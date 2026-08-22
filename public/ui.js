@@ -131,6 +131,36 @@ const UI = (function () {
     if (inn) inn.addEventListener('click', () => step(0.1));
   }
 
+  /* ---------- where phones should connect ---------- */
+
+  const ADDR_KEY = 'rcs:hostaddr:v1';
+  const isLocalUrl = (u) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(u);
+
+  // A phone cannot reach "localhost", so prefer a network address.
+  async function serverAddresses() {
+    let urls = [], ok = true;
+    try {
+      const r = await fetch('/net.json', { cache: 'no-store' });
+      if (!r.ok) throw new Error('net.json ' + r.status);
+      const j = await r.json();
+      urls = Array.isArray(j.urls) ? j.urls.slice() : [];
+    } catch (e) {
+      ok = false;
+      console.warn('[join] cannot read the server addresses:', e.message);
+    }
+    if (!urls.includes(location.origin)) urls.push(location.origin);
+    let saved = null;
+    try { saved = localStorage.getItem(ADDR_KEY); } catch (e) {}
+    const best = (saved && urls.includes(saved)) ? saved
+      : (!isLocalUrl(location.origin) && urls.includes(location.origin)) ? location.origin
+      : (urls.find((u) => !isLocalUrl(u)) || urls[0]);
+    return { urls, best, ok };
+  }
+
+  function rememberAddress(u) {
+    try { localStorage.setItem(ADDR_KEY, u); } catch (e) {}
+  }
+
   /* ---------- sticky offset ---------- */
 
   // The top bar and the standings both stick, so anything below them needs to
@@ -149,5 +179,6 @@ const UI = (function () {
   window.addEventListener('load', measureTopbar);
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
-  return { wireFullscreen, isFull, keepAwake, showAwake, wireZoom, measureTopbar, measureSticky: measureTopbar };
+  return { wireFullscreen, isFull, keepAwake, showAwake, wireZoom, measureTopbar,
+           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl };
 })();

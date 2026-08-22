@@ -262,6 +262,18 @@ function client(name) {
     ok(seats[0].state.phase === 'lobby', 'and can call a new game');
   }
 
+  // ---- start a table and take a seat, from one phone ----
+  {
+    const solo = client('solo'); await solo.ready;
+    solo.send({ t: 'create' }); await wait(120);
+    const code4 = solo.hello.code;
+    solo.send({ t: 'join', code: code4, name: 'Solo' }); await wait(150);
+    ok(solo.hello.role === 'player' && !!solo.hello.seatId, 'one socket can make a table and take a seat');
+    ok(solo.state.seats.length === 1 && solo.state.seats[0].name === 'Solo', 'the seat is at the new table');
+    ok(solo.state.captainId === solo.hello.seatId, 'and that player runs the table');
+    ok(solo.state.code === code4, 'the code is the one the QR shows');
+  }
+
   console.log(fails ? `\n${fails} FAILURES` : '\nall integration checks passed');
   srv.kill(); process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); srv.kill(); process.exit(1); });

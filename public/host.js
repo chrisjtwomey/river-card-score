@@ -10,7 +10,6 @@ let draftKey = '';
 let dealtKey = null;    // the round already dealt on screen
 let addrs = [];         // addresses this server answers on
 let addr = null;        // the one shown in the QR code
-const KEY_ADDR = 'rcs:hostaddr:v1';
 
 /* ---------- theme ---------- */
 const KEY_THEME = 'river-card-score:theme:v1';
@@ -21,28 +20,13 @@ const KEY_THEME = 'river-card-score:theme:v1';
 
 /* ---------- join address and QR ---------- */
 
-const isLocal = (u) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(u);
+const isLocal = (u) => UI.isLocalUrl(u);
 
 async function loadAddresses() {
-  let saved = null;
-  try { saved = localStorage.getItem(KEY_ADDR); } catch (e) {}
-  addrs = [];
-  try {
-    const r = await fetch('/net.json');
-    if (!r.ok) throw new Error('net.json ' + r.status);
-    const j = await r.json();
-    addrs = Array.isArray(j.urls) ? j.urls.slice() : [];
-  } catch (e) {
-    // An old server has no /net.json, so only this page's address is known.
-    console.warn('[join] cannot read the server addresses:', e.message);
-    $('#qr-err').hidden = false;
-  }
-  if (!addrs.includes(location.origin)) addrs.push(location.origin);
-
-  // A phone cannot reach "localhost", so prefer a network address.
-  addr = (saved && addrs.includes(saved)) ? saved
-    : (!isLocal(location.origin) && addrs.includes(location.origin)) ? location.origin
-    : (addrs.find((u) => !isLocal(u)) || addrs[0]);
+  const found = await UI.serverAddresses();
+  addrs = found.urls;
+  addr = found.best;
+  if (!found.ok) $('#qr-err').hidden = false;   // an old server has no /net.json
 
   const pick = $('#addr-pick');
   pick.innerHTML = '';
@@ -55,7 +39,7 @@ async function loadAddresses() {
   $('#addr-field').hidden = addrs.length < 2;
   pick.addEventListener('change', () => {
     addr = pick.value;
-    try { localStorage.setItem(KEY_ADDR, addr); } catch (e) {}
+    UI.rememberAddress(addr);
     renderJoin();
   });
   renderJoin();

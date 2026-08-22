@@ -60,4 +60,31 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('#in-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-join').click(); });
+
+  /* Start a table and take the first seat, in one tap. The socket makes the
+     room, then joins it, so this phone ends up as a player who runs the table. */
+  const newErr = (msg) => { $('#new-err').textContent = msg; $('#new-err').hidden = !msg; };
+
+  $('#btn-new-table').addEventListener('click', () => {
+    const name = $('#new-name').value.trim();
+    if (!name) return newErr('Type your name.');
+    newErr('');
+    $('#btn-new-table').disabled = true;
+    $('#btn-join').disabled = true;
+    let stage = 'create';
+    Net.connect({
+      onOpen: () => Net.send({ t: 'create' }),
+      onHello: (m) => {
+        if (stage === 'create') { stage = 'join'; Net.send({ t: 'join', code: m.code, name }); }
+        else location.href = 'play.html';
+      },
+      onError: (msg) => {
+        newErr(msg);
+        $('#btn-new-table').disabled = false;
+        $('#btn-join').disabled = false;
+      },
+    });
+  });
+
+  $('#new-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-new-table').click(); });
 });

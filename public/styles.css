@@ -522,3 +522,6 @@ body.host .scorecard-panel .table-wrap{
 .capset[open] > summary::after{content:' ▴'}
 .capset{display:flex;flex-direction:column;gap:10px}
 .captain-panel .seat-item .mini{width:34px;height:34px}
+.captain-panel .code-badge{font-size:46px;letter-spacing:.16em}
+.captain-panel .qrbox img{width:150px;height:150px}
+.captain-panel .joinrow{gap:14px}

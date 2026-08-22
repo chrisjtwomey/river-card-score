@@ -6,6 +6,7 @@ const $ = (s) => document.querySelector(s);
 let ST = null, ME = null;      // ME = my seat id
 let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
+let joinAddr = null;           // the address the others should open
 
 const KEY_THEME = 'river-card-score:theme:v1';
 (function () {
@@ -132,6 +133,8 @@ function renderCaptain(lobby) {
     return;
   }
 
+  renderJoinBox();
+
   const n = ST.seats.length;
   $('#btn-start').disabled = n < 2;
   $('#btn-start').textContent = n < 2 ? 'Waiting for players…' : `Start game with ${n} players`;
@@ -147,6 +150,23 @@ function renderCaptain(lobby) {
   $('#rounds-hint').textContent = `${cards.length} rounds: ${cards.join(' ')}`;
   const ex = (w) => Game.roundScore(2, w, c);
   $('#miss-hint').textContent = `Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`;
+}
+
+// The table host may be the only screen, so the code and the QR live here too.
+function renderJoinBox() {
+  $('#code-badge').textContent = ST.code;
+  if (joinAddr === null) {
+    joinAddr = '';                                    // ask once
+    UI.serverAddresses().then((found) => { joinAddr = found.best; renderJoinBox(); });
+    return;
+  }
+  if (!joinAddr) return;
+  const url = `${joinAddr}/?code=${ST.code}`;
+  $('#join-url').textContent = url.replace(/^https?:\/\//, '');
+  const img = $('#qr');
+  img.alt = `QR code for ${url}`;
+  const src = `/qr.svg?cell=6&d=${encodeURIComponent(url)}`;
+  if (img.getAttribute('src') !== src) img.src = src;
 }
 
 function renderLobby(me) {
