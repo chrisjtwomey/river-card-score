@@ -71,10 +71,13 @@
       <label class="field">
         <span>Missed bid pays</span>
         <select id="cfg-miss">
+          <option value="atleast">must make the bid: over pays tricks won, short pays 0</option>
+          <option value="atleastdiff">must make the bid: over pays tricks won, short pays minus 1 each</option>
           <option value="zero">0 points</option>
           <option value="diff">minus 1 per trick off</option>
           <option value="tricks">tricks won only</option>
         </select>
+        <small id="miss-hint"></small>
       </label>
     </div>
     <div class="toggles">
@@ -147,6 +150,11 @@
   </section>
 </main>
 
+<div class="deal" id="deal" hidden aria-hidden="true">
+  <div class="deal-stage" id="deal-stage"></div>
+  <div class="deal-skip">tap to skip</div>
+</div>
+
 <dialog id="rules-dlg">
   <h2>How the game works</h2>
   <ol class="rules">
@@ -158,6 +166,7 @@
     <li>Play the hand. Follow suit if you can. The highest trump wins, or the highest card of the suit led.</li>
     <li>Enter the tricks won. The tricks must total the hand size.</li>
     <li>An exact bid scores the bonus plus the tricks won. A missed bid scores by your chosen rule.</li>
+    <li>House rule "must make the bid": win more than your bid and you score the tricks won, with no bonus. Win fewer than your bid and you score nothing.</li>
     <li>The highest total after the last round wins.</li>
   </ol>
   <p class="hint">This tracker keeps the score only. It does not deal the cards.</p>

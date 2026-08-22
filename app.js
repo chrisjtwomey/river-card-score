@@ -8,6 +8,7 @@
 const KEY_GAME = 'river-card-score:game:v1';
 const KEY_SEATS = 'river-card-score:seats:v1';
 const KEY_THEME = 'river-card-score:theme:v1';
+const KEY_MOTION = 'river-card-score:motion:v1';
 
 const SUITS = [
   { k: 'S',  g: '♠',  name: 'Spades',    red: false },
@@ -90,9 +91,14 @@ function schedule(max, pattern, ones) {
 
 function roundScore(bid, won, cfg) {
   if (bid === won) return Number(cfg.bonus) + won;
-  if (cfg.miss === 'diff') return -Math.abs(bid - won);
-  if (cfg.miss === 'tricks') return won;
-  return 0;
+  switch (cfg.miss) {
+    // House rule: you must win at least your bid to score anything.
+    case 'atleast':     return won > bid ? won : 0;
+    case 'atleastdiff': return won > bid ? won : -(bid - won);
+    case 'diff':        return -Math.abs(bid - won);
+    case 'tricks':      return won;
+    default:            return 0; // 'zero'
+  }
 }
 
 const isDone = (r) => Array.isArray(r.bids) && Array.isArray(r.tricks);
@@ -155,6 +161,10 @@ function syncSetupHints() {
   const cards = schedule(m, pattern, k);
   $('#rounds-hint').textContent = `${cards.length} rounds: ${cards.join(' ')}`;
 
+  const cfg = { bonus: Number($('#cfg-bonus').value), miss: $('#cfg-miss').value };
+  const ex = (won) => roundScore(2, won, cfg);
+  $('#miss-hint').textContent = `Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`;
+
   const ones = k > 1 ? `1×${k}` : '1';
   const opts = $('#cfg-pattern').options;
   opts[0].textContent = `Down then up (${m}…${ones}…${m})`;
@@ -185,6 +195,7 @@ function startGame() {
   S = newGame(cfg);
   save();
   showGame();
+  dealAnimation();
 }
 
 function newGame(cfg) {
@@ -198,6 +209,178 @@ function newGame(cfg) {
     tricks: null,
   }));
   return { cfg, rounds, idx: 0, phase: 'bid', draft: cfg.names.map(() => null), editReturn: null };
+}
+
+/* ============================================================
+   DEAL ANIMATION — a card flies to each seat, then a flourish
+   ============================================================ */
+
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+function shuffledFaces(n) {
+  const deck = [];
+  SUITS.filter((s) => s.k !== 'NT').forEach((s) => RANKS.forEach((r) => deck.push({ r, s })));
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
+  }
+  return deck.slice(0, n);
+}
+
+function cardEl(face, cls) {
+  const el = document.createElement('div');
+  el.className = 'dcard' + (cls ? ' ' + cls : '');
+  const front = document.createElement('div');
+  front.className = 'face front' + (face && face.s.red ? ' red' : '');
+  if (face) {
+    front.innerHTML = '<span class="r"></span><span class="big"></span>';
+    front.querySelector('.r').textContent = face.r;
+    front.querySelector('.big').textContent = face.s.g;
+  }
+  const back = document.createElement('div');
+  back.className = 'face back';
+  el.append(front, back);
+  return el;
+}
+
+// Resolves when the overlay is gone. A tap, a click, or a key skips to the end.
+// 'full' | 'reduced' | 'off'.  ?motion=full in the URL wins and is remembered.
+function motionMode() {
+  let saved = null;
+  try { saved = localStorage.getItem(KEY_MOTION); } catch (e) {}
+  const q = new URLSearchParams(window.location.search).get('motion');
+  if (q === 'full' || q === 'reduced' || q === 'off') {
+    saved = q;
+    try { localStorage.setItem(KEY_MOTION, q); } catch (e) {}
+  }
+  if (saved) return saved;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return reduce ? 'reduced' : 'full';
+}
+
+function dealAnimation(force) {
+  return new Promise((resolve) => {
+    const overlay = $('#deal');
+    const stage = $('#deal-stage');
+    const mode = force || motionMode();
+    if (!overlay || !stage || !stage.animate) {
+      console.warn('[deal] skipped: the overlay or the Web Animations API is missing');
+      resolve(); return;
+    }
+    if (mode === 'off') { console.info('[deal] skipped: motion is off'); resolve(); return; }
+    const calm = mode === 'reduced';
+    if (calm) {
+      console.info('[deal] short version: this device asks for reduced motion. ' +
+        'Add ?motion=full to the URL for the full deal, or run playDeal().');
+    }
+
+    const cfg = S.cfg, n = cfg.names.length, r0 = S.rounds[0];
+    stage.innerHTML = '';
+    overlay.hidden = false;
+
+    const W = overlay.clientWidth, H = overlay.clientHeight;
+    const rx = Math.min(W * 0.33, 250), ry = Math.min(H * 0.27, 160);
+    const seat = (p) => {                       // seat 0 sits at the bottom
+      const a = (Math.PI / 2) + (p * 2 * Math.PI / n);
+      return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
+    };
+
+    const T = calm
+      ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
+      : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280 };
+    const anims = [], timers = [];
+    let ended = false;
+
+    // the deck, face down in the middle
+    for (let i = 0; i < 3; i++) {
+      const d = cardEl(null, 'deck');
+      d.style.transform = `translate3d(0,0,0) rotate(${(i - 1) * 4}deg) rotateY(180deg)`;
+      stage.appendChild(d);
+      const rest = `translate3d(0,0,0) rotate(${(i - 1) * 4}deg) rotateY(180deg)`;
+      anims.push(d.animate(
+        calm
+          ? [{ transform: rest, opacity: 0 }, { transform: rest, opacity: 1 }]
+          : [{ transform: rest + ' scale(.5)', opacity: 0 }, { transform: rest + ' scale(1)', opacity: 1 }],
+        { duration: T.deckPop, delay: i * 40, easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.4)', fill: 'both' }
+      ));
+    }
+
+    // one card per player, in dealing order: left of the dealer first
+    const faces = shuffledFaces(n);
+    for (let step = 1; step <= n; step++) {
+      const p = (r0.dealer + step) % n;
+      const { x, y } = seat(p);
+      const tilt = (x / (rx || 1)) * 9;
+      const delay = T.start + (step - 1) * T.gap;
+
+      const card = cardEl(faces[step - 1]);
+      card.style.opacity = '0';
+      stage.appendChild(card);
+      const landed = `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(0deg) scale(1)`;
+      anims.push(card.animate(
+        calm
+          ? [{ transform: landed, opacity: 0 }, { transform: landed, opacity: 1 }]
+          : [{ transform: 'translate3d(0,0,0) rotate(0deg) rotateY(180deg) scale(.9)', opacity: 1, offset: 0 },
+             { transform: `translate3d(${x * 0.55}px,${y * 0.55 - 26}px,0) rotate(${tilt * 0.6}deg) rotateY(90deg) scale(1.06)`, opacity: 1, offset: .55 },
+             { transform: landed, opacity: 1, offset: 1 }],
+        { duration: T.fly, delay, easing: calm ? 'ease-out' : 'cubic-bezier(.25,.8,.3,1)', fill: 'both' }
+      ));
+
+      const name = document.createElement('div');
+      name.className = 'dname';
+      name.textContent = cfg.names[p];
+      name.style.left = `calc(50% + ${x}px)`;
+      name.style.top = `calc(50% + ${y + 56}px)`;
+      stage.appendChild(name);
+      anims.push(name.animate(
+        [{ opacity: 0, transform: 'translate(-50%,6px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
+        { duration: 220, delay: delay + T.fly - 120, easing: 'ease-out', fill: 'both' }
+      ));
+    }
+
+    // flourish: the top of the deck turns over
+    const dealEnd = T.start + (n - 1) * T.gap + T.fly;
+    const hero = cardEl(null, 'hero');
+    hero.querySelector('.front').innerHTML =
+      '<div class="quad"><span>♠</span><span>♥</span><span>♦</span><span>♣</span></div>';
+    hero.style.transform = calm ? 'rotateY(0deg)' : 'rotateY(180deg)';
+    stage.appendChild(hero);
+    anims.push(hero.animate(
+      calm
+        ? [{ transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)', opacity: 0 },
+           { transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)', opacity: 1 }]
+        : [{ transform: 'translate3d(0,0,0) rotateY(180deg) scale(.8)' },
+           { transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)' }],
+      { duration: T.flip, delay: dealEnd + 140, easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }
+    ));
+
+    const cap = document.createElement('div');
+    cap.className = 'deal-cap';
+    cap.textContent = `Round 1 · ${r0.cards} card${r0.cards === 1 ? '' : 's'} · ${cfg.names[r0.dealer]} deals`;
+    cap.style.top = 'calc(50% + 86px)';
+    stage.appendChild(cap);
+    anims.push(cap.animate(
+      [{ opacity: 0, transform: 'translate(-50%,8px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
+      { duration: 260, delay: dealEnd + 260, easing: 'ease-out', fill: 'both' }
+    ));
+
+    anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
+
+    function finish() {
+      if (ended) return;
+      ended = true;
+      timers.forEach(clearTimeout);
+      overlay.removeEventListener('pointerdown', skip);
+      window.removeEventListener('keydown', skip);
+      const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
+      out.onfinish = () => { overlay.hidden = true; stage.innerHTML = ''; resolve(); };
+    }
+    function skip() { anims.forEach((a) => { try { a.finish(); } catch (e) {} }); finish(); }
+
+    overlay.addEventListener('pointerdown', skip);
+    window.addEventListener('keydown', skip);
+    timers.push(setTimeout(finish, dealEnd + 140 + T.flip + T.hold));
+  });
 }
 
 /* ============================================================
@@ -549,6 +732,8 @@ function init() {
   $('#cfg-max').addEventListener('input', syncSetupHints);
   $('#cfg-ones').addEventListener('input', () => { onesEdited = true; syncSetupHints(); });
   $('#cfg-pattern').addEventListener('change', syncSetupHints);
+  $('#cfg-miss').addEventListener('change', syncSetupHints);
+  $('#cfg-bonus').addEventListener('change', syncSetupHints);
   $('#btn-start').addEventListener('click', startGame);
 
   $('#btn-commit').addEventListener('click', commit);
@@ -569,11 +754,16 @@ function init() {
     S = newGame(S.cfg);
     save(); render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    dealAnimation();
   });
 
   const saved = loadGame();
   if (saved) { S = saved; showGame(); }
   else { showSetup(); }
 }
+
+// Debug handle: playDeal() forces the full deal, playDeal('reduced') the short one.
+window.playDeal = (mode) => (S ? dealAnimation(mode || 'full') : Promise.resolve(console.warn('[deal] start a game first')));
+window.motionMode = motionMode;
 
 document.addEventListener('DOMContentLoaded', init);

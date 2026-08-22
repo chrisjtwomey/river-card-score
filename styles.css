@@ -97,9 +97,12 @@ main{max-width:820px;margin:0 auto;padding:16px;display:flex;flex-direction:colu
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--felt);border-color:var(--felt);color:#fff}
 .btn.primary:hover{background:var(--felt-2)}
-.btn.primary.danger{background:var(--red);border-color:var(--red)}
 .btn.ghost{background:transparent}
 .btn.danger{color:var(--red)}
+/* keep these after .btn.danger: a filled button needs light text on the red fill */
+.btn.primary.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn.primary.danger:hover{background:var(--red);filter:brightness(1.1)}
+.topbar .btn.danger{color:#ffd9d4}
 .btn.big{padding:14px;font-size:17px}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 
@@ -241,3 +244,62 @@ dialog h2{color:var(--ink);text-transform:none;letter-spacing:-.01em;font-size:1
 .rules{margin:0 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:7px;font-size:14px}
 dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .confirm-actions{justify-content:flex-end}
+
+/* ---------- deal animation ---------- */
+.deal{
+  position:fixed;inset:0;z-index:60;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 45%, rgba(30,138,90,.30), rgba(8,12,9,.86) 70%);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  perspective:1100px;cursor:pointer;
+}
+.deal-stage{position:absolute;inset:0}
+.deal-skip{
+  position:absolute;left:0;right:0;bottom:18px;text-align:center;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.4);
+}
+.dcard{
+  position:absolute;left:50%;top:50%;width:64px;height:90px;margin:-45px 0 0 -32px;
+  transform-style:preserve-3d;will-change:transform;
+}
+.dcard .face{
+  position:absolute;inset:0;border-radius:8px;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,.45);
+}
+.dcard .front{
+  background:#fbf9f3;color:#15181a;
+  display:grid;place-items:center;font-weight:800;
+  border:1px solid rgba(0,0,0,.15);
+}
+.dcard .front.red{color:#c0271d}
+.dcard .front .r{position:absolute;top:5px;left:7px;font-size:13px;line-height:1}
+.dcard .front .big{font-size:32px;line-height:1}
+.dcard .back{
+  transform:rotateY(180deg);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.10) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg,#1c6b48,#0d3f2a);
+  border:2px solid #f0ead9;
+}
+.dcard.hero{width:86px;height:120px;margin:-60px 0 0 -43px}
+.dcard.hero .front{
+  background:#fbf9f3;border:2px solid var(--gold);
+  box-shadow:0 0 0 4px rgba(184,134,43,.25), 0 12px 40px rgba(0,0,0,.55);
+}
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:2px;font-size:26px;line-height:1}
+.quad span:nth-child(2),.quad span:nth-child(3){color:#c0271d}
+.dname{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,0);
+  font-size:14px;font-weight:700;color:#f3efe2;text-shadow:0 2px 8px rgba(0,0,0,.7);
+  white-space:nowrap;opacity:0;
+}
+.deal-cap{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,0);
+  font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--gold);text-shadow:0 2px 10px rgba(0,0,0,.7);white-space:nowrap;opacity:0;
+}
+@media (max-width:420px){
+  .dcard{width:52px;height:74px;margin:-37px 0 0 -26px}
+  .dcard .front .big{font-size:26px}
+  .dcard.hero{width:70px;height:98px;margin:-49px 0 0 -35px}
+  .deal-cap{font-size:13px}
+}
