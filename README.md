@@ -94,6 +94,82 @@ The compose file mounts `./certs` read only. Run `npm run cert` on the host firs
 
 The same variable works outside Docker, and it accepts a list: `PUBLIC_URL=http://192.168.1.5:8787,https://table.example.com`. Each address appears in the picker on the host screen.
 
+## Behind a reverse proxy
+
+The game runs on one WebSocket at **`/ws`**. A proxy that does not pass the upgrade will serve the page and then fail with `can't establish a connection to the server at wss://.../ws`. Firefox fails silently here, because it never asks about a WebSocket.
+
+Three rules:
+
+1. Pass the `Upgrade` and `Connection` headers to `/ws`.
+2. Keep the path as `/ws`. Do not strip or rewrite it.
+3. Set `PUBLIC_URL` to the address people type, so the QR code matches: `PUBLIC_URL=https://table.example.com`.
+
+The server pings every 30 seconds, so an idle socket survives a normal proxy timeout.
+
+### nginx
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 443 ssl;
+    server_name table.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;                      # 1.0 cannot upgrade
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+}
+```
+
+### Caddy
+
+```
+table.example.com {
+    reverse_proxy 127.0.0.1:8787
+}
+```
+
+Caddy passes WebSockets on its own. Nothing else is needed.
+
+### Traefik
+
+```yaml
+labels:
+  - traefik.enable=true
+  - traefik.http.routers.table.rule=Host(`table.example.com`)
+  - traefik.http.services.table.loadbalancer.server.port=8787
+```
+
+Traefik passes WebSockets on its own.
+
+### Apache
+
+```apache
+RewriteEngine on
+RewriteCond %{HTTP:Upgrade} websocket [NC]
+RewriteCond %{HTTP:Connection} upgrade [NC]
+RewriteRule ^/ws$ ws://127.0.0.1:8787/ws [P,L]
+ProxyPass        / http://127.0.0.1:8787/
+ProxyPassReverse / http://127.0.0.1:8787/
+```
+
+`mod_proxy_wstunnel` must be enabled.
+
+### Cloudflare Tunnel
+
+WebSockets work with no extra setting. If the tunnel points at an https origin with a self-signed certificate, add `noTLSVerify: true`, or point it at plain http and let the server run without a certificate.
+
+When the socket cannot connect, the page now says so at the bottom of the screen, with the address it tried and what to check.
+
 ## Single-device tracker
 
 Open `public/local.html` in a browser. It needs no server and keeps its state in that browser. It has the same rules and scorecard, plus a deal animation when the game starts.
@@ -133,7 +209,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player phone: your bid pad, the trick pad when you deal, standings, and the scorecard.
 - `public/table.js` — the scorecard table, shared by the host screen and the phones.
-- `public/net.js` — WebSocket client with reconnect and a saved session.
+- `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
 - `public/local.html`, `app.js` — the offline single-device tracker.
 - `public/styles.css` — shared styles, light and dark.
 

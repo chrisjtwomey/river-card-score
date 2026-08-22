@@ -496,3 +496,15 @@ body.host .table-wrap{max-height:min(52vh, 620px)}
 body.host .scorecard-panel .table-wrap{
   max-height:max(240px, calc(100vh - var(--topbar-h, 62px) - var(--standings-h, 0px) - 170px));
 }
+
+/* ---------- connection trouble ---------- */
+.netbanner{
+  position:fixed;left:12px;right:12px;bottom:12px;z-index:80;
+  max-width:640px;margin:0 auto;padding:14px 16px;border-radius:12px;
+  background:var(--bg2);border:1px solid var(--red);box-shadow:var(--shadow);
+  color:var(--ink);font-size:14px;line-height:1.45;
+}
+.netbanner b{display:block;margin-bottom:6px;color:var(--red)}
+.netbanner ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.netbanner code{background:var(--chip);padding:1px 5px;border-radius:5px;font-size:13px}
+.netbanner a{color:var(--gold)}

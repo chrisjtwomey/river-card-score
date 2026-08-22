@@ -3,6 +3,54 @@
 const Net = (function () {
   const KEY = 'rcs:session:v1';
   let ws = null, handlers = {}, backoff = 700, queue = [];
+  let everOpen = false, fails = 0, probing = false;
+
+  const wsUrl = () => (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+
+  function banner(html) {
+    let el = document.getElementById('netbanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'netbanner';
+      el.className = 'netbanner';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = html;
+    el.hidden = false;
+  }
+  function clearBanner() {
+    const el = document.getElementById('netbanner');
+    if (el) el.hidden = true;
+  }
+
+  // The socket never opened. Say why, instead of retrying in silence.
+  async function diagnose() {
+    if (probing) return;
+    probing = true;
+    const url = wsUrl();
+    let reachable = false;
+    try {
+      const r = await fetch('/net.json', { cache: 'no-store' });
+      reachable = r.ok;
+    } catch (e) { reachable = false; }
+    probing = false;
+
+    if (!reachable) {
+      banner(`<b>No answer from ${location.host}.</b> The table server is not running there, ` +
+        'or something is blocking it. Start it with <code>npm start</code> and reload.');
+      return;
+    }
+    const tips = [
+      'A proxy in front of the server must pass the <code>Upgrade</code> and <code>Connection</code> headers, ' +
+      'or the WebSocket never gets through.',
+    ];
+    if (location.protocol === 'https:') {
+      tips.push(`If the certificate is self-signed, open <a href="/net.json" target="_blank" rel="noopener">` +
+        `${location.origin}/net.json</a> in a tab and accept the warning. Firefox will not ask for a WebSocket, ` +
+        'so it fails without a word until the certificate is trusted.');
+    }
+    banner(`<b>The page loads, but ${url} will not connect.</b><ul><li>` + tips.join('</li><li>') + '</li></ul>');
+  }
 
   function session() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
   function setSession(s) {
@@ -11,11 +59,12 @@ const Net = (function () {
 
   function connect(h) {
     if (h) handlers = h;
-    const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    ws = new WebSocket(proto + location.host + '/ws');
+    ws = new WebSocket(wsUrl());
 
     ws.onopen = () => {
       backoff = 700;
+      everOpen = true; fails = 0;
+      clearBanner();
       if (handlers.onUp) handlers.onUp();
       if (handlers.onOpen) handlers.onOpen();       // sends create / join / resume
       queue.splice(0).forEach((o) => ws.send(JSON.stringify(o)));
@@ -33,6 +82,8 @@ const Net = (function () {
 
     ws.onclose = () => {
       if (handlers.onDown) handlers.onDown();
+      fails += 1;
+      if (!everOpen && fails >= 2) diagnose();
       backoff = Math.min(Math.round(backoff * 1.6), 5000);
       setTimeout(() => connect(), backoff);
     };
