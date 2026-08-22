@@ -108,7 +108,12 @@ The server pings every 30 seconds, so an idle socket survives a normal proxy tim
 
 ### nginx
 
+The `map` goes in the `http` context, outside any `server` block. Put it in its own file at `/etc/nginx/conf.d/websocket.conf`, or at the top of the site file above `server {`. Inside `server` or `location`, nginx refuses it with `"map" directive is not allowed here`.
+
+Some distributions define `$connection_upgrade` already. Check with `grep -rn connection_upgrade /etc/nginx/` first, because defining it twice gives `duplicate map`. Test with `nginx -t` before you reload.
+
 ```nginx
+# http context: conf.d/websocket.conf, or above the server block
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
