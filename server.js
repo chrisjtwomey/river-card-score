@@ -135,6 +135,7 @@ function createRoom() {
     cfg: G.defaultCfg(2),
     onesLocked: false,
     firstDealerId: null,        // seat that deals round 1, or null for seat 1
+    captainId: null,            // the player who runs the table from their phone
     seats: [],
     rounds: [],
     idx: 0,
@@ -154,6 +155,7 @@ function syncCfg(room) {
   room.cfg.max = Math.min(room.cfg.max, G.maxCardsFor(n));
   if (!room.onesLocked) room.cfg.ones = n;
   if (room.firstDealerId && seatIndex(room, room.firstDealerId) < 0) room.firstDealerId = null;
+  if (seatIndex(room, room.captainId) < 0) room.captainId = room.seats.length ? room.seats[0].id : null;
 }
 
 function publicState(room) {
@@ -166,6 +168,7 @@ function publicState(room) {
     cfg: room.cfg,
     seats: room.seats.map((s) => ({ id: s.id, name: s.name, online: s.online })),
     firstDealerId: room.firstDealerId,
+    captainId: room.captainId,
     rounds: room.rounds,
     idx: room.idx,
     turn: (room.phase === 'bid' && r) ? G.turnSeat(r, n) : null,
@@ -251,6 +254,7 @@ function handle(ws, m) {
     if (room.seats.some((s) => s.name.toLowerCase() === name.toLowerCase())) return fail(ws, 'that name is taken');
     const seat = { id: token().slice(0, 8), name, token: token(), online: true };
     room.seats.push(seat);
+    if (!room.captainId) room.captainId = seat.id;      // first in, table host
     syncCfg(room);
     attach(ws, room, { role: 'player', seatId: seat.id });
     send(ws, { t: 'hello', role: 'player', code: room.code, token: seat.token, seatId: seat.id });
@@ -279,13 +283,17 @@ function handle(ws, m) {
   const n = room.seats.length;
   const isHost = ctx.role === 'host';
   const mySeat = ctx.seatId ? seatIndex(room, ctx.seatId) : -1;
+  // The table host is a player with the same powers as the host screen, so a
+  // game can run with no host screen at all.
+  const isCaptain = mySeat >= 0 && room.seats[mySeat].id === room.captainId;
+  const boss = isHost || isCaptain;
   const r = curRound(room);
 
   switch (m.t) {
     case 'ping': return send(ws, { t: 'pong' });
 
     case 'config': {
-      if (!isHost) return fail(ws, 'only the host changes the rules');
+      if (!boss) return fail(ws, 'only the table host changes the rules');
       if (room.phase !== 'lobby') return fail(ws, 'the game has started');
       const c = room.cfg, p = m.patch || {};
       if ('max' in p) c.max = Math.max(1, Math.min(Number(p.max) || 1, G.maxCardsFor(Math.max(2, n))));
@@ -302,7 +310,7 @@ function handle(ws, m) {
     }
 
     case 'seatMove': {
-      if (!isHost || room.phase !== 'lobby') return fail(ws, 'not allowed now');
+      if (!boss || room.phase !== 'lobby') return fail(ws, 'not allowed now');
       const i = seatIndex(room, m.id);
       const j = i + (m.dir === 'up' ? -1 : 1);
       if (i < 0 || j < 0 || j >= n) return;
@@ -311,7 +319,7 @@ function handle(ws, m) {
     }
 
     case 'kick': {
-      if (!isHost || room.phase !== 'lobby') return fail(ws, 'not allowed now');
+      if (!boss || room.phase !== 'lobby') return fail(ws, 'not allowed now');
       const i = seatIndex(room, m.id);
       if (i < 0) return;
       room.seats.splice(i, 1);
@@ -320,8 +328,15 @@ function handle(ws, m) {
       return broadcast(room);
     }
 
+    case 'captain': {
+      if (!boss) return fail(ws, 'only the table host can pass it on');
+      if (seatIndex(room, m.id) < 0) return fail(ws, 'no such seat');
+      room.captainId = m.id;
+      return broadcast(room);
+    }
+
     case 'start': {
-      if (!isHost) return fail(ws, 'only the host starts the game');
+      if (!boss) return fail(ws, 'only the table host starts the game');
       if (room.phase !== 'lobby') return fail(ws, 'already started');
       if (n < 2) return fail(ws, 'you need at least 2 players');
       syncCfg(room);
@@ -335,7 +350,7 @@ function handle(ws, m) {
 
     case 'trump': {
       if (!r) return;
-      if (!isHost && mySeat !== r.dealer) return fail(ws, 'the host or the dealer sets the trump');
+      if (!boss && mySeat !== r.dealer) return fail(ws, 'the table host or the dealer sets the trump');
       const ok = G.SUITS.some((s) => s.k === m.k);
       r.trump = (m.k === null || r.trump === m.k) ? null : (ok ? m.k : r.trump);
       return broadcast(room);
@@ -363,7 +378,7 @@ function handle(ws, m) {
 
     case 'tricks': {
       if (room.phase !== 'tricks' || !r) return fail(ws, 'not counting tricks now');
-      if (!isHost && mySeat !== r.dealer) return fail(ws, 'the dealer enters the tricks');
+      if (!boss && mySeat !== r.dealer) return fail(ws, 'the dealer enters the tricks');
       const v = Array.isArray(m.values) ? m.values.map(Number) : [];
       if (v.length !== n || v.some((x) => !Number.isInteger(x) || x < 0 || x > r.cards)) return fail(ws, 'bad trick counts');
       const sum = v.reduce((a, b) => a + b, 0);
@@ -379,7 +394,7 @@ function handle(ws, m) {
     case 'bumdeal': {
       if (room.phase !== 'bid' && room.phase !== 'tricks') return fail(ws, 'no hand to throw in');
       const isDealer = mySeat >= 0 && r && mySeat === r.dealer;
-      if (isHost || isDealer) { bumDeal(room); return broadcast(room); }
+      if (boss || isDealer) { bumDeal(room); return broadcast(room); }
       if (mySeat < 0) return fail(ws, 'only the table can call a bum deal');
       if (room.vote && room.vote.round === room.idx) {          // already asked: count as a yes
         if (!room.vote.yes.includes(mySeat)) room.vote.yes.push(mySeat);
@@ -404,13 +419,13 @@ function handle(ws, m) {
 
     case 'votecancel': {
       if (!room.vote) return;
-      if (!isHost && mySeat !== room.vote.by) return fail(ws, 'only the host or the player who asked can cancel');
+      if (!boss && mySeat !== room.vote.by) return fail(ws, 'only the table host or the player who asked can cancel');
       room.vote = null;
       return broadcast(room);
     }
 
     case 'undo': {
-      if (!isHost) return fail(ws, 'only the host can go back');
+      if (!boss) return fail(ws, 'only the table host can go back');
       room.vote = null;
       if (room.phase === 'done') {
         room.idx = room.rounds.length - 1;
@@ -429,7 +444,7 @@ function handle(ws, m) {
     }
 
     case 'reset': {
-      if (!isHost) return fail(ws, 'only the host can reset');
+      if (!boss) return fail(ws, 'only the table host can reset');
       room.phase = 'lobby';
       room.vote = null;
       room.rounds = [];

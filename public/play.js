@@ -14,6 +14,7 @@ const KEY_THEME = 'river-card-score:theme:v1';
 })();
 
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
+const amHost = () => !!(ST && ME && ST.captainId === ME);
 
 function boot() {
   const s = Net.session();
@@ -43,6 +44,7 @@ function render() {
   const lobby = ST.phase === 'lobby';
   $('#lobby').hidden = !lobby;
   $('#game').hidden = lobby;
+  renderCaptain(lobby);
   if (lobby) return renderLobby(me);
 
   const r = ST.rounds[ST.idx] || null;
@@ -116,19 +118,72 @@ function dealWatch(r) {
   });
 }
 
+// The table host runs the game from their phone: rules, seats, start, go
+// back, new game. No host screen needed.
+function renderCaptain(lobby) {
+  const panel = $('#captain-panel');
+  panel.hidden = !amHost();
+  $('#cap-lobby').hidden = !lobby;
+  $('#cap-game').hidden = lobby;
+  if (!amHost()) return;
+
+  if (!lobby) {
+    $('#btn-undo').disabled = false;
+    return;
+  }
+
+  const n = ST.seats.length;
+  $('#btn-start').disabled = n < 2;
+  $('#btn-start').textContent = n < 2 ? 'Waiting for players…' : `Start game with ${n} players`;
+
+  const c = ST.cfg;
+  const setVal = (sel, v) => { const el = $(sel); if (el && document.activeElement !== el) el.value = String(v); };
+  $('#cfg-max').max = String(Game.maxCardsFor(Math.max(2, n)));
+  setVal('#cfg-max', c.max); setVal('#cfg-ones', c.ones); setVal('#cfg-pattern', c.pattern);
+  setVal('#cfg-bonus', c.bonus); setVal('#cfg-miss', c.miss);
+  $('#cfg-screw').checked = !!c.screw;
+  $('#cfg-trump').checked = !!c.trump;
+  const cards = Game.schedule(c.max, c.pattern, c.ones);
+  $('#rounds-hint').textContent = `${cards.length} rounds: ${cards.join(' ')}`;
+  const ex = (w) => Game.roundScore(2, w, c);
+  $('#miss-hint').textContent = `Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`;
+}
+
 function renderLobby(me) {
   const box = $('#lobby-seats');
   box.innerHTML = '';
+  const boss = amHost();
   ST.seats.forEach((s, i) => {
+    const isCap = s.id === ST.captainId;
+    const isFirst = ST.firstDealerId ? ST.firstDealerId === s.id : i === 0;
     const row = document.createElement('div');
-    row.className = 'seat-item' + (i === me ? ' me' : '') + (s.online ? '' : ' off');
-    row.innerHTML = `<span class="seat">${i + 1}</span><span class="nm"></span><span class="dotstat"></span>`;
+    row.className = 'seat-item' + (i === me ? ' me' : '') + (s.online ? '' : ' off') +
+      (isFirst ? ' first-dealer' : '');
+    row.innerHTML = `<span class="seat">${i + 1}</span><span class="nm"></span>` +
+      (isCap ? '<span class="badge">host</span>' : '') +
+      (isFirst ? '<span class="badge soft">deals first</span>' : '') +
+      '<span class="dotstat"></span>' +
+      (boss ? `<button class="mini" data-a="cap" title="Make this player the table host" aria-pressed="${isCap}">★</button>` +
+              `<button class="mini d" data-a="deal" title="Deals the first round" aria-pressed="${isFirst}">🂠</button>` +
+              '<button class="mini" data-a="up" title="Move up">↑</button>' +
+              '<button class="mini" data-a="down" title="Move down">↓</button>' +
+              (i === me ? '' : '<button class="mini x" data-a="kick" title="Remove">×</button>') : '');
     row.querySelector('.nm').textContent = s.name + (i === me ? ' (you)' : '');
+    row.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+      const a = b.dataset.a;
+      if (a === 'kick') Net.send({ t: 'kick', id: s.id });
+      else if (a === 'cap') Net.send({ t: 'captain', id: s.id });
+      else if (a === 'deal') Net.send({ t: 'config', patch: { firstDealer: isFirst ? null : s.id } });
+      else Net.send({ t: 'seatMove', id: s.id, dir: a });
+    }));
     box.appendChild(row);
   });
+
+  const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
+  $('#lobby-title').textContent = boss ? 'Set the table' : 'Waiting for the table host';
   $('#lobby-hint').textContent = ST.seats.length < 2
     ? 'Waiting for more players…'
-    : 'The host starts the game when everybody is seated.';
+    : (boss ? 'Start the game when everybody is seated.' : `${capName} starts the game when everybody is seated.`);
 }
 
 function renderRound(r, me) {
@@ -318,5 +373,19 @@ document.addEventListener('DOMContentLoaded', () => {
   UI.wireFullscreen('#btn-full');
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
   $('#btn-bum').addEventListener('click', () => Net.send({ t: 'bumdeal' }));
+
+  const patch = (p) => Net.send({ t: 'config', patch: p });
+  $('#cfg-max').addEventListener('change', (e) => patch({ max: e.target.value }));
+  $('#cfg-ones').addEventListener('change', (e) => patch({ ones: e.target.value }));
+  $('#cfg-pattern').addEventListener('change', (e) => patch({ pattern: e.target.value }));
+  $('#cfg-bonus').addEventListener('change', (e) => patch({ bonus: e.target.value }));
+  $('#cfg-miss').addEventListener('change', (e) => patch({ miss: e.target.value }));
+  $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
+  $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
+  $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
+  $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
+  $('#btn-reset').addEventListener('click', () => {
+    if (confirm('New game with the same players? The scorecard is deleted.')) Net.send({ t: 'reset' });
+  });
   boot();
 });

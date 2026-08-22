@@ -74,11 +74,26 @@ function client(name) {
   ok(dupe.errors.some(e => /taken/.test(e)), 'duplicate name is refused');
 
   // rules: 2 cards down to 1, three 1-card rounds => 2,1,1,1
-  host.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 3 } }); await wait(120);
+  P[0].send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 3 } }); await wait(120);
   ok(JSON.stringify(Game_schedule(host.state.cfg)) === '[2,1,1,1]', 'schedule is 2,1,1,1');
 
-  P[0].send({ t: 'start' }); await wait(120);
-  ok(P[0].errors.some(e => /only the host/.test(e)), 'a player cannot start the game');
+  // the first player to sit down runs the table
+  ok(host.state.captainId === P[0].seatId, 'the first player to sit down is the table host');
+  P[1].send({ t: 'start' }); await wait(120);
+  ok(P[1].errors.some(e => /only the table host/.test(e)), 'another player cannot start the game');
+  P[1].errors.length = 0;
+  P[1].send({ t: 'config', patch: { max: 9 } }); await wait(100);
+  ok(P[1].errors.some(e => /only the table host/.test(e)), 'and cannot change the rules');
+
+  P[0].send({ t: 'captain', id: P[2].seatId }); await wait(120);
+  ok(host.state.captainId === P[2].seatId, 'the table host can pass it on');
+  P[1].send({ t: 'captain', id: P[1].seatId }); await wait(100);
+  ok(host.state.captainId === P[2].seatId, 'a player cannot take it for themselves');
+  host.send({ t: 'captain', id: P[0].seatId }); await wait(120);
+  ok(host.state.captainId === P[0].seatId, 'the host screen can hand it back');
+
+  P[0].send({ t: 'config', patch: { max: 2 } }); await wait(100);
+  ok(host.state.cfg.max === 2, 'the table host can change the rules');
 
   // pick who deals the first round, then put it back for the rest of this game
   host.send({ t: 'config', patch: { firstDealer: P[2].seatId } }); await wait(120);
@@ -212,6 +227,39 @@ function client(name) {
     h2.send({ t: 'reset' }); await wait(100);
     h2.send({ t: 'kick', id: seats[1].seatId }); await wait(120);
     ok(h2.state.firstDealerId === null, 'removing the chosen dealer clears the choice');
+  }
+
+  // ---- a table with no host screen at all ----
+  {
+    const seats = [];
+    let code3 = null;
+    for (const nm of ['Dot', 'Eve']) {
+      const c = client(nm); await c.ready;
+      if (!code3) {                                   // the first one needs a room
+        const h3 = client('host3'); await h3.ready;
+        h3.send({ t: 'create' }); await wait(120);
+        code3 = h3.hello.code;
+        h3.ws.close(); await wait(120);               // the host screen walks away
+      }
+      c.send({ t: 'join', code: code3, name: nm }); await wait(120);
+      seats.push(c);
+    }
+    seats[0].send({ t: 'config', patch: { max: 1, pattern: 'down', ones: 2 } }); await wait(120);
+    seats[0].send({ t: 'start' }); await wait(150);
+    ok(seats[0].state.phase === 'bid' && seats[0].state.rounds.length === 2,
+       'the table host starts a game with no host screen');
+    const r = seats[0].state.rounds[0];
+    const first = seats[0].state.turn;
+    seats[first].send({ t: 'bid', v: 1 }); await wait(110);
+    // one card, one bid of 1: screw the dealer leaves the dealer only 1
+    seats[seats[0].state.turn].send({ t: 'bid', v: 1 }); await wait(120);
+    ok(seats[0].state.phase === 'tricks', 'and the bidding runs without one');
+    seats[r.dealer].send({ t: 'tricks', values: [1, 0] }); await wait(140);
+    ok(seats[0].state.idx === 1, 'and the round scores');
+    seats[0].send({ t: 'undo' }); await wait(120);
+    ok(seats[0].state.idx === 0 && seats[0].state.phase === 'tricks', 'the table host can go back');
+    seats[0].send({ t: 'reset' }); await wait(120);
+    ok(seats[0].state.phase === 'lobby', 'and can call a new game');
   }
 
   console.log(fails ? `\n${fails} FAILURES` : '\nall integration checks passed');

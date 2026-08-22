@@ -25,23 +25,27 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 ### How a game runs
 
+**The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, go back, and new game. They can hand that over with the ★ button beside any player. So a game needs no host screen at all — but a host screen is still nice on a TV, and it has the same powers.
+
 1. The host opens the host screen. The server makes a 4-character table code and shows a QR code with the join address. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker under the code chooses which one goes in the QR code.
 2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can move a player up or down, or remove one, until the game starts.
-3. The host taps 🂠 beside a player to say who deals the first round. Without a choice, seat 1 deals. The deal then moves on one seat each round.
-4. The host sets the rules and presses **Start game**. Nobody can join after that.
+3. The table host taps 🂠 beside a player to say who deals the first round. Without a choice, seat 1 deals. The deal then moves on one seat each round. ★ passes the table host badge to another player.
+4. The table host sets the rules and presses **Start game**. Nobody can join after that.
 5. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
 6. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
 7. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the host screen marks the bid that can still change. Once the next player bids, the change is refused.
 8. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The host screen can enter them too, if the dealer's phone is not handy.
 9. The round scores, the next round opens, and the deal moves on one seat.
-10. The host can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
+10. The table host, or the host screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
 
 ### Bum deal
 
 If the cards were dealt wrong, throw the hand in and deal it again. The round keeps the same dealer and hand size, and the bids, tricks, and trump are cleared. The round label then shows `re-deal 1`.
 
-- The **dealer** or the **host** re-deals on their own.
-- Any other player calls a bum deal and the table votes. Every player must agree. One "no" ends it, and the player who called it can take it back. The host can also force the re-deal from the host screen.
+- The **dealer** or the **table host** re-deals on their own.
+- Any other player calls a bum deal and the table votes. Every player must agree. One "no" ends it, and the player who called it can take it back. The table host, or the host screen, can also force the re-deal.
+
+If the table host leaves the table, the badge moves to the first seat.
 
 ### Host screen
 

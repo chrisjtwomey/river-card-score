@@ -165,8 +165,10 @@ function renderLobby() {
   $('#seat-count').textContent = `${n} player${n === 1 ? '' : 's'}`;
   $('#lobby-wait').hidden = n >= 2;
   const fd = ST.seats.find((s) => s.id === ST.firstDealerId) || ST.seats[0];
+  const capSeat = ST.seats.find((s) => s.id === ST.captainId);
   $('#first-dealer-hint').textContent = fd
-    ? `${fd.name} deals the first round. Tap 🂠 beside a player to change it.`
+    ? `${fd.name} deals the first round. Tap 🂠 beside a player to change it.` +
+      (capSeat ? ` ${capSeat.name} runs the table from their phone: tap ★ to pass that on.` : '')
     : '';
   $('#btn-start').disabled = n < 2;
   $('#btn-start').textContent = n < 2 ? 'Waiting for players…' : `Start game with ${n} players`;
@@ -175,11 +177,15 @@ function renderLobby() {
   list.innerHTML = '';
   ST.seats.forEach((s, i) => {
     const isFirst = ST.firstDealerId ? ST.firstDealerId === s.id : i === 0;
+    const isCap = s.id === ST.captainId;
     const row = document.createElement('div');
     row.className = 'seat-item' + (s.online ? '' : ' off') + (isFirst ? ' first-dealer' : '');
     row.innerHTML = `<span class="seat">${i + 1}</span><span class="nm"></span>` +
-      (isFirst ? '<span class="badge">deals first</span>' : '') +
+      (isCap ? '<span class="badge">host</span>' : '') +
+      (isFirst ? '<span class="badge soft">deals first</span>' : '') +
       `<span class="dotstat" title="${s.online ? 'connected' : 'not connected'}"></span>` +
+      `<button class="mini" data-a="cap" title="Make this player the table host" ` +
+        `aria-pressed="${isCap}">★</button>` +
       `<button class="mini d" data-a="deal" title="This player deals the first round" ` +
         `aria-pressed="${isFirst}">🂠</button>` +
       `<button class="mini" data-a="up" title="Move up">↑</button>` +
@@ -189,6 +195,7 @@ function renderLobby() {
     row.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       const a = b.dataset.a;
       if (a === 'kick') Net.send({ t: 'kick', id: s.id });
+      else if (a === 'cap') Net.send({ t: 'captain', id: s.id });
       else if (a === 'deal') Net.send({ t: 'config', patch: { firstDealer: isFirst ? null : s.id } });
       else Net.send({ t: 'seatMove', id: s.id, dir: a });
     }));

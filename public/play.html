@@ -26,9 +26,65 @@
 
 <main>
   <section class="panel" id="lobby" hidden>
-    <h2>Waiting for the host</h2>
-    <p class="hint" id="lobby-hint">The host starts the game when everybody is seated.</p>
+    <h2 id="lobby-title">Waiting for the table host</h2>
+    <p class="hint" id="lobby-hint">The table host starts the game when everybody is seated.</p>
     <div class="seatlist" id="lobby-seats"></div>
+  </section>
+
+  <!-- shown only to the player who runs the table -->
+  <section class="panel captain-panel" id="captain-panel" hidden>
+    <div class="entry-head">
+      <h2>You run this table</h2>
+      <span class="tally gold">table host</span>
+    </div>
+
+    <div id="cap-lobby" hidden>
+      <p class="hint">Tap ★ to hand the table over, 🂠 to say who deals first, ↑ ↓ to reorder, × to remove.</p>
+      <details class="capset">
+        <summary>Rules</summary>
+        <div class="grid2">
+          <label class="field"><span>Biggest hand</span><input type="number" id="cfg-max" min="1" max="13"></label>
+          <label class="field"><span>Rounds of 1 card</span><input type="number" id="cfg-ones" min="1" max="8"></label>
+        </div>
+        <label class="field"><span>Round pattern</span>
+          <select id="cfg-pattern">
+            <option value="downup">Down then up</option>
+            <option value="updown">Up then down</option>
+            <option value="down">Down only</option>
+            <option value="up">Up only</option>
+          </select>
+          <small id="rounds-hint"></small>
+        </label>
+        <label class="field"><span>Exact bid pays</span>
+          <select id="cfg-bonus">
+            <option value="10">10 + tricks won</option>
+            <option value="5">5 + tricks won</option>
+            <option value="1">1 + tricks won</option>
+            <option value="0">tricks won only</option>
+          </select>
+        </label>
+        <label class="field"><span>Missed bid pays</span>
+          <select id="cfg-miss">
+            <option value="atleast">must make the bid: over pays tricks, short pays 0</option>
+            <option value="atleastdiff">must make the bid: short pays minus 1 each</option>
+            <option value="zero">0 points</option>
+            <option value="diff">minus 1 per trick off</option>
+            <option value="tricks">tricks won only</option>
+          </select>
+          <small id="miss-hint"></small>
+        </label>
+        <div class="toggles">
+          <label class="switch"><input type="checkbox" id="cfg-screw"><span>Screw the dealer</span></label>
+          <label class="switch"><input type="checkbox" id="cfg-trump"><span>Record the trump suit</span></label>
+        </div>
+      </details>
+      <button class="btn primary big" id="btn-start" type="button" disabled>Start game</button>
+    </div>
+
+    <div id="cap-game" class="row-actions" hidden>
+      <button class="btn ghost" id="btn-undo" type="button">Go back</button>
+      <button class="btn ghost danger" id="btn-reset" type="button">New game</button>
+    </div>
   </section>
 
   <section id="game" hidden>
