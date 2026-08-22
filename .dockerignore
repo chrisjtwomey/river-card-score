@@ -1,0 +1,9 @@
+node_modules
+certs
+.git
+.gitignore
+test.js
+README.md
+Dockerfile
+compose.yaml
+.dockerignore

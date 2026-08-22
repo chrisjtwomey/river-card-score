@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Up the River, Down the River</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="pip">♠</span>
+    <div>
+      <h1>Up the River, Down the River</h1>
+      <p class="sub">Join a table</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn ghost" id="btn-full" type="button" title="Full screen">⛶</button>
+    <button class="btn ghost" id="btn-theme" type="button" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel" id="rejoin-panel" hidden>
+    <h2>You are in a game</h2>
+    <p class="hint" id="rejoin-text"></p>
+    <div class="row-actions">
+      <button class="btn primary" id="btn-rejoin" type="button">Rejoin</button>
+      <button class="btn ghost danger" id="btn-forget" type="button">Leave</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Join a table</h2>
+    <label class="field">
+      <span>Table code</span>
+      <input type="text" id="in-code" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="4F2K" class="code-input">
+    </label>
+    <label class="field">
+      <span>Your name</span>
+      <input type="text" id="in-name" maxlength="16" autocomplete="nickname" placeholder="Chris">
+    </label>
+    <button class="btn primary big" id="btn-join" type="button">Take a seat</button>
+    <p class="err" id="join-err" hidden></p>
+  </section>
+
+  <section class="panel">
+    <h2>Run the table</h2>
+    <p class="hint">Open the host screen on a laptop or a TV. It shows the code, the scorecard, and whose turn it is.</p>
+    <a class="btn" href="host.html">Start a table</a>
+  </section>
+
+  <p class="hint center"><a href="local.html">Single-device tracker (no server)</a></p>
+</main>
+
+<script src="net.js"></script>
+<script src="ui.js"></script>
+<script src="join.js"></script>
+</body>
+</html>

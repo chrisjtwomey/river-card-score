@@ -1,0 +1,17 @@
+services:
+  table:
+    build: .
+    image: river-card-score
+    container_name: river-card-score
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      # A container cannot see the address the phones use, so name it here.
+      # Put the address of the machine that runs Docker.
+      PUBLIC_URL: "${PUBLIC_URL:-http://localhost:8787}"
+      PORT: "8787"
+      # NO_TLS: "1"     # force plain http even when certs are mounted
+    volumes:
+      # Optional https. Run "npm run cert" on the host first, or delete this.
+      - ./certs:/app/certs:ro

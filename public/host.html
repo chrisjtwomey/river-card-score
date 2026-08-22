@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Table host — Up the River, Down the River</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="host">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="pip">♠</span>
+    <div>
+      <h1>Up the River, Down the River</h1>
+      <p class="sub" id="subtitle">Host screen</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span class="netpill" id="netpill" hidden>reconnecting…</span>
+    <span class="netpill" id="awakepill" hidden></span>
+    <button class="btn ghost" id="btn-deal" type="button" title="Play the deal animation" hidden>🂠</button>
+    <span class="zoomer">
+      <button class="btn ghost" id="zoom-out" type="button" title="Smaller">A−</button>
+      <span id="zoom-label">100%</span>
+      <button class="btn ghost" id="zoom-in" type="button" title="Bigger">A+</button>
+    </span>
+    <button class="btn ghost" id="btn-full" type="button" title="Full screen">⛶</button>
+    <button class="btn ghost" id="btn-theme" type="button" title="Toggle theme">◐</button>
+    <button class="btn ghost danger" id="btn-reset" type="button" hidden>New game</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ LOBBY ============ -->
+  <section id="lobby" hidden>
+    <div class="panel join-panel">
+      <h2>Players join here</h2>
+      <div class="joinrow">
+        <div class="qrbox"><img id="qr" alt="QR code with the join address"></div>
+        <div class="joinside">
+          <div class="code-badge" id="code-badge">····</div>
+          <p class="joinurl">or open <b id="join-url">…</b></p>
+          <label class="field" id="addr-field" hidden>
+            <span>Address in the QR code</span>
+            <select id="addr-pick"></select>
+          </label>
+        </div>
+      </div>
+      <p class="hint">Point a phone camera at the code. The phone must be on the same network as this machine.</p>
+      <p class="err" id="qr-err" hidden>The QR code needs the newer server. Stop it and run <b>npm start</b> again.</p>
+    </div>
+
+    <div class="panel">
+      <div class="entry-head">
+        <h2>At the table</h2>
+        <span class="tally" id="seat-count">0 players</span>
+      </div>
+      <p class="hint">The order below is the order of play. Bidding starts left of the dealer.</p>
+      <p class="hint" id="first-dealer-hint"></p>
+      <div class="seatlist" id="seatlist"></div>
+      <p class="hint" id="lobby-wait">Waiting for players…</p>
+    </div>
+
+    <div class="panel">
+      <h2>Rules</h2>
+      <div class="grid2">
+        <label class="field">
+          <span>Biggest hand (cards)</span>
+          <input type="number" id="cfg-max" min="1" max="13">
+          <small id="max-hint"></small>
+        </label>
+        <label class="field">
+          <span>Rounds of 1 card</span>
+          <input type="number" id="cfg-ones" min="1" max="8">
+          <small>One per player, so everybody deals it.</small>
+        </label>
+      </div>
+      <label class="field">
+        <span>Round pattern</span>
+        <select id="cfg-pattern">
+          <option value="downup">Down then up</option>
+          <option value="updown">Up then down</option>
+          <option value="down">Down only</option>
+          <option value="up">Up only</option>
+        </select>
+        <small id="rounds-hint"></small>
+      </label>
+      <div class="grid2">
+        <label class="field">
+          <span>Exact bid pays</span>
+          <select id="cfg-bonus">
+            <option value="10">10 + tricks won</option>
+            <option value="5">5 + tricks won</option>
+            <option value="1">1 + tricks won</option>
+            <option value="0">tricks won only</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Missed bid pays</span>
+          <select id="cfg-miss">
+            <option value="atleast">must make the bid: over pays tricks won, short pays 0</option>
+            <option value="atleastdiff">must make the bid: over pays tricks won, short pays minus 1 each</option>
+            <option value="zero">0 points</option>
+            <option value="diff">minus 1 per trick off</option>
+            <option value="tricks">tricks won only</option>
+          </select>
+          <small id="miss-hint"></small>
+        </label>
+      </div>
+      <div class="toggles">
+        <label class="switch"><input type="checkbox" id="cfg-screw"><span>Screw the dealer (bids must not total the tricks)</span></label>
+        <label class="switch"><input type="checkbox" id="cfg-trump"><span>Record the trump suit each round</span></label>
+      </div>
+      <button class="btn primary big" id="btn-start" type="button" disabled>Start game</button>
+    </div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="game" hidden>
+    <div class="panel round-bar">
+      <div class="round-head">
+        <div>
+          <div class="eyebrow" id="round-label">Round</div>
+          <div class="cards-big"><span id="round-cards">·</span> <span class="unit">cards</span></div>
+        </div>
+        <div class="round-meta">
+          <div><span class="k">Dealer</span> <span id="round-dealer">—</span></div>
+          <div><span class="k">Table</span> <span id="code-small">—</span></div>
+        </div>
+      </div>
+      <div class="dots" id="round-dots"></div>
+      <div class="trump-bar" id="trump-row">
+        <div class="trump-label">
+          <span class="k">Trump suit</span>
+          <span class="trump-now" id="trump-now">Turn the top card</span>
+        </div>
+        <div class="trumps" id="trump-picker"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="entry-head">
+        <h2 id="turn-title">Bidding</h2>
+        <span class="tally" id="turn-tally"></span>
+      </div>
+      <div class="bidstrip" id="bidstrip"></div>
+      <p class="hint" id="turn-hint"></p>
+      <div id="host-tricks" hidden>
+        <div class="entry-rows" id="trick-rows"></div>
+        <div class="entry-actions">
+          <button class="btn primary" id="btn-tricks" type="button" disabled>Score the round</button>
+        </div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn ghost" id="btn-bum" type="button" title="Throw the hand in and deal it again">Bum deal</button>
+        <button class="btn ghost" id="btn-undo" type="button">Go back</button>
+      </div>
+      <div class="votebox" id="votebox" hidden>
+        <div class="vote-text" id="vote-text">…</div>
+        <div class="row-actions">
+          <button class="btn primary" id="btn-vote-do" type="button">Deal again now</button>
+          <button class="btn ghost" id="btn-vote-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+      <p class="err" id="host-err" hidden></p>
+    </div>
+
+    <div class="panel winner-panel" id="winner-panel" hidden>
+      <h2 id="winner-title">Game over</h2>
+      <div id="winner-list" class="winner-list"></div>
+    </div>
+
+    <div class="panel standings-panel">
+      <h2>Standings</h2>
+      <div class="standings" id="standings"></div>
+    </div>
+
+    <div class="panel scorecard-panel">
+      <h2>Scorecard</h2>
+      <div class="table-wrap"><table id="scorecard"></table></div>
+    </div>
+  </section>
+</main>
+
+<script src="/game.js"></script>
+<script src="net.js"></script>
+<script src="ui.js"></script>
+<script src="deal.js"></script>
+<script src="table.js"></script>
+<script src="host.js"></script>
+</body>
+</html>

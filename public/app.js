@@ -212,175 +212,12 @@ function newGame(cfg) {
 }
 
 /* ============================================================
-   DEAL ANIMATION — a card flies to each seat, then a flourish
+   DEAL ANIMATION — see deal.js, shared with the host screen
    ============================================================ */
 
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-
-function shuffledFaces(n) {
-  const deck = [];
-  SUITS.filter((s) => s.k !== 'NT').forEach((s) => RANKS.forEach((r) => deck.push({ r, s })));
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
-  }
-  return deck.slice(0, n);
-}
-
-function cardEl(face, cls) {
-  const el = document.createElement('div');
-  el.className = 'dcard' + (cls ? ' ' + cls : '');
-  const front = document.createElement('div');
-  front.className = 'face front' + (face && face.s.red ? ' red' : '');
-  if (face) {
-    front.innerHTML = '<span class="r"></span><span class="big"></span>';
-    front.querySelector('.r').textContent = face.r;
-    front.querySelector('.big').textContent = face.s.g;
-  }
-  const back = document.createElement('div');
-  back.className = 'face back';
-  el.append(front, back);
-  return el;
-}
-
-// Resolves when the overlay is gone. A tap, a click, or a key skips to the end.
-// 'full' | 'reduced' | 'off'.  ?motion=full in the URL wins and is remembered.
-function motionMode() {
-  let saved = null;
-  try { saved = localStorage.getItem(KEY_MOTION); } catch (e) {}
-  const q = new URLSearchParams(window.location.search).get('motion');
-  if (q === 'full' || q === 'reduced' || q === 'off') {
-    saved = q;
-    try { localStorage.setItem(KEY_MOTION, q); } catch (e) {}
-  }
-  if (saved) return saved;
-  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  return reduce ? 'reduced' : 'full';
-}
-
 function dealAnimation(force) {
-  return new Promise((resolve) => {
-    const overlay = $('#deal');
-    const stage = $('#deal-stage');
-    const mode = force || motionMode();
-    if (!overlay || !stage || !stage.animate) {
-      console.warn('[deal] skipped: the overlay or the Web Animations API is missing');
-      resolve(); return;
-    }
-    if (mode === 'off') { console.info('[deal] skipped: motion is off'); resolve(); return; }
-    const calm = mode === 'reduced';
-    if (calm) {
-      console.info('[deal] short version: this device asks for reduced motion. ' +
-        'Add ?motion=full to the URL for the full deal, or run playDeal().');
-    }
-
-    const cfg = S.cfg, n = cfg.names.length, r0 = S.rounds[0];
-    stage.innerHTML = '';
-    overlay.hidden = false;
-
-    const W = overlay.clientWidth, H = overlay.clientHeight;
-    const rx = Math.min(W * 0.33, 250), ry = Math.min(H * 0.27, 160);
-    const seat = (p) => {                       // seat 0 sits at the bottom
-      const a = (Math.PI / 2) + (p * 2 * Math.PI / n);
-      return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
-    };
-
-    const T = calm
-      ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
-      : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280 };
-    const anims = [], timers = [];
-    let ended = false;
-
-    // the deck, face down in the middle
-    for (let i = 0; i < 3; i++) {
-      const d = cardEl(null, 'deck');
-      d.style.transform = `translate3d(0,0,0) rotate(${(i - 1) * 4}deg) rotateY(180deg)`;
-      stage.appendChild(d);
-      const rest = `translate3d(0,0,0) rotate(${(i - 1) * 4}deg) rotateY(180deg)`;
-      anims.push(d.animate(
-        calm
-          ? [{ transform: rest, opacity: 0 }, { transform: rest, opacity: 1 }]
-          : [{ transform: rest + ' scale(.5)', opacity: 0 }, { transform: rest + ' scale(1)', opacity: 1 }],
-        { duration: T.deckPop, delay: i * 40, easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.4)', fill: 'both' }
-      ));
-    }
-
-    // one card per player, in dealing order: left of the dealer first
-    const faces = shuffledFaces(n);
-    for (let step = 1; step <= n; step++) {
-      const p = (r0.dealer + step) % n;
-      const { x, y } = seat(p);
-      const tilt = (x / (rx || 1)) * 9;
-      const delay = T.start + (step - 1) * T.gap;
-
-      const card = cardEl(faces[step - 1]);
-      card.style.opacity = '0';
-      stage.appendChild(card);
-      const landed = `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(0deg) scale(1)`;
-      anims.push(card.animate(
-        calm
-          ? [{ transform: landed, opacity: 0 }, { transform: landed, opacity: 1 }]
-          : [{ transform: 'translate3d(0,0,0) rotate(0deg) rotateY(180deg) scale(.9)', opacity: 1, offset: 0 },
-             { transform: `translate3d(${x * 0.55}px,${y * 0.55 - 26}px,0) rotate(${tilt * 0.6}deg) rotateY(90deg) scale(1.06)`, opacity: 1, offset: .55 },
-             { transform: landed, opacity: 1, offset: 1 }],
-        { duration: T.fly, delay, easing: calm ? 'ease-out' : 'cubic-bezier(.25,.8,.3,1)', fill: 'both' }
-      ));
-
-      const name = document.createElement('div');
-      name.className = 'dname';
-      name.textContent = cfg.names[p];
-      name.style.left = `calc(50% + ${x}px)`;
-      name.style.top = `calc(50% + ${y + 56}px)`;
-      stage.appendChild(name);
-      anims.push(name.animate(
-        [{ opacity: 0, transform: 'translate(-50%,6px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
-        { duration: 220, delay: delay + T.fly - 120, easing: 'ease-out', fill: 'both' }
-      ));
-    }
-
-    // flourish: the top of the deck turns over
-    const dealEnd = T.start + (n - 1) * T.gap + T.fly;
-    const hero = cardEl(null, 'hero');
-    hero.querySelector('.front').innerHTML =
-      '<div class="quad"><span>♠</span><span>♥</span><span>♦</span><span>♣</span></div>';
-    hero.style.transform = calm ? 'rotateY(0deg)' : 'rotateY(180deg)';
-    stage.appendChild(hero);
-    anims.push(hero.animate(
-      calm
-        ? [{ transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)', opacity: 0 },
-           { transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)', opacity: 1 }]
-        : [{ transform: 'translate3d(0,0,0) rotateY(180deg) scale(.8)' },
-           { transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)' }],
-      { duration: T.flip, delay: dealEnd + 140, easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }
-    ));
-
-    const cap = document.createElement('div');
-    cap.className = 'deal-cap';
-    cap.textContent = `Round 1 · ${r0.cards} card${r0.cards === 1 ? '' : 's'} · ${cfg.names[r0.dealer]} deals`;
-    cap.style.top = 'calc(50% + 86px)';
-    stage.appendChild(cap);
-    anims.push(cap.animate(
-      [{ opacity: 0, transform: 'translate(-50%,8px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
-      { duration: 260, delay: dealEnd + 260, easing: 'ease-out', fill: 'both' }
-    ));
-
-    anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
-
-    function finish() {
-      if (ended) return;
-      ended = true;
-      timers.forEach(clearTimeout);
-      overlay.removeEventListener('pointerdown', skip);
-      window.removeEventListener('keydown', skip);
-      const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
-      out.onfinish = () => { overlay.hidden = true; stage.innerHTML = ''; resolve(); };
-    }
-    function skip() { anims.forEach((a) => { try { a.finish(); } catch (e) {} }); finish(); }
-
-    overlay.addEventListener('pointerdown', skip);
-    window.addEventListener('keydown', skip);
-    timers.push(setTimeout(finish, dealEnd + 140 + T.flip + T.hold));
-  });
+  const r0 = S.rounds[0];
+  return Deal.play({ names: S.cfg.names, dealer: r0.dealer, cards: r0.cards, round: 1 }, force);
 }
 
 /* ============================================================
@@ -511,7 +348,7 @@ function renderEntry() {
   $('#entry-hint').textContent = bidding
     ? `${cfg.names[(r.dealer + 1) % n]} bids first. ${cfg.names[r.dealer]} deals and bids last.`
       + (cfg.screw ? ` The bids must not total ${r.cards}.` : '')
-    : `Enter the tricks each player won. They must total ${r.cards}.`;
+    : `Everybody starts on 0. Tap only the players who won tricks. They must total ${r.cards}.`;
 
   // tally pill
   const pill = $('#entry-tally');
@@ -523,7 +360,7 @@ function renderEntry() {
     pill.textContent = txt;
     pill.className = 'tally' + (blocked ? ' bad' : (allIn ? ' ok' : ''));
   } else {
-    pill.textContent = `Tricks ${sum} of ${r.cards}`;
+    pill.textContent = sum === r.cards ? `Tricks ${sum} of ${r.cards}` : `${r.cards - sum} of ${r.cards} tricks still to give`;
     pill.className = 'tally' + (allIn && sum === r.cards ? ' ok' : (sum > r.cards ? ' bad' : ''));
   }
 
@@ -557,6 +394,7 @@ function renderEntry() {
 
     const chips = document.createElement('div');
     chips.className = 'chips';
+    const others = S.draft.reduce((a, v, i) => a + (i === p ? 0 : (v || 0)), 0);
     for (let v = 0; v <= r.cards; v++) {
       const c = document.createElement('button');
       c.type = 'button';
@@ -564,8 +402,9 @@ function renderEntry() {
       c.textContent = v;
       c.setAttribute('aria-pressed', String(S.draft[p] === v));
       if (v === forbidden) { c.disabled = true; c.title = 'Screw the dealer: this bid is not allowed'; }
+      if (!bidding && others + v > r.cards) { c.disabled = true; c.title = `Only ${r.cards - others} tricks are left`; }
       c.addEventListener('click', () => {
-        S.draft[p] = (S.draft[p] === v) ? null : v;
+        S.draft[p] = (S.draft[p] === v) ? (bidding ? null : 0) : v;
         save(); renderEntry();
       });
       chips.appendChild(c);
@@ -619,9 +458,25 @@ function renderScorecard() {
   html += '</tr></tfoot>';
   tbl.innerHTML = html;
 
+  followCurrentRow();
   tbl.querySelectorAll('tr.editable').forEach((tr) => {
     tr.addEventListener('click', () => editRound(Number(tr.dataset.round)));
   });
+}
+
+// Keeps the round in play in view inside the scorecard box.
+function followCurrentRow() {
+  const table = $('#scorecard');
+  const box = table && table.closest('.table-wrap');
+  const row = table && (table.querySelector('tbody tr.current') || table.querySelector('tbody tr:last-child'));
+  if (!box || !row) return;
+  const head = table.querySelector('thead');
+  const headH = head ? head.getBoundingClientRect().height : 0;
+  const target = row.offsetTop - headH - (box.clientHeight - row.offsetHeight - headH) / 2;
+  const top = Math.max(0, Math.min(target, box.scrollHeight - box.clientHeight));
+  if (Math.abs(box.scrollTop - top) < 2) return;
+  if (box.scrollTo) box.scrollTo({ top, behavior: 'smooth' });
+  else box.scrollTop = top;
 }
 
 function renderWinner() {
@@ -658,7 +513,8 @@ function commit() {
   if (S.phase === 'bid') {
     r.bids = S.draft.slice();
     S.phase = 'play';
-    S.draft = r.tricks ? r.tricks.slice() : S.cfg.names.map(() => null);
+    // Tricks start at 0, so only the winners need a tap.
+    S.draft = r.tricks ? r.tricks.slice() : S.cfg.names.map(() => 0);
   } else {
     r.tricks = S.draft.slice();
     if (S.editReturn !== null) {
@@ -691,7 +547,7 @@ function back() {
   } else if (S.idx > 0) {
     S.idx -= 1;
     S.phase = 'play';
-    S.draft = S.rounds[S.idx].tricks ? S.rounds[S.idx].tricks.slice() : S.cfg.names.map(() => null);
+    S.draft = S.rounds[S.idx].tricks ? S.rounds[S.idx].tricks.slice() : S.cfg.names.map(() => 0);
   }
   save(); render();
 }
@@ -719,6 +575,7 @@ function confirmAsk(title, body) {
 /* ---------- wiring ---------- */
 
 function init() {
+  UI.wireFullscreen('#btn-full');
   initTheme();
 
   const seats = loadSeats();
@@ -764,6 +621,6 @@ function init() {
 
 // Debug handle: playDeal() forces the full deal, playDeal('reduced') the short one.
 window.playDeal = (mode) => (S ? dealAnimation(mode || 'full') : Promise.resolve(console.warn('[deal] start a game first')));
-window.motionMode = motionMode;
+window.motionMode = Deal.mode;
 
 document.addEventListener('DOMContentLoaded', init);

@@ -19,6 +19,7 @@
   </div>
   <div class="topbar-actions">
     <button class="btn ghost" id="btn-rules" type="button">Rules</button>
+    <button class="btn ghost" id="btn-full" type="button" title="Full screen">⛶</button>
     <button class="btn ghost" id="btn-theme" type="button" title="Toggle theme">◐</button>
     <button class="btn ghost danger" id="btn-new" type="button" hidden>New game</button>
   </div>
@@ -150,11 +151,6 @@
   </section>
 </main>
 
-<div class="deal" id="deal" hidden aria-hidden="true">
-  <div class="deal-stage" id="deal-stage"></div>
-  <div class="deal-skip">tap to skip</div>
-</div>
-
 <dialog id="rules-dlg">
   <h2>How the game works</h2>
   <ol class="rules">
@@ -182,6 +178,8 @@
   </form>
 </dialog>
 
+<script src="ui.js"></script>
+<script src="deal.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

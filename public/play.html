@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your hand — Up the River, Down the River</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="pip" id="pip">♠</span>
+    <div>
+      <h1 id="my-name">…</h1>
+      <p class="sub" id="subtitle">Table</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span class="netpill" id="netpill" hidden>reconnecting…</span>
+    <span class="netpill" id="awakepill" hidden></span>
+    <button class="btn ghost" id="btn-full" type="button" title="Full screen">⛶</button>
+    <button class="btn ghost" id="btn-theme" type="button" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel" id="lobby" hidden>
+    <h2>Waiting for the host</h2>
+    <p class="hint" id="lobby-hint">The host starts the game when everybody is seated.</p>
+    <div class="seatlist" id="lobby-seats"></div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="panel round-bar">
+      <div class="round-head">
+        <div>
+          <div class="eyebrow" id="round-label">Round</div>
+          <div class="cards-big"><span id="round-cards">·</span> <span class="unit">cards</span></div>
+        </div>
+        <div class="round-meta">
+          <div><span class="k">Dealer</span> <span id="round-dealer">—</span></div>
+          <div><span class="k">Trump</span> <span id="round-trump">—</span></div>
+        </div>
+      </div>
+      <div class="trump-bar" id="trump-row" hidden>
+        <div class="trump-label">
+          <span class="k">Trump suit</span>
+          <span class="trump-now" id="trump-now">Turn the top card</span>
+        </div>
+        <div class="trumps" id="trump-picker"></div>
+      </div>
+    </div>
+
+    <div class="panel turn-panel" id="turn-panel">
+      <div class="turnbar" id="turnbar">
+        <span class="turn-eyebrow" id="turn-eyebrow">Bidding</span>
+        <span class="turn-text" id="turn-text">…</span>
+      </div>
+      <div id="bid-pad" hidden>
+        <div class="chips big-chips" id="bid-chips"></div>
+        <p class="hint" id="bid-hint"></p>
+      </div>
+      <div class="votebox" id="votebox" hidden>
+        <div class="vote-text" id="vote-text">…</div>
+        <div class="row-actions" id="vote-actions"></div>
+      </div>
+      <div class="row-actions bum-row" id="bum-row" hidden>
+        <button class="btn ghost" id="btn-bum" type="button">Call a bum deal</button>
+      </div>
+      <div id="trick-pad" hidden>
+        <div class="entry-rows" id="trick-rows"></div>
+        <button class="btn primary big" id="btn-tricks" type="button" disabled>Score the round</button>
+      </div>
+      <p class="err" id="play-err" hidden></p>
+    </div>
+
+    <div class="panel">
+      <div class="entry-head">
+        <h2>Bids</h2>
+        <span class="tally" id="bid-tally"></span>
+      </div>
+      <div class="bidstrip" id="bidstrip"></div>
+    </div>
+
+    <div class="panel standings-panel">
+      <div class="entry-head">
+        <h2>Standings</h2>
+        <span class="tally" id="my-score"></span>
+      </div>
+      <div class="standings" id="standings"></div>
+    </div>
+
+    <details class="panel scorepanel scorecard-panel">
+      <summary>Scorecard</summary>
+      <div class="table-wrap"><table id="scorecard"></table></div>
+    </details>
+  </section>
+</main>
+
+<script src="/game.js"></script>
+<script src="deal.js"></script>
+<script src="table.js"></script>
+<script src="net.js"></script>
+<script src="ui.js"></script>
+<script src="play.js"></script>
+</body>
+</html>
