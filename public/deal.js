@@ -102,7 +102,7 @@ const Deal = (function () {
         ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
         : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280 };
       const anims = [], timers = [];
-      const labels = [];
+      const labels = [], cardEls = [], landedAt = [];
       const hold = !!(opts && opts.hold);
       let ended = false, settled = false;
 
@@ -130,6 +130,8 @@ const Deal = (function () {
         card.style.opacity = '0';
         stage.appendChild(card);
         const landed = `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(0deg) scale(1)`;
+        cardEls[p] = card;
+        landedAt[p] = landed;
         anims.push(card.animate(
           calm
             ? [{ transform: landed, opacity: 0 }, { transform: landed, opacity: 1 }]
@@ -214,8 +216,14 @@ const Deal = (function () {
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
       const naturalEnd = dealEnd + 140 + T.flip + T.hold + linger;
       if (hold) {
-        timers.push(setTimeout(() => { settled = true; }, naturalEnd - T.hold));
-        live = { finish, labels, status, names, dealer, key: opts.key || null };
+        live = {
+          finish, labels, cards: cardEls, landedAt, status, names, dealer,
+          key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
+        };
+        timers.push(setTimeout(() => {
+          settled = true;
+          if (live) { live.settled = true; applyTurn(); }   // now the cards have landed
+        }, naturalEnd - T.hold));
         if (last && last.key === live.key) update(last);   // re-opened: catch up
       } else {
         timers.push(setTimeout(finish, naturalEnd));
@@ -226,6 +234,28 @@ const Deal = (function () {
   // Closes a held scene, if one is open.
   function close() { if (live) live.finish(); }
   const isOpen = () => !!live;
+
+  // The card of the player to act breathes, so the table can see whose turn it
+  // is from across the room. The landing used the Web Animations API, and that
+  // owns the transform, so this has to be an animation too, not a CSS class.
+  function applyTurn() {
+    if (!live || !live.settled) return;
+    if (live.turnAnim) { try { live.turnAnim.cancel(); } catch (e) {} live.turnAnim = null; }
+    const p = live.turn;
+    const card = (p === null || p === undefined) ? null : live.cards[p];
+    if (!card || live.calm) return;                 // reduced motion: the label is enough
+    // A peek: the card tips up on its edge, settles back, then waits.
+    const at = live.landedAt[p];
+    const rest = 'drop-shadow(0 5px 9px rgba(0,0,0,.45)) drop-shadow(0 0 5px rgba(255,255,255,.22))';
+    const up = 'drop-shadow(0 16px 18px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(255,255,255,.4))';
+    live.turnAnim = card.animate([
+      { transform: at, filter: rest, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
+      { transform: `${at} translateY(-11px) rotateX(-26deg)`, filter: up, offset: 0.13,
+        easing: 'cubic-bezier(.45,0,.55,1)' },
+      { transform: at, filter: rest, offset: 0.30 },
+      { transform: at, filter: rest, offset: 1 },
+    ], { duration: 2800, iterations: Infinity });
+  }
 
   // While the scene is held, show the bids as they arrive.
   function update(o) {
@@ -240,6 +270,8 @@ const Deal = (function () {
       el.classList.toggle('bidin', b !== null && b !== undefined);
     });
     if (live.status) live.status.textContent = (o && o.text) || '';
+    const next = (o && typeof o.turn === 'number') ? o.turn : null;
+    if (next !== live.turn) { live.turn = next; applyTurn(); }
   }
 
   return { play, close, update, isOpen, mode };

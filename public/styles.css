@@ -311,8 +311,11 @@ dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 }
 .dname.bidin{color:#fff}
 .dname.turn{
-  color:var(--gold);
-  text-shadow:0 0 14px rgba(184,134,43,.75), 0 2px 8px rgba(0,0,0,.8);
+  color:#fff;
+  font-size:17px;
+  font-weight:800;
+  letter-spacing:.01em;
+  text-shadow:0 0 16px rgba(255,255,255,.55), 0 2px 10px rgba(0,0,0,.85);
 }
 @media (max-width:420px){
   .dcard{width:52px;height:74px;margin:-37px 0 0 -26px}
