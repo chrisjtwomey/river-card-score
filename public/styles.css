@@ -339,8 +339,17 @@ body.host .toast .note{font-size:19px}
 .dstamp{
   position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;
   display:grid;place-items:center;pointer-events:none;
-  font-size:46px;font-weight:800;line-height:1;color:#f0c878;
-  text-shadow:0 0 20px rgba(240,200,120,.65), 0 3px 12px rgba(0,0,0,.9);
+  font-size:48px;font-weight:900;line-height:1;color:#f6d488;
+  /* the card face under it is white, so the number carries its own dark edge */
+  text-shadow:
+    -1px -1px 0 #10140f, 1px -1px 0 #10140f, -1px 1px 0 #10140f, 1px 1px 0 #10140f,
+    0 -2px 0 #10140f, 0 2px 0 #10140f, -2px 0 0 #10140f, 2px 0 0 #10140f,
+    0 3px 7px rgba(0,0,0,.6), 0 0 10px rgba(246,212,136,.38);
+}
+/* and a soft dark disc behind it, to lift it off the white */
+.dstamp::before{
+  content:'';position:absolute;inset:6px;border-radius:50%;z-index:-1;
+  background:radial-gradient(circle, rgba(9,13,10,.46) 0 34%, rgba(9,13,10,0) 66%);
 }
 .dname.bidin{color:#fff}
 .dname.turn{
