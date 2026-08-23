@@ -122,8 +122,8 @@ function settleAccolades() {
   }
   if (S.awards) return;
   const earned = Accolades.list(S.rounds, S.cfg.names.length, (b, w) => roundScore(b, w, S.cfg));
-  S.awards = Accolades.pick(earned, 3);
-  S.bonus = Accolades.bonus(S.awards, S.cfg.names.length, S.cfg.accolade);
+  S.awards = Accolades.pick(earned, S.cfg.accoladeCount);
+  S.bonus = Accolades.bonus(S.awards, S.cfg.names.length, S.cfg.accoladePay);
   save();
 }
 
@@ -207,7 +207,8 @@ function startGame() {
     miss: $('#cfg-miss').value,
     screw: $('#cfg-screw').checked,
     trump: $('#cfg-trump').checked,
-    accolade: Number($('#cfg-accolade').value),
+    accoladePay: Number($('#cfg-accolade-pay').value),
+    accoladeCount: Number($('#cfg-accolade-count').value),
   };
   S = newGame(cfg);
   save();
@@ -244,7 +245,7 @@ let wasDone = null;
 function finaleAnimation(force) {
   return Deal.finale({
     names: S.cfg.names, totals: totals(),
-    awards: S.awards || [], points: S.cfg.accolade,
+    awards: S.awards || [], points: S.cfg.accoladePay, bonus: S.bonus || [],
   }, force);
 }
 
@@ -539,7 +540,7 @@ function renderWinner() {
   const panel = $('#winner-panel');
   if (!finished()) { panel.hidden = true; return; }
   panel.hidden = false;
-  Accolades.render($('#accolades'), S.awards || [], S.cfg.names, S.cfg.accolade);
+  Accolades.render($('#accolades'), S.awards || [], S.cfg.names, S.cfg.accoladePay);
   const t = totals();
   const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
   const top = order[0].v;

@@ -44,7 +44,8 @@
       screw: true,
       trump: true,
       deck: 'physical',        // 'virtual' deals the cards on the phones
-      accolade: 10,            // what each accolade pays at the end
+      accoladePay: 10,         // what each accolade pays at the end
+      accoladeCount: 3,        // how many are drawn
     };
   }
 

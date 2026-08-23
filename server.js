@@ -336,15 +336,15 @@ function playCard(ws, room, p, card) {
   return broadcast(room);
 }
 
-// The last round is in. Three of the accolades the table earned are drawn at
+// The last round is in. A few of the accolades the table earned are drawn at
 // random and paid, and only then is the winner known.
 function finishGame(room) {
   const n = room.seats.length;
   room.phase = 'done';
   room.idx = room.rounds.length;
   const earned = A.list(room.rounds, n, (b, w) => G.roundScore(b, w, room.cfg));
-  room.awards = A.pick(earned, 3);
-  room.bonus = A.bonus(room.awards, n, room.cfg.accolade);
+  room.awards = A.pick(earned, room.cfg.accoladeCount);
+  room.bonus = A.bonus(room.awards, n, room.cfg.accoladePay);
 }
 
 // Back into play: the accolades are not settled after all.
@@ -739,7 +739,13 @@ function handle(ws, m) {
       if ('screw' in p) c.screw = !!p.screw;
       if ('trump' in p) c.trump = !!p.trump;
       if ('deck' in p && ['physical', 'virtual'].includes(p.deck)) c.deck = p.deck;
-      if ('accolade' in p) c.accolade = [0, 5, 10, 20].includes(Number(p.accolade)) ? Number(p.accolade) : c.accolade;
+      if ('accoladePay' in p) {
+        c.accoladePay = [0, 5, 10, 20].includes(Number(p.accoladePay)) ? Number(p.accoladePay) : c.accoladePay;
+      }
+      if ('accoladeCount' in p) {
+        const k = Math.round(Number(p.accoladeCount));
+        if (Number.isFinite(k) && k >= 0 && k <= 6) c.accoladeCount = k;
+      }
       if ('firstDealer' in p) {
         room.firstDealerId = (p.firstDealer && seatIndex(room, p.firstDealer) >= 0) ? p.firstDealer : null;
       }

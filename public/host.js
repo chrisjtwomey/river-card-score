@@ -140,7 +140,8 @@ function playFinaleNow(mode) {
     names: ST.seats.map((s) => s.name),
     totals: ST.totals,                       // the accolades are already in these
     awards: ST.awards || [],
-    points: ST.cfg.accolade,
+    points: ST.cfg.accoladePay,
+    bonus: ST.bonus || [],
   }, mode);
 }
 
@@ -244,7 +245,8 @@ function renderLobby() {
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
   setVal('#cfg-deck', c.deck || 'physical');
-  setVal('#cfg-accolade', c.accolade === undefined ? 10 : c.accolade);
+  setVal('#cfg-accolade-pay', c.accoladePay === undefined ? 10 : c.accoladePay);
+  setVal('#cfg-accolade-count', c.accoladeCount === undefined ? 3 : c.accoladeCount);
   $('#deck-hint').textContent = c.deck === 'virtual'
     ? 'The server deals to each phone, turns the trump, and counts the tricks.'
     : 'You deal real cards. The dealer types in the tricks at the end of a round.';
@@ -521,7 +523,7 @@ function renderWinner(done) {
   const panel = $('#winner-panel');
   panel.hidden = !done;
   if (!done) return;
-  Accolades.render($('#accolades'), ST.awards || [], ST.seats.map((s) => s.name), ST.cfg.accolade);
+  Accolades.render($('#accolades'), ST.awards || [], ST.seats.map((s) => s.name), ST.cfg.accoladePay);
   const t = ST.totals;
   const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
   const top = order[0].v;
@@ -561,7 +563,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
   $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
   $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
-  $('#cfg-accolade').addEventListener('change', (e) => patch({ accolade: e.target.value }));
+  $('#cfg-accolade-pay').addEventListener('change', (e) => patch({ accoladePay: e.target.value }));
+  $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
 
   UI.wireFullscreen('#btn-full');

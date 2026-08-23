@@ -278,10 +278,13 @@ const Deal = (function () {
     live.turnAnim = card.animate(frames, { duration: D, iterations: Infinity });
   }
 
-  /* The finish: the accolades are read out and paid, then the places come up
-     from last to first, then the winner's card turns over and the room goes
-     gold.  opts: { names, totals, awards, points, linger }. The totals given
-     are the final ones, with what the accolades paid already in them.
+  /* The finish, in three moves:
+       1. the places, with the scores as they stood before the accolades;
+       2. each accolade in turn, four seconds each, paying as it lands, so the
+          places shuffle while the table watches;
+       3. the winner, whoever is top once they are all in.
+     opts: { names, totals, bonus, awards, points, linger }. `totals` are the
+     final scores, with what the accolades paid already in them.
      A tap lands it; the next one closes it. */
   function finale(opts, force) {
     close();
@@ -299,31 +302,24 @@ const Deal = (function () {
       if (m === 'off') { console.info('[finale] skipped: motion is off'); resolve(); return; }
       const calm = m === 'reduced';
 
-      // The accolades to read out, and what each seat was paid for them.
+      const n = names.length;
       const awards = (opts && opts.awards) || [];
       const pay = Number(opts && opts.points) || 0;
-      const paid = {};
-      awards.forEach((a) => (a.who || []).forEach((i) => { paid[i] = (paid[i] || 0) + pay; }));
-
-      // Best first. A draw shares the place, so the places read 1, 1, 3.
-      const order = names.map((nm, i) => ({ nm, i, v: Number(totals[i]) || 0 })).sort((a, b) => b.v - a.v);
-      const best = order[0].v;
-      const champs = order.filter((o) => o.v === best);
+      const paidIn = (opts && opts.bonus) || [];
+      const final = names.map((nm, i) => Number(totals[i]) || 0);
+      const cur = final.map((v, i) => v - (Number(paidIn[i]) || 0));   // before the accolades
+      const best = Math.max.apply(null, final);
+      const champs = names.map((nm, i) => ({ nm, i })).filter((c) => final[c.i] === best);
       const each = champs.length > 1 ? ' each' : '';
-      const tail = champs.some((c) => paid[c.i]) ? ', accolades in' : '';
+      const tail = champs.some((c) => paidIn[c.i]) ? ', accolades in' : '';
       const points = (v) => `${v} point${Math.abs(v) === 1 ? '' : 's'}${each}${tail}`;
 
       stage.innerHTML = '';
       overlay.hidden = false;
 
-      // The accolades add time, so the winner is held a little less long.
       const T = calm
-        ? { fade: 120, gap: 90,  flip: 240, out: 220, acc: 900,
-            hold: awards.length ? 2200 : 2600 }
-        : { fade: 200, gap: 240, flip: 620, out: 320, acc: 1500,
-            hold: awards.length ? 4200 : 5200 };
-      // how long the accolades take before the places start
-      const runIn = awards.length ? T.fade + 500 + awards.length * T.acc : 0;
+        ? { fade: 120, gap: 90,  flip: 240, out: 220, acc: 1500, settle: 700,  hold: 2400 }
+        : { fade: 200, gap: 240, flip: 620, out: 320, acc: 4000, settle: 1200, hold: 4200 };
       const anims = [], timers = [];
       let ended = false, settled = false, raf = 0;
 
@@ -331,13 +327,12 @@ const Deal = (function () {
       head.className = 'deal-head';
       const cap = document.createElement('div');
       cap.className = 'deal-cap';
-      cap.textContent = awards.length ? 'Accolades' : 'Game over';
+      cap.textContent = 'Game over';
       head.appendChild(cap);
       stage.appendChild(head);
       anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-12px)' }, { opacity: 1, transform: 'translateY(0)' }],
         { duration: 300, delay: T.fade, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }));
-      if (awards.length) timers.push(setTimeout(() => { cap.textContent = 'Game over'; }, runIn));
 
       const box = document.createElement('div');
       box.className = 'fin';
@@ -357,29 +352,70 @@ const Deal = (function () {
       sub.className = 'fin-sub';
       box.append(title, sub);
 
+      const run = document.createElement('div');             // where the accolades are read
+      run.className = 'fin-run';
+      box.appendChild(run);
+
       const list = document.createElement('div');
       list.className = 'fin-list';
       box.appendChild(list);
-      const rows = order.map((o, i) => {
-        const row = document.createElement('div');
-        row.className = 'fin-row' + (o.v === best ? ' first' : '');
-        const a = document.createElement('span');
-        a.className = 'pl';
-        a.textContent = String(order.findIndex((x) => x.v === o.v) + 1);
-        const b = document.createElement('span'); b.className = 'nm'; b.textContent = o.nm;
-        const c = document.createElement('span'); c.className = 'sc'; c.textContent = String(o.v);
-        row.append(a, b, c);
-        list.appendChild(row);
-        return row;
+
+      // One row a seat, so a row can move when its score changes.
+      const rows = names.map((nm, i) => {
+        const el = document.createElement('div');
+        el.className = 'fin-row';
+        el.dataset.k = String(i);
+        const pl = document.createElement('span'); pl.className = 'pl';
+        const who = document.createElement('span'); who.className = 'nm'; who.textContent = nm;
+        const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = String(cur[i]);
+        el.append(pl, who, sc);
+        return { el, pl, sc, i };
       });
 
-      // The accolades first, one at a time, each paying as it is read out.
-      // They stack on top of each other and only one is up at a time.
-      const run = document.createElement('div');
-      run.className = 'fin-run';
-      box.appendChild(run);
-      awards.forEach((a, i) => {
-        const at = T.fade + 500 + i * T.acc;
+      // Put the rows in score order, number the places, and slide them there.
+      function relayout(move) {
+        const seats = names.map((nm, i) => i).sort((a, b) => cur[b] - cur[a]);
+        const top = Math.max.apply(null, cur);
+        const was = new Map();
+        if (move) rows.forEach((r) => was.set(r.i, r.el.getBoundingClientRect().top));
+        seats.forEach((i) => list.appendChild(rows[i].el));
+        seats.forEach((i) => {
+          rows[i].pl.textContent = String(seats.findIndex((x) => cur[x] === cur[i]) + 1);
+          rows[i].el.classList.toggle('first', cur[i] === top);
+        });
+        if (!move || calm) return;
+        rows.forEach((r) => {
+          const from = was.get(r.i);
+          if (from === undefined || !r.el.animate) return;
+          const dy = from - r.el.getBoundingClientRect().top;
+          if (Math.abs(dy) < 1) return;
+          anims.push(r.el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }],
+            { duration: 460, easing: 'cubic-bezier(.2,.85,.3,1)' }));
+        });
+      }
+      relayout(false);
+
+      anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
+
+      /* ---- 1. the places, as they stood before the accolades ---- */
+      const order0 = names.map((nm, i) => i).sort((a, b) => cur[b] - cur[a]);
+      const start = T.fade + (calm ? 200 : 520);
+      order0.forEach((i, k) => {
+        anims.push(rows[i].el.animate(
+          calm ? [{ opacity: 0 }, { opacity: 1 }]
+               : [{ opacity: 0, transform: 'translateX(30px) scale(.94)' },
+                  { opacity: 1, transform: 'none' }],
+          { duration: calm ? 160 : 320, delay: start + (n - 1 - k) * T.gap,
+            easing: 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }));
+      });
+      const runAt = start + n * T.gap + T.settle;
+
+      /* ---- 2. the accolades, one at a time, paying as they land ---- */
+      if (awards.length) {
+        timers.push(setTimeout(() => { cap.textContent = 'Accolades'; }, runAt - 200));
+      }
+      awards.forEach((a, k) => {
+        const at = runAt + k * T.acc;
         const row = document.createElement('div');
         row.className = 'fin-award';
         const t = document.createElement('div');
@@ -387,7 +423,7 @@ const Deal = (function () {
         t.textContent = a.title;
         const w = document.createElement('div');
         w.className = 'fa-who';
-        w.textContent = (a.who || []).map((k) => names[k]).join(' & ');
+        w.textContent = (a.who || []).map((i) => names[i]).join(' & ');
         const note = document.createElement('div');
         note.className = 'fa-note';
         note.textContent = a.note;
@@ -401,58 +437,62 @@ const Deal = (function () {
             calm ? [{ opacity: 0 }, { opacity: 1 }]
                  : [{ opacity: 0, transform: 'scale(2.4) rotate(-9deg)' },
                     { opacity: 1, transform: 'scale(1) rotate(0deg)' }],
-            { duration: calm ? 200 : 440, delay: at + (calm ? 120 : 500),
+            { duration: calm ? 200 : 440, delay: at + (calm ? 150 : 700),
               easing: 'cubic-bezier(.2,.9,.3,1.5)', fill: 'both' }));
         }
         run.appendChild(row);
         anims.push(row.animate(
           calm
             ? [{ opacity: 0, offset: 0 }, { opacity: 1, offset: .12 },
-               { opacity: 1, offset: .8 }, { opacity: 0, offset: 1 }]
+               { opacity: 1, offset: .84 }, { opacity: 0, offset: 1 }]
             : [{ opacity: 0, transform: 'translateY(18px) scale(.94)', offset: 0 },
-               { opacity: 1, transform: 'none', offset: .12 },
-               { opacity: 1, transform: 'none', offset: .78 },
+               { opacity: 1, transform: 'none', offset: .09 },
+               { opacity: 1, transform: 'none', offset: .86 },
                { opacity: 0, transform: 'translateY(-20px) scale(.98)', offset: 1 }],
           { duration: T.acc, delay: at, easing: 'ease-out', fill: 'both' }));
-      });
 
-      anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
+        // and the points land in the standings behind it
+        if (pay) {
+          timers.push(setTimeout(() => {
+            if (ended) return;
+            (a.who || []).forEach((i) => {
+              const from = cur[i];
+              cur[i] = from + pay;
+              countTo(rows[i].sc, from, cur[i], calm ? 0 : 620);
+              if (!calm && rows[i].el.animate) {
+                anims.push(rows[i].el.animate(
+                  [{ transform: 'scale(1)' }, { transform: 'scale(1.08)', offset: .4 },
+                   { transform: 'scale(1)' }],
+                  { duration: 380, easing: 'cubic-bezier(.2,.9,.3,1.4)' }));
+              }
+            });
+            timers.push(setTimeout(() => { if (!ended) relayout(true); }, calm ? 0 : 640));
+          }, at + Math.round(T.acc * (calm ? .4 : .42))));
+        }
+      });
+      const winAt = runAt + awards.length * T.acc + (calm ? 60 : 300);
+      if (awards.length) timers.push(setTimeout(() => { cap.textContent = 'Game over'; }, winAt - 200));
+
+      /* ---- 3. the winner, once every accolade is in ---- */
       anims.push(card.animate(
         calm ? [{ opacity: 0 }, { opacity: 1 }]
              : [{ transform: 'rotateY(180deg) scale(.6)', opacity: 0 },
                 { transform: 'rotateY(180deg) scale(1)', opacity: 1 }],
-        { duration: calm ? 200 : 380, delay: runIn + T.fade,
+        { duration: calm ? 200 : 380, delay: Math.max(0, winAt - 700),
           easing: 'cubic-bezier(.2,.9,.3,1.35)', fill: 'both' }));
-
-      // The also-rans come up from the bottom of the list, one at a time.
-      const losers = rows.slice(champs.length);
-      const start = runIn + T.fade + (calm ? 200 : 520);
-      losers.forEach((row, k) => {
-        anims.push(row.animate(
-          calm ? [{ opacity: 0 }, { opacity: 1 }]
-               : [{ opacity: 0, transform: 'translateX(30px) scale(.94)' },
-                  { opacity: 1, transform: 'none' }],
-          { duration: calm ? 160 : 320, delay: start + (losers.length - 1 - k) * T.gap,
-            easing: 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }));
-      });
-
-      // Then the winner. The card turns over: it fills forwards only, so it
-      // leaves the card alone until its turn comes.
-      const winAt = start + losers.length * T.gap + (calm ? 60 : 260);
       anims.push(card.animate(
         calm ? [{ transform: 'rotateY(0deg) scale(1.16)' }]
              : [{ transform: 'rotateY(180deg) scale(1)', offset: 0 },
                 { transform: 'rotateY(0deg) scale(1.3)', offset: .7, easing: 'cubic-bezier(.2,.9,.3,1.4)' },
                 { transform: 'rotateY(0deg) scale(1.16)', offset: 1 }],
         { duration: calm ? 200 : T.flip, delay: winAt, easing: 'linear', fill: 'forwards' }));
-      rows.slice(0, champs.length).forEach((row, k) => {
-        anims.push(row.animate(
-          calm ? [{ opacity: 0 }, { opacity: 1 }]
-               : [{ opacity: 0, transform: 'scale(.9)' },
-                  { opacity: 1, transform: 'scale(1.06)', offset: .6 },
-                  { opacity: 1, transform: 'scale(1)' }],
+      champs.forEach((c, k) => {
+        anims.push(rows[c.i].el.animate(
+          calm ? [{ opacity: 1 }, { opacity: 1 }]
+               : [{ transform: 'scale(1)' }, { transform: 'scale(1.07)', offset: .5 },
+                  { transform: 'scale(1)' }],
           { duration: calm ? 200 : 520, delay: winAt + (calm ? 40 : 160) + k * 90,
-            easing: 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }));
+            easing: 'cubic-bezier(.2,.9,.3,1.3)' }));
       });
       anims.push(title.animate(
         calm ? [{ opacity: 0 }, { opacity: 1 }]
@@ -462,19 +502,25 @@ const Deal = (function () {
       anims.push(sub.animate([{ opacity: 0 }, { opacity: 1 }],
         { duration: 260, delay: winAt + (calm ? 120 : 420), easing: 'ease-out', fill: 'both' }));
 
-      if (calm) sub.textContent = points(best);
-      else countTo(winAt + 420, 700);
+      if (calm || awards.length) sub.textContent = points(best);
+      else countTo(sub, 0, best, 700, winAt + 420, points);
       burst(winAt + 200);
 
-      // The winner's score runs up to the total, so the eye lands on it.
-      function countTo(delay, ms) {
-        const at = (window.performance ? performance.now() : Date.now()) + delay;
+      // A number that runs to its new value. `el` may be a score in the list,
+      // or the winner's line, which needs its own wording.
+      function countTo(el, from, to, ms, delay, fmt) {
+        const say = fmt || String;
+        if (!ms || !el || typeof requestAnimationFrame !== 'function') {
+          el.textContent = say(to);
+          return;
+        }
+        const at = (window.performance ? performance.now() : Date.now()) + (delay || 0);
         const tick = (now) => {
           if (ended) return;
-          if (settled) { sub.textContent = points(best); return; }
+          if (settled) { el.textContent = say(to); return; }
           const k = Math.max(0, Math.min(1, (now - at) / ms));
           if (k <= 0) { raf = requestAnimationFrame(tick); return; }
-          sub.textContent = points(Math.round(best * (1 - Math.pow(1 - k, 3))));
+          el.textContent = say(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
           if (k < 1) raf = requestAnimationFrame(tick);
         };
         raf = requestAnimationFrame(tick);
@@ -516,8 +562,14 @@ const Deal = (function () {
           resolve();
         };
       }
+      // A tap lands the whole thing: every accolade is paid at once.
       function settle() {
         settled = true;
+        timers.forEach(clearTimeout);
+        timers.length = 0;
+        names.forEach((nm, i) => { cur[i] = final[i]; rows[i].sc.textContent = String(final[i]); });
+        relayout(false);
+        cap.textContent = 'Game over';
         anims.forEach((a) => { try { a.finish(); } catch (e) {} });
         sub.textContent = points(best);
       }

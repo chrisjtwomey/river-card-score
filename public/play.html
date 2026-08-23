@@ -92,14 +92,24 @@
           </select>
           <small id="deck-hint"></small>
         </label>
-        <label class="field"><span>Each accolade pays</span>
-          <select id="cfg-accolade">
+        <label class="field"><span>Accolades drawn</span>
+          <select id="cfg-accolade-count">
+            <option value="0">none</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <label class="field"><span>Each one pays</span>
+          <select id="cfg-accolade-pay">
             <option value="20">20 points</option>
             <option value="10">10 points</option>
             <option value="5">5 points</option>
             <option value="0">nothing</option>
           </select>
-          <small>Three are drawn at random when the game ends.</small>
+          <small>Drawn at random at the end, and paid before the winner is known.</small>
         </label>
       </details>
       <button class="btn primary big" id="btn-start" type="button" disabled>Start game</button>

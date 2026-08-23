@@ -519,7 +519,7 @@ function client(name, url) {
     // ---- the accolades are drawn and paid before anybody wins ----
     {
       const aw = d.state.awards || [];
-      const pay = d.state.cfg.accolade;
+      const pay = d.state.cfg.accoladePay;
       ok(aw.length > 0 && aw.length <= 3, 'the game ends with up to three accolades drawn  got ' + aw.length);
       ok(aw.every((a) => a.title && a.note && a.who.length), 'each one names a player and says why');
       ok(new Set(aw.map((a) => a.key)).size === aw.length, 'and no accolade is drawn twice');
@@ -533,6 +533,23 @@ function client(name, url) {
       ok(!d.state.awards && d.state.bonus.every((b) => !b), 'going back puts the accolades away');
       d.send({ t: 'dev', action: 'endGame' }); await wait(600);
       ok((d.state.awards || []).length > 0, 'and ending it again draws them afresh');
+
+      // how many are drawn is a rule of the table
+      const again = async (patch) => {
+        d.send({ t: 'dev', action: 'patch', patch: { phase: 'tricks' } }); await wait(120);
+        if (patch) { d.send({ t: 'config', patch }); await wait(120); }
+        d.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(150);
+        return d.state.awards || [];
+      };
+      ok((await again({ accoladeCount: 1 })).length === 1, 'a table can ask for one accolade');
+      ok((await again({ accoladeCount: 5 })).length === 5, 'or five');
+      const none = await again({ accoladeCount: 0 });
+      ok(none.length === 0 && d.state.bonus.every((b) => !b), 'or none at all');
+      ok((await again({ accoladeCount: 3, accoladePay: 20 })).length === 3, 'and back to three');
+      ok(d.state.bonus.reduce((a, b) => a + b, 0) === 60, 'paying 20 each  got ' + d.state.bonus.join(','));
+      d.send({ t: 'config', patch: { accoladeCount: 99, accoladePay: 7 } }); await wait(120);
+      ok(d.state.cfg.accoladeCount === 3 && d.state.cfg.accoladePay === 20,
+         'values outside the rules are refused  got ' + d.state.cfg.accoladeCount + '/' + d.state.cfg.accoladePay);
     }
     d.send({ t: 'dev', action: 'patch', patch: { idx: 1, phase: 'bid' } }); await wait(150);
     ok(d.state.idx === 1 && d.state.phase === 'bid', 'patch forces the round and the phase');

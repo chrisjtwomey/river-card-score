@@ -168,7 +168,8 @@ function render() {
   const c = ST.cfg;
   const set = (sel, v) => { const el = $(sel); if (document.activeElement !== el) el.value = String(v); };
   set('#cfg-max', c.max); set('#cfg-ones', c.ones); set('#cfg-pattern', c.pattern);
-  set('#cfg-bonus', c.bonus); set('#cfg-miss', c.miss); set('#cfg-deck', c.deck || 'physical'); set('#cfg-accolade', c.accolade === undefined ? 10 : c.accolade);
+  set('#cfg-bonus', c.bonus); set('#cfg-miss', c.miss); set('#cfg-deck', c.deck || 'physical'); set('#cfg-accolade-pay', c.accoladePay === undefined ? 10 : c.accoladePay);
+  set('#cfg-accolade-count', c.accoladeCount === undefined ? 3 : c.accoladeCount);
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
 
@@ -300,7 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
   $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
   $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
-  $('#cfg-accolade').addEventListener('change', (e) => patch({ accolade: e.target.value }));
+  $('#cfg-accolade-pay').addEventListener('change', (e) => patch({ accoladePay: e.target.value }));
+  $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
 
   connect();
   watchFiles();
