@@ -415,6 +415,7 @@ function renderBidStrip(r) {
     strip.appendChild(pill);
   });
   lastBids = Table.bidsAfter(strip, ST, r, lastBids);   // a bid lands, the turn moves on
+  Table.sayBids(ST, r, lastBids.landed, mySeat());     // and a line says so, in case you looked away
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
   $('#bid-tally').textContent = `${sum} of ${r.cards}`;
 }

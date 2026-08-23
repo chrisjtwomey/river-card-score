@@ -217,8 +217,9 @@ const Deal = (function () {
       const naturalEnd = dealEnd + 140 + T.flip + T.hold + linger;
       if (hold) {
         live = {
-          kind: 'deal', finish, labels, cards: cardEls, landedAt, status, names, dealer,
+          kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
           key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
+          bids: null,                       // what was on the table at the last update
         };
         timers.push(setTimeout(() => {
           settled = true;
@@ -463,11 +464,58 @@ const Deal = (function () {
     });
   }
 
+  // A bid lands: the number slams down onto that player's card, holds, then
+  // lifts away. The name below the card keeps it from then on.
+  function stamp(p, value) {
+    if (!live || live.calm || !live.settled) return;
+    const card = live.cards[p], at = live.landedAt[p];
+    if (!card || !at || !live.stage.animate) return;
+
+    const el = document.createElement('div');
+    el.className = 'dstamp';
+    el.textContent = String(value);
+    live.stage.appendChild(el);
+    const a = el.animate(
+      [{ transform: `${at} scale(2.7) rotate(-15deg)`, opacity: 0, offset: 0,
+         easing: 'cubic-bezier(.2,.9,.3,1.5)' },
+       { transform: `${at} scale(.9) rotate(5deg)`, opacity: 1, offset: .16 },
+       { transform: `${at} scale(1.08) rotate(-1deg)`, opacity: 1, offset: .26 },
+       { transform: `${at} scale(1) rotate(0deg)`, opacity: 1, offset: .74 },
+       { transform: `${at} scale(1.6) rotate(0deg)`, opacity: 0, offset: 1 }],
+      { duration: 1200, fill: 'both' });
+    a.onfinish = () => el.remove();
+
+    // the card takes the hit, and the name below it pops
+    card.animate(
+      [{ transform: at }, { transform: `${at} scale(1.13)`, offset: .3 },
+       { transform: `${at} scale(.98)`, offset: .55 }, { transform: at }],
+      { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
+    const name = live.labels[p];
+    if (name) {
+      name.animate(
+        [{ transform: 'translate(-50%,0) scale(1)' },
+         { transform: 'translate(-50%,0) scale(1.22)', offset: .35 },
+         { transform: 'translate(-50%,0) scale(1)' }],
+        { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
+    }
+  }
+
   // While the scene is held, show the bids as they arrive.
   function update(o) {
     if (o) last = o;
     if (!live || live.kind !== 'deal') return;
     const bids = (o && o.bids) || [];
+    // Anything new since the last push gets stamped on its card. A scene that
+    // has just opened has nothing to compare with, so it stamps nothing.
+    if (live.bids) {
+      bids.forEach((b, p) => {
+        const had = live.bids[p];
+        if (b === null || b === undefined) return;
+        if (had !== null && had !== undefined) return;
+        stamp(p, b);
+      });
+    }
+    live.bids = bids.slice();
     live.labels.forEach((el, p) => {
       if (!el) return;
       const b = bids[p];

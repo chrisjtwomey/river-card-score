@@ -258,6 +258,22 @@ dialog h2{color:var(--ink);text-transform:none;letter-spacing:-.01em;font-size:1
 dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .confirm-actions{justify-content:flex-end}
 
+/* ---------- what just happened ---------- */
+.toaster{
+  position:fixed;left:0;right:0;top:calc(var(--topbar-h, 62px) + 8px);z-index:70;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:0 12px;pointer-events:none;
+}
+.toast{
+  display:flex;align-items:baseline;gap:9px;max-width:min(520px,92vw);
+  padding:8px 15px;border-radius:999px;
+  background:var(--ink);color:var(--bg2);box-shadow:0 8px 26px rgba(0,0,0,.35);
+  font-size:15px;font-weight:700;
+}
+.toast .note{font-size:13px;font-weight:600;opacity:.72;white-space:nowrap}
+body.host .toast{font-size:24px;padding:12px 22px}
+body.host .toast .note{font-size:19px}
+
 /* ---------- deal animation ---------- */
 .deal{
   position:fixed;inset:0;z-index:60;overflow:hidden;
@@ -319,6 +335,13 @@ dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
   font-size:clamp(14px, 2.1vw, 24px);font-weight:600;color:rgba(255,255,255,.85);
   text-shadow:0 2px 12px rgba(0,0,0,.85);opacity:0;
 }
+/* the bid, slammed onto the card it belongs to */
+.dstamp{
+  position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;
+  display:grid;place-items:center;pointer-events:none;
+  font-size:46px;font-weight:800;line-height:1;color:#f0c878;
+  text-shadow:0 0 20px rgba(240,200,120,.65), 0 3px 12px rgba(0,0,0,.9);
+}
 .dname.bidin{color:#fff}
 .dname.turn{
   color:#fff;
@@ -366,6 +389,7 @@ dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
   .dcard{width:52px;height:74px;margin:-37px 0 0 -26px}
   .dcard .front .big{font-size:26px}
   .dcard.hero{width:70px;height:98px;margin:-49px 0 0 -35px}
+  .dstamp{font-size:34px}
   .fin-card .cup{font-size:34px}
 }
 

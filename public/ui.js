@@ -290,7 +290,48 @@ const UI = (function () {
     return values;
   }
 
-  const fx = { on: motionOK, flip, pop, ring, count, rise, barsBefore, scores };
+  // A line that slides in under the top bar, waits, and goes. It says what
+  // just happened at another seat, for a player who was looking away.
+  function toast(text, opts) {
+    const o = opts || {};
+    let box = document.getElementById('toaster');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'toaster';
+      box.className = 'toaster';
+      box.setAttribute('aria-live', 'polite');
+      document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    el.className = 'toast';
+    const what = document.createElement('span');
+    what.className = 'what';
+    what.textContent = text;
+    el.appendChild(what);
+    if (o.note) {
+      const n = document.createElement('span');
+      n.className = 'note';
+      n.textContent = o.note;
+      el.appendChild(n);
+    }
+    box.appendChild(el);
+    while (box.children.length > 3) box.removeChild(box.firstChild);
+
+    const ms = o.ms || 2600;
+    if (!el.animate || !motionOK()) {          // the words still matter: only the movement goes
+      setTimeout(() => el.remove(), ms);
+      return;
+    }
+    const a = el.animate(
+      [{ opacity: 0, transform: 'translateY(-10px)' },
+       { opacity: 1, transform: 'none', offset: .12 },
+       { opacity: 1, transform: 'none', offset: .86 },
+       { opacity: 0, transform: 'translateY(-6px)' }],
+      { duration: ms, easing: 'ease-out' });
+    a.onfinish = () => el.remove();
+  }
+
+  const fx = { on: motionOK, flip, pop, ring, count, rise, barsBefore, scores, toast };
 
   /* ---------- sticky offset ---------- */
 

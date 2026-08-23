@@ -65,12 +65,13 @@ const Table = (function () {
   function bidsAfter(strip, ST, r, last) {
     const key = `${ST.idx}:${r.redeals || 0}`;
     const bids = (r.bids || []).slice();
-    const mark = { key, bids, turn: ST.turn };
+    const mark = { key, bids, turn: ST.turn, landed: [] };
     if (!last || last.key !== key) return mark;         // a new round: nothing landed
     bids.forEach((b, p) => {
       const had = last.bids[p];
       if (b === null || b === undefined) return;
       if (had !== null && had !== undefined) return;    // it was already in
+      mark.landed.push(p);
       UI.fx.pop(strip.querySelector(`.bidpill[data-k="${p}"]`));
     });
     if (ST.turn !== null && ST.turn !== last.turn) {
@@ -79,5 +80,24 @@ const Table = (function () {
     return mark;
   }
 
-  return { scorecardHTML, followCurrent, esc, bidsAfter };
+  // "Hugh bid 2 · Joe to bid", for the seats that have just bid. `me` is the
+  // seat reading it, or -1 for a screen that belongs to nobody. Your own bid
+  // is not announced: your own pad already says it.
+  function sayBids(ST, r, landed, me) {
+    if (!landed || !landed.length) return;
+    const others = landed.filter((p) => p !== me);
+    if (!others.length) return;
+    const next = ST.turn === null ? 'all bids in'
+      : ST.turn === me ? 'your turn' : `${ST.seats[ST.turn].name} to bid`;
+    if (others.length > 2) {                           // a catch-up, not one at a time
+      UI.fx.toast(`${others.length} more bids in`, { note: next });
+      return;
+    }
+    others.forEach((p, i) => {
+      UI.fx.toast(`${ST.seats[p].name} bid ${r.bids[p]}`,
+        { note: i === others.length - 1 ? next : null });
+    });
+  }
+
+  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids };
 })();

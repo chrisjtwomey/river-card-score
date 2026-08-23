@@ -342,6 +342,8 @@ function renderTurn(r, n) {
     strip.appendChild(pill);
   });
   lastBids = Table.bidsAfter(strip, ST, r, lastBids);   // a bid lands, the turn moves on
+  // While the deal is up, the bid stamps onto that player's card instead.
+  if (!Deal.isOpen('deal')) Table.sayBids(ST, r, lastBids.landed, -1);
 
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
 
