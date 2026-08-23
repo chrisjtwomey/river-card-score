@@ -131,6 +131,13 @@ function render() {
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
 
+  // scorecard filler. Before the game starts the card is not built yet, so the
+  // length comes from the rules.
+  const cardLen = ST.rounds.length || Game.schedule(c.max, c.pattern, c.ones).length;
+  $('#fill-rounds').max = String(cardLen);
+  $('#fill-hint').textContent =
+    `The card holds ${cardLen} rounds. Leave it empty for a random number.`;
+
   // round editor
   const rounds = ST.rounds.map((rr, i) => ({ v: i, t: `${i + 1} · ${rr.cards} cards` }));
   if (editRound >= ST.rounds.length) editRound = Math.max(0, ST.rounds.length - 1);
@@ -205,6 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
     act('setup', { players: Number($('#players').value) || 4 }));
   $('#players').addEventListener('change', () =>
     act('players', { players: Number($('#players').value) || 4 }));
+
+  $('#btn-fillcard').addEventListener('click', () => {
+    const v = $('#fill-rounds').value.trim();
+    act('fillCard', v === '' ? {} : { rounds: Number(v) });
+  });
+  $('#fill-rounds').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('#btn-fillcard').click();
+  });
 
   $('#scale').addEventListener('change', () => { topKey = seatKey = ''; renderFrames(); });
 

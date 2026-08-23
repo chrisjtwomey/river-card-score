@@ -306,6 +306,22 @@ function client(name, url) {
     await wait(150);
     ok(JSON.stringify(d.state.rounds[0].bids) === '[1,0,2,1]' && d.state.totals.some((t) => t !== 0),
        'patch forces a round, and the totals follow');
+
+    // ---- a random scorecard ----
+    d.send({ t: 'dev', action: 'fillCard', rounds: 3 }); await wait(300);
+    const full = (r) => r.bids && r.bids.every((b) => b !== null) && Array.isArray(r.tricks);
+    const played = d.state.rounds.filter(full);
+    ok(played.length === 3 && d.state.idx === 3 && d.state.phase === 'bid',
+       'fillCard plays the number of rounds asked for');
+    ok(played.every((r) => r.tricks.reduce((a, b) => a + b, 0) === r.cards),
+       'and every filled hand has all of its tricks');
+    ok(played.every((r) => !d.state.cfg.screw || r.bids.reduce((a, b) => a + b, 0) !== r.cards),
+       'and every filled round keeps the screw-the-dealer rule');
+    ok(played.every((r) => !d.state.cfg.trump || r.trump), 'and every filled round has a trump');
+    ok(d.state.rounds.slice(3).every((r) => !full(r)), 'and the rounds after it are still empty');
+    d.send({ t: 'dev', action: 'fillCard' }); await wait(400);
+    const many = d.state.rounds.filter(full).length;
+    ok(many >= 1 && many <= d.state.rounds.length, 'fillCard with no number plays a random number of rounds');
     srv3.kill();
   }
 

@@ -298,6 +298,8 @@ function devFillTricks(room) {
 function devNextRound(room) {
   if (!room.rounds.length) { devStart(room); return; }
   if (room.phase === 'done') return;
+  const r = curRound(room);
+  if (r && room.cfg.trump && !r.trump) r.trump = G.SUITS[rand(G.SUITS.length)].k;
   devFillBids(room);
   devFillTricks(room);
   room.vote = null;
@@ -310,6 +312,19 @@ function devEndGame(room) {
   if (!room.rounds.length) devStart(room);
   let guard = 60;
   while (room.phase !== 'done' && guard-- > 0) devNextRound(room);
+}
+
+// Fill the scorecard. Plays whole rounds of bids and tricks that a real table
+// could make, and leaves the next round waiting for its bids. The rules, the
+// seats and the first dealer stay as they are. `count` rounds, or a random
+// number of them when `count` is not a number.
+function devFillCard(room, count) {
+  devStart(room);                       // an empty card, built from the rules in force
+  const total = room.rounds.length;
+  let want = Number(count);
+  if (!Number.isFinite(want)) want = 1 + rand(total);
+  want = Math.max(0, Math.min(Math.round(want), total));
+  for (let i = 0; i < want; i++) devNextRound(room);
 }
 
 function devBumVote(room) {
@@ -436,6 +451,7 @@ function handle(ws, m) {
       case 'endGame': devEndGame(room); break;
       case 'lobby': room.phase = 'lobby'; room.rounds = []; room.idx = 0; room.vote = null; break;
       case 'bumVote': devBumVote(room); break;
+      case 'fillCard': devFillCard(room, m.rounds); break;
       case 'randomise': devRandomise(room); break;
       case 'patch': devPatch(room, m.patch || {}); break;
       default: return fail(ws, 'unknown dev action');
