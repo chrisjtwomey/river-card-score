@@ -299,7 +299,7 @@ function client(name, url) {
     await wait(150);
     ok(JSON.stringify(h.state.rounds[0].bids) === '[1,0]', 'the host of a real table can force a round');
     ok(h.hello.stand === false, 'and is told it is not a table of stand-ins');
-    ok(h.hello.seats.length === 0, 'and gets no seat tokens back');
+    ok(h.hello.seats.every((x) => !x.token), 'and gets no seat tokens back');
 
     h.errors.length = 0;
     h.send({ t: 'dev', action: 'randomise' }); await wait(140);
@@ -316,6 +316,33 @@ function client(name, url) {
     ok(h.state.rounds[0].tricks === null, 'junk tricks are dropped, not stored');
     h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: [5, 0] } } }); await wait(140);
     ok(JSON.stringify(h.state.rounds[0].tricks) === '[1,0]', 'and a count above the hand size is clamped');
+
+    // ---- the seats come back as watching windows, not as seats ----
+    const seats = h.hello.seats;
+    ok(seats.length === 2 && seats.every((x) => x.watch && !x.token),
+       'a real table gives the dev page a watch token a seat, never the seat itself');
+
+    const bobWatch = seats.find((x) => x.name === 'Bob').watch;
+    p2.ws.close(); await wait(200);                       // Bob puts his phone down
+    ok(h.state.seats[1].online === false, 'Bob is offline once his phone goes');
+
+    const eye = client('watcher'); await eye.ready;
+    eye.send({ t: 'watch', code, token: bobWatch }); await wait(160);
+    ok(eye.hello.role === 'watch' && eye.hello.seatId === h.state.seats[1].id,
+       'a watch token opens that seat and says which one it is');
+    ok(eye.state && eye.state.code === code, 'and the window gets the same state the phone gets');
+    ok(h.state.seats[1].online === false, 'and watching does not put the player back at the table');
+
+    eye.errors.length = 0;
+    eye.send({ t: 'bid', v: 1 }); await wait(140);
+    eye.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
+    ok(eye.errors.filter((e) => /only watching/.test(e)).length === 2, 'and it can do nothing at all');
+    ok(h.state.phase === 'bid', 'so the game is untouched');
+
+    const fake = client('faker'); await fake.ready;
+    fake.send({ t: 'resume', code, token: bobWatch }); await wait(150);
+    ok(fake.errors.some((e) => /seat is gone/.test(e)) && !fake.state,
+       'a watch token cannot be used to take the seat');
   }
 
   // ---- the dev controls on a server started with DEV=1 ----

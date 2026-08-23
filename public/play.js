@@ -4,6 +4,7 @@
 const $ = (s) => document.querySelector(s);
 
 let ST = null, ME = null;      // ME = my seat id
+let WATCH = false;             // this window only shows the seat, it cannot act
 let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
 let lastPhase = null;          // to catch the moment the game ends
@@ -19,26 +20,37 @@ const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
 
 // A link like play.html#c=CODE&t=TOKEN drops that seat into this browser.
-// It is how dev-seed.js hands out seats, and how you move a seat to another
+// It is how the dev page hands out seats, and how you move a seat to another
 // device: the token is the seat.
+// With w= instead of t= the page only watches: it shows that seat's screen,
+// off the same state, but it cannot touch the game.
 function claimFromHash() {
   const h = location.hash || '';
   const q = new URLSearchParams(h.replace(/^#/, ''));
   const code = (q.get('c') || '').toUpperCase();
   const token = q.get('t') || '';
-  if (!code || !token) return;
-  // inside the dev previews, keep it in this frame only
-  Net.setSession({ code, token, role: 'player', seatId: null }, window.top !== window.self);
-  history.replaceState(null, '', location.pathname + location.search);
+  const eye = q.get('w') || '';
+  if (!code || (!token && !eye)) return;
+  // Inside the dev previews, keep it in this frame only. A watching window
+  // never saves itself at all, so it cannot evict your own seat, and it keeps
+  // the link in the address bar so a reload still works.
+  Net.setSession({ code, token: eye || token, role: eye ? 'watch' : 'player', seatId: null },
+    !!eye || window.top !== window.self);
+  if (!eye) history.replaceState(null, '', location.pathname + location.search);
 }
 
 function boot() {
   claimFromHash();
   const s = Net.session();
-  if (!s || !s.code || s.role !== 'player') { location.href = 'index.html'; return; }
+  if (!s || !s.code || (s.role !== 'player' && s.role !== 'watch')) { location.href = 'index.html'; return; }
+  WATCH = s.role === 'watch';
+  document.body.classList.toggle('watching', WATCH);
+  $('#watchpill').hidden = !WATCH;
   ME = s.seatId;                       // null after a hash claim: the hello fills it in
   Net.connect({
-    onOpen: () => Net.send({ t: 'resume', code: s.code, token: s.token }),
+    onOpen: () => Net.send(WATCH
+      ? { t: 'watch', code: s.code, token: s.token }
+      : { t: 'resume', code: s.code, token: s.token }),
     onHello: (m) => { ME = m.seatId; },
     onState: (m) => { ST = m; render(); },
     onError: (msg) => {

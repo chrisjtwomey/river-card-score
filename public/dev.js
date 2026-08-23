@@ -57,10 +57,14 @@ const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !
 
 const SIZES = { host: [1180, 820], seat: [400, 800], captain: [400, 900] };
 
-function frame(box, label, page, token, kind, seatId) {
+// A seat frame opens the seat itself on a table of stand-ins, and only watches
+// on a real one. The hash says which: t= is the seat, w= just shows it.
+const seatHash = (s) => (s.watch ? `#c=${CODE}&w=${s.watch}` : `#c=${CODE}&t=${s.token}`);
+
+function frame(box, label, page, hash, kind, seatId) {
   const scale = Number($('#scale').value) || 0.65;
   const [w, h] = SIZES[kind];
-  const url = `${page}#c=${CODE}&t=${token}`;
+  const url = page + hash;
   const el = document.createElement('div');
   el.className = 'frame' + (kind === 'captain' ? ' captain' : '');
   if (seatId) el.dataset.seat = seatId;
@@ -81,24 +85,24 @@ function renderFrames() {
   const cap = ST ? seatOf(ST.captainId) : null;
 
   // top row: the big screen, and the phone of whoever runs the table
-  const top = `${CODE}:${HOST_TOKEN}:${cap ? cap.token : ''}:${scale}`;
+  const top = `${CODE}:${HOST_TOKEN}:${cap ? seatHash(cap) : ''}:${scale}`;
   if (top !== topKey) {
     topKey = top;
     const box = $('#host-frame');
     box.innerHTML = '';
-    frame(box, `host screen · table ${CODE}`, 'host.html', HOST_TOKEN, 'host');
-    if (cap) frame(box, `table host · ${cap.name}`, 'play.html', cap.token, 'captain');
+    frame(box, `host screen · table ${CODE}`, 'host.html', `#c=${CODE}&t=${HOST_TOKEN}`, 'host');
+    if (cap) frame(box, `table host · ${cap.name}`, 'play.html', seatHash(cap), 'captain');
   }
 
   // bottom row: the other seats. The table host is already up top, so it is
   // not shown twice. The key changes with them, so it follows the badge.
   const others = SEATS.filter((s) => !cap || s.id !== cap.id);
-  const seats = `${CODE}:${others.map((s) => s.token).join(',')}:${scale}`;
+  const seats = `${CODE}:${others.map(seatHash).join(',')}:${scale}`;
   if (seats !== seatKey) {
     seatKey = seats;
     const box = $('#seat-frames');
     box.innerHTML = '';
-    others.forEach((s) => frame(box, s.name, 'play.html', s.token, 'seat', s.id));
+    others.forEach((s) => frame(box, s.name, 'play.html', seatHash(s), 'seat', s.id));
   }
 }
 

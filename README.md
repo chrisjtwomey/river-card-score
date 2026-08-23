@@ -241,14 +241,17 @@ The host screen always carries a 🛠 button in its top bar, on any server. It o
 
 A real table gets the state editor and nothing else. **Force**, **Round** and **State** work. Everything that invents data — new table, jump to, fill scorecard, randomise — is hidden, and the server refuses it even with `DEV=1`. The top bar turns red, and the page says the game is real.
 
+The phones are there, one pane a player, so you can see what each of them sees. On a real table they are **watching windows**: the same page, off the same state, with a 👁 badge and nothing that can be pressed. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
+
 The server decides this, not the page:
 
 - Anything that makes or fills a table of stand-ins needs `DEV=1` **and** a table the dev page itself made.
 - Forcing a state needs only the host or the table host of that table, which is authority they already have.
-- A real table never hands its seat tokens out, so the dev page shows one preview of the host screen and no phones.
+- A real table never hands its seat tokens out. It hands out a watch token a seat instead, which opens that screen and can do nothing else.
+- A watching socket is refused every message but `ping`, and is left out of who counts as online.
 - Forced bids and tricks are checked for shape: one whole number a seat, no bigger than the hand. Junk is dropped rather than stored.
 
-The previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
+On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
 Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, says so, and points at the 🛠 button on the host screen, which is the way in to a real table.
 

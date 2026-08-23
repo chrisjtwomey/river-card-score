@@ -368,6 +368,14 @@ dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
   align-self:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
   padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;
 }
+/* A window that only shows a seat: nothing on it can be pressed. */
+.watchpill{background:rgba(184,134,43,.3);color:#f0c878}
+body.watching button,
+body.watching input,
+body.watching select,
+body.watching summary{pointer-events:none}
+body.watching .topbar-actions button{pointer-events:auto}
+
 .code-input{font-size:28px;font-weight:800;letter-spacing:.32em;text-align:center;text-transform:uppercase}
 
 /* lobby / join */

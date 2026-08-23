@@ -225,7 +225,8 @@ function broadcast(room) {
 
 function markPresence(room) {
   room.seats.forEach((s) => {
-    s.online = Array.from(room.sockets).some((w) => w.ctx && w.ctx.seatId === s.id);
+    s.online = Array.from(room.sockets).some(
+      (w) => w.ctx && w.ctx.seatId === s.id && w.ctx.role !== 'watch');
   });
 }
 
@@ -252,7 +253,7 @@ function devSeats(room, count) {
   room.stand = true;            // a table of stand-ins, never a real game
   room.seats = [];
   for (let i = 0; i < Math.max(2, Math.min(8, count)); i++) {
-    room.seats.push({ id: token().slice(0, 8), name: DEV_NAMES[i], token: token(), online: false });
+    room.seats.push({ id: token().slice(0, 8), name: DEV_NAMES[i], token: token(), watch: token(), online: false });
   }
   room.captainId = room.seats[0].id;
   room.firstDealerId = null;
@@ -422,10 +423,15 @@ const fail = (ws, msg) => send(ws, { t: 'error', msg });
 // only for a table of stand-ins, so the previews can open each phone. A real
 // table never hands its seats out.
 function devHello(ws, room) {
+  // A table of stand-ins hands over the seats themselves, so every phone in
+  // the previews can be played. A real table hands over watch tokens instead:
+  // they open the same screen, but they cannot act and nobody comes online.
   send(ws, {
     t: 'hello', role: 'host', code: room.code, token: room.hostToken,
     dev: true, stand: !!room.stand,
-    seats: room.stand ? room.seats.map((x) => ({ id: x.id, name: x.name, token: x.token })) : [],
+    seats: room.seats.map((x) => (room.stand
+      ? { id: x.id, name: x.name, token: x.token }
+      : { id: x.id, name: x.name, watch: x.watch })),
   });
   return broadcast(room);
 }
@@ -479,6 +485,7 @@ function handle(ws, m) {
     }
     const room = ws.ctx && ws.ctx.room;
     if (!room) return fail(ws, 'open a table first');
+    if (ws.ctx.role === 'watch') return fail(ws, 'this window is only watching');
     const mine = ws.ctx.seatId ? seatIndex(room, ws.ctx.seatId) : -1;
     const runs = ws.ctx.role === 'host' || (mine >= 0 && room.seats[mine].id === room.captainId);
     if (!runs) return fail(ws, 'only the host can use the dev controls');
@@ -511,7 +518,7 @@ function handle(ws, m) {
     if (room.seats.length >= 8) return fail(ws, 'the table is full');
     const name = String(m.name || '').trim().slice(0, 16) || `Player ${room.seats.length + 1}`;
     if (room.seats.some((s) => s.name.toLowerCase() === name.toLowerCase())) return fail(ws, 'that name is taken');
-    const seat = { id: token().slice(0, 8), name, token: token(), online: true };
+    const seat = { id: token().slice(0, 8), name, token: token(), watch: token(), online: true };
     room.seats.push(seat);
     if (!room.captainId) room.captainId = seat.id;      // first in, table host
     syncCfg(room);
@@ -535,12 +542,27 @@ function handle(ws, m) {
     return broadcast(room);
   }
 
+  // A window that shows one seat's screen. It is the same page the player has,
+  // off the same state, but it cannot touch the game and it does not count as
+  // that player being at the table.
+  if (m.t === 'watch') {
+    const room = rooms.get(String(m.code || '').toUpperCase().trim());
+    if (!room) return fail(ws, 'that table is gone');
+    const tok = String(m.token || '');
+    const seat = tok && room.seats.find((x) => x.watch === tok);
+    if (!seat) return fail(ws, 'that seat is gone');
+    attach(ws, room, { role: 'watch', seatId: seat.id });
+    send(ws, { t: 'hello', role: 'watch', code: room.code, token: m.token, seatId: seat.id });
+    return broadcast(room);
+  }
+
   /* --- everything below needs a room --- */
   const ctx = ws.ctx;
   if (!ctx || !ctx.room) return fail(ws, 'join a table first');
   const room = ctx.room;
   const n = room.seats.length;
   const isHost = ctx.role === 'host';
+  if (ctx.role === 'watch' && m.t !== 'ping') return fail(ws, 'this window is only watching');
   const mySeat = ctx.seatId ? seatIndex(room, ctx.seatId) : -1;
   // The table host is a player with the same powers as the host screen, so a
   // game can run with no host screen at all.
