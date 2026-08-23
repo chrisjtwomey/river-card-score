@@ -515,6 +515,9 @@ function renderWinner(done) {
   const panel = $('#winner-panel');
   panel.hidden = !done;
   if (!done) return;
+  Accolades.render($('#accolades'),
+    Accolades.list(ST.rounds, ST.seats.length, (b, w) => Game.roundScore(b, w, ST.cfg)),
+    ST.seats.map((s) => s.name));
   const t = ST.totals;
   const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
   const top = order[0].v;

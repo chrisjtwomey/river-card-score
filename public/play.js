@@ -92,12 +92,29 @@ function render() {
   renderRound(r, me);
   renderTurn(r, me);
   renderPlay(r, me);
+  renderWinner();
   renderVote(r, me);
   renderBidStrip(r);
   renderStandings(me);
   UI.measureSticky();
   $('#scorecard').innerHTML = Table.scorecardHTML(ST, me);
   Table.followCurrent('#scorecard');
+}
+
+// What each player is remembered for, once the last round is scored.
+function renderWinner() {
+  const panel = $('#winner-panel');
+  const done = ST.phase === 'done';
+  panel.hidden = !done;
+  if (!done) return;
+  const t = ST.totals, top = Math.max.apply(null, t);
+  const champs = ST.seats.filter((s, i) => t[i] === top).map((s) => s.name);
+  $('#winner-title').textContent = champs.length > 1
+    ? `${champs.join(' & ')} tie on ${top}`
+    : `${champs[0]} wins with ${top}`;
+  Accolades.render($('#accolades'),
+    Accolades.list(ST.rounds, ST.seats.length, (b, w) => Game.roundScore(b, w, ST.cfg)),
+    ST.seats.map((s) => s.name));
 }
 
 // The hand, when the table plays with a virtual deck. The server holds the

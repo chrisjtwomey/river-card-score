@@ -274,6 +274,37 @@ function client(name, url) {
     ok(solo.state.code === code4, 'the code is the one the QR shows');
   }
 
+  // ---- the accolades, worked out from a scorecard alone ----
+  {
+    const G = require(path + '/game.js');
+    global.document = { createElement: () => ({ append() {} }) };
+    eval(require('fs').readFileSync(path + '/public/accolades.js', 'utf8') + '\nglobal.Accolades = Accolades;');
+    const cfg = { bonus: 10, miss: 'atleast' };
+    const card = (cards, bids, tricks) => ({ cards, dealer: 0, trump: null, bids, tricks });
+    const rounds = [
+      card(2, [2, 0, 1, 0], [2, 0, 0, 0]),
+      card(2, [1, 1, 0, 0], [0, 1, 1, 0]),
+      card(1, [0, 1, 0, 0], [0, 1, 0, 0]),
+      card(1, [1, 0, 0, 0], [1, 0, 0, 0]),
+    ];
+    const got = Accolades.list(rounds, 4, (b, w) => G.roundScore(b, w, cfg));
+    const find = (k) => got.find((a) => a.key === k);
+    const who = (k) => (find(k) ? find(k).who.join(',') : 'none');
+    ok(who('fearless') === '0', 'the biggest total bid is the most fearless  got ' + who('fearless'));
+    ok(who('careful') === '3', 'and the smallest is the most careful  got ' + who('careful'));
+    ok(who('tricks') === '0', 'the most tricks won is its own accolade  got ' + who('tricks'));
+    ok(who('zeros') === '3', 'a player who bids nothing and takes nothing is the zero hero');
+    ok(who('made') === '1,3', 'an accolade two players earn names them both  got ' + who('made'));
+    ok(find('made').note === 'made 4 of 4 bids', 'and it says what they did  got ' + find('made').note);
+    ok(Accolades.list(rounds.slice(0, 2), 4, (b, w) => G.roundScore(b, w, cfg)).length === 0,
+       'a game too short to judge gets none');
+    const level = [card(1, [0, 0, 0, 0], [1, 0, 0, 0]), card(1, [0, 0, 0, 0], [0, 1, 0, 0]),
+                   card(1, [0, 0, 0, 0], [0, 0, 1, 0])];
+    ok(!Accolades.list(level, 4, (b, w) => G.roundScore(b, w, cfg)).some((a) => a.key === 'fearless'),
+       'and nothing is awarded where every seat is level');
+    delete global.document;
+  }
+
   // ---- a table that plays with a virtual deck ----
   {
     const vh = client('vhost'); await vh.ready;

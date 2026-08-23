@@ -196,6 +196,22 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 .fxrise.down{color:var(--red)}
 body.host .fxrise{font-size:19px}
 
+/* ---------- accolades ---------- */
+.accolades{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.acc{
+  display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:baseline;
+  padding:8px 12px;border-radius:10px;background:var(--chip);
+}
+.acc-title{
+  grid-column:1 / -1;font-size:11px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--gold);
+}
+.acc-who{font-size:16px;font-weight:800}
+.acc-note{font-size:13px;color:var(--ink-dim)}
+body.host .acc-title{font-size:13px}
+body.host .acc-who{font-size:21px}
+body.host .acc-note{font-size:17px}
+
 /* ---------- entry ---------- */
 .entry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .tally{font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--ink-dim)}

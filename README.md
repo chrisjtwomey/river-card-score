@@ -40,6 +40,27 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 9. The round scores, the next round opens, and the deal moves on one seat.
 10. The table host, or the host screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
 
+### Accolades
+
+When the last round is scored, every screen shows what each player is remembered for, under the winner. They come from the scorecard alone — the bids, the tricks and the hand sizes — so a table with real cards earns them the same way as one with a virtual deck.
+
+| Accolade | Who gets it |
+|---|---|
+| **Bang on** | Made the most bids exactly |
+| **Most fearless** | Bid the most tricks in all |
+| **Most tricks won** | Took the most tricks |
+| **Best round** | The highest score in a single round |
+| **Steadiest hand** | Fewest tricks out, over the whole game |
+| **Best comeback** | Climbed the most places in the second half |
+| **Zero hero** | Bid nothing and took nothing, most often |
+| **All in** | Bid a whole hand and made it |
+| **Quiet achiever** | Won the most tricks above their bids |
+| **Most careful** | Bid the fewest tricks all game |
+| **Biggest eyes** | Bid the most tricks above what they won |
+| **Hardest luck** | Most rounds that paid nothing |
+
+An accolade is shared when two players earn it, and it is not awarded at all when half the table or more would share it, or when every seat is level. A game of fewer than three rounds gets none.
+
 ### Playing with a virtual deck
 
 The table can play without real cards. In the lobby set **Cards** to *Deal on the phones*, and the server becomes the dealer:
@@ -293,6 +314,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `server.js` — HTTP static files, the QR and address endpoints, plus the WebSocket game server. Rooms live in memory.
 - `public/ui.js` — shared page bits, such as the full-screen button.
 - `public/deal.js` — the deal animation and the game-over finish, used by every screen.
+- `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
 - `test.js` — end-to-end test.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
