@@ -319,9 +319,11 @@ const Deal = (function () {
 
       // The pacing is the same either way: the accolades are there to be read,
       // and reduced motion takes the movement out, not the time.
+      // gap is how long each place is left alone on screen before the next one
+      // comes up, so the table can take them in one at a time.
       const T = calm
-        ? { fade: 120, gap: 90,  flip: 240, out: 220, acc: 8000, settle: 5000, hold: 2400 }
-        : { fade: 200, gap: 240, flip: 620, out: 320, acc: 8000, settle: 5000, hold: 4200 };
+        ? { fade: 120, gap: 180, flip: 240, out: 220, acc: 8000, settle: 5000, hold: 2400 }
+        : { fade: 200, gap: 480, flip: 620, out: 320, acc: 8000, settle: 5000, hold: 4200 };
       const anims = [], timers = [];
       let ended = false, settled = false, raf = 0;
 

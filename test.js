@@ -545,8 +545,13 @@ function client(name, url) {
       ok((await again({ accoladeCount: 5 })).length === 5, 'or five');
       const none = await again({ accoladeCount: 0 });
       ok(none.length === 0 && d.state.bonus.every((b) => !b), 'or none at all');
-      ok((await again({ accoladeCount: 3, accoladePay: 20 })).length === 3, 'and back to three');
-      ok(d.state.bonus.reduce((a, b) => a + b, 0) === 60, 'paying 20 each  got ' + d.state.bonus.join(','));
+      const three = await again({ accoladeCount: 3, accoladePay: 20 });
+      ok(three.length === 3, 'and back to three');
+      // an accolade two players share pays them both, so count the holders
+      const owed20 = three.reduce((sum, a) => sum + a.who.length * 20, 0);
+      ok(d.state.bonus.reduce((a, b) => a + b, 0) === owed20,
+         'paying 20 each  got ' + d.state.bonus.join(',') + ' for ' +
+         three.map((a) => a.who.length).join('+') + ' holders');
       d.send({ t: 'config', patch: { accoladeCount: 99, accoladePay: 7 } }); await wait(120);
       ok(d.state.cfg.accoladeCount === 3 && d.state.cfg.accoladePay === 20,
          'values outside the rules are refused  got ' + d.state.cfg.accoladeCount + '/' + d.state.cfg.accoladePay);
