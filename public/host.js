@@ -144,6 +144,9 @@ function render() {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
   $('#btn-deal').hidden = lobby;
+  // the dev page, on a server started with DEV=1. Not inside a dev preview,
+  // where it would only open the page it is already in.
+  $('#btn-dev').hidden = !ST.dev || window.top !== window;
 
   $('#lobby').hidden = !lobby;
   $('#game').hidden = lobby;

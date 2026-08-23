@@ -212,6 +212,7 @@ function publicState(room) {
     turn: (room.phase === 'bid' && r) ? G.turnSeat(r, n) : null,
     vote: (room.vote && room.vote.round === room.idx) ? room.vote : null,
     totals: n ? G.totals(room.cfg, room.rounds, n) : [],
+    dev: DEV,                       // the host screen offers the dev page when it is on
   };
 }
 

@@ -221,6 +221,8 @@ npm run dev
 
 Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the host screen and one phone per seat, live, side by side. Press a button and every pane updates together.
 
+The host screen carries a 🛠 button in its top bar whenever the server runs with `DEV=1`, so the page is one tap away from any screen. It opens in a new tab and makes its own table, so a game in play is not touched.
+
 It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
 - **Jump to** — start game, fill bids, fill tricks, next round, end game, bum deal vote, back to lobby, and **randomise**, which shuffles the rules and plays a random number of rounds.

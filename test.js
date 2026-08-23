@@ -280,6 +280,7 @@ function client(name, url) {
     d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(150);
     ok(d.errors.some((e) => /DEV=1/.test(e)), 'the dev controls are refused on a normal server');
     ok(!d.state, 'and no table is made');
+    ok(host.state.dev === false, 'and the screens are told not to offer the dev page');
   }
 
   // ---- the dev controls on a server started with DEV=1 ----
@@ -292,6 +293,7 @@ function client(name, url) {
     const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
     d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(200);
     ok(d.hello && d.hello.dev && d.hello.seats.length === 4, 'dev setup makes 4 stand-in seats with tokens');
+    ok(d.state.dev === true, 'and the screens are told to offer the dev page');
     d.send({ t: 'dev', action: 'startGame' }); await wait(150);
     d.send({ t: 'dev', action: 'fillBids' }); await wait(150);
     const r0 = d.state.rounds[0];
