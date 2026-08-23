@@ -7,7 +7,6 @@
   "scripts": {
     "start": "node server.js",
     "dev": "DEV=1 node server.js",
-    "seed": "node dev-seed.js",
     "cert": "node make-cert.js",
     "test": "NO_TLS=1 node test.js"
   },

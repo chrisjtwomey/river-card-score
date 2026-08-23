@@ -213,42 +213,27 @@ Live reload is off unless `DEV=1`. Without it, `/live` answers 404 and each page
 
 Changes to `server.js` still need a restart, and that ends the games in memory. Client files do not.
 
-### Setting up a table without players
+### The dev page
 
 ```sh
-npm run dev                                   # in one terminal
-npm run seed -- --state mid --players 5       # in another
+npm run dev
 ```
 
-`dev-seed.js` fills a table with stand-in players and drives it to a chosen state, so a screen can be worked on without gathering real people. It speaks the same protocol as a phone, so every state it makes is one a real game can reach.
+Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the host screen and one phone per seat, live, side by side. Press a button and every pane updates together.
 
-It prints a link for each seat and for the host screen. Open a link and that browser becomes that seat, because the link carries the seat token:
+It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
-```
-table H88Q · 4 players · state "mid" · round 3 of 8
-  phase        bid · Amy to bid
+- **Jump to** — start game, fill bids, fill tricks, next round, end game, bum deal vote, back to lobby, and **randomise**, which shuffles the rules and plays a random number of rounds.
+- **Force** — round number, phase, table host, who deals first, trump, re-deal count.
+- **Round** — pick any round and type each seat's bid and tricks. Scores come from the bids and the tricks, so editing a played round changes the totals.
+- **Rules** — the full set, editable even after the start, which the real game does not allow.
+- **State** — the live JSON the server is sending.
 
-open any of these, the link puts that seat in the browser:
-  host screen  http://localhost:8787/host.html#c=H88Q&t=7f501af3…
-  Amy          http://localhost:8787/play.html#c=H88Q&t=1ddd3083…
-  Hugh         http://localhost:8787/play.html#c=H88Q&t=7b5532ee…
-```
+The filled bids keep the screw-the-dealer rule, and the filled tricks always total the hand size, so nothing on screen is impossible.
 
-States:
+The previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
-| `--state` | what you get |
-|---|---|
-| `lobby` | seats taken, nothing started |
-| `bid` | game started, bidding open |
-| `tricks` | every bid in, waiting for the dealer |
-| `mid` | a few rounds scored, part way through the next |
-| `end` | every round played, the winner shown |
-| `vote` | a bum deal called, waiting on the table |
-| `redeal` | a hand thrown in and dealt again |
-
-Other options: `--rounds n` (finished rounds for `mid`), `--take <seat>` keeps one seat free for you and lets the stand-ins keep playing so you can play against them, `--auto`, `--url`, `--seed n` for the same cards every time, and the rules: `--max --pattern --ones --miss --bonus`. `--help` lists them.
-
-The same link trick moves a seat to another device: send somebody their `play.html#c=…&t=…` link and their seat follows.
+Every dev route needs `DEV=1`. On a normal server the page loads and says so, and no table is made.
 
 ## Test
 
@@ -267,7 +252,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `test.js` — end-to-end test.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
-- `dev-seed.js` — fills a table with stand-in players for working on the screens.
+- `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, and live previews of every screen.
 - `Dockerfile`, `compose.yaml` — container build and run.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.

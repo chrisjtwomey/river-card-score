@@ -3,6 +3,7 @@
 const Net = (function () {
   const KEY = 'rcs:session:v1';
   let ws = null, handlers = {}, backoff = 700, queue = [];
+  let mem = null, ephemeral = false;   // a preview keeps its seat in memory only
   let everOpen = false, fails = 0, probing = false;
 
   const wsUrl = () => (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -52,8 +53,15 @@ const Net = (function () {
     banner(`<b>The page loads, but ${url} will not connect.</b><ul><li>` + tips.join('</li><li>') + '</li></ul>');
   }
 
-  function session() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
-  function setSession(s) {
+  function session() {
+    if (ephemeral) return mem;
+    try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; }
+  }
+  // memoryOnly keeps the seat in this page only. Several previews of the same
+  // table can then run side by side without overwriting each other.
+  function setSession(s, memoryOnly) {
+    if (memoryOnly) ephemeral = true;
+    if (ephemeral) { mem = s; return; }
     try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch (e) {}
   }
 
@@ -73,7 +81,7 @@ const Net = (function () {
     ws.onmessage = (e) => {
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
       if (m.t === 'hello') {
-        setSession({ code: m.code, token: m.token, role: m.role, seatId: m.seatId || null });
+        setSession({ code: m.code, token: m.token, role: m.role, seatId: m.seatId || null }, ephemeral);
         handlers.onHello && handlers.onHello(m);
       } else if (m.t === 'state') { handlers.onState && handlers.onState(m); }
       else if (m.t === 'error') { handlers.onError && handlers.onError(m.msg); }

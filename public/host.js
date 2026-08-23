@@ -67,7 +67,7 @@ function claimFromHash() {
   const code = (q.get('c') || '').toUpperCase();
   const token = q.get('t') || '';
   if (!code || !token) return;
-  Net.setSession({ code, token, role: 'host', seatId: null });
+  Net.setSession({ code, token, role: 'host', seatId: null }, window.top !== window.self);
   history.replaceState(null, '', location.pathname + location.search);
 }
 

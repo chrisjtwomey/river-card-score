@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dev controls — Up the River, Down the River</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{padding-bottom:0}
+  .devwrap{display:grid;grid-template-columns:340px 1fr;gap:14px;padding:14px;max-width:none;align-items:start}
+  @media (max-width:1000px){ .devwrap{grid-template-columns:1fr} }
+  .devcol{display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 92px);overflow:auto;padding-right:4px}
+  .devcol .panel{padding:12px;gap:9px}
+  .devcol h2{font-size:12px}
+  .btnrow{display:flex;flex-wrap:wrap;gap:6px}
+  .btnrow .btn{padding:7px 10px;font-size:13px;flex:1 1 auto}
+  .frames{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .frameset{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
+  .frame{flex:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2);box-shadow:var(--shadow)}
+  .frame > header{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:5px 9px;font-size:12px;font-weight:700;background:var(--chip);color:var(--ink-dim)}
+  .frame > header a{color:var(--gold);text-decoration:none}
+  .frame .shell{position:relative;overflow:hidden}
+  .frame iframe{border:0;display:block;transform-origin:top left;background:var(--bg)}
+  .seatgrid{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;font-size:13px}
+  .seatgrid input{width:56px;font:inherit;padding:5px 6px;border-radius:8px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink);text-align:center}
+  .seatgrid .who{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .seatgrid .head{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);font-weight:700;text-align:center}
+  pre.state{margin:0;font-size:11px;line-height:1.35;max-height:320px;overflow:auto;
+    background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px;white-space:pre-wrap}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .devbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .devbar .code{font-size:22px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="pip">🛠</span>
+    <div>
+      <h1>Dev controls</h1>
+      <p class="sub" id="subtitle">setting up…</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <label class="field inline" style="color:#f3efe2">
+      <span style="font-size:11px">preview</span>
+      <select id="scale">
+        <option value="0.5">50%</option>
+        <option value="0.65" selected>65%</option>
+        <option value="0.8">80%</option>
+        <option value="1">100%</option>
+      </select>
+    </label>
+    <button class="btn ghost" id="btn-theme" type="button" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<div class="devwrap">
+  <div class="devcol">
+    <p class="err" id="dev-err" hidden></p>
+
+    <div class="panel">
+      <div class="devbar">
+        <span class="code" id="code">····</span>
+        <span class="tally" id="phase">—</span>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Players</span><input type="number" id="players" min="2" max="8" value="4"></label>
+        <label class="field"><span>&nbsp;</span><button class="btn" id="btn-rebuild" type="button">New table</button></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Jump to</h2>
+      <div class="btnrow">
+        <button class="btn" data-act="startGame" type="button">Start game</button>
+        <button class="btn" data-act="fillBids" type="button">Fill bids</button>
+        <button class="btn" data-act="fillTricks" type="button">Fill tricks</button>
+        <button class="btn" data-act="nextRound" type="button">Next round</button>
+        <button class="btn" data-act="endGame" type="button">End game</button>
+        <button class="btn" data-act="bumVote" type="button">Bum deal vote</button>
+        <button class="btn" data-act="lobby" type="button">Back to lobby</button>
+        <button class="btn primary" data-act="randomise" type="button">Randomise</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Force</h2>
+      <div class="row2">
+        <label class="field"><span>Round</span><input type="number" id="f-idx" min="1"></label>
+        <label class="field"><span>Phase</span>
+          <select id="f-phase">
+            <option value="lobby">lobby</option>
+            <option value="bid">bid</option>
+            <option value="tricks">tricks</option>
+            <option value="done">done</option>
+          </select>
+        </label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Table host</span><select id="f-captain"></select></label>
+        <label class="field"><span>Deals first</span><select id="f-dealer"></select></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Trump</span><select id="f-trump"></select></label>
+        <label class="field"><span>Re-deals</span><input type="number" id="f-redeals" min="0" value="0"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="entry-head">
+        <h2>Round</h2>
+        <select id="r-pick" style="max-width:130px"></select>
+      </div>
+      <div class="seatgrid" id="seatgrid"></div>
+      <div class="btnrow">
+        <button class="btn" id="btn-apply" type="button">Apply</button>
+        <button class="btn ghost" id="btn-clear" type="button">Clear round</button>
+      </div>
+      <p class="hint">Scores come from the bids and the tricks, so edit a played round to change a total.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Rules</h2>
+      <div class="row2">
+        <label class="field"><span>Biggest hand</span><input type="number" id="cfg-max" min="1" max="13"></label>
+        <label class="field"><span>1-card rounds</span><input type="number" id="cfg-ones" min="1" max="8"></label>
+      </div>
+      <label class="field"><span>Pattern</span>
+        <select id="cfg-pattern">
+          <option value="downup">down then up</option>
+          <option value="updown">up then down</option>
+          <option value="down">down only</option>
+          <option value="up">up only</option>
+        </select>
+      </label>
+      <div class="row2">
+        <label class="field"><span>Exact pays</span>
+          <select id="cfg-bonus"><option>10</option><option>5</option><option>1</option><option>0</option></select>
+        </label>
+        <label class="field"><span>Miss pays</span>
+          <select id="cfg-miss">
+            <option value="atleast">at least</option>
+            <option value="atleastdiff">at least, penalty</option>
+            <option value="zero">zero</option>
+            <option value="diff">difference</option>
+            <option value="tricks">tricks</option>
+          </select>
+        </label>
+      </div>
+      <div class="toggles">
+        <label class="switch"><input type="checkbox" id="cfg-screw"><span>Screw the dealer</span></label>
+        <label class="switch"><input type="checkbox" id="cfg-trump"><span>Record trump</span></label>
+      </div>
+    </div>
+
+    <details class="panel">
+      <summary style="cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)">State</summary>
+      <pre class="state" id="state-json">—</pre>
+    </details>
+  </div>
+
+  <div class="frames">
+    <div class="frameset" id="host-frame"></div>
+    <div class="frameset" id="seat-frames"></div>
+  </div>
+</div>
+
+<script src="/game.js"></script>
+<script src="dev.js"></script>
+</body>
+</html>

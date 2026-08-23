@@ -241,6 +241,138 @@ function bumDeal(room) {
   return true;
 }
 
+/* ---------------- dev controls (DEV=1 only) ---------------- */
+
+const DEV_NAMES = ['Amy', 'Hugh', 'Joe', 'Nia', 'Owen', 'Pia', 'Rhys', 'Sian'];
+const rand = (n) => Math.floor(Math.random() * n);
+
+function devSeats(room, count) {
+  room.seats = [];
+  for (let i = 0; i < Math.max(2, Math.min(8, count)); i++) {
+    room.seats.push({ id: token().slice(0, 8), name: DEV_NAMES[i], token: token(), online: false });
+  }
+  room.captainId = room.seats[0].id;
+  room.firstDealerId = null;
+  room.phase = 'lobby';
+  room.rounds = [];
+  room.idx = 0;
+  room.vote = null;
+  syncCfg(room);
+}
+
+function devStart(room) {
+  const n = room.seats.length;
+  syncCfg(room);
+  const first = Math.max(0, seatIndex(room, room.firstDealerId));
+  room.rounds = G.buildRounds(room.cfg, n, first);
+  room.idx = 0;
+  room.rounds[0].bids = Array(n).fill(null);
+  room.phase = 'bid';
+  room.vote = null;
+}
+
+// Bids that a real table could make, including the screw-the-dealer rule.
+function devFillBids(room) {
+  const r = curRound(room), n = room.seats.length;
+  if (!r) return;
+  if (!r.bids) r.bids = Array(n).fill(null);
+  let p = G.turnSeat(r, n);
+  while (p !== null) {
+    const forbidden = G.forbiddenBid(r, p, room.cfg, n);
+    const choices = [];
+    for (let v = 0; v <= r.cards; v++) if (v !== forbidden) choices.push(v);
+    r.bids[p] = choices[rand(choices.length)];
+    p = G.turnSeat(r, n);
+  }
+  room.phase = 'tricks';
+}
+
+function devFillTricks(room) {
+  const r = curRound(room), n = room.seats.length;
+  if (!r || !r.bids || r.bids.some((b) => b === null)) return;
+  const out = Array(n).fill(0);
+  for (let i = 0; i < r.cards; i++) out[rand(n)] += 1;
+  r.tricks = out;
+}
+
+function devNextRound(room) {
+  if (!room.rounds.length) { devStart(room); return; }
+  if (room.phase === 'done') return;
+  devFillBids(room);
+  devFillTricks(room);
+  room.vote = null;
+  room.idx += 1;
+  if (room.idx >= room.rounds.length) { room.idx = room.rounds.length; room.phase = 'done'; }
+  else { room.rounds[room.idx].bids = Array(room.seats.length).fill(null); room.phase = 'bid'; }
+}
+
+function devEndGame(room) {
+  if (!room.rounds.length) devStart(room);
+  let guard = 60;
+  while (room.phase !== 'done' && guard-- > 0) devNextRound(room);
+}
+
+function devBumVote(room) {
+  const r = curRound(room);
+  if (!r) return;
+  const by = room.seats.findIndex((seat, i) => i !== r.dealer && seat.id !== room.captainId);
+  if (by < 0) return;
+  room.vote = { kind: 'bumdeal', by, round: room.idx, yes: [by], no: [] };
+}
+
+// A table part way through, with the rules shuffled about.
+function devRandomise(room) {
+  const n = room.seats.length;
+  room.cfg.max = 2 + rand(Math.min(6, G.maxCardsFor(n) - 1));
+  room.cfg.pattern = ['downup', 'updown', 'down', 'up'][rand(4)];
+  room.cfg.ones = 1 + rand(n);
+  room.cfg.bonus = [10, 5, 1, 0][rand(4)];
+  room.cfg.miss = Object.keys(G.MISS_RULES)[rand(5)];
+  room.cfg.screw = rand(2) === 0;
+  room.onesLocked = true;
+  room.firstDealerId = room.seats[rand(n)].id;
+  room.captainId = room.seats[rand(n)].id;
+  devStart(room);
+  const played = rand(room.rounds.length);
+  for (let i = 0; i < played; i++) devNextRound(room);
+  if (room.phase === 'bid' && rand(2) === 0) {          // part way through the bids
+    const r = curRound(room);
+    const order = G.bidOrder(r.dealer, n);
+    const upto = rand(n);
+    for (let i = 0; i < upto; i++) r.bids[order[i]] = rand(r.cards + 1);
+  }
+  const r = curRound(room);
+  if (r && room.cfg.trump && rand(3) > 0) r.trump = G.SUITS[rand(G.SUITS.length)].k;
+}
+
+// Force values the protocol would not allow, for looking at a screen.
+function devPatch(room, p) {
+  const n = room.seats.length;
+  if (p.cfg) Object.assign(room.cfg, p.cfg);
+  if (typeof p.idx === 'number' && room.rounds.length) {
+    room.idx = Math.max(0, Math.min(p.idx, room.rounds.length));
+    if (room.idx < room.rounds.length && !room.rounds[room.idx].bids) {
+      room.rounds[room.idx].bids = Array(n).fill(null);
+    }
+  }
+  if (p.phase) {
+    room.phase = p.phase;
+    if (p.phase === 'done') room.idx = room.rounds.length;
+  }
+  if (p.captainId && seatIndex(room, p.captainId) >= 0) room.captainId = p.captainId;
+  if ('firstDealerId' in p) {
+    room.firstDealerId = (p.firstDealerId && seatIndex(room, p.firstDealerId) >= 0) ? p.firstDealerId : null;
+  }
+  if (p.round && room.rounds[p.round.i]) {
+    const r = room.rounds[p.round.i];
+    if ('bids' in p.round) r.bids = p.round.bids;
+    if ('tricks' in p.round) r.tricks = p.round.tricks;
+    if ('trump' in p.round) r.trump = p.round.trump;
+    if ('redeals' in p.round) r.redeals = Number(p.round.redeals) || 0;
+  }
+  if (p.vote === null) room.vote = null;
+}
+
 /* ---------------- socket protocol ---------------- */
 
 const wss = new WebSocketServer({ server, path: '/ws' });
@@ -280,6 +412,37 @@ function handle(ws, m) {
     const room = createRoom();
     attach(ws, room, { role: 'host' });
     send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken });
+    return broadcast(room);
+  }
+
+  // The dev page: makes a table of stand-ins and forces it into a state.
+  if (m.t === 'dev') {
+    if (!DEV) return fail(ws, 'the dev controls need the server started with DEV=1');
+    let room = ws.ctx && ws.ctx.room;
+    if (m.action === 'setup' || !room) {
+      room = room && m.action !== 'setup' ? room : createRoom();
+      attach(ws, room, { role: 'host' });
+      devSeats(room, Number(m.players) || 4);
+      send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken, dev: true,
+                 seats: room.seats.map((x) => ({ id: x.id, name: x.name, token: x.token })) });
+      return broadcast(room);
+    }
+    switch (m.action) {
+      case 'players': devSeats(room, Number(m.players) || 4); break;
+      case 'startGame': devStart(room); break;
+      case 'fillBids': devFillBids(room); break;
+      case 'fillTricks': devFillTricks(room); break;
+      case 'nextRound': devNextRound(room); break;
+      case 'endGame': devEndGame(room); break;
+      case 'lobby': room.phase = 'lobby'; room.rounds = []; room.idx = 0; room.vote = null; break;
+      case 'bumVote': devBumVote(room); break;
+      case 'randomise': devRandomise(room); break;
+      case 'patch': devPatch(room, m.patch || {}); break;
+      default: return fail(ws, 'unknown dev action');
+    }
+    // the seat tokens go back every time, so the previews can re-open
+    send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken, dev: true,
+               seats: room.seats.map((x) => ({ id: x.id, name: x.name, token: x.token })) });
     return broadcast(room);
   }
 
@@ -332,7 +495,7 @@ function handle(ws, m) {
 
     case 'config': {
       if (!boss) return fail(ws, 'only the table host changes the rules');
-      if (room.phase !== 'lobby') return fail(ws, 'the game has started');
+      if (room.phase !== 'lobby' && !DEV) return fail(ws, 'the game has started');
       const c = room.cfg, p = m.patch || {};
       if ('max' in p) c.max = Math.max(1, Math.min(Number(p.max) || 1, G.maxCardsFor(Math.max(2, n))));
       if ('ones' in p) { c.ones = Math.max(1, Math.min(8, Number(p.ones) || 1)); room.onesLocked = true; }

@@ -9,8 +9,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) fails++; };
 
-function client(name) {
-  const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`);
+function client(name, url) {
+  const ws = new WebSocket(url || `ws://127.0.0.1:${PORT}/ws`);
   const c = { ws, name, state: null, hello: null, errors: [], seatId: null };
   ws.on('message', d => {
     const m = JSON.parse(d);
@@ -272,6 +272,41 @@ function client(name) {
     ok(solo.state.seats.length === 1 && solo.state.seats[0].name === 'Solo', 'the seat is at the new table');
     ok(solo.state.captainId === solo.hello.seatId, 'and that player runs the table');
     ok(solo.state.code === code4, 'the code is the one the QR shows');
+  }
+
+  // ---- the dev controls are refused unless DEV=1 ----
+  {
+    const d = client('devprobe'); await d.ready;
+    d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(150);
+    ok(d.errors.some((e) => /DEV=1/.test(e)), 'the dev controls are refused on a normal server');
+    ok(!d.state, 'and no table is made');
+  }
+
+  // ---- the dev controls on a server started with DEV=1 ----
+  {
+    const port3 = PORT + 2;
+    const srv3 = spawn('node', [path + '/server.js'], {
+      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1' }, stdio: 'ignore',
+    });
+    await wait(700);
+    const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
+    d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(200);
+    ok(d.hello && d.hello.dev && d.hello.seats.length === 4, 'dev setup makes 4 stand-in seats with tokens');
+    d.send({ t: 'dev', action: 'startGame' }); await wait(150);
+    d.send({ t: 'dev', action: 'fillBids' }); await wait(150);
+    const r0 = d.state.rounds[0];
+    const bidSum = r0.bids.reduce((a, b) => a + b, 0);
+    ok(d.state.phase === 'tricks' && r0.bids.every((b) => b !== null), 'fillBids fills every bid');
+    ok(!d.state.cfg.screw || bidSum !== r0.cards, 'and keeps the screw-the-dealer rule');
+    d.send({ t: 'dev', action: 'endGame' }); await wait(600);
+    ok(d.state.phase === 'done', 'endGame plays every round');
+    d.send({ t: 'dev', action: 'patch', patch: { idx: 1, phase: 'bid' } }); await wait(150);
+    ok(d.state.idx === 1 && d.state.phase === 'bid', 'patch forces the round and the phase');
+    d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, bids: [1, 0, 2, 1], tricks: [1, 1, 1, 1] } } });
+    await wait(150);
+    ok(JSON.stringify(d.state.rounds[0].bids) === '[1,0,2,1]' && d.state.totals.some((t) => t !== 0),
+       'patch forces a round, and the totals follow');
+    srv3.kill();
   }
 
   // ---- PUBLIC_URL replaces the detected addresses ----

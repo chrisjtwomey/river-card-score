@@ -26,7 +26,8 @@ function claimFromHash() {
   const code = (q.get('c') || '').toUpperCase();
   const token = q.get('t') || '';
   if (!code || !token) return;
-  Net.setSession({ code, token, role: 'player', seatId: null });
+  // inside the dev previews, keep it in this frame only
+  Net.setSession({ code, token, role: 'player', seatId: null }, window.top !== window.self);
   history.replaceState(null, '', location.pathname + location.search);
 }
 
