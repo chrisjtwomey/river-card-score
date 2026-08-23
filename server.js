@@ -38,14 +38,15 @@ const MIME = {
 
 /* ---------------- addresses and QR ---------------- */
 
-// Every address a phone can use to reach the table. In a container the
-// detected address is the container's own, so PUBLIC_URL wins when it is set.
+// Every address a phone can use to reach the table. PUBLIC_URL replaces the
+// detected addresses, it does not add to them: behind a proxy or in a
+// container the detected ones are private and no phone can reach them.
 function lanUrls() {
+  const named = (process.env.PUBLIC_URL || '').split(',')
+    .map((u) => u.trim().replace(/\/$/, '')).filter(Boolean);
+  if (named.length) return Array.from(new Set(named));
+
   const out = [];
-  if (process.env.PUBLIC_URL) {
-    process.env.PUBLIC_URL.split(',').map((u) => u.trim().replace(/\/$/, ''))
-      .filter(Boolean).forEach((u) => out.push(u));
-  }
   const nets = os.networkInterfaces();
   Object.values(nets).forEach((list) => (list || []).forEach((ni) => {
     if (ni.family === 'IPv4' && !ni.internal) out.push(`${SCHEME}://${ni.address}:${PORT}`);
@@ -515,7 +516,9 @@ server.listen(PORT, () => {
   console.log(`Up the River, Down the River — table server (${SCHEME})`);
   console.log(`  host screen:  ${SCHEME}://localhost:${PORT}/host.html`);
   console.log(`  players join: ${SCHEME}://localhost:${PORT}/`);
-  lanUrls().forEach((u) => console.log(`  on this network: ${u}/`));
+  const advertised = process.env.PUBLIC_URL ? 'players join at' : 'on this network';
+  lanUrls().forEach((u) => console.log(`  ${advertised}: ${u}/`));
+  if (process.env.PUBLIC_URL) console.log('  PUBLIC_URL is set, so this machine\'s own addresses are not offered');
   if (!tls) console.log('  note: phones keep the screen awake only over https. Run "npm run cert" and restart.');
   if (DEV) console.log('  live reload is on: a change under public/ reloads every open page');
 });

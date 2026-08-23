@@ -96,6 +96,8 @@ PUBLIC_URL=http://192.168.1.5:8787 docker compose up --build
 
 `PUBLIC_URL` is the address the phones use. A container cannot see it, so the QR code shows this instead of the container's own address. Use the address of the machine that runs Docker. Without it, the QR code says `localhost`, which no phone can reach.
 
+`PUBLIC_URL` **replaces** the detected addresses, it does not add to them. Behind a proxy or in a container the detected ones are private and useless to a phone, so the host screen offers only what you name here.
+
 The compose file mounts `./certs` read only. Run `npm run cert` on the host first for https, or delete that line. `NO_TLS=1` forces plain http.
 
 The same variable works outside Docker, and it accepts a list: `PUBLIC_URL=http://192.168.1.5:8787,https://table.example.com`. Each address appears in the picker on the host screen.
@@ -108,7 +110,7 @@ Three rules:
 
 1. Pass the `Upgrade` and `Connection` headers to `/ws`.
 2. Keep the path as `/ws`. Do not strip or rewrite it.
-3. Set `PUBLIC_URL` to the address people type, so the QR code matches: `PUBLIC_URL=https://table.example.com`.
+3. Set `PUBLIC_URL` to the address people type, so the QR code matches: `PUBLIC_URL=https://table.example.com`. That also hides the server's own private addresses from the picker.
 
 The server pings every 30 seconds, so an idle socket survives a normal proxy timeout.
 

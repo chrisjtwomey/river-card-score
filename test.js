@@ -274,6 +274,20 @@ function client(name) {
     ok(solo.state.code === code4, 'the code is the one the QR shows');
   }
 
+  // ---- PUBLIC_URL replaces the detected addresses ----
+  {
+    const port2 = PORT + 1;
+    const srv2 = spawn('node', [path + '/server.js'], {
+      env: { ...process.env, PORT: port2, NO_TLS: '1', PUBLIC_URL: 'https://table.example.com/' },
+      stdio: 'ignore',
+    });
+    await wait(700);
+    const net2 = await fetch(`http://127.0.0.1:${port2}/net.json`).then((r) => r.json());
+    ok(JSON.stringify(net2.urls) === '["https://table.example.com"]',
+       'PUBLIC_URL is the only address offered, with no private ones  got ' + JSON.stringify(net2.urls));
+    srv2.kill();
+  }
+
   console.log(fails ? `\n${fails} FAILURES` : '\nall integration checks passed');
   srv.kill(); process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); srv.kill(); process.exit(1); });
