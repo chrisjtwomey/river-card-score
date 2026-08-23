@@ -319,13 +319,17 @@ function renderTurn(r, me) {
   }
 
   // tricks phase
+  // The player left of the dealer leads the first trick, the same one who bid
+  // first.
+  const leader = (r.dealer + 1) % ST.seats.length;
+  const leads = leader === me ? 'You lead' : `${ST.seats[leader].name} leads`;
   $('#turn-eyebrow').textContent = 'Tricks won';
   if (r.dealer !== me) {
-    $('#turn-text').textContent = `Play the hand. ${ST.seats[r.dealer].name} enters the tricks.`;
+    $('#turn-text').textContent = `${leads} the first trick. ${ST.seats[r.dealer].name} enters the tricks.`;
     return;
   }
   panel.classList.add('mine');
-  $('#turn-text').textContent = 'You deal: enter the tricks each player won';
+  $('#turn-text').textContent = `${leads} the first trick. Enter the tricks each player won.`;
   trickPad.hidden = false;
 
   // Everybody starts on 0, so the dealer only taps the players who won tricks.

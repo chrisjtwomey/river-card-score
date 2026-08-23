@@ -331,8 +331,9 @@ function renderTurn(r, n) {
   $('#turn-title').textContent = 'Tricks won';
   $('#turn-tally').textContent = `Bids ${sum} of ${r.cards}`;
   $('#turn-tally').className = 'tally';
-  $('#turn-hint').textContent = `${ST.seats[r.dealer].name} enters the tricks. You can enter them here instead. ` +
-    'Everybody starts on 0, so only tap the players who won tricks.';
+  const leader = ST.seats[(r.dealer + 1) % n].name;
+  $('#turn-hint').textContent = `${leader} leads the first trick. ${ST.seats[r.dealer].name} enters the tricks, ` +
+    'or you can enter them here. Everybody starts on 0, so only tap the players who won tricks.';
   pad.hidden = false;
 
   const key = `${ST.idx}:${ST.phase}`;
