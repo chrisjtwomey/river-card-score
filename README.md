@@ -214,6 +214,8 @@ Same server, plus live reload. The server watches `public/` and `game.js`, and e
 
 Live reload is off unless `DEV=1`. Without it, `/live` answers 404 and each page stops asking after one try. `npm start` never watches the files.
 
+A page inside a frame never opens the stream. A browser allows only six connections to one address, and the stream never closes, so a wall of dev previews would use them all up and every later request — the QR image, `/net.json` — would wait for ever. The dev page keeps the one stream and rebuilds its frames itself.
+
 Changes to `server.js` still need a restart, and that ends the games in memory. Client files do not.
 
 ### The dev page

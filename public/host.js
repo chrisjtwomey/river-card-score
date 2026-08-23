@@ -68,8 +68,10 @@ function claimFromHash() {
   const code = (q.get('c') || '').toUpperCase();
   const token = q.get('t') || '';
   if (!code || !token) return;
-  Net.setSession({ code, token, role: 'host', seatId: null }, window.top !== window.self);
-  history.replaceState(null, '', location.pathname + location.search);
+  const framed = window.top !== window.self;
+  Net.setSession({ code, token, role: 'host', seatId: null }, framed);
+  // A frame keeps its link, so it still knows the table if it reloads.
+  if (!framed) history.replaceState(null, '', location.pathname + location.search);
 }
 
 function boot() {

@@ -32,11 +32,13 @@ function claimFromHash() {
   const eye = q.get('w') || '';
   if (!code || (!token && !eye)) return;
   // Inside the dev previews, keep it in this frame only. A watching window
-  // never saves itself at all, so it cannot evict your own seat, and it keeps
-  // the link in the address bar so a reload still works.
+  // never saves itself at all, so it cannot evict your own seat.
+  const framed = window.top !== window.self;
   Net.setSession({ code, token: eye || token, role: eye ? 'watch' : 'player', seatId: null },
-    !!eye || window.top !== window.self);
-  if (!eye) history.replaceState(null, '', location.pathname + location.search);
+    !!eye || framed);
+  // The link stays in the address bar for anything held in memory, so the page
+  // still knows its seat if it reloads. A seat claimed for keeps drops it.
+  if (!eye && !framed) history.replaceState(null, '', location.pathname + location.search);
 }
 
 function boot() {

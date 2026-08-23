@@ -151,6 +151,11 @@ const UI = (function () {
   function liveReload() {
     if (!/^https?:$/.test(location.protocol)) return;      // file:// has no server
     if (typeof EventSource === 'undefined') return;
+    // Not inside a frame. The stream never closes, and a browser allows only
+    // six connections to one address, so a wall of dev previews would use them
+    // all up and later requests -- the QR code, /net.json -- would hang for
+    // ever. The dev page keeps one stream and reloads its own frames.
+    if (window.top !== window) return;
     let es;
     try { es = new EventSource('/live'); } catch (e) { return; }
     es.onopen = () => console.info('[dev] live reload is on');

@@ -106,6 +106,26 @@ function renderFrames() {
   }
 }
 
+// Live reload for the previews. The frames do not each hold a stream open --
+// a browser allows only six connections to one address, and a wall of frames
+// would use them all up. This page keeps the one stream and rebuilds the
+// frames itself, which reloads them with their table and seat still in the
+// link. A change to this page reloads this page.
+function watchFiles() {
+  if (typeof EventSource === 'undefined') return;
+  let es;
+  try { es = new EventSource('/live'); } catch (e) { return; }
+  es.onopen = () => console.info('[dev] live reload is on');
+  es.addEventListener('reload', (e) => {
+    let what = '';
+    try { what = JSON.parse(e.data); } catch (err) {}
+    if (/^dev\./.test(String(what))) { location.reload(); return; }
+    topKey = seatKey = '';
+    renderFrames();
+  });
+  es.onerror = () => { if (es.readyState === 2) es.close(); };   // 2 is CLOSED
+}
+
 /* ---------- controls ---------- */
 
 function fillSelect(sel, items, value) {
@@ -281,4 +301,5 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
 
   connect();
+  watchFiles();
 });
