@@ -105,7 +105,7 @@ main{max-width:820px;margin:0 auto;padding:16px;display:flex;flex-direction:colu
 .topbar .btn.danger{color:#ffd9d4}
 .btn.big{padding:14px;font-size:17px}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
-a.btn{display:inline-flex;align-items:center;text-decoration:none}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 
 .field{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-dim);font-weight:600}
 .field input,.field select{
@@ -363,6 +363,7 @@ dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 /* ---------- table server: shared bits ---------- */
 .center{text-align:center}
 .row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.row-actions.even > *{flex:1 1 160px;text-align:center}
 .netpill{
   align-self:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
   padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;

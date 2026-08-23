@@ -55,10 +55,13 @@
     </label>
     <button class="btn primary big" id="btn-new-table" type="button">Start a table and play</button>
     <p class="err" id="new-err" hidden></p>
-    <p class="hint center"><a href="host.html">Open a host screen for a TV instead</a></p>
   </section>
 
-  <p class="hint center"><a href="local.html">Single-device tracker (no server)</a></p>
+  <!-- the other two ways to run a game, side by side -->
+  <div class="row-actions even">
+    <a class="btn" href="host.html">Host screen for a TV</a>
+    <a class="btn" href="local.html">Single-device tracker</a>
+  </div>
 </main>
 
 <script src="net.js"></script>
