@@ -42,11 +42,12 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 ### Accolades
 
-When the last round is scored, every screen shows what each player is remembered for, under the winner. They come from the scorecard alone — the bids, the tricks and the hand sizes — so a table with real cards earns them the same way as one with a virtual deck.
+When the last round is scored, **three** of the accolades the table earned are drawn at random. Each one pays its holder **10 points** by default, and the rules let the table set 20, 5, or nothing. The screens read the three out one at a time, with what each paid, and only then are the places and the winner shown. So the game is not over until the accolades are in.
+
+They come from the scorecard alone — the bids, the tricks and the hand sizes — so a table with real cards earns them the same way as one with a virtual deck. The scorecard grows an **Accolades** row under the last round, and the Total row is the final score.
 
 | Accolade | Who gets it |
 |---|---|
-| **Bang on** | Made the most bids exactly |
 | **Most fearless** | Bid the most tricks in all |
 | **Most tricks won** | Took the most tricks |
 | **Best round** | The highest score in a single round |
@@ -59,7 +60,7 @@ When the last round is scored, every screen shows what each player is remembered
 | **Biggest eyes** | Bid the most tricks above what they won |
 | **Hardest luck** | Most rounds that paid nothing |
 
-An accolade is shared when two players earn it, and it is not awarded at all when half the table or more would share it, or when every seat is level. A game of fewer than three rounds gets none.
+An accolade is shared when two players earn it, and both are paid. It is not awarded at all when half the table or more would share it, or when every seat is level. A game of fewer than three rounds earns none, and nothing is drawn.
 
 ### Playing with a virtual deck
 
@@ -115,7 +116,7 @@ Both screens play the deal animation at the start of every round: a card flies t
 
 When somebody bids, every other screen says so: a line slides in under the top bar — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. Your own bid is not announced, because your own pad already shows it. On the host screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.
 
-When the last round is scored, both screens play the finish: the places come up one at a time from last to first, the winner's card turns over, the score runs up to the total, and paper falls. Every player's score is on screen, best first, with a shared place for a draw. It clears itself after a few seconds. A tap lands it, and a second tap clears it. A screen that opens on a game already over does not replay it.
+When the last round is scored, both screens play the finish: the three accolades are read out and paid, one at a time, then the places come up from last to first, the winner's card turns over, the score runs up to the total, and paper falls. Every player's score is on screen, best first, with a shared place for a draw. It clears itself after a few seconds. A tap lands it, and a second tap clears it. A screen that opens on a game already over does not replay it.
 
 The `?motion=` flag below works on `host.html` and `play.html` as well.
 
@@ -132,6 +133,7 @@ Phones reconnect on their own. A player who closes the page and comes back is of
   - **0 points**, **minus 1 per trick off**, or **tricks won only**.
 - Screw the dealer, and whether to record the trump suit.
 - Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
+- What each accolade pays at the end: 20, 10, 5, or nothing. See [Accolades](#accolades).
 
 ## Run it with Docker
 

@@ -203,7 +203,12 @@ const Deal = (function () {
         overlay.removeEventListener('pointerdown', skip);
         window.removeEventListener('keydown', skip);
         const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
-        out.onfinish = () => { overlay.hidden = true; stage.innerHTML = ''; resolve(); };
+        // A scene that opens while this one fades out owns the overlay now, so
+        // do not pull the stage out from under it.
+        out.onfinish = () => {
+          if (!live) { overlay.hidden = true; stage.innerHTML = ''; }
+          resolve();
+        };
       }
       function settle() { settled = true; anims.forEach((a) => { try { a.finish(); } catch (e) {} }); }
       function skip() {
@@ -273,8 +278,10 @@ const Deal = (function () {
     live.turnAnim = card.animate(frames, { duration: D, iterations: Infinity });
   }
 
-  /* The finish: the places come up from last to first, then the winner's card
-     turns over and the room goes gold.  opts: { names, totals, linger }.
+  /* The finish: the accolades are read out and paid, then the places come up
+     from last to first, then the winner's card turns over and the room goes
+     gold.  opts: { names, totals, awards, points, linger }. The totals given
+     are the final ones, with what the accolades paid already in them.
      A tap lands it; the next one closes it. */
   function finale(opts, force) {
     close();
@@ -292,19 +299,31 @@ const Deal = (function () {
       if (m === 'off') { console.info('[finale] skipped: motion is off'); resolve(); return; }
       const calm = m === 'reduced';
 
+      // The accolades to read out, and what each seat was paid for them.
+      const awards = (opts && opts.awards) || [];
+      const pay = Number(opts && opts.points) || 0;
+      const paid = {};
+      awards.forEach((a) => (a.who || []).forEach((i) => { paid[i] = (paid[i] || 0) + pay; }));
+
       // Best first. A draw shares the place, so the places read 1, 1, 3.
-      const order = names.map((nm, i) => ({ nm, v: Number(totals[i]) || 0 })).sort((a, b) => b.v - a.v);
+      const order = names.map((nm, i) => ({ nm, i, v: Number(totals[i]) || 0 })).sort((a, b) => b.v - a.v);
       const best = order[0].v;
       const champs = order.filter((o) => o.v === best);
       const each = champs.length > 1 ? ' each' : '';
-      const points = (v) => `${v} point${Math.abs(v) === 1 ? '' : 's'}${each}`;
+      const tail = champs.some((c) => paid[c.i]) ? ', accolades in' : '';
+      const points = (v) => `${v} point${Math.abs(v) === 1 ? '' : 's'}${each}${tail}`;
 
       stage.innerHTML = '';
       overlay.hidden = false;
 
+      // The accolades add time, so the winner is held a little less long.
       const T = calm
-        ? { fade: 120, gap: 90,  flip: 240, hold: 2600, out: 220 }
-        : { fade: 200, gap: 240, flip: 620, hold: 5200, out: 320 };
+        ? { fade: 120, gap: 90,  flip: 240, out: 220, acc: 900,
+            hold: awards.length ? 2200 : 2600 }
+        : { fade: 200, gap: 240, flip: 620, out: 320, acc: 1500,
+            hold: awards.length ? 4200 : 5200 };
+      // how long the accolades take before the places start
+      const runIn = awards.length ? T.fade + 500 + awards.length * T.acc : 0;
       const anims = [], timers = [];
       let ended = false, settled = false, raf = 0;
 
@@ -312,12 +331,13 @@ const Deal = (function () {
       head.className = 'deal-head';
       const cap = document.createElement('div');
       cap.className = 'deal-cap';
-      cap.textContent = 'Game over';
+      cap.textContent = awards.length ? 'Accolades' : 'Game over';
       head.appendChild(cap);
       stage.appendChild(head);
       anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-12px)' }, { opacity: 1, transform: 'translateY(0)' }],
         { duration: 300, delay: T.fade, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }));
+      if (awards.length) timers.push(setTimeout(() => { cap.textContent = 'Game over'; }, runIn));
 
       const box = document.createElement('div');
       box.className = 'fin';
@@ -353,16 +373,60 @@ const Deal = (function () {
         return row;
       });
 
+      // The accolades first, one at a time, each paying as it is read out.
+      // They stack on top of each other and only one is up at a time.
+      const run = document.createElement('div');
+      run.className = 'fin-run';
+      box.appendChild(run);
+      awards.forEach((a, i) => {
+        const at = T.fade + 500 + i * T.acc;
+        const row = document.createElement('div');
+        row.className = 'fin-award';
+        const t = document.createElement('div');
+        t.className = 'fa-title';
+        t.textContent = a.title;
+        const w = document.createElement('div');
+        w.className = 'fa-who';
+        w.textContent = (a.who || []).map((k) => names[k]).join(' & ');
+        const note = document.createElement('div');
+        note.className = 'fa-note';
+        note.textContent = a.note;
+        row.append(t, w, note);
+        if (pay) {
+          const pts = document.createElement('div');
+          pts.className = 'fa-pts';
+          pts.textContent = `+${pay}`;
+          row.appendChild(pts);
+          anims.push(pts.animate(
+            calm ? [{ opacity: 0 }, { opacity: 1 }]
+                 : [{ opacity: 0, transform: 'scale(2.4) rotate(-9deg)' },
+                    { opacity: 1, transform: 'scale(1) rotate(0deg)' }],
+            { duration: calm ? 200 : 440, delay: at + (calm ? 120 : 500),
+              easing: 'cubic-bezier(.2,.9,.3,1.5)', fill: 'both' }));
+        }
+        run.appendChild(row);
+        anims.push(row.animate(
+          calm
+            ? [{ opacity: 0, offset: 0 }, { opacity: 1, offset: .12 },
+               { opacity: 1, offset: .8 }, { opacity: 0, offset: 1 }]
+            : [{ opacity: 0, transform: 'translateY(18px) scale(.94)', offset: 0 },
+               { opacity: 1, transform: 'none', offset: .12 },
+               { opacity: 1, transform: 'none', offset: .78 },
+               { opacity: 0, transform: 'translateY(-20px) scale(.98)', offset: 1 }],
+          { duration: T.acc, delay: at, easing: 'ease-out', fill: 'both' }));
+      });
+
       anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
       anims.push(card.animate(
         calm ? [{ opacity: 0 }, { opacity: 1 }]
              : [{ transform: 'rotateY(180deg) scale(.6)', opacity: 0 },
                 { transform: 'rotateY(180deg) scale(1)', opacity: 1 }],
-        { duration: calm ? 200 : 380, delay: T.fade, easing: 'cubic-bezier(.2,.9,.3,1.35)', fill: 'both' }));
+        { duration: calm ? 200 : 380, delay: runIn + T.fade,
+          easing: 'cubic-bezier(.2,.9,.3,1.35)', fill: 'both' }));
 
       // The also-rans come up from the bottom of the list, one at a time.
       const losers = rows.slice(champs.length);
-      const start = T.fade + (calm ? 200 : 520);
+      const start = runIn + T.fade + (calm ? 200 : 520);
       losers.forEach((row, k) => {
         anims.push(row.animate(
           calm ? [{ opacity: 0 }, { opacity: 1 }]
@@ -445,7 +509,12 @@ const Deal = (function () {
         overlay.removeEventListener('pointerdown', skip);
         window.removeEventListener('keydown', skip);
         const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
-        out.onfinish = () => { overlay.hidden = true; stage.innerHTML = ''; resolve(); };
+        // A scene that opens while this one fades out owns the overlay now, so
+        // do not pull the stage out from under it.
+        out.onfinish = () => {
+          if (!live) { overlay.hidden = true; stage.innerHTML = ''; }
+          resolve();
+        };
       }
       function settle() {
         settled = true;

@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const qrcode = require('qrcode-generator');
 const G = require('./game.js');
+const A = require('./public/accolades.js');
 
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = __dirname;
@@ -180,6 +181,8 @@ function createRoom() {
     vote: null,                 // an open "bum deal" vote, or null
     stand: false,               // true for a dev table of stand-in players
     play: null,                 // the hands and the trick, when the deck is virtual
+    awards: null,               // the accolades drawn at the end of the game
+    bonus: null,                // and what they paid each seat
     sockets: new Set(),
     lastSeen: Date.now(),
   };
@@ -201,6 +204,7 @@ function syncCfg(room) {
 function publicState(room) {
   const n = room.seats.length;
   const r = curRound(room);
+  const bonus = room.bonus || Array(n).fill(0);
   return {
     t: 'state',
     code: room.code,
@@ -213,7 +217,9 @@ function publicState(room) {
     idx: room.idx,
     turn: (room.phase === 'bid' && r) ? G.turnSeat(r, n) : null,
     vote: (room.vote && room.vote.round === room.idx) ? room.vote : null,
-    totals: n ? G.totals(room.cfg, room.rounds, n) : [],
+    totals: n ? G.totals(room.cfg, room.rounds, n).map((v, i) => v + (bonus[i] || 0)) : [],
+    bonus,                          // what the accolades paid, once they are drawn
+    awards: room.awards || null,    // the three drawn at the end
     play: playPublic(room),         // the cards on the table, never the hands
     dev: DEV,                       // the host screen offers the dev page when it is on
   };
@@ -330,6 +336,20 @@ function playCard(ws, room, p, card) {
   return broadcast(room);
 }
 
+// The last round is in. Three of the accolades the table earned are drawn at
+// random and paid, and only then is the winner known.
+function finishGame(room) {
+  const n = room.seats.length;
+  room.phase = 'done';
+  room.idx = room.rounds.length;
+  const earned = A.list(room.rounds, n, (b, w) => G.roundScore(b, w, room.cfg));
+  room.awards = A.pick(earned, 3);
+  room.bonus = A.bonus(room.awards, n, room.cfg.accolade);
+}
+
+// Back into play: the accolades are not settled after all.
+function unfinish(room) { room.awards = null; room.bonus = null; }
+
 // The round is over, however the tricks were counted.
 function scoreRound(room, values) {
   const n = room.seats.length;
@@ -337,7 +357,7 @@ function scoreRound(room, values) {
   room.vote = null;
   room.play = null;
   room.idx += 1;
-  if (room.idx >= room.rounds.length) { room.idx = room.rounds.length; room.phase = 'done'; }
+  if (room.idx >= room.rounds.length) { finishGame(room); }
   else {
     room.rounds[room.idx].bids = Array(n).fill(null);
     room.phase = 'bid';
@@ -362,6 +382,7 @@ function devSeats(room, count) {
   room.rounds = [];
   room.idx = 0;
   room.vote = null;
+  unfinish(room);
   syncCfg(room);
 }
 
@@ -375,6 +396,7 @@ function devStart(room) {
   room.phase = 'bid';
   room.vote = null;
   room.play = null;
+  unfinish(room);
   if (virtual(room)) dealHands(room);
 }
 
@@ -437,10 +459,7 @@ function devNextRound(room) {
   devFillBids(room);
   devFillTricks(room);
   if (room.idx !== at) return;                       // a virtual hand scored itself
-  room.vote = null;
-  room.idx += 1;
-  if (room.idx >= room.rounds.length) { room.idx = room.rounds.length; room.phase = 'done'; }
-  else { room.rounds[room.idx].bids = Array(room.seats.length).fill(null); room.phase = 'bid'; }
+  scoreRound(room, curRound(room).tricks);           // the same road a real round takes
 }
 
 function devEndGame(room) {
@@ -527,7 +546,8 @@ function devPatch(room, p) {
   }
   if (p.phase && ['lobby', 'bid', 'tricks', 'done'].includes(p.phase)) {
     room.phase = p.phase;
-    if (p.phase === 'done') room.idx = room.rounds.length;
+    if (p.phase === 'done') finishGame(room);
+    else unfinish(room);
   }
   if (p.captainId && seatIndex(room, p.captainId) >= 0) room.captainId = p.captainId;
   if ('firstDealerId' in p) {
@@ -635,7 +655,7 @@ function handle(ws, m) {
       case 'fillTricks': devFillTricks(room); break;
       case 'nextRound': devNextRound(room); break;
       case 'endGame': devEndGame(room); break;
-      case 'lobby': room.phase = 'lobby'; room.rounds = []; room.idx = 0; room.vote = null; break;
+      case 'lobby': room.phase = 'lobby'; room.rounds = []; room.idx = 0; room.vote = null; unfinish(room); break;
       case 'bumVote': devBumVote(room); break;
       case 'fillCard': devFillCard(room, m.rounds); break;
       case 'randomise': devRandomise(room); break;
@@ -719,6 +739,7 @@ function handle(ws, m) {
       if ('screw' in p) c.screw = !!p.screw;
       if ('trump' in p) c.trump = !!p.trump;
       if ('deck' in p && ['physical', 'virtual'].includes(p.deck)) c.deck = p.deck;
+      if ('accolade' in p) c.accolade = [0, 5, 10, 20].includes(Number(p.accolade)) ? Number(p.accolade) : c.accolade;
       if ('firstDealer' in p) {
         room.firstDealerId = (p.firstDealer && seatIndex(room, p.firstDealer) >= 0) ? p.firstDealer : null;
       }
@@ -762,6 +783,7 @@ function handle(ws, m) {
       room.rounds[0].bids = Array(n).fill(null);
       room.phase = 'bid';
       room.play = null;
+      unfinish(room);
       if (virtual(room)) dealHands(room);
       return broadcast(room);
     }
@@ -869,6 +891,7 @@ function handle(ws, m) {
     case 'undo': {
       if (!boss) return fail(ws, 'only the table host can go back');
       room.vote = null;
+      unfinish(room);
       if (room.phase === 'done') {
         room.idx = room.rounds.length - 1;
         room.rounds[room.idx].tricks = null;
@@ -898,6 +921,7 @@ function handle(ws, m) {
       room.rounds = [];
       room.idx = 0;
       room.play = null;
+      unfinish(room);
       syncCfg(room);
       return broadcast(room);
     }

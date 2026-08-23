@@ -109,7 +109,22 @@ function totals() {
     if (!isDone(r)) return;
     r.bids.forEach((b, i) => { t[i] += roundScore(b, r.tricks[i], S.cfg); });
   });
-  return t;
+  const bonus = S.bonus || [];
+  return t.map((v, i) => v + (bonus[i] || 0));
+}
+
+// Three of the accolades earned, drawn once, when the last round is scored.
+// Going back into the game puts them away again.
+function settleAccolades() {
+  if (!finished()) {
+    if (S.awards) { S.awards = null; S.bonus = null; save(); }
+    return;
+  }
+  if (S.awards) return;
+  const earned = Accolades.list(S.rounds, S.cfg.names.length, (b, w) => roundScore(b, w, S.cfg));
+  S.awards = Accolades.pick(earned, 3);
+  S.bonus = Accolades.bonus(S.awards, S.cfg.names.length, S.cfg.accolade);
+  save();
 }
 
 /* ============================================================
@@ -192,6 +207,7 @@ function startGame() {
     miss: $('#cfg-miss').value,
     screw: $('#cfg-screw').checked,
     trump: $('#cfg-trump').checked,
+    accolade: Number($('#cfg-accolade').value),
   };
   S = newGame(cfg);
   save();
@@ -226,7 +242,10 @@ function dealAnimation(force) {
 let wasDone = null;
 
 function finaleAnimation(force) {
-  return Deal.finale({ names: S.cfg.names, totals: totals() }, force);
+  return Deal.finale({
+    names: S.cfg.names, totals: totals(),
+    awards: S.awards || [], points: S.cfg.accolade,
+  }, force);
 }
 
 function finaleWatch() {
@@ -258,6 +277,7 @@ function showGame() {
 const finished = () => S.idx >= S.rounds.length;
 
 function render() {
+  settleAccolades();               // before anything reads the totals
   const cfg = S.cfg;
   const done = S.rounds.filter(isDone).length;
   $('#subtitle').textContent = `${cfg.names.length} players · ${done}/${S.rounds.length} rounds played`;
@@ -482,7 +502,14 @@ function renderScorecard() {
     html += '</tr>';
   });
 
-  html += '</tbody><tfoot><tr><td>Total</td>';
+  html += '</tbody><tfoot>';
+  const bonus = S.bonus || [];
+  if (bonus.some((b) => b)) {                     // what the accolades paid
+    html += '<tr class="bonusrow"><td>Accolades</td>';
+    bonus.forEach((b) => { html += `<td>${b ? '+' + b : '·'}</td>`; });
+    html += '</tr>';
+  }
+  html += '<tr><td>Total</td>';
   totals().forEach((t) => { html += `<td>${t}</td>`; });
   html += '</tr></tfoot>';
   tbl.innerHTML = html;
@@ -512,9 +539,7 @@ function renderWinner() {
   const panel = $('#winner-panel');
   if (!finished()) { panel.hidden = true; return; }
   panel.hidden = false;
-  Accolades.render($('#accolades'),
-    Accolades.list(S.rounds, S.cfg.names.length, (b, w) => roundScore(b, w, S.cfg)),
-    S.cfg.names);
+  Accolades.render($('#accolades'), S.awards || [], S.cfg.names, S.cfg.accolade);
   const t = totals();
   const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
   const top = order[0].v;

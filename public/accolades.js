@@ -16,7 +16,7 @@ const Accolades = (function () {
 
     const st = [];
     for (let p = 0; p < n; p++) {
-      st.push({ bid: 0, tricks: 0, made: 0, over: 0, under: 0, off: 0,
+      st.push({ bid: 0, tricks: 0, over: 0, under: 0, off: 0,
                 zeros: 0, allin: 0, blank: 0, best: -Infinity, bestAt: 0 });
     }
     played.forEach((r, i) => {
@@ -24,7 +24,6 @@ const Accolades = (function () {
         const b = r.bids[p], w = r.tricks[p], pts = score(b, w);
         const s = st[p];
         s.bid += b; s.tricks += w; s.off += Math.abs(b - w);
-        if (b === w) s.made += 1;
         if (b > w) s.over += b - w;
         if (w > b) s.under += w - b;
         if (b === 0 && w === 0) s.zeros += 1;
@@ -64,8 +63,6 @@ const Accolades = (function () {
     };
     const by = (k) => st.map((s) => s[k]);
 
-    award('made', 'Bang on', by('made'), 1, 2,
-      (v) => `made ${v} of ${played.length} bids`);
     award('fearless', 'Most fearless', by('bid'), 1, 1,
       (v) => `bid ${plural(v, 'trick')} in all`);
     award('tricks', 'Most tricks won', by('tricks'), 1, 1,
@@ -98,8 +95,27 @@ const Accolades = (function () {
     return out;
   }
 
+  // Three of them, drawn at random. Fewer if fewer were earned.
+  function pick(items, count) {
+    const a = (items || []).slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a.slice(0, Math.max(0, count === undefined ? 3 : count));
+  }
+
+  // What each seat is paid for the accolades it was given.
+  function bonus(awarded, n, points) {
+    const out = Array(n).fill(0);
+    const v = Number(points);
+    if (!Number.isFinite(v) || !v) return out;
+    (awarded || []).forEach((a) => { (a.who || []).forEach((i) => { out[i] += v; }); });
+    return out;
+  }
+
   // Draws the list into a box. `names` is the seat names, in seat order.
-  function render(box, items, names) {
+  function render(box, items, names, points) {
     if (!box) return;
     box.innerHTML = '';
     box.hidden = !items.length;
@@ -116,9 +132,17 @@ const Accolades = (function () {
       note.className = 'acc-note';
       note.textContent = a.note;
       row.append(title, who, note);
+      if (points) {
+        const pts = document.createElement('span');
+        pts.className = 'acc-pts';
+        pts.textContent = `+${points}`;
+        row.appendChild(pts);
+      }
       box.appendChild(row);
     });
   }
 
-  return { list, render };
+  const api = { list, pick, bonus, render };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;   // the server picks
+  return api;
 })();

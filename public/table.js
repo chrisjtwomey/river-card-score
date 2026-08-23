@@ -34,7 +34,16 @@ const Table = (function () {
       html += '</tr>';
     });
 
-    html += '</tbody><tfoot><tr><td>Total</td>';
+    html += '</tbody><tfoot>';
+    const bonus = ST.bonus || [];
+    if (bonus.some((b) => b)) {                       // what the accolades paid
+      html += '<tr class="bonusrow"><td>Accolades</td>';
+      bonus.forEach((b, i) => {
+        html += `<td class="${i === me ? 'mecol' : ''}">${b ? '+' + b : '·'}</td>`;
+      });
+      html += '</tr>';
+    }
+    html += '<tr><td>Total</td>';
     ST.totals.forEach((t, i) => { html += `<td class="${i === me ? 'mecol' : ''}">${t}</td>`; });
     html += '</tr></tfoot>';
     return html;

@@ -112,9 +112,7 @@ function renderWinner() {
   $('#winner-title').textContent = champs.length > 1
     ? `${champs.join(' & ')} tie on ${top}`
     : `${champs[0]} wins with ${top}`;
-  Accolades.render($('#accolades'),
-    Accolades.list(ST.rounds, ST.seats.length, (b, w) => Game.roundScore(b, w, ST.cfg)),
-    ST.seats.map((s) => s.name));
+  Accolades.render($('#accolades'), ST.awards || [], ST.seats.map((s) => s.name), ST.cfg.accolade);
 }
 
 // The hand, when the table plays with a virtual deck. The server holds the
@@ -220,7 +218,9 @@ function finaleWatch() {
   if (ST.phase === 'done' && lastPhase && lastPhase !== 'done') {
     Deal.finale({
       names: ST.seats.map((s) => s.name),
-      totals: ST.totals,
+      totals: ST.totals,                     // the accolades are already in these
+      awards: ST.awards || [],
+      points: ST.cfg.accolade,
       linger: 1000,             // a phone gets a second longer to read it
     });
   }
@@ -272,6 +272,7 @@ function renderCaptain(lobby) {
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
   setVal('#cfg-deck', c.deck || 'physical');
+  setVal('#cfg-accolade', c.accolade === undefined ? 10 : c.accolade);
   $('#deck-hint').textContent = c.deck === 'virtual'
     ? 'The server deals to each phone, turns the trump, and counts the tricks.'
     : 'You deal real cards. The dealer types in the tricks at the end of a round.';
@@ -569,6 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
   $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
   $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
+  $('#cfg-accolade').addEventListener('change', (e) => patch({ accolade: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
   $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));

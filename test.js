@@ -294,8 +294,21 @@ function client(name, url) {
     ok(who('careful') === '3', 'and the smallest is the most careful  got ' + who('careful'));
     ok(who('tricks') === '0', 'the most tricks won is its own accolade  got ' + who('tricks'));
     ok(who('zeros') === '3', 'a player who bids nothing and takes nothing is the zero hero');
-    ok(who('made') === '1,3', 'an accolade two players earn names them both  got ' + who('made'));
-    ok(find('made').note === 'made 4 of 4 bids', 'and it says what they did  got ' + find('made').note);
+    ok(who('steady') === '1,3', 'an accolade two players earn names them both  got ' + who('steady'));
+    ok(find('steady').note === 'never missed a bid', 'and it says what they did  got ' + find('steady').note);
+    ok(!got.some((a) => a.key === 'made'), 'bang on is not an accolade any more');
+
+    // three of them are drawn, and each pays whoever earned it
+    const three = Accolades.pick(got, 3);
+    ok(three.length === 3 && three.every((a) => got.indexOf(a) >= 0), 'three are drawn from the ones earned');
+    ok(new Set(three.map((a) => a.key)).size === 3, 'and never the same one twice');
+    const seen = new Set();
+    for (let i = 0; i < 40; i++) Accolades.pick(got, 3).forEach((a) => seen.add(a.key));
+    ok(seen.size > 3, 'the draw is not always the same three  got ' + seen.size + ' different');
+    ok(Accolades.pick(got.slice(0, 2), 3).length === 2, 'a table that earned two gets two');
+    const paid = Accolades.bonus([{ who: [0] }, { who: [1, 3] }], 4, 10);
+    ok(paid.join(',') === '10,10,0,10', 'each seat is paid for what it was given  got ' + paid.join(','));
+    ok(Accolades.bonus([{ who: [0] }], 4, 0).join(',') === '0,0,0,0', 'and nothing when they pay nothing');
     ok(Accolades.list(rounds.slice(0, 2), 4, (b, w) => G.roundScore(b, w, cfg)).length === 0,
        'a game too short to judge gets none');
     const level = [card(1, [0, 0, 0, 0], [1, 0, 0, 0]), card(1, [0, 0, 0, 0], [0, 1, 0, 0]),
@@ -502,6 +515,25 @@ function client(name, url) {
     ok(!d.state.cfg.screw || bidSum !== r0.cards, 'and keeps the screw-the-dealer rule');
     d.send({ t: 'dev', action: 'endGame' }); await wait(600);
     ok(d.state.phase === 'done', 'endGame plays every round');
+
+    // ---- the accolades are drawn and paid before anybody wins ----
+    {
+      const aw = d.state.awards || [];
+      const pay = d.state.cfg.accolade;
+      ok(aw.length > 0 && aw.length <= 3, 'the game ends with up to three accolades drawn  got ' + aw.length);
+      ok(aw.every((a) => a.title && a.note && a.who.length), 'each one names a player and says why');
+      ok(new Set(aw.map((a) => a.key)).size === aw.length, 'and no accolade is drawn twice');
+      const raw = require(path + '/game.js').totals(d.state.cfg, d.state.rounds, 4);
+      const want = raw.map((v, i) => v + d.state.bonus[i]);
+      ok(JSON.stringify(d.state.totals) === JSON.stringify(want),
+         'the totals everybody is ranked by carry what the accolades paid');
+      const owed = aw.reduce((sum, a) => sum + a.who.length * pay, 0);
+      ok(d.state.bonus.reduce((a, b) => a + b, 0) === owed, 'and every winner is paid ' + pay);
+      d.send({ t: 'undo' }); await wait(150);
+      ok(!d.state.awards && d.state.bonus.every((b) => !b), 'going back puts the accolades away');
+      d.send({ t: 'dev', action: 'endGame' }); await wait(600);
+      ok((d.state.awards || []).length > 0, 'and ending it again draws them afresh');
+    }
     d.send({ t: 'dev', action: 'patch', patch: { idx: 1, phase: 'bid' } }); await wait(150);
     ok(d.state.idx === 1 && d.state.phase === 'bid', 'patch forces the round and the phase');
     d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, bids: [1, 0, 2, 1], tricks: [1, 1, 1, 1] } } });
