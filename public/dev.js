@@ -6,7 +6,7 @@
 const $ = (s) => document.querySelector(s);
 
 let ws = null, ST = null, CODE = null, HOST_TOKEN = null, SEATS = [];
-let framesKey = '';           // rebuild the previews only when the seats change
+let topKey = '', seatKey = '';   // rebuild a preview only when it has to change
 let editRound = 0;
 
 (function theme() {
@@ -39,31 +39,59 @@ const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !
 
 /* ---------- previews ---------- */
 
-const SIZES = { host: [1180, 820], seat: [400, 800] };
+const SIZES = { host: [1180, 820], seat: [400, 800], captain: [400, 900] };
 
-function frame(box, label, page, token, kind) {
+function frame(box, label, page, token, kind, seatId) {
   const scale = Number($('#scale').value) || 0.65;
   const [w, h] = SIZES[kind];
   const url = `${page}#c=${CODE}&t=${token}`;
   const el = document.createElement('div');
-  el.className = 'frame';
+  el.className = 'frame' + (kind === 'captain' ? ' captain' : '');
+  if (seatId) el.dataset.seat = seatId;
   el.innerHTML =
-    `<header><span></span><a href="${url}" target="_blank" rel="noopener">open</a></header>` +
+    `<header><span class="lbl"></span><a href="${url}" target="_blank" rel="noopener">open</a></header>` +
     `<div class="shell" style="width:${Math.round(w * scale)}px;height:${Math.round(h * scale)}px">` +
     `<iframe src="${url}" width="${w}" height="${h}" style="transform:scale(${scale})"></iframe></div>`;
-  el.querySelector('span').textContent = label;
+  el.querySelector('.lbl').textContent = label;
   box.appendChild(el);
 }
 
+const seatOf = (id) => SEATS.find((s) => s.id === id) || null;
+
 function renderFrames() {
-  const key = `${CODE}:${SEATS.map((s) => s.token).join(',')}:${$('#scale').value}`;
-  if (key === framesKey) return;
-  framesKey = key;
-  const hostBox = $('#host-frame'), seatBox = $('#seat-frames');
-  hostBox.innerHTML = ''; seatBox.innerHTML = '';
   if (!CODE) return;
-  frame(hostBox, `host screen · table ${CODE}`, 'host.html', HOST_TOKEN, 'host');
-  SEATS.forEach((s) => frame(seatBox, s.name, 'play.html', s.token, 'seat'));
+  const scale = $('#scale').value;
+  const cap = ST ? seatOf(ST.captainId) : null;
+
+  // top row: the big screen, and the phone of whoever runs the table
+  const top = `${CODE}:${HOST_TOKEN}:${cap ? cap.token : ''}:${scale}`;
+  if (top !== topKey) {
+    topKey = top;
+    const box = $('#host-frame');
+    box.innerHTML = '';
+    frame(box, `host screen · table ${CODE}`, 'host.html', HOST_TOKEN, 'host');
+    if (cap) frame(box, `table host · ${cap.name}`, 'play.html', cap.token, 'captain');
+  }
+
+  // bottom row: every seat
+  const seats = `${CODE}:${SEATS.map((s) => s.token).join(',')}:${scale}`;
+  if (seats !== seatKey) {
+    seatKey = seats;
+    const box = $('#seat-frames');
+    box.innerHTML = '';
+    SEATS.forEach((s) => frame(box, s.name, 'play.html', s.token, 'seat', s.id));
+  }
+
+  // the badge moves without rebuilding the frames
+  if (ST) {
+    document.querySelectorAll('#seat-frames .frame').forEach((el) => {
+      const seat = seatOf(el.dataset.seat);
+      if (!seat) return;
+      const isCap = seat.id === ST.captainId;
+      el.classList.toggle('captain', isCap);
+      el.querySelector('.lbl').textContent = seat.name + (isCap ? ' · table host' : '');
+    });
+  }
 }
 
 /* ---------- controls ---------- */
@@ -187,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#players').addEventListener('change', () =>
     act('players', { players: Number($('#players').value) || 4 }));
 
-  $('#scale').addEventListener('change', () => { framesKey = ''; renderFrames(); });
+  $('#scale').addEventListener('change', () => { topKey = seatKey = ''; renderFrames(); });
 
   $('#f-idx').addEventListener('change', (e) => act('patch', { patch: { idx: Number(e.target.value) - 1 } }));
   $('#f-phase').addEventListener('change', (e) => act('patch', { patch: { phase: e.target.value } }));
