@@ -46,11 +46,11 @@ When the last round is scored, some of the accolades the table earned are drawn 
 
 The finish plays in three moves:
 
-1. **The places, as they stood before the accolades.** Every score is the one the scorecard shows.
-2. **Each accolade in turn, four seconds each.** The name comes up with what it was for, the **+10** lands, and that player's score runs up in the list behind. The places shuffle as the points go in.
+1. **The places, as they stood before the accolades.** Every score is the one the scorecard shows. The screen holds there for five seconds, so the table can read them.
+2. **Each accolade in turn, eight seconds each.** The name comes up with what it was for, the **+10** lands, and that player's score runs up in the list behind. The places shuffle as the points go in.
 3. **The winner** — whoever is top once every accolade is paid, which is not always whoever led before them.
 
-A tap lands the whole thing at once, and another clears it.
+With three accolades the finish runs about 35 seconds. A tap lands the whole thing at once — every accolade paid, the list settled, the winner there — and another clears it.
 
 They come from the scorecard alone — the bids, the tricks and the hand sizes — so a table with real cards earns them the same way as one with a virtual deck. The scorecard grows an **Accolades** row under the last round, and the Total row is the final score.
 

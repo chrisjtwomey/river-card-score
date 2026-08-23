@@ -317,9 +317,11 @@ const Deal = (function () {
       stage.innerHTML = '';
       overlay.hidden = false;
 
+      // The pacing is the same either way: the accolades are there to be read,
+      // and reduced motion takes the movement out, not the time.
       const T = calm
-        ? { fade: 120, gap: 90,  flip: 240, out: 220, acc: 1500, settle: 700,  hold: 2400 }
-        : { fade: 200, gap: 240, flip: 620, out: 320, acc: 4000, settle: 1200, hold: 4200 };
+        ? { fade: 120, gap: 90,  flip: 240, out: 220, acc: 8000, settle: 5000, hold: 2400 }
+        : { fade: 200, gap: 240, flip: 620, out: 320, acc: 8000, settle: 5000, hold: 4200 };
       const anims = [], timers = [];
       let ended = false, settled = false, raf = 0;
 
@@ -414,6 +416,11 @@ const Deal = (function () {
       if (awards.length) {
         timers.push(setTimeout(() => { cap.textContent = 'Accolades'; }, runAt - 200));
       }
+      // Where each beat falls inside one accolade: it rises, the points chip
+      // pops, the score runs up, then it leaves.
+      const o = (ms) => Math.max(0, Math.min(1, ms / T.acc));
+      const chipAt = Math.min(1200, Math.round(T.acc * 0.2));
+      const payAt = Math.min(3800, Math.round(T.acc * 0.5));
       awards.forEach((a, k) => {
         const at = runAt + k * T.acc;
         const row = document.createElement('div');
@@ -437,17 +444,17 @@ const Deal = (function () {
             calm ? [{ opacity: 0 }, { opacity: 1 }]
                  : [{ opacity: 0, transform: 'scale(2.4) rotate(-9deg)' },
                     { opacity: 1, transform: 'scale(1) rotate(0deg)' }],
-            { duration: calm ? 200 : 440, delay: at + (calm ? 150 : 700),
+            { duration: calm ? 200 : 440, delay: at + chipAt,
               easing: 'cubic-bezier(.2,.9,.3,1.5)', fill: 'both' }));
         }
         run.appendChild(row);
         anims.push(row.animate(
           calm
-            ? [{ opacity: 0, offset: 0 }, { opacity: 1, offset: .12 },
-               { opacity: 1, offset: .84 }, { opacity: 0, offset: 1 }]
+            ? [{ opacity: 0, offset: 0 }, { opacity: 1, offset: o(400) },
+               { opacity: 1, offset: o(T.acc - 700) }, { opacity: 0, offset: 1 }]
             : [{ opacity: 0, transform: 'translateY(18px) scale(.94)', offset: 0 },
-               { opacity: 1, transform: 'none', offset: .09 },
-               { opacity: 1, transform: 'none', offset: .86 },
+               { opacity: 1, transform: 'none', offset: o(400) },
+               { opacity: 1, transform: 'none', offset: o(T.acc - 700) },
                { opacity: 0, transform: 'translateY(-20px) scale(.98)', offset: 1 }],
           { duration: T.acc, delay: at, easing: 'ease-out', fill: 'both' }));
 
@@ -467,7 +474,7 @@ const Deal = (function () {
               }
             });
             timers.push(setTimeout(() => { if (!ended) relayout(true); }, calm ? 0 : 640));
-          }, at + Math.round(T.acc * (calm ? .4 : .42))));
+          }, at + payAt));
         }
       });
       const winAt = runAt + awards.length * T.acc + (calm ? 60 : 300);
