@@ -93,21 +93,6 @@ const UI = (function () {
     return Promise.resolve('off');
   }
 
-  // Fills a pill with what actually happened, so a sleeping screen is not a mystery.
-  function showAwake(sel, status) {
-    const el = document.querySelector(sel);
-    if (!el) return;
-    const secure = window.isSecureContext;
-    if (status === 'on') { el.hidden = false; el.textContent = '☀ screen on'; el.className = 'netpill awake'; el.title = 'The browser is holding the screen awake.'; }
-    else if (status === 'video') { el.hidden = false; el.textContent = '☀ screen on*'; el.className = 'netpill awake dim'; el.title = 'Best effort: a silent video is holding the screen. An iPhone may still sleep.'; }
-    else if (status === 'off') { el.hidden = true; }
-    else {
-      el.hidden = false; el.textContent = '☾ may sleep'; el.className = 'netpill dim';
-      el.title = secure ? 'This browser will not hold the screen awake.'
-        : 'The screen lock needs https. Open the table over https to keep the screen on.';
-    }
-  }
-
   /* ---------- page size, for reading from across the room ---------- */
 
   const ZKEY = 'rcs:zoom:v1';
@@ -196,6 +181,6 @@ const UI = (function () {
   window.addEventListener('load', measureTopbar);
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
-  return { wireFullscreen, isFull, keepAwake, showAwake, wireZoom, measureTopbar,
+  return { wireFullscreen, isFull, keepAwake, wireZoom, measureTopbar,
            measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl };
 })();

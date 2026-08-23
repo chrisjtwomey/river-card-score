@@ -69,7 +69,6 @@ function render() {
   const r = ST.rounds[ST.idx] || null;
   dealWatch(r);
   UI.keepAwake(ST.phase !== 'lobby').then((s) => {
-    UI.showAwake('#awakepill', s);
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
   renderRound(r, me);

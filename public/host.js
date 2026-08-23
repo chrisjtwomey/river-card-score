@@ -141,7 +141,6 @@ function dealWatch() {
 function render() {
   const lobby = ST.phase === 'lobby';
   UI.keepAwake(!lobby).then((s) => {
-    UI.showAwake('#awakepill', s);
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
   $('#btn-deal').hidden = lobby;

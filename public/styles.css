@@ -451,8 +451,6 @@ body.host .topbar .btn{font-size:15px;padding:8px 12px}
 /* who deals the first round */
 .seat-item.first-dealer{border-color:var(--gold)}
 .seat-item .mini.d[aria-pressed="true"]{background:var(--gold);color:#1c1a12}
-.netpill.awake{background:rgba(255,255,255,.22)}
-.netpill.dim{background:rgba(255,255,255,.10);color:rgba(255,255,255,.7)}
 
 /* ---------- standings stay in view ---------- */
 .standings-panel{
