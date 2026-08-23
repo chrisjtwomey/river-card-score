@@ -244,17 +244,31 @@ const Deal = (function () {
     const p = live.turn;
     const card = (p === null || p === undefined) ? null : live.cards[p];
     if (!card || live.calm) return;                 // reduced motion: the label is enough
-    // A peek: the card tips up on its edge, settles back, then waits.
+    // The card tips up on its edge, shivers while it is up, settles, then
+    // waits. Written in milliseconds, because that is how it is judged.
+    const UP = 182, SHIVER_IN = 280, SHIVER_OUT = 784, SIDE = 84, DOWN_AT = 868, FLAT = 1050;
+    const D = 3000;                                 // one peek every three seconds
     const at = live.landedAt[p];
+    const o = (ms) => Number((ms / D).toFixed(4));
     const rest = 'drop-shadow(0 5px 9px rgba(0,0,0,.45)) drop-shadow(0 0 5px rgba(255,255,255,.22))';
     const up = 'drop-shadow(0 16px 18px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(255,255,255,.4))';
-    live.turnAnim = card.animate([
+    const tip = `${at} translateY(-11px) rotateX(-26deg)`;
+
+    const frames = [
       { transform: at, filter: rest, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
-      { transform: `${at} translateY(-11px) rotateX(-26deg)`, filter: up, offset: 0.13,
-        easing: 'cubic-bezier(.45,0,.55,1)' },
-      { transform: at, filter: rest, offset: 0.30 },
-      { transform: at, filter: rest, offset: 1 },
-    ], { duration: 2800, iterations: Infinity });
+      { transform: tip, filter: up, offset: o(UP), easing: 'linear' },
+    ];
+    for (let ms = SHIVER_IN, i = 0; ms <= SHIVER_OUT; ms += SIDE, i++) {
+      const dir = i % 2 === 0 ? 1 : -1;
+      frames.push({
+        transform: `${tip} translateX(${dir * 3}px) rotate(${dir * 1.2}deg)`,
+        filter: up, offset: o(ms), easing: 'linear',
+      });
+    }
+    frames.push({ transform: tip, filter: up, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
+    frames.push({ transform: at, filter: rest, offset: o(FLAT) });
+    frames.push({ transform: at, filter: rest, offset: 1 });
+    live.turnAnim = card.animate(frames, { duration: D, iterations: Infinity });
   }
 
   // While the scene is held, show the bids as they arrive.
