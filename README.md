@@ -52,7 +52,7 @@ If the table host leaves the table, the badge moves to the first seat.
 ### Host screen
 
 - **A−** and **A+** in the top bar change the page size, from 80% to 200%, so the table can read it from across the room. The size is remembered in that browser.
-- The 🂠 button replays the deal animation for the round on screen at any time.
+- The 🂠 button replays the deal animation for the round on screen at any time. Once the game is over it becomes 🏆 and replays the result.
 - The host screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
 
 ### Keeping phone screens on
@@ -72,6 +72,8 @@ Both screens play the deal animation at the start of every round: a card flies t
 
 - On the **host screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it, and 🂠 brings it back with the bids so far.
 - On a **phone** it plays and then clears, so the bid pad is never blocked. A tap skips it. It does not replay when a phone reloads part way through a game.
+
+When the last round is scored, both screens play the finish: the places come up one at a time from last to first, the winner's card turns over, the score runs up to the total, and paper falls. Every player's score is on screen, best first, with a shared place for a draw. It clears itself after a few seconds. A tap lands it, and a second tap clears it. A screen that opens on a game already over does not replay it.
 
 The `?motion=` flag below works on `host.html` and `play.html` as well.
 
@@ -185,13 +187,13 @@ When the socket cannot connect, the page now says so at the bottom of the screen
 
 ## Single-device tracker
 
-Open `public/local.html` in a browser. It needs no server and keeps its state in that browser. It has the same rules and scorecard, plus a deal animation when the game starts.
+Open `public/local.html` in a browser. It needs no server and keeps its state in that browser. It has the same rules and scorecard, plus a deal animation when the game starts and the finish when the last round is scored.
 
 ### Motion
 
-The deal animation lives in `public/deal.js` and is shared by the host screen and the offline tracker.
+The deal animation and the finish live in `public/deal.js`, shared by the host screen, the phones and the offline tracker.
 
-The animation follows the system "reduce motion" setting. On macOS that is System Settings → Accessibility → Display → Reduce motion. With reduce motion on, the cards fade in at their seats instead of flying.
+Both follow the system "reduce motion" setting. On macOS that is System Settings → Accessibility → Display → Reduce motion. With reduce motion on, the cards fade in at their seats instead of flying, the places fade in together, and no paper falls.
 
 To override it, open the page with a flag. The choice is saved for that browser:
 
@@ -199,7 +201,7 @@ To override it, open the page with a flag. The choice is saved for that browser:
 - `local.html?motion=reduced` — always play the short fade
 - `local.html?motion=off` — never animate
 
-From the browser console: `playDeal()`, `playDeal('reduced')`, and `motionMode()`.
+From the browser console: `playDeal()`, `playFinale()`, either with `'reduced'`, and `motionMode()`.
 
 ## Working on it
 
@@ -250,7 +252,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 
 - `server.js` — HTTP static files, the QR and address endpoints, plus the WebSocket game server. Rooms live in memory.
 - `public/ui.js` — shared page bits, such as the full-screen button.
-- `public/deal.js` — the deal animation, used by the host screen and the offline tracker.
+- `public/deal.js` — the deal animation and the game-over finish, used by every screen.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
 - `test.js` — end-to-end test.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.

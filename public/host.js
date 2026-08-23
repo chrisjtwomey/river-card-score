@@ -8,6 +8,7 @@ let ST = null;          // last state from the server
 let draft = [];         // host-side trick entry
 let draftKey = '';
 let dealtKey = null;    // the round already dealt on screen
+let lastPhase = null;   // to catch the moment the game ends
 let addrs = [];         // addresses this server answers on
 let addr = null;        // the one shown in the QR code
 
@@ -117,7 +118,7 @@ function playDealNow(mode) {
 // What the held scene shows: every bid so far and who has to act.
 function pushDealStatus() {
   const r = ST && ST.rounds[ST.idx];
-  if (!r || !Deal.isOpen()) return;
+  if (!r || !Deal.isOpen('deal')) return;
   Deal.update({
     key: roundKey(),
     bids: r.bids || [],
@@ -127,10 +128,22 @@ function pushDealStatus() {
   });
 }
 
+// The finish plays once, when the last round is scored. A screen that opens on
+// a game already over does not replay it.
+function playFinaleNow(mode) {
+  if (!ST || !ST.seats.length) return Promise.resolve(console.warn('[finale] no table'));
+  return Deal.finale({ names: ST.seats.map((s) => s.name), totals: ST.totals }, mode);
+}
+
+function finaleWatch() {
+  if (ST.phase === 'done' && lastPhase && lastPhase !== 'done') playFinaleNow();
+  lastPhase = ST.phase;
+}
+
 function dealWatch() {
   const r = ST.rounds[ST.idx];
   if (ST.phase !== 'bid' || !r) {
-    if (ST.phase !== 'bid') Deal.close();     // the bids are in: show the table again
+    if (ST.phase !== 'bid') Deal.close('deal');   // the bids are in: show the table again
     if (ST.phase === 'lobby') dealtKey = null;
     return;
   }
@@ -143,7 +156,10 @@ function render() {
   UI.keepAwake(!lobby).then((s) => {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
+  const over = ST.phase === 'done';
   $('#btn-deal').hidden = lobby;
+  $('#btn-deal').textContent = over ? '🏆' : '🂠';
+  $('#btn-deal').title = over ? 'Play the result again' : 'Play the deal animation';
   // the dev page, on a server started with DEV=1. Not inside a dev preview,
   // where it would only open the page it is already in.
   $('#btn-dev').hidden = !ST.dev || window.top !== window;
@@ -246,6 +262,7 @@ function renderGame() {
   }
 
   dealWatch();
+  finaleWatch();
   renderTrump(r);
   renderTurn(r, n);
   renderVote(r, n);
@@ -443,7 +460,8 @@ document.addEventListener('DOMContentLoaded', () => {
   UI.wireFullscreen('#btn-full');
   loadAddresses();
   UI.wireZoom('#zoom-out', '#zoom-in');
-  $('#btn-deal').addEventListener('click', () => playDealNow());
+  $('#btn-deal').addEventListener('click', () =>
+    (ST && ST.phase === 'done' ? playFinaleNow() : playDealNow()));
   $('#btn-bum').addEventListener('click', () => {
     if (confirm('Bum deal? The hand is thrown in and dealt again by the same dealer.')) Net.send({ t: 'bumdeal' });
   });
@@ -451,6 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-vote-cancel').addEventListener('click', () => Net.send({ t: 'votecancel' }));
   // playDeal() in the console replays it for the current table.
   window.playDeal = (mode) => playDealNow(mode || 'full');
+  // playFinale() in the console replays the result.
+  window.playFinale = (mode) => playFinaleNow(mode || 'full');
 
   $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));

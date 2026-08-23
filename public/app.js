@@ -220,6 +220,20 @@ function dealAnimation(force) {
   return Deal.play({ names: S.cfg.names, dealer: r0.dealer, cards: r0.cards, round: 1 }, force);
 }
 
+// The finish plays once, when the last round is scored. A page that opens on a
+// game already over does not replay it.
+let wasDone = null;
+
+function finaleAnimation(force) {
+  return Deal.finale({ names: S.cfg.names, totals: totals() }, force);
+}
+
+function finaleWatch() {
+  const done = finished();
+  if (done && wasDone === false) finaleAnimation();
+  wasDone = done;
+}
+
 /* ============================================================
    GAME SCREEN
    ============================================================ */
@@ -252,6 +266,7 @@ function render() {
   renderEntry();
   renderScorecard();
   renderWinner();
+  finaleWatch();
 }
 
 function renderRoundBar() {
@@ -621,6 +636,8 @@ function init() {
 
 // Debug handle: playDeal() forces the full deal, playDeal('reduced') the short one.
 window.playDeal = (mode) => (S ? dealAnimation(mode || 'full') : Promise.resolve(console.warn('[deal] start a game first')));
+window.playFinale = (mode) => (S ? finaleAnimation(mode || 'full')
+                                 : Promise.resolve(console.warn('[finale] start a game first')));
 window.motionMode = Deal.mode;
 
 document.addEventListener('DOMContentLoaded', init);

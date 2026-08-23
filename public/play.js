@@ -6,6 +6,7 @@ const $ = (s) => document.querySelector(s);
 let ST = null, ME = null;      // ME = my seat id
 let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
+let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
 
 const KEY_THEME = 'river-card-score:theme:v1';
@@ -68,6 +69,7 @@ function render() {
 
   const r = ST.rounds[ST.idx] || null;
   dealWatch(r);
+  finaleWatch();
   UI.keepAwake(ST.phase !== 'lobby').then((s) => {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
@@ -118,6 +120,19 @@ function renderVote(r, me) {
     c.addEventListener('click', () => Net.send({ t: 'votecancel' }));
     acts.appendChild(c);
   }
+}
+
+// The finish plays once, when the last round is scored. A phone that opens on
+// a game already over does not replay it.
+function finaleWatch() {
+  if (ST.phase === 'done' && lastPhase && lastPhase !== 'done') {
+    Deal.finale({
+      names: ST.seats.map((s) => s.name),
+      totals: ST.totals,
+      linger: 1000,             // a phone gets a second longer to read it
+    });
+  }
+  lastPhase = ST.phase;
 }
 
 // The deal plays at the start of each round. It does not hold on a phone: the

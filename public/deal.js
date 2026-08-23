@@ -217,7 +217,7 @@ const Deal = (function () {
       const naturalEnd = dealEnd + 140 + T.flip + T.hold + linger;
       if (hold) {
         live = {
-          finish, labels, cards: cardEls, landedAt, status, names, dealer,
+          kind: 'deal', finish, labels, cards: cardEls, landedAt, status, names, dealer,
           key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
         };
         timers.push(setTimeout(() => {
@@ -231,15 +231,16 @@ const Deal = (function () {
     });
   }
 
-  // Closes a held scene, if one is open.
-  function close() { if (live) live.finish(); }
-  const isOpen = () => !!live;
+  // Closes a held scene, if one is open. With a kind, 'deal' or 'finale', it
+  // closes only that one and leaves the other alone.
+  function close(kind) { if (live && (!kind || live.kind === kind)) live.finish(); }
+  const isOpen = (kind) => !!live && (!kind || live.kind === kind);
 
   // The card of the player to act breathes, so the table can see whose turn it
   // is from across the room. The landing used the Web Animations API, and that
   // owns the transform, so this has to be an animation too, not a CSS class.
   function applyTurn() {
-    if (!live || !live.settled) return;
+    if (!live || live.kind !== 'deal' || !live.settled) return;
     if (live.turnAnim) { try { live.turnAnim.cancel(); } catch (e) {} live.turnAnim = null; }
     const p = live.turn;
     const card = (p === null || p === undefined) ? null : live.cards[p];
@@ -271,10 +272,201 @@ const Deal = (function () {
     live.turnAnim = card.animate(frames, { duration: D, iterations: Infinity });
   }
 
+  /* The finish: the places come up from last to first, then the winner's card
+     turns over and the room goes gold.  opts: { names, totals, linger }.
+     A tap lands it; the next one closes it. */
+  function finale(opts, force) {
+    close();
+    return new Promise((resolve) => {
+      const overlay = overlayEl();
+      const stage = overlay.querySelector('.deal-stage');
+      const names = (opts && opts.names) || [];
+      const totals = (opts && opts.totals) || [];
+      const m = force || mode();
+
+      if (!names.length || !stage || !stage.animate) {
+        console.warn('[finale] skipped: no players, or no Web Animations API');
+        resolve(); return;
+      }
+      if (m === 'off') { console.info('[finale] skipped: motion is off'); resolve(); return; }
+      const calm = m === 'reduced';
+
+      // Best first. A draw shares the place, so the places read 1, 1, 3.
+      const order = names.map((nm, i) => ({ nm, v: Number(totals[i]) || 0 })).sort((a, b) => b.v - a.v);
+      const best = order[0].v;
+      const champs = order.filter((o) => o.v === best);
+      const each = champs.length > 1 ? ' each' : '';
+      const points = (v) => `${v} point${Math.abs(v) === 1 ? '' : 's'}${each}`;
+
+      stage.innerHTML = '';
+      overlay.hidden = false;
+
+      const T = calm
+        ? { fade: 120, gap: 90,  flip: 240, hold: 2600, out: 220 }
+        : { fade: 200, gap: 240, flip: 620, hold: 5200, out: 320 };
+      const anims = [], timers = [];
+      let ended = false, settled = false, raf = 0;
+
+      const head = document.createElement('div');            // the line across the top
+      head.className = 'deal-head';
+      const cap = document.createElement('div');
+      cap.className = 'deal-cap';
+      cap.textContent = 'Game over';
+      head.appendChild(cap);
+      stage.appendChild(head);
+      anims.push(cap.animate(
+        [{ opacity: 0, transform: 'translateY(-12px)' }, { opacity: 1, transform: 'translateY(0)' }],
+        { duration: 300, delay: T.fade, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }));
+
+      const box = document.createElement('div');
+      box.className = 'fin';
+      stage.appendChild(box);
+
+      const card = cardEl(null, 'hero fin-card');            // face down until the end
+      card.querySelector('.front').innerHTML = '<div class="cup">🏆</div>';
+      card.style.transform = 'rotateY(180deg)';
+      box.appendChild(card);
+
+      const title = document.createElement('div');
+      title.className = 'fin-title';
+      title.textContent = champs.length > 1
+        ? `${champs.map((c) => c.nm).join(' & ')} tie`
+        : `${champs[0].nm} wins`;
+      const sub = document.createElement('div');
+      sub.className = 'fin-sub';
+      box.append(title, sub);
+
+      const list = document.createElement('div');
+      list.className = 'fin-list';
+      box.appendChild(list);
+      const rows = order.map((o, i) => {
+        const row = document.createElement('div');
+        row.className = 'fin-row' + (o.v === best ? ' first' : '');
+        const a = document.createElement('span');
+        a.className = 'pl';
+        a.textContent = String(order.findIndex((x) => x.v === o.v) + 1);
+        const b = document.createElement('span'); b.className = 'nm'; b.textContent = o.nm;
+        const c = document.createElement('span'); c.className = 'sc'; c.textContent = String(o.v);
+        row.append(a, b, c);
+        list.appendChild(row);
+        return row;
+      });
+
+      anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
+      anims.push(card.animate(
+        calm ? [{ opacity: 0 }, { opacity: 1 }]
+             : [{ transform: 'rotateY(180deg) scale(.6)', opacity: 0 },
+                { transform: 'rotateY(180deg) scale(1)', opacity: 1 }],
+        { duration: calm ? 200 : 380, delay: T.fade, easing: 'cubic-bezier(.2,.9,.3,1.35)', fill: 'both' }));
+
+      // The also-rans come up from the bottom of the list, one at a time.
+      const losers = rows.slice(champs.length);
+      const start = T.fade + (calm ? 200 : 520);
+      losers.forEach((row, k) => {
+        anims.push(row.animate(
+          calm ? [{ opacity: 0 }, { opacity: 1 }]
+               : [{ opacity: 0, transform: 'translateX(30px) scale(.94)' },
+                  { opacity: 1, transform: 'none' }],
+          { duration: calm ? 160 : 320, delay: start + (losers.length - 1 - k) * T.gap,
+            easing: 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }));
+      });
+
+      // Then the winner. The card turns over: it fills forwards only, so it
+      // leaves the card alone until its turn comes.
+      const winAt = start + losers.length * T.gap + (calm ? 60 : 260);
+      anims.push(card.animate(
+        calm ? [{ transform: 'rotateY(0deg) scale(1.16)' }]
+             : [{ transform: 'rotateY(180deg) scale(1)', offset: 0 },
+                { transform: 'rotateY(0deg) scale(1.3)', offset: .7, easing: 'cubic-bezier(.2,.9,.3,1.4)' },
+                { transform: 'rotateY(0deg) scale(1.16)', offset: 1 }],
+        { duration: calm ? 200 : T.flip, delay: winAt, easing: 'linear', fill: 'forwards' }));
+      rows.slice(0, champs.length).forEach((row, k) => {
+        anims.push(row.animate(
+          calm ? [{ opacity: 0 }, { opacity: 1 }]
+               : [{ opacity: 0, transform: 'scale(.9)' },
+                  { opacity: 1, transform: 'scale(1.06)', offset: .6 },
+                  { opacity: 1, transform: 'scale(1)' }],
+          { duration: calm ? 200 : 520, delay: winAt + (calm ? 40 : 160) + k * 90,
+            easing: 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }));
+      });
+      anims.push(title.animate(
+        calm ? [{ opacity: 0 }, { opacity: 1 }]
+             : [{ opacity: 0, transform: 'scale(.82)' }, { opacity: 1, transform: 'scale(1)' }],
+        { duration: calm ? 200 : 420, delay: winAt + (calm ? 60 : 240),
+          easing: 'cubic-bezier(.2,.9,.3,1.5)', fill: 'both' }));
+      anims.push(sub.animate([{ opacity: 0 }, { opacity: 1 }],
+        { duration: 260, delay: winAt + (calm ? 120 : 420), easing: 'ease-out', fill: 'both' }));
+
+      if (calm) sub.textContent = points(best);
+      else countTo(winAt + 420, 700);
+      burst(winAt + 200);
+
+      // The winner's score runs up to the total, so the eye lands on it.
+      function countTo(delay, ms) {
+        const at = (window.performance ? performance.now() : Date.now()) + delay;
+        const tick = (now) => {
+          if (ended) return;
+          if (settled) { sub.textContent = points(best); return; }
+          const k = Math.max(0, Math.min(1, (now - at) / ms));
+          if (k <= 0) { raf = requestAnimationFrame(tick); return; }
+          sub.textContent = points(Math.round(best * (1 - Math.pow(1 - k, 3))));
+          if (k < 1) raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      }
+
+      // Paper on the table.
+      function burst(delay) {
+        if (calm) return;
+        const colours = ['#e8c169', '#f3efe2', '#2f8f5b', '#c0271d', '#f0c878'];
+        const fall = overlay.clientHeight + 80;
+        for (let i = 0; i < 26; i++) {
+          const bit = document.createElement('div');
+          bit.className = 'fin-bit';
+          bit.style.background = colours[i % colours.length];
+          bit.style.left = `${6 + Math.random() * 88}%`;
+          stage.appendChild(bit);
+          anims.push(bit.animate(
+            [{ transform: 'translate3d(0,0,0) rotate(0deg)', opacity: 1 },
+             { transform: `translate3d(${(Math.random() * 2 - 1) * 90}px,${fall}px,0) ` +
+                          `rotate(${(Math.random() * 2 - 1) * 900}deg)`, opacity: .15 }],
+            { duration: 1500 + Math.random() * 1400, delay: delay + Math.random() * 500,
+              easing: 'cubic-bezier(.25,.6,.5,1)', fill: 'both' }));
+        }
+      }
+
+      function finish() {
+        if (ended) return;
+        ended = true;
+        if (live && live.finish === finish) live = null;
+        timers.forEach(clearTimeout);
+        if (raf) cancelAnimationFrame(raf);
+        overlay.removeEventListener('pointerdown', skip);
+        window.removeEventListener('keydown', skip);
+        const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
+        out.onfinish = () => { overlay.hidden = true; stage.innerHTML = ''; resolve(); };
+      }
+      function settle() {
+        settled = true;
+        anims.forEach((a) => { try { a.finish(); } catch (e) {} });
+        sub.textContent = points(best);
+      }
+      function skip() { if (!settled) { settle(); return; } finish(); }
+
+      overlay.addEventListener('pointerdown', skip);
+      window.addEventListener('keydown', skip);
+      live = { kind: 'finale', finish };
+      const linger = Math.max(0, Number(opts && opts.linger) || 0);
+      const shown = winAt + T.flip + 400;
+      timers.push(setTimeout(() => { settled = true; }, shown));   // now a tap clears it
+      timers.push(setTimeout(finish, shown + T.hold + linger));
+    });
+  }
+
   // While the scene is held, show the bids as they arrive.
   function update(o) {
     if (o) last = o;
-    if (!live) return;
+    if (!live || live.kind !== 'deal') return;
     const bids = (o && o.bids) || [];
     live.labels.forEach((el, p) => {
       if (!el) return;
@@ -288,5 +480,5 @@ const Deal = (function () {
     if (next !== live.turn) { live.turn = next; applyTurn(); }
   }
 
-  return { play, close, update, isOpen, mode };
+  return { play, finale, close, update, isOpen, mode };
 })();
