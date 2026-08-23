@@ -43,6 +43,7 @@
       miss: 'atleast',
       screw: true,
       trump: true,
+      deck: 'physical',        // 'virtual' deals the cards on the phones
     };
   }
 
@@ -120,8 +121,67 @@
     return (f >= 0 && f <= round.cards) ? f : null;
   }
 
+  /* ---------- a deck of cards, for a table that has none ---------- */
+
+  const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+  const suitOf = (c) => String(c).slice(-1);
+  const rankOf = (c) => String(c).slice(0, -1);
+  const rankValue = (c) => RANKS.indexOf(rankOf(c));
+  const cardFace = (c) => (rankOf(c) === 'T' ? '10' : rankOf(c));
+  const cardRed = (c) => suitOf(c) === 'H' || suitOf(c) === 'D';
+  const cardGlyph = (c) => (SUITS.find((s) => s.k === suitOf(c)) || { g: '?' }).g;
+  const cardName = (c) => cardFace(c) + cardGlyph(c);
+
+  function deck() {
+    const out = [];
+    SUITS.forEach((s) => { if (s.k !== 'NT') RANKS.forEach((r) => out.push(r + s.k)); });
+    return out;
+  }
+
+  function shuffle(cards) {
+    const a = cards.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // A hand reads best in suits, high card first.
+  function sortHand(cards) {
+    const order = ['S', 'H', 'C', 'D'];
+    return cards.slice().sort((a, b) => {
+      const d = order.indexOf(suitOf(a)) - order.indexOf(suitOf(b));
+      return d || rankValue(b) - rankValue(a);
+    });
+  }
+
+  // Follow the suit that was led, if you hold it. Otherwise anything goes.
+  function legalPlays(hand, led) {
+    if (!led) return hand.slice();
+    const same = hand.filter((c) => suitOf(c) === led);
+    return same.length ? same : hand.slice();
+  }
+
+  // plays: [{ p, card }] in the order they were played. The highest trump wins,
+  // or the highest card of the suit that was led.
+  function trickWinner(plays, trump) {
+    if (!plays || !plays.length) return null;
+    const t = (trump && trump !== 'NT') ? trump : null;
+    let best = plays[0];
+    for (let i = 1; i < plays.length; i++) {
+      const x = plays[i];
+      const bs = suitOf(best.card), xs = suitOf(x.card);
+      if (t && xs === t && bs !== t) best = x;
+      else if (xs === bs && rankValue(x.card) > rankValue(best.card)) best = x;
+    }
+    return best.p;
+  }
+
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
-                roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid };
+                roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
+                RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
+                suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Game = api;

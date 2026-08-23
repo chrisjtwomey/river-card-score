@@ -58,6 +58,40 @@ const Table = (function () {
     else box.scrollTop = top;
   }
 
+  /* ---------- a card on screen ---------- */
+
+  // tag 'button' makes it playable, anything else just shows it.
+  function cardEl(card, tag) {
+    const el = document.createElement(tag || 'span');
+    el.className = 'pcard' + (Game.cardRed(card) ? ' red' : '');
+    el.dataset.card = card;
+    const face = document.createElement('b');
+    face.textContent = Game.cardFace(card);
+    const pip = document.createElement('i');
+    pip.textContent = Game.cardGlyph(card);
+    el.append(face, pip);
+    return el;
+  }
+
+  // The cards on the table: the trick being played, or the one just won.
+  function trickEl(box, ST, me) {
+    const p = ST.play;
+    box.innerHTML = '';
+    if (!p) return;
+    const held = !p.trick.length && p.last;
+    const cards = held ? p.last.trick : p.trick;
+    cards.forEach((x) => {
+      const slot = document.createElement('div');
+      slot.className = 'slot' + (held && p.last.winner === x.p ? ' won' : '');
+      slot.appendChild(cardEl(x.card));
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = ST.seats[x.p].name + (x.p === me ? ' (you)' : '');
+      slot.appendChild(who);
+      box.appendChild(slot);
+    });
+  }
+
   /* ---------- the bids, as they land ---------- */
 
   // Pops the pill of a bid that has just arrived, and rings the seat that has
@@ -99,5 +133,5 @@ const Table = (function () {
     });
   }
 
-  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids };
+  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, cardEl, trickEl };
 })();

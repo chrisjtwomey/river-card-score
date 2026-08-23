@@ -258,6 +258,47 @@ dialog h2{color:var(--ink);text-transform:none;letter-spacing:-.01em;font-size:1
 dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .confirm-actions{justify-content:flex-end}
 
+/* ---------- cards on the table ---------- */
+.pcard{
+  display:inline-grid;grid-template-rows:auto auto;justify-items:center;align-content:center;gap:1px;
+  width:52px;height:72px;border-radius:9px;flex:none;
+  background:#fbf9f3;color:#15181a;border:1px solid rgba(0,0,0,.18);
+  box-shadow:0 3px 10px rgba(0,0,0,.22);
+  font:inherit;font-weight:800;line-height:1;padding:0;
+}
+.pcard b{font-size:19px}
+.pcard i{font-size:22px;font-style:normal}
+.pcard.red{color:#c0271d}
+.hand{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+button.pcard{cursor:pointer;transition:.12s transform,.12s box-shadow;opacity:.45}
+button.pcard.live{opacity:1}
+button.pcard.live:hover{transform:translateY(-5px);box-shadow:0 8px 20px rgba(0,0,0,.32)}
+button.pcard:disabled{cursor:not-allowed}
+.trick{
+  display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:flex-start;
+  min-height:96px;padding:10px 6px;border-radius:12px;background:var(--chip);
+}
+.trick:empty{display:none}
+.trick .slot{display:flex;flex-direction:column;align-items:center;gap:5px}
+.trick .slot .who{font-size:12px;font-weight:700;color:var(--ink-dim);white-space:nowrap}
+.trick .slot.won .pcard{box-shadow:0 0 0 3px var(--gold), 0 8px 22px rgba(0,0,0,.3)}
+.trick .slot.won .who{color:var(--gold)}
+.trick.big{min-height:130px;gap:18px}
+.trick.big .pcard{width:74px;height:104px;border-radius:11px}
+.trick.big .pcard b{font-size:26px}
+.trick.big .pcard i{font-size:31px}
+.trick.big .slot .who{font-size:16px}
+.seatcounts{display:flex;flex-wrap:wrap;gap:8px}
+.seatcount{
+  display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;
+  background:var(--chip);font-size:14px;font-weight:650;
+}
+.seatcount.now{background:var(--bg2);box-shadow:0 0 0 2px var(--gold)}
+.seatcount .left{color:var(--ink-dim);font-size:12px}
+body.host .seatcount{font-size:19px;padding:8px 16px}
+body.host .seatcount .left{font-size:16px}
+.trump-bar.turned .trumps{display:none}
+
 /* ---------- what just happened ---------- */
 .toaster{
   position:fixed;left:0;right:0;top:calc(var(--topbar-h, 62px) + 8px);z-index:70;

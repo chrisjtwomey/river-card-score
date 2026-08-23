@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const path = __dirname;
 const WebSocket = require('ws');
 const PORT = Number(process.env.TEST_PORT) || 8899;
-const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120' }, stdio: ['ignore', 'pipe', 'pipe'] });
 srv.stderr.on('data', d => process.stderr.write('[srv] ' + d));
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -274,6 +274,113 @@ function client(name, url) {
     ok(solo.state.code === code4, 'the code is the one the QR shows');
   }
 
+  // ---- a table that plays with a virtual deck ----
+  {
+    const vh = client('vhost'); await vh.ready;
+    vh.send({ t: 'create' }); await wait(120);
+    const code = vh.hello.code;
+    const P = [];
+    for (const nm of ['Ann', 'Bob', 'Cal']) {
+      const c = client('v' + nm); await c.ready;
+      c.send({ t: 'join', code, name: nm }); await wait(110);
+      P.push(c);
+    }
+    vh.send({ t: 'config', patch: { deck: 'virtual', max: 3, pattern: 'down', ones: 1 } }); await wait(120);
+    vh.send({ t: 'start' }); await wait(200);
+
+    // ---- the deal ----
+    ok(P.every((c) => c.state.hand && c.state.hand.length === 3), 'every player is dealt a hand');
+    ok(!vh.state.hand, 'the host screen is dealt none');
+    const dealt = P.flatMap((c) => c.state.hand);
+    ok(new Set(dealt).size === 9, 'and no card is dealt twice');
+    ok(P[0].state.play.counts.join(',') === '3,3,3', 'the table sees only how many cards each hand holds');
+    ok(!P[0].state.play.hands, 'and never the cards themselves');
+    const up = P[0].state.play.upcard;
+    ok(!!up && dealt.indexOf(up) < 0, 'the trump is turned from the rest of the deck');
+    ok(P[0].state.rounds[0].trump === up.slice(-1), 'and it sets the trump suit');
+    P[0].errors.length = 0;
+    P[0].send({ t: 'trump', k: 'S' }); await wait(120);
+    ok(P[0].errors.some((e) => /deck turns the trump/.test(e)), 'nobody may set the trump by hand');
+
+    // ---- the bidding, as usual ----
+    const r0 = P[0].state.rounds[0];
+    for (let i = 0; i < 3; i++) {
+      const st = P[0].state, rr = st.rounds[st.idx], turn = st.turn;
+      const sum = rr.bids.reduce((a, b) => a + (b || 0), 0);
+      const forbidden = (st.cfg.screw && turn === rr.dealer) ? rr.cards - sum : -1;
+      P[turn].send({ t: 'bid', v: forbidden === 1 ? 0 : 1 }); await wait(120);
+    }
+    ok(P[0].state.phase === 'tricks', 'the last bid starts the play');
+    ok(P[0].state.play.turn === (r0.dealer + 1) % 3, 'and the player left of the dealer leads');
+
+    // ---- one card at a time ----
+    const suit = (c) => c.slice(-1);
+    const legalFor = (hand, led) => {
+      const same = hand.filter((c) => suit(c) === led);
+      return led && same.length ? same : hand;
+    };
+    async function playOne() {
+      const st = P[0].state;
+      const p = st.play.turn;
+      const led = st.play.trick.length ? suit(st.play.trick[0].card) : null;
+      const can = legalFor(P[p].state.hand, led);
+      P[p].send({ t: 'play', card: can[0] });
+      await wait(140);
+      if (P[0].state.play && P[0].state.play.turn === null) await wait(260);   // a trick is held up
+      return { p, card: can[0] };
+    }
+
+    // out of turn, and a card nobody holds
+    const onPlay = P[0].state.play.turn;
+    const off = P[(onPlay + 1) % 3];
+    off.errors.length = 0;
+    off.send({ t: 'play', card: off.state.hand[0] }); await wait(140);
+    ok(off.errors.some((e) => /not your turn/.test(e)), 'a card out of turn is refused');
+    P[onPlay].errors.length = 0;
+    P[onPlay].send({ t: 'play', card: 'AS' + 'X' }); await wait(140);
+    ok(P[onPlay].errors.some((e) => /do not hold/.test(e)), 'and a card you do not hold');
+
+    const first = await playOne();
+    const led = suit(first.card);
+    // somebody who holds the suit led must follow it
+    let tested = false;
+    for (let k = 1; k < 3 && !tested; k++) {
+      const p = (first.p + k) % 3;
+      if (P[0].state.play.turn !== p) continue;
+      const hand = P[p].state.hand;
+      const hasLed = hand.some((c) => suit(c) === led);
+      const other = hand.find((c) => suit(c) !== led);
+      if (!hasLed || !other) continue;
+      P[p].errors.length = 0;
+      P[p].send({ t: 'play', card: other }); await wait(140);
+      ok(P[p].errors.some((e) => /must follow/.test(e)), 'a player holding the suit led must follow it');
+      tested = true;
+    }
+    if (!tested) ok(true, 'a player holding the suit led must follow it (no such hand this deal)');
+
+    // play the rest of the hand out
+    let guard = 40;
+    while (P[0].state.phase === 'tricks' && guard-- > 0) await playOne();
+    const done = P[0].state.rounds[0];
+    ok(Array.isArray(done.tricks) && done.tricks.reduce((a, b) => a + b, 0) === 3,
+       'the cards count the tricks themselves, and they total the hand');
+    ok(P[0].state.idx === 1 && P[0].state.phase === 'bid', 'and the round scores and moves on');
+    ok(P[0].state.hand.length === P[0].state.rounds[1].cards, 'the next hand is dealt at once');
+
+    vh.errors.length = 0;
+    vh.send({ t: 'tricks', values: [1, 1, 1] }); await wait(140);
+    ok(vh.errors.some((e) => /count themselves/.test(e)), 'nobody may type the tricks in');
+
+    // ---- a hand survives a phone going away and coming back ----
+    const held = P[2].state.hand.join(',');
+    const seatTok = P[2].hello.token;
+    P[2].ws.close(); await wait(200);
+    const back = client('vCal2'); await back.ready;
+    back.send({ t: 'resume', code, token: seatTok }); await wait(200);
+    ok(back.state.hand.join(',') === held, 'a phone that comes back gets its own hand again');
+    ok(back.state.seats[2].online === true, 'and the seat is at the table again');
+  }
+
   // ---- the dev controls are refused unless DEV=1 ----
   {
     const d = client('devprobe'); await d.ready;
@@ -349,7 +456,7 @@ function client(name, url) {
   {
     const port3 = PORT + 2;
     const srv3 = spawn('node', [path + '/server.js'], {
-      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1' }, stdio: 'ignore',
+      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', TRICK_HOLD: '120' }, stdio: 'ignore',
     });
     await wait(700);
     const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
@@ -386,6 +493,52 @@ function client(name, url) {
     d.send({ t: 'dev', action: 'fillCard' }); await wait(400);
     const many = d.state.rounds.filter(full).length;
     ok(many >= 1 && many <= d.state.rounds.length, 'fillCard with no number plays a random number of rounds');
+
+    // ---- the rules of a trick, with the cards stacked on purpose ----
+    {
+      d.send({ t: 'dev', action: 'setup', players: 3 }); await wait(200);
+      const seats = d.hello.seats;
+      d.send({ t: 'config', patch: { deck: 'virtual', max: 3, pattern: 'down', ones: 1, screw: false } });
+      await wait(150);
+      d.send({ t: 'dev', action: 'startGame' }); await wait(200);
+
+      // The lead holds hearts. The next player holds a heart and two diamonds,
+      // so they must follow. The last holds no heart, and a diamond is trump.
+      const dealer = d.state.rounds[0].dealer;
+      const lead = (dealer + 1) % 3, second = (lead + 1) % 3, third = (second + 1) % 3;
+      const stack = [];
+      stack[lead] = ['KH', '3S', '4C'];
+      stack[second] = ['9H', 'AD', 'KD'];
+      stack[third] = ['AS', '2C', 'QD'];
+      d.send({ t: 'dev', action: 'patch', patch: { hands: stack } }); await wait(150);
+      d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, trump: 'D' } } }); await wait(150);
+
+      const at = [];
+      for (const st of seats) {
+        const c = client('stack-' + st.name, `ws://127.0.0.1:${port3}/ws`); await c.ready;
+        c.send({ t: 'resume', code: d.state.code, token: st.token }); await wait(150);
+        at.push(c);
+      }
+      ok(at[second].state.hand.join(',') === '9H,AD,KD', 'a stand-in table can have its hands stacked');
+      for (let i = 0; i < 3; i++) { at[at[0].state.turn].send({ t: 'bid', v: 1 }); await wait(120); }
+      ok(at[0].state.play.turn === lead, 'the player left of the dealer leads');
+
+      at[lead].send({ t: 'play', card: 'KH' }); await wait(150);
+      at[second].errors.length = 0;
+      at[second].send({ t: 'play', card: 'AD' }); await wait(150);
+      ok(at[second].errors.some((e) => /must follow/.test(e)),
+         'a player holding the suit led may not play another');
+      ok(at[0].state.play.trick.length === 1, 'and the refused card stays in the hand');
+      at[second].send({ t: 'play', card: '9H' }); await wait(150);
+      at[third].errors.length = 0;
+      at[third].send({ t: 'play', card: 'QD' }); await wait(500);
+      ok(at[third].errors.length === 0, 'a player with none of the suit led may play anything');
+      ok(at[0].state.play.won[third] === 1, 'a trump beats the highest card of the suit led');
+      ok(at[0].state.play.last && at[0].state.play.last.winner === third, 'the table is told who won it');
+      ok(at[0].state.play.turn === third, 'and the winner leads the next trick');
+      ok(at[0].state.play.counts.join(',') === '2,2,2', 'every hand is one card lighter');
+      at.forEach((c) => c.ws.close());
+    }
 
     // a real table on a dev server is still not a table of stand-ins
     const real = client('devreal', `ws://127.0.0.1:${port3}/ws`); await real.ready;

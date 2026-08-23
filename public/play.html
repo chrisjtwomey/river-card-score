@@ -85,6 +85,13 @@
           <label class="switch"><input type="checkbox" id="cfg-screw"><span>Screw the dealer</span></label>
           <label class="switch"><input type="checkbox" id="cfg-trump"><span>Record the trump suit</span></label>
         </div>
+        <label class="field"><span>Cards</span>
+          <select id="cfg-deck">
+            <option value="physical">Real cards on the table</option>
+            <option value="virtual">Deal on the phones</option>
+          </select>
+          <small id="deck-hint"></small>
+        </label>
       </details>
       <button class="btn primary big" id="btn-start" type="button" disabled>Start game</button>
     </div>
@@ -137,6 +144,20 @@
         <button class="btn primary big" id="btn-tricks" type="button" disabled>Score the round</button>
       </div>
       <p class="err" id="play-err" hidden></p>
+    </div>
+
+    <!-- the hand, when the table plays with a virtual deck -->
+    <div class="panel play-panel" id="play-panel" hidden>
+      <div class="entry-head">
+        <h2 id="play-title">The hand</h2>
+        <span class="tally" id="play-tally"></span>
+      </div>
+      <div class="trick" id="trick"></div>
+      <p class="hint" id="hand-hint"></p>
+      <div class="hand" id="hand"></div>
+      <div class="row-actions" id="playfor-row" hidden>
+        <button class="btn ghost" id="btn-playfor" type="button">Play a card for them</button>
+      </div>
     </div>
 
     <div class="panel">

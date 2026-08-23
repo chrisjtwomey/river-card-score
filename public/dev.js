@@ -168,7 +168,7 @@ function render() {
   const c = ST.cfg;
   const set = (sel, v) => { const el = $(sel); if (document.activeElement !== el) el.value = String(v); };
   set('#cfg-max', c.max); set('#cfg-ones', c.ones); set('#cfg-pattern', c.pattern);
-  set('#cfg-bonus', c.bonus); set('#cfg-miss', c.miss);
+  set('#cfg-bonus', c.bonus); set('#cfg-miss', c.miss); set('#cfg-deck', c.deck || 'physical');
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
 
@@ -299,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-miss').addEventListener('change', (e) => patch({ miss: e.target.value }));
   $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
   $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
+  $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
 
   connect();
   watchFiles();

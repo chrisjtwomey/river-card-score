@@ -238,6 +238,10 @@ function renderLobby() {
   setVal('#cfg-miss', c.miss);
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
+  setVal('#cfg-deck', c.deck || 'physical');
+  $('#deck-hint').textContent = c.deck === 'virtual'
+    ? 'The server deals to each phone, turns the trump, and counts the tricks.'
+    : 'You deal real cards. The dealer types in the tricks at the end of a round.';
   $('#max-hint').textContent = `Up to ${cap} cards each with ${Math.max(2, n)} players.`;
   const cards = Game.schedule(c.max, c.pattern, c.ones);
   $('#rounds-hint').textContent = `${cards.length} rounds: ${cards.join(' ')}`;
@@ -276,6 +280,7 @@ function renderGame() {
   renderTurn(r, n);
   renderVote(r, n);
   $('#btn-bum').hidden = !r;
+  renderTable(r);
   renderStandings();
   renderScorecard();
   renderWinner(done);
@@ -293,6 +298,22 @@ function renderVote(r, n) {
 }
 
 function renderTrump(r) {
+  // With a virtual deck the deck turns the trump, so there is nothing to pick.
+  if (ST.cfg.deck === 'virtual') {
+    const row = $('#trump-row');
+    const up = ST.play && ST.play.upcard;
+    row.classList.add('turned');
+    $('#trump-picker').innerHTML = '';
+    const s = r && r.trump ? Game.SUITS.find((x) => x.k === r.trump) : null;
+    $('#trump-now').textContent = !s ? 'No trumps'
+      : (up ? `${Game.cardName(up)} — ${s.name}` : s.name);
+    return;
+  }
+  $('#trump-row').classList.remove('turned');
+  return renderTrumpPicker(r);
+}
+
+function renderTrumpPicker(r) {
   const bar = $('#trump-row');
   if (!ST.cfg.trump || !r) { bar.hidden = true; return; }
   bar.hidden = false;
@@ -360,6 +381,19 @@ function renderTurn(r, n) {
     return;
   }
 
+  if (ST.cfg.deck === 'virtual') {                 // the cards below do the counting
+    const p = ST.play;
+    $('#turn-title').textContent = 'Playing the hand';
+    $('#turn-tally').textContent = `Bids ${sum} of ${r.cards}`;
+    $('#turn-tally').className = 'tally';
+    const leader = ST.seats[(r.dealer + 1) % n].name;
+    $('#turn-hint').textContent = !p || !p.won.some((x) => x)
+      ? `${leader} leads the first trick.`
+      : 'The cards count the tricks. The round scores itself when the last one is played.';
+    pad.hidden = true;
+    return;
+  }
+
   // tricks phase
   $('#turn-title').textContent = 'Tricks won';
   $('#turn-tally').textContent = `Bids ${sum} of ${r.cards}`;
@@ -406,6 +440,45 @@ function renderTurn(r, n) {
 
 // The rows slide to their new places, the scores run to their new values, and
 // what the round paid floats up out of them.
+// The table, when the deck is virtual: the trick in the middle, and what each
+// seat has left. No hands: this screen is the one everybody can see.
+function renderTable(r) {
+  const panel = $('#table-panel');
+  const on = ST.cfg.deck === 'virtual' && ST.phase === 'tricks' && !!r && !!ST.play;
+  panel.hidden = !on;
+  if (!on) return;
+  const p = ST.play;
+
+  Table.trickEl($('#trick'), ST, -1);
+  $('#table-title').textContent = p.turn === null && p.last
+    ? `${ST.seats[p.last.winner].name} wins the trick`
+    : p.turn === null ? 'Dealing…' : `${ST.seats[p.turn].name} to play`;
+  const played = p.won.reduce((a, b) => a + b, 0);
+  $('#table-tally').textContent = `trick ${Math.min(played + 1, r.cards)} of ${r.cards}`;
+
+  const box = $('#seatcounts');
+  box.innerHTML = '';
+  ST.seats.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'seatcount' + (p.turn === i ? ' now' : '');
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    nm.textContent = s.name + (i === r.dealer ? ' (D)' : '');
+    const won = document.createElement('span');
+    won.className = 'badge soft';
+    won.textContent = `${p.won[i]} of ${r.bids[i]}`;
+    const left = document.createElement('span');
+    left.className = 'left';
+    left.textContent = `${p.counts[i]} card${p.counts[i] === 1 ? '' : 's'}`;
+    row.append(nm, won, left);
+    box.appendChild(row);
+  });
+
+  const stuck = p.turn !== null && !ST.seats[p.turn].online;
+  $('#playfor-row').hidden = !stuck;
+  if (stuck) $('#btn-playfor').textContent = `Play a card for ${ST.seats[p.turn].name}`;
+}
+
 function renderStandings() {
   const box = $('#standings');
   const t = ST.totals;
@@ -480,6 +553,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-miss').addEventListener('change', (e) => patch({ miss: e.target.value }));
   $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
   $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
+  $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
+  $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
 
   UI.wireFullscreen('#btn-full');
   loadAddresses();
@@ -487,7 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-deal').addEventListener('click', () =>
     (ST && ST.phase === 'done' ? playFinaleNow() : playDealNow()));
   $('#btn-bum').addEventListener('click', () => {
-    if (confirm('Bum deal? The hand is thrown in and dealt again by the same dealer.')) Net.send({ t: 'bumdeal' });
+    UI.ask('Bum deal?', 'The hand is thrown in. The same dealer deals it again, and the bids so far are lost.',
+      'Deal again').then((yes) => { if (yes) Net.send({ t: 'bumdeal' }); });
   });
   $('#btn-vote-do').addEventListener('click', () => Net.send({ t: 'bumdeal' }));
   $('#btn-vote-cancel').addEventListener('click', () => Net.send({ t: 'votecancel' }));
@@ -500,7 +576,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
   $('#btn-reset').addEventListener('click', () => {
-    if (confirm('Start a new game with the same players? The scorecard is deleted.')) Net.send({ t: 'reset' });
+    UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.',
+      'New game').then((yes) => { if (yes) Net.send({ t: 'reset' }); });
   });
 
   boot();

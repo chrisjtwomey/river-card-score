@@ -179,6 +179,7 @@ function createRoom() {
     idx: 0,
     vote: null,                 // an open "bum deal" vote, or null
     stand: false,               // true for a dev table of stand-in players
+    play: null,                 // the hands and the trick, when the deck is virtual
     sockets: new Set(),
     lastSeen: Date.now(),
   };
@@ -213,14 +214,25 @@ function publicState(room) {
     turn: (room.phase === 'bid' && r) ? G.turnSeat(r, n) : null,
     vote: (room.vote && room.vote.round === room.idx) ? room.vote : null,
     totals: n ? G.totals(room.cfg, room.rounds, n) : [],
+    play: playPublic(room),         // the cards on the table, never the hands
     dev: DEV,                       // the host screen offers the dev page when it is on
   };
 }
 
+// A hand is a secret, so each socket gets the table plus its own cards. A
+// screen with no seat -- the host screen -- gets the table alone.
 function broadcast(room) {
   room.lastSeen = Date.now();
-  const msg = JSON.stringify(publicState(room));
-  room.sockets.forEach((ws) => { if (ws.readyState === 1) ws.send(msg); });
+  const base = publicState(room);
+  const shared = JSON.stringify(base);
+  room.sockets.forEach((ws) => {
+    if (ws.readyState !== 1) return;
+    const seat = (room.play && ws.ctx && ws.ctx.seatId) ? seatIndex(room, ws.ctx.seatId) : -1;
+    if (seat < 0) { ws.send(shared); return; }
+    base.hand = room.play.hands[seat];
+    ws.send(JSON.stringify(base));
+  });
+  delete base.hand;
 }
 
 function markPresence(room) {
@@ -241,7 +253,96 @@ function bumDeal(room) {
   r.redeals = (r.redeals || 0) + 1;
   room.phase = 'bid';
   room.vote = null;
+  if (virtual(room)) dealHands(room);
   return true;
+}
+
+/* ---------------- the virtual deck ---------------- */
+
+const TRICK_HOLD = Number(process.env.TRICK_HOLD) || 1500;   // how long a finished trick stays up
+const virtual = (room) => room.cfg.deck === 'virtual';
+
+// Shuffle, deal, and turn the next card for trump. With no card left over --
+// four players at thirteen cards -- the hand is played at no trumps.
+function dealHands(room) {
+  const r = curRound(room), n = room.seats.length;
+  if (!r) return;
+  const d = G.shuffle(G.deck());
+  const hands = [];
+  for (let p = 0; p < n; p++) hands.push(G.sortHand(d.splice(0, r.cards)));
+  const up = (room.cfg.trump && d.length) ? d.shift() : null;
+  r.trump = room.cfg.trump ? (up ? G.suitOf(up) : 'NT') : null;
+  room.play = { round: room.idx, hands, upcard: up, trick: [], turn: null,
+                won: Array(n).fill(0), last: null };
+}
+
+// The bids are in: the player left of the dealer leads the first trick.
+function startPlay(room) {
+  const r = curRound(room), n = room.seats.length;
+  if (!room.play || room.play.round !== room.idx) dealHands(room);
+  room.play.trick = [];
+  room.play.last = null;
+  room.play.turn = (r.dealer + 1) % n;
+}
+
+// What everybody may see: the cards on the table, how many are left in each
+// hand, and who won the last trick. Never a hand.
+function playPublic(room) {
+  const p = room.play;
+  if (!p) return null;
+  return { turn: p.turn, trick: p.trick, won: p.won, last: p.last,
+           upcard: p.upcard, counts: p.hands.map((h) => h.length) };
+}
+
+// One card. The server holds the rules, so a phone cannot renege.
+function playCard(ws, room, p, card) {
+  const play = room.play, r = curRound(room), n = room.seats.length;
+  if (play.turn !== p) return fail(ws, 'not your turn');
+  const hand = play.hands[p];
+  if (hand.indexOf(card) < 0) return fail(ws, 'you do not hold that card');
+  const led = play.trick.length ? G.suitOf(play.trick[0].card) : null;
+  if (G.legalPlays(hand, led).indexOf(card) < 0) {
+    const suit = G.SUITS.find((x) => x.k === led);
+    return fail(ws, `you must follow ${suit ? suit.name.toLowerCase() : 'the suit led'}`);
+  }
+
+  if (!play.trick.length) play.last = null;        // the last trick has had its moment
+  hand.splice(hand.indexOf(card), 1);
+  play.trick.push({ p, card });
+  if (play.trick.length < n) {
+    play.turn = (p + 1) % n;
+    return broadcast(room);
+  }
+
+  // the trick is full: name the winner and hold it up for the table
+  const winner = G.trickWinner(play.trick, r.trump);
+  play.won[winner] += 1;
+  play.last = { trick: play.trick.slice(), winner };
+  play.trick = [];
+  play.turn = null;
+  const tag = play, at = room.idx;
+  setTimeout(() => {
+    if (room.play !== tag || room.idx !== at) return;      // the game moved on
+    if (tag.hands.every((h) => !h.length)) scoreRound(room, tag.won.slice());
+    else tag.turn = winner;
+    broadcast(room);
+  }, TRICK_HOLD);
+  return broadcast(room);
+}
+
+// The round is over, however the tricks were counted.
+function scoreRound(room, values) {
+  const n = room.seats.length;
+  curRound(room).tricks = values;
+  room.vote = null;
+  room.play = null;
+  room.idx += 1;
+  if (room.idx >= room.rounds.length) { room.idx = room.rounds.length; room.phase = 'done'; }
+  else {
+    room.rounds[room.idx].bids = Array(n).fill(null);
+    room.phase = 'bid';
+    if (virtual(room)) dealHands(room);
+  }
 }
 
 /* ---------------- dev controls (DEV=1 only) ---------------- */
@@ -273,6 +374,8 @@ function devStart(room) {
   room.rounds[0].bids = Array(n).fill(null);
   room.phase = 'bid';
   room.vote = null;
+  room.play = null;
+  if (virtual(room)) dealHands(room);
 }
 
 // Bids that a real table could make, including the screw-the-dealer rule.
@@ -289,11 +392,37 @@ function devFillBids(room) {
     p = G.turnSeat(r, n);
   }
   room.phase = 'tricks';
+  if (virtual(room)) startPlay(room);
+}
+
+// Play the hand out at once, with no pause between the tricks. Only the dev
+// page does this: a real table watches each trick land.
+function devPlayOut(room) {
+  const r = curRound(room), n = room.seats.length, play = room.play;
+  if (!play) return;
+  if (play.turn === null) play.turn = (r.dealer + 1) % n;
+  let guard = 400;
+  while (guard-- > 0 && play.hands.some((h) => h.length)) {
+    const p = play.turn;
+    const led = play.trick.length ? G.suitOf(play.trick[0].card) : null;
+    const can = G.legalPlays(play.hands[p], led);
+    const card = can[rand(can.length)];
+    play.hands[p].splice(play.hands[p].indexOf(card), 1);
+    play.trick.push({ p, card });
+    if (play.trick.length < n) { play.turn = (p + 1) % n; continue; }
+    const w = G.trickWinner(play.trick, r.trump);
+    play.won[w] += 1;
+    play.last = { trick: play.trick.slice(), winner: w };
+    play.trick = [];
+    play.turn = w;
+  }
+  scoreRound(room, play.won.slice());
 }
 
 function devFillTricks(room) {
   const r = curRound(room), n = room.seats.length;
   if (!r || !r.bids || r.bids.some((b) => b === null)) return;
+  if (virtual(room)) return devPlayOut(room);        // the cards decide, and score
   const out = Array(n).fill(0);
   for (let i = 0; i < r.cards; i++) out[rand(n)] += 1;
   r.tricks = out;
@@ -303,9 +432,11 @@ function devNextRound(room) {
   if (!room.rounds.length) { devStart(room); return; }
   if (room.phase === 'done') return;
   const r = curRound(room);
-  if (r && room.cfg.trump && !r.trump) r.trump = G.SUITS[rand(G.SUITS.length)].k;
+  if (r && room.cfg.trump && !r.trump && !virtual(room)) r.trump = G.SUITS[rand(G.SUITS.length)].k;
+  const at = room.idx;
   devFillBids(room);
   devFillTricks(room);
+  if (room.idx !== at) return;                       // a virtual hand scored itself
   room.vote = null;
   room.idx += 1;
   if (room.idx >= room.rounds.length) { room.idx = room.rounds.length; room.phase = 'done'; }
@@ -401,6 +532,9 @@ function devPatch(room, p) {
   if (p.captainId && seatIndex(room, p.captainId) >= 0) room.captainId = p.captainId;
   if ('firstDealerId' in p) {
     room.firstDealerId = (p.firstDealerId && seatIndex(room, p.firstDealerId) >= 0) ? p.firstDealerId : null;
+  }
+  if (p.hands && room.play && room.stand && Array.isArray(p.hands)) {
+    room.play.hands = p.hands.map((h) => (Array.isArray(h) ? h.slice(0, 13) : []));
   }
   if (p.round && room.rounds[p.round.i]) {
     const r = room.rounds[p.round.i];
@@ -584,6 +718,7 @@ function handle(ws, m) {
       if ('miss' in p && p.miss in G.MISS_RULES) c.miss = p.miss;
       if ('screw' in p) c.screw = !!p.screw;
       if ('trump' in p) c.trump = !!p.trump;
+      if ('deck' in p && ['physical', 'virtual'].includes(p.deck)) c.deck = p.deck;
       if ('firstDealer' in p) {
         room.firstDealerId = (p.firstDealer && seatIndex(room, p.firstDealer) >= 0) ? p.firstDealer : null;
       }
@@ -626,11 +761,14 @@ function handle(ws, m) {
       room.idx = 0;
       room.rounds[0].bids = Array(n).fill(null);
       room.phase = 'bid';
+      room.play = null;
+      if (virtual(room)) dealHands(room);
       return broadcast(room);
     }
 
     case 'trump': {
       if (!r) return;
+      if (virtual(room)) return fail(ws, 'the deck turns the trump on this table');
       if (!boss && mySeat !== r.dealer) return fail(ws, 'the table host or the dealer sets the trump');
       const ok = G.SUITS.some((s) => s.k === m.k);
       r.trump = (m.k === null || r.trump === m.k) ? null : (ok ? m.k : r.trump);
@@ -653,23 +791,46 @@ function handle(ws, m) {
       const forbidden = G.forbiddenBid(r, mySeat, room.cfg, n);
       if (forbidden !== null && v === forbidden) return fail(ws, `the bids must not total ${r.cards}`);
       r.bids[mySeat] = v;
-      if (G.turnSeat(r, n) === null) room.phase = 'tricks';
+      if (G.turnSeat(r, n) === null) {
+        room.phase = 'tricks';
+        if (virtual(room)) startPlay(room);
+      }
       return broadcast(room);
     }
 
     case 'tricks': {
+      if (virtual(room)) return fail(ws, 'the cards count themselves on this table');
       if (room.phase !== 'tricks' || !r) return fail(ws, 'not counting tricks now');
       if (!boss && mySeat !== r.dealer) return fail(ws, 'the dealer enters the tricks');
       const v = Array.isArray(m.values) ? m.values.map(Number) : [];
       if (v.length !== n || v.some((x) => !Number.isInteger(x) || x < 0 || x > r.cards)) return fail(ws, 'bad trick counts');
       const sum = v.reduce((a, b) => a + b, 0);
       if (sum !== r.cards) return fail(ws, `the tricks must total ${r.cards}, not ${sum}`);
-      r.tricks = v;
-      room.vote = null;
-      room.idx += 1;
-      if (room.idx >= room.rounds.length) { room.idx = room.rounds.length; room.phase = 'done'; }
-      else { room.rounds[room.idx].bids = Array(n).fill(null); room.phase = 'bid'; }
+      scoreRound(room, v);
       return broadcast(room);
+    }
+
+    // A card. Everything about whether it may be played is decided here.
+    case 'play': {
+      if (!virtual(room)) return fail(ws, 'this table plays with real cards');
+      if (room.phase !== 'tricks' || !r || !room.play) return fail(ws, 'no hand in play');
+      if (mySeat < 0) return fail(ws, 'only the players hold cards');
+      return playCard(ws, room, mySeat, String(m.card || ''));
+    }
+
+    // A phone has gone: the table would sit there for ever, so whoever runs
+    // the table can make that seat play. The server picks, and only from the
+    // cards the rules allow, so nobody chooses another player's card.
+    case 'playfor': {
+      if (!virtual(room)) return fail(ws, 'this table plays with real cards');
+      if (!boss) return fail(ws, 'only the table host can play for a seat');
+      if (room.phase !== 'tricks' || !room.play) return fail(ws, 'no hand in play');
+      const p = room.play.turn;
+      if (p === null) return fail(ws, 'nobody is on play');
+      if (room.seats[p].online) return fail(ws, `${room.seats[p].name} is here and can play`);
+      const led = room.play.trick.length ? G.suitOf(room.play.trick[0].card) : null;
+      const can = G.legalPlays(room.play.hands[p], led);
+      return playCard(ws, room, p, can[Math.floor(Math.random() * can.length)]);
     }
 
     case 'bumdeal': {
@@ -721,6 +882,12 @@ function handle(ws, m) {
         room.rounds[room.idx].tricks = null;
         room.phase = 'tricks';
       } else return fail(ws, 'nothing to undo');
+      if (virtual(room)) {              // those cards are gone: deal that hand again
+        room.rounds[room.idx].tricks = null;
+        room.rounds[room.idx].bids = Array(n).fill(null);
+        room.phase = 'bid';
+        dealHands(room);
+      }
       return broadcast(room);
     }
 
@@ -730,6 +897,7 @@ function handle(ws, m) {
       room.vote = null;
       room.rounds = [];
       room.idx = 0;
+      room.play = null;
       syncCfg(room);
       return broadcast(room);
     }

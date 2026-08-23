@@ -168,6 +168,32 @@ const UI = (function () {
   }
   document.addEventListener('DOMContentLoaded', liveReload);
 
+  /* ---------- a question, before something that cannot be undone ---------- */
+
+  // Builds its own dialog, so any page can ask without markup of its own.
+  // Falls back to the browser's own box where <dialog> is not supported.
+  function ask(title, body, okLabel) {
+    let d = document.getElementById('ui-confirm');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'ui-confirm';
+      d.innerHTML = '<h2></h2><p class="hint"></p>' +
+        '<form method="dialog" class="confirm-actions">' +
+        '<button class="btn ghost" value="no">Cancel</button>' +
+        '<button class="btn primary danger" value="yes">Yes</button></form>';
+      document.body.appendChild(d);
+    }
+    if (!d.showModal) return Promise.resolve(window.confirm(title + (body ? '\n\n' + body : '')));
+    d.querySelector('h2').textContent = title;
+    d.querySelector('p').textContent = body || '';
+    d.querySelector('[value="yes"]').textContent = okLabel || 'Yes';
+    d.returnValue = '';
+    return new Promise((res) => {
+      d.addEventListener('close', () => res(d.returnValue === 'yes'), { once: true });
+      d.showModal();
+    });
+  }
+
   /* ---------- small movements ---------- */
 
   // The same switch the deal animation uses: the system setting, unless a
@@ -352,5 +378,5 @@ const UI = (function () {
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
   return { wireFullscreen, isFull, keepAwake, wireZoom, measureTopbar,
-           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl, fx };
+           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl, fx, ask };
 })();

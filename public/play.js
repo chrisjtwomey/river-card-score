@@ -91,12 +91,71 @@ function render() {
   });
   renderRound(r, me);
   renderTurn(r, me);
+  renderPlay(r, me);
   renderVote(r, me);
   renderBidStrip(r);
   renderStandings(me);
   UI.measureSticky();
   $('#scorecard').innerHTML = Table.scorecardHTML(ST, me);
   Table.followCurrent('#scorecard');
+}
+
+// The hand, when the table plays with a virtual deck. The server holds the
+// cards and the rules; this draws them and sends the one that is tapped.
+function renderPlay(r, me) {
+  const panel = $('#play-panel');
+  const bidding = ST.phase === 'bid';
+  const on = ST.cfg.deck === 'virtual' && (bidding || ST.phase === 'tricks') && !!r && !!ST.play;
+  panel.hidden = !on;
+  if (!on) return;
+  const p = ST.play;
+  const suit = (k) => (Game.SUITS.find((x) => x.k === k) || { name: 'none', g: '—' });
+
+  Table.trickEl($('#trick'), ST, me);
+  $('#play-title').textContent = bidding ? 'Your cards' : 'The hand';
+  $('#play-tally').textContent = bidding
+    ? `trump ${suit(r.trump).g} · ${r.cards} card${r.cards === 1 ? '' : 's'}`
+    : `you bid ${r.bids[me]} · won ${p.won[me]} of ${r.cards}`;
+
+  const hand = ST.hand || [];
+  const led = p.trick.length ? Game.suitOf(p.trick[0].card) : null;
+  const mine = p.turn === me;
+  const can = mine ? Game.legalPlays(hand, led) : [];
+  const box = $('#hand');
+  box.innerHTML = '';
+  hand.forEach((c) => {
+    const el = Table.cardEl(c, 'button');
+    el.type = 'button';
+    el.disabled = !mine || can.indexOf(c) < 0;
+    if (!el.disabled) el.classList.add('live');
+    el.addEventListener('click', () => {
+      box.querySelectorAll('.pcard').forEach((x) => { x.disabled = true; });
+      Net.send({ t: 'play', card: c });
+    });
+    box.appendChild(el);
+  });
+
+  const suitName = (k) => suit(k).name.toLowerCase();
+  let hint;
+  if (bidding) {
+    hint = r.trump && r.trump !== 'NT'
+      ? `Trump is ${suitName(r.trump)}. Bid the tricks you think these win.`
+      : 'No trumps this hand. Bid the tricks you think these win.';
+  } else if (mine) {
+    hint = !led ? 'Your lead. Play any card.'
+      : can.length === hand.length ? `You have no ${suitName(led)}, so play anything.`
+      : `Follow ${suitName(led)}.`;
+  } else if (p.turn === null) {
+    hint = p.last ? `${ST.seats[p.last.winner].name} won that trick.` : 'Waiting…';
+  } else {
+    hint = `Waiting for ${ST.seats[p.turn].name}.`;
+  }
+  $('#hand-hint').textContent = hint;
+
+  // a phone that has gone quiet would stop the table
+  const stuck = !bidding && p.turn !== null && !ST.seats[p.turn].online;
+  $('#playfor-row').hidden = !(stuck && amHost());
+  if (stuck) $('#btn-playfor').textContent = `Play a card for ${ST.seats[p.turn].name}`;
 }
 
 // A bum deal throws the hand in. The dealer can do it alone; anybody else asks
@@ -195,6 +254,10 @@ function renderCaptain(lobby) {
   setVal('#cfg-bonus', c.bonus); setVal('#cfg-miss', c.miss);
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
+  setVal('#cfg-deck', c.deck || 'physical');
+  $('#deck-hint').textContent = c.deck === 'virtual'
+    ? 'The server deals to each phone, turns the trump, and counts the tricks.'
+    : 'You deal real cards. The dealer types in the tricks at the end of a round.';
   const cards = Game.schedule(c.max, c.pattern, c.ones);
   $('#rounds-hint').textContent = `${cards.length} rounds: ${cards.join(' ')}`;
   const ex = (w) => Game.roundScore(2, w, c);
@@ -355,6 +418,15 @@ function renderTurn(r, me) {
   const leader = (r.dealer + 1) % ST.seats.length;
   const leads = leader === me ? 'You lead' : `${ST.seats[leader].name} leads`;
   $('#turn-eyebrow').textContent = 'Tricks won';
+  if (ST.cfg.deck === 'virtual') {                 // the hand is played below
+    const p = ST.play;
+    $('#turn-text').textContent = !p ? 'Dealing…'
+      : p.turn === me ? 'Your card'
+      : p.turn === null ? 'That trick is done'
+      : `${ST.seats[p.turn].name} to play`;
+    if (p && p.turn === me) panel.classList.add('mine');
+    return;
+  }
   if (r.dealer !== me) {
     $('#turn-text').textContent = `${leads} the first trick. ${ST.seats[r.dealer].name} enters the tricks.`;
     return;
@@ -459,7 +531,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   UI.wireFullscreen('#btn-full');
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
-  $('#btn-bum').addEventListener('click', () => Net.send({ t: 'bumdeal' }));
+  // The dealer and the table host deal again on the spot, so they are asked
+  // first. Anybody else is asking the table, which can still be taken back.
+  $('#btn-bum').addEventListener('click', () => {
+    const me = mySeat();
+    const r = ST && ST.rounds[ST.idx];
+    const now = amHost() || (r && r.dealer === me);
+    const q = now
+      ? UI.ask('Bum deal?', 'The hand is thrown in. The same dealer deals it again, and the bids so far are lost.', 'Deal again')
+      : UI.ask('Call a bum deal?', 'Every player has to agree before the hand is thrown in.', 'Ask the table');
+    q.then((yes) => { if (yes) Net.send({ t: 'bumdeal' }); });
+  });
 
   const patch = (p) => Net.send({ t: 'config', patch: p });
   $('#cfg-max').addEventListener('change', (e) => patch({ max: e.target.value }));
@@ -469,10 +551,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-miss').addEventListener('change', (e) => patch({ miss: e.target.value }));
   $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
   $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
+  $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
+  $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
   $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
   $('#btn-reset').addEventListener('click', () => {
-    if (confirm('New game with the same players? The scorecard is deleted.')) Net.send({ t: 'reset' });
+    UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.',
+      'New game').then((yes) => { if (yes) Net.send({ t: 'reset' }); });
   });
   boot();
 });

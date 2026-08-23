@@ -40,11 +40,29 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 9. The round scores, the next round opens, and the deal moves on one seat.
 10. The table host, or the host screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
 
+### Playing with a virtual deck
+
+The table can play without real cards. In the lobby set **Cards** to *Deal on the phones*, and the server becomes the dealer:
+
+1. It shuffles a 52-card deck and deals the hand to each phone. A hand is a secret: the server sends each socket the table and **its own cards only**, and the host screen is dealt none.
+2. It turns the next card for trump, before the bidding, so everybody bids knowing it. With nothing left in the deck — four players at thirteen cards — the hand is played at no trumps.
+3. Bidding runs as it always does, in order, with screw the dealer if it is on.
+4. The player left of the dealer leads. Tap a card to play it. Cards you may not play lie flat and cannot be tapped: you must follow the suit led if you hold it.
+5. The highest trump takes the trick, or the highest card of the suit led. The trick stays on the table for a second and a half so everybody sees it, then the winner leads.
+6. When the last trick is played the round scores itself. Nobody types anything in.
+
+The rules are held on the server, so a phone cannot renege, play out of turn, or play a card it does not hold. What changes on a virtual table:
+
+- The dealer's trick pad is gone, and typing the tricks in is refused.
+- Nobody picks the trump. The deck turns it.
+- **Go back** deals that hand again, because those cards are gone.
+- A phone that goes quiet would stop the table, so whoever runs the table gets **Play a card for them**. The server picks, and only from the cards the rules allow, so nobody chooses another player's card.
+
 ### Bum deal
 
 If the cards were dealt wrong, throw the hand in and deal it again. The round keeps the same dealer and hand size, and the bids, tricks, and trump are cleared. The round label then shows `re-deal 1`.
 
-- The **dealer** or the **table host** re-deals on their own.
+- The **dealer** or the **table host** re-deals on their own. They are asked to confirm first, so one stray tap cannot throw a hand in.
 - Any other player calls a bum deal and the table votes. Every player must agree. One "no" ends it, and the player who called it can take it back. The table host, or the host screen, can also force the re-deal.
 
 If the table host leaves the table, the badge moves to the first seat.
@@ -92,6 +110,7 @@ Phones reconnect on their own. A player who closes the page and comes back is of
   - **must make the bid, with a penalty** — the same, but short by *n* tricks costs *n* points.
   - **0 points**, **minus 1 per trick off**, or **tricks won only**.
 - Screw the dealer, and whether to record the trump suit.
+- Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
 
 ## Run it with Docker
 
