@@ -73,24 +73,15 @@ function renderFrames() {
     if (cap) frame(box, `table host · ${cap.name}`, 'play.html', cap.token, 'captain');
   }
 
-  // bottom row: every seat
-  const seats = `${CODE}:${SEATS.map((s) => s.token).join(',')}:${scale}`;
+  // bottom row: the other seats. The table host is already up top, so it is
+  // not shown twice. The key changes with them, so it follows the badge.
+  const others = SEATS.filter((s) => !cap || s.id !== cap.id);
+  const seats = `${CODE}:${others.map((s) => s.token).join(',')}:${scale}`;
   if (seats !== seatKey) {
     seatKey = seats;
     const box = $('#seat-frames');
     box.innerHTML = '';
-    SEATS.forEach((s) => frame(box, s.name, 'play.html', s.token, 'seat', s.id));
-  }
-
-  // the badge moves without rebuilding the frames
-  if (ST) {
-    document.querySelectorAll('#seat-frames .frame').forEach((el) => {
-      const seat = seatOf(el.dataset.seat);
-      if (!seat) return;
-      const isCap = seat.id === ST.captainId;
-      el.classList.toggle('captain', isCap);
-      el.querySelector('.lbl').textContent = seat.name + (isCap ? ' · table host' : '');
-    });
+    others.forEach((s) => frame(box, s.name, 'play.html', s.token, 'seat', s.id));
   }
 }
 
