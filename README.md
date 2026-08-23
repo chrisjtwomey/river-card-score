@@ -199,6 +199,18 @@ To override it, open the page with a flag. The choice is saved for that browser:
 
 From the browser console: `playDeal()`, `playDeal('reduced')`, and `motionMode()`.
 
+## Working on it
+
+```sh
+npm run dev
+```
+
+Same server, plus live reload. The server watches `public/` and `game.js`, and every open page reloads itself when a file changes. Pages reload straight back into their seat, because the game state lives on the server and the seat token lives in the browser, so a reload during a game is safe.
+
+Live reload is off unless `DEV=1`. Without it, `/live` answers 404 and each page stops asking after one try. `npm start` never watches the files.
+
+Changes to `server.js` still need a restart, and that ends the games in memory. Client files do not.
+
 ## Test
 
 ```sh
@@ -215,6 +227,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
 - `test.js` — end-to-end test.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
+- `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
 - `Dockerfile`, `compose.yaml` — container build and run.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.

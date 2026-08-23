@@ -28,6 +28,7 @@ if (process.env.NO_TLS !== '1') {
   } catch (e) { console.warn('[tls] cannot read the certificate:', e.message); }
 }
 const SCHEME = tls ? 'https' : 'http';
+const DEV = process.env.DEV === '1';        // live reload, for working on it
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -72,12 +73,48 @@ function qrSvg(text, cell, margin) {
     `<rect width="100%" height="100%" fill="#ffffff"/><path d="${d}" fill="#000000"/></svg>`;
 }
 
+/* ---------------- live reload (dev only) ---------------- */
+
+const liveClients = new Set();
+
+if (DEV) {
+  let timer = null;
+  const bump = (what) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      console.log(`[dev] ${what} changed: reloading ${liveClients.size} page(s)`);
+      liveClients.forEach((res) => res.write(`event: reload\ndata: ${JSON.stringify(what)}\n\n`));
+    }, 150);                                 // editors write more than once
+  };
+  try {
+    fs.watch(PUB, { recursive: true }, (e, f) => { if (f) bump(String(f)); });
+    fs.watch(path.join(ROOT, 'game.js'), () => bump('game.js'));
+  } catch (e) {
+    console.warn('[dev] cannot watch the files:', e.message);
+  }
+  setInterval(() => liveClients.forEach((res) => res.write(': ping\n\n')), 25000);
+}
+
 /* ---------------- static files ---------------- */
 
 function handler(req, res) {
   const [rawPath, rawQuery] = (req.url || '/').split('?');
   let url = decodeURIComponent(rawPath);
   const query = new URLSearchParams(rawQuery || '');
+
+  if (url === '/live') {                           // page reload stream, dev only
+    if (!DEV) { res.writeHead(404, { 'content-type': 'text/plain' }).end('live reload is off'); return; }
+    res.writeHead(200, {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache',
+      connection: 'keep-alive',
+      'x-accel-buffering': 'no',                   // nginx must not hold it back
+    });
+    res.write('retry: 1000\n\n');
+    liveClients.add(res);
+    req.on('close', () => liveClients.delete(res));
+    return;
+  }
 
   if (url === '/net.json') {                       // addresses for the host screen
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-cache' });
@@ -480,4 +517,5 @@ server.listen(PORT, () => {
   console.log(`  players join: ${SCHEME}://localhost:${PORT}/`);
   lanUrls().forEach((u) => console.log(`  on this network: ${u}/`));
   if (!tls) console.log('  note: phones keep the screen awake only over https. Run "npm run cert" and restart.');
+  if (DEV) console.log('  live reload is on: a change under public/ reloads every open page');
 });

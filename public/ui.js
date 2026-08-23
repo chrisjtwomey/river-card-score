@@ -161,6 +161,23 @@ const UI = (function () {
     try { localStorage.setItem(ADDR_KEY, u); } catch (e) {}
   }
 
+  /* ---------- live reload, when the server runs with DEV=1 ---------- */
+
+  function liveReload() {
+    if (!/^https?:$/.test(location.protocol)) return;      // file:// has no server
+    if (typeof EventSource === 'undefined') return;
+    let es;
+    try { es = new EventSource('/live'); } catch (e) { return; }
+    es.onopen = () => console.info('[dev] live reload is on');
+    es.addEventListener('reload', () => location.reload());
+    es.onerror = () => {
+      // 2 is CLOSED: the route is off or gone, so stop asking. A dropped
+      // connection leaves it CONNECTING, and the browser retries on its own.
+      if (es.readyState === 2) es.close();
+    };
+  }
+  document.addEventListener('DOMContentLoaded', liveReload);
+
   /* ---------- sticky offset ---------- */
 
   // The top bar and the standings both stick, so anything below them needs to

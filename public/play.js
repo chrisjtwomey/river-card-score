@@ -116,6 +116,7 @@ function dealWatch(r) {
   Deal.play({
     names: ST.seats.map((s) => s.name),
     dealer: r.dealer, cards: r.cards, round: ST.idx + 1,
+    linger: 1000,               // a phone gets a second longer to read it
   });
 }
 

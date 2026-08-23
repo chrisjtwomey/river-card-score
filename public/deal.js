@@ -61,7 +61,8 @@ const Deal = (function () {
     return el;
   }
 
-  /* opts: { names, dealer, cards, round, hold }.
+  /* opts: { names, dealer, cards, round, hold, linger }.
+     linger adds milliseconds to the pause before it clears itself.
      With hold, the scene stays on screen after the deal, until close() is
      called, so the table can see the hand while the bids come in.
      A tap, a click, or a key ends the deal early; a second one closes it. */
@@ -210,7 +211,8 @@ const Deal = (function () {
 
       overlay.addEventListener('pointerdown', skip);
       window.addEventListener('keydown', skip);
-      const naturalEnd = dealEnd + 140 + T.flip + T.hold;
+      const linger = Math.max(0, Number(opts && opts.linger) || 0);
+      const naturalEnd = dealEnd + 140 + T.flip + T.hold + linger;
       if (hold) {
         timers.push(setTimeout(() => { settled = true; }, naturalEnd - T.hold));
         live = { finish, labels, status, names, dealer, key: opts.key || null };
