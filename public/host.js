@@ -160,9 +160,13 @@ function render() {
   $('#btn-deal').hidden = lobby;
   $('#btn-deal').textContent = over ? '🏆' : '🂠';
   $('#btn-deal').title = over ? 'Play the result again' : 'Play the deal animation';
-  // the dev page, on a server started with DEV=1. Not inside a dev preview,
-  // where it would only open the page it is already in.
-  $('#btn-dev').hidden = !ST.dev || window.top !== window;
+  // The dev page, opened on this table so a game in play can be put right.
+  // Not inside a dev preview, where it would only open the page it sits in.
+  const devBtn = $('#btn-dev');
+  const sess = Net.session();
+  devBtn.hidden = window.top !== window;
+  devBtn.title = ST.dev ? 'Dev controls' : 'Fix this game';
+  if (sess && sess.code && sess.token) devBtn.href = `dev.html#c=${sess.code}&t=${sess.token}`;
 
   $('#lobby').hidden = !lobby;
   $('#game').hidden = lobby;

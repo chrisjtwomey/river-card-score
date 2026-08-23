@@ -8,6 +8,17 @@ const $ = (s) => document.querySelector(s);
 let ws = null, ST = null, CODE = null, HOST_TOKEN = null, SEATS = [];
 let topKey = '', seatKey = '';   // rebuild a preview only when it has to change
 let editRound = 0;
+let LIVE = false;                // fixing a real table, not a table of stand-ins
+
+/* dev.html#c=CODE&t=TOKEN opens the portal on a real table, so a game in play
+   can be put right. With no hash it makes its own table of stand-in players,
+   which the server allows only with DEV=1. */
+(function readHash() {
+  const q = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  const c = (q.get('c') || '').toUpperCase();
+  const t = q.get('t') || '';
+  if (c && t) { LIVE = true; CODE = c; HOST_TOKEN = t; }
+})();
 
 (function theme() {
   let t = null; try { t = localStorage.getItem('river-card-score:theme:v1'); } catch (e) {}
@@ -19,7 +30,9 @@ let editRound = 0;
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   ws = new WebSocket(proto + location.host + '/ws');
-  ws.onopen = () => send({ t: 'dev', action: 'setup', players: Number($('#players').value) || 4 });
+  ws.onopen = () => (LIVE
+    ? send({ t: 'resume', code: CODE, token: HOST_TOKEN })
+    : send({ t: 'dev', action: 'setup', players: Number($('#players').value) || 4 }));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === 'hello') {
@@ -28,7 +41,10 @@ function connect() {
     } else if (m.t === 'state') {
       ST = m; render();
     } else if (m.t === 'error') {
-      err(m.msg);
+      // No table yet means the stand-in table was refused. Say the other way in.
+      err(!LIVE && !CODE
+        ? `${m.msg}. To put a real game right, open this page from the host screen with 🛠.`
+        : m.msg);
     }
   };
   ws.onclose = () => setTimeout(connect, 1000);
@@ -61,6 +77,7 @@ const seatOf = (id) => SEATS.find((s) => s.id === id) || null;
 function renderFrames() {
   if (!CODE) return;
   const scale = $('#scale').value;
+  // A real table hands out no seat tokens, so it gets the host screen alone.
   const cap = ST ? seatOf(ST.captainId) : null;
 
   // top row: the big screen, and the phone of whoever runs the table
@@ -108,7 +125,7 @@ function render() {
 
   $('#code').textContent = ST.code;
   $('#phase').textContent = ST.phase + (ST.rounds.length ? ` · round ${Math.min(ST.idx + 1, ST.rounds.length)}/${ST.rounds.length}` : '');
-  $('#subtitle').textContent = `table ${ST.code} · ${n} players · ${ST.phase}`;
+  $('#subtitle').textContent = `${LIVE ? 'live ' : ''}table ${ST.code} · ${n} players · ${ST.phase}`;
   if (document.activeElement !== $('#players')) $('#players').value = String(n);
 
   // force
@@ -195,7 +212,20 @@ function applyRound() {
 
 /* ---------- wiring ---------- */
 
+// A real table gets the state editor only. Everything that invents data needs
+// a table of stand-ins.
+function applyMode() {
+  document.body.classList.toggle('livemode', LIVE);
+  document.querySelectorAll('[data-stand]').forEach((el) => { el.hidden = LIVE; });
+  $('#live-note').hidden = !LIVE;
+  if (LIVE) {
+    $('#code').textContent = CODE;
+    $('#subtitle').textContent = `fixing table ${CODE}`;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  applyMode();
   $('#btn-theme').addEventListener('click', () => {
     const now = document.documentElement.getAttribute('data-theme');
     const next = now === 'dark' ? 'light' : now === 'light' ? null : 'dark';

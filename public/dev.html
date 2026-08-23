@@ -34,6 +34,8 @@
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .devbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .devbar .code{font-size:22px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
+  .live-note{color:var(--red);font-weight:650}
+  body.livemode .topbar{background:linear-gradient(90deg,#5c1a12,#8d2a1c)}
 </style>
 </head>
 <body>
@@ -69,13 +71,16 @@
         <span class="code" id="code">····</span>
         <span class="tally" id="phase">—</span>
       </div>
-      <div class="row2">
+      <div class="row2" data-stand>
         <label class="field"><span>Players</span><input type="number" id="players" min="2" max="8" value="4"></label>
         <label class="field"><span>&nbsp;</span><button class="btn" id="btn-rebuild" type="button">New table</button></label>
       </div>
+      <p class="hint live-note" id="live-note" hidden>
+        A real game, with real players. Only the state editor works here: nothing on this page invents data.
+      </p>
     </div>
 
-    <div class="panel">
+    <div class="panel" data-stand>
       <h2>Jump to</h2>
       <div class="btnrow">
         <button class="btn" data-act="startGame" type="button">Start game</button>
@@ -132,7 +137,7 @@
       <p class="hint">Scores come from the bids and the tricks, so edit a played round to change a total.</p>
     </div>
 
-    <div class="panel">
+    <div class="panel" data-stand>
       <h2>Rules</h2>
       <div class="row2">
         <label class="field"><span>Biggest hand</span><input type="number" id="cfg-max" min="1" max="13"></label>

@@ -178,6 +178,7 @@ function createRoom() {
     rounds: [],
     idx: 0,
     vote: null,                 // an open "bum deal" vote, or null
+    stand: false,               // true for a dev table of stand-in players
     sockets: new Set(),
     lastSeen: Date.now(),
   };
@@ -248,6 +249,7 @@ const DEV_NAMES = ['Amy', 'Hugh', 'Joe', 'Nia', 'Owen', 'Pia', 'Rhys', 'Sian'];
 const rand = (n) => Math.floor(Math.random() * n);
 
 function devSeats(room, count) {
+  room.stand = true;            // a table of stand-ins, never a real game
   room.seats = [];
   for (let i = 0; i < Math.max(2, Math.min(8, count)); i++) {
     room.seats.push({ id: token().slice(0, 8), name: DEV_NAMES[i], token: token(), online: false });
@@ -361,17 +363,37 @@ function devRandomise(room) {
   if (r && room.cfg.trump && rand(3) > 0) r.trump = G.SUITS[rand(G.SUITS.length)].k;
 }
 
+// Bids and tricks come in from the dev page, so keep the shape right: one
+// whole number a seat, inside the hand. The values themselves may still be as
+// odd as the page likes, which is the point of the page.
+function devNums(v, n, cards, allowNull) {
+  if (!Array.isArray(v)) return null;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const x = v[i];
+    if (x === null || x === undefined) {
+      if (!allowNull) return null;
+      out.push(null);
+      continue;
+    }
+    const k = Math.round(Number(x));
+    if (!Number.isFinite(k)) return null;
+    out.push(Math.max(0, Math.min(k, cards)));
+  }
+  return out;
+}
+
 // Force values the protocol would not allow, for looking at a screen.
 function devPatch(room, p) {
   const n = room.seats.length;
-  if (p.cfg) Object.assign(room.cfg, p.cfg);
+  if (p.cfg && room.stand) Object.assign(room.cfg, p.cfg);
   if (typeof p.idx === 'number' && room.rounds.length) {
     room.idx = Math.max(0, Math.min(p.idx, room.rounds.length));
     if (room.idx < room.rounds.length && !room.rounds[room.idx].bids) {
       room.rounds[room.idx].bids = Array(n).fill(null);
     }
   }
-  if (p.phase) {
+  if (p.phase && ['lobby', 'bid', 'tricks', 'done'].includes(p.phase)) {
     room.phase = p.phase;
     if (p.phase === 'done') room.idx = room.rounds.length;
   }
@@ -381,8 +403,8 @@ function devPatch(room, p) {
   }
   if (p.round && room.rounds[p.round.i]) {
     const r = room.rounds[p.round.i];
-    if ('bids' in p.round) r.bids = p.round.bids;
-    if ('tricks' in p.round) r.tricks = p.round.tricks;
+    if ('bids' in p.round) r.bids = devNums(p.round.bids, n, r.cards, true);
+    if ('tricks' in p.round) r.tricks = devNums(p.round.tricks, n, r.cards, false);
     if ('trump' in p.round) r.trump = p.round.trump;
     if ('redeals' in p.round) r.redeals = Number(p.round.redeals) || 0;
   }
@@ -395,6 +417,18 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 const send = (ws, obj) => { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); };
 const fail = (ws, msg) => send(ws, { t: 'error', msg });
+
+// What the dev page gets back after every action. The seat tokens go with it
+// only for a table of stand-ins, so the previews can open each phone. A real
+// table never hands its seats out.
+function devHello(ws, room) {
+  send(ws, {
+    t: 'hello', role: 'host', code: room.code, token: room.hostToken,
+    dev: true, stand: !!room.stand,
+    seats: room.stand ? room.seats.map((x) => ({ id: x.id, name: x.name, token: x.token })) : [],
+  });
+  return broadcast(room);
+}
 
 function attach(ws, room, ctx) {
   if (ws.ctx && ws.ctx.room && ws.ctx.room !== room) ws.ctx.room.sockets.delete(ws);
@@ -431,17 +465,27 @@ function handle(ws, m) {
     return broadcast(room);
   }
 
-  // The dev page: makes a table of stand-ins and forces it into a state.
+  /* The dev page, two ways in.
+     With DEV=1 it makes a table of stand-in players and may do anything to it,
+     including inventing bids and scores. From the host screen of a real table
+     it may only force that table's own state, to fix a game in play. */
   if (m.t === 'dev') {
-    if (!DEV) return fail(ws, 'the dev controls need the server started with DEV=1');
-    let room = ws.ctx && ws.ctx.room;
-    if (m.action === 'setup' || !room) {
-      room = room && m.action !== 'setup' ? room : createRoom();
-      attach(ws, room, { role: 'host' });
-      devSeats(room, Number(m.players) || 4);
-      send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken, dev: true,
-                 seats: room.seats.map((x) => ({ id: x.id, name: x.name, token: x.token })) });
-      return broadcast(room);
+    if (m.action === 'setup') {
+      if (!DEV) return fail(ws, 'a table of stand-ins needs the server started with DEV=1');
+      const made = createRoom();
+      attach(ws, made, { role: 'host' });
+      devSeats(made, Number(m.players) || 4);
+      return devHello(ws, made);
+    }
+    const room = ws.ctx && ws.ctx.room;
+    if (!room) return fail(ws, 'open a table first');
+    const mine = ws.ctx.seatId ? seatIndex(room, ws.ctx.seatId) : -1;
+    const runs = ws.ctx.role === 'host' || (mine >= 0 && room.seats[mine].id === room.captainId);
+    if (!runs) return fail(ws, 'only the host can use the dev controls');
+    // Everything that invents data belongs to a table of stand-ins. A real
+    // table gets the state editor and nothing else.
+    if (m.action !== 'patch' && !(DEV && room.stand)) {
+      return fail(ws, 'that control only works on a table of stand-ins');
     }
     switch (m.action) {
       case 'players': devSeats(room, Number(m.players) || 4); break;
@@ -457,10 +501,7 @@ function handle(ws, m) {
       case 'patch': devPatch(room, m.patch || {}); break;
       default: return fail(ws, 'unknown dev action');
     }
-    // the seat tokens go back every time, so the previews can re-open
-    send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken, dev: true,
-               seats: room.seats.map((x) => ({ id: x.id, name: x.name, token: x.token })) });
-    return broadcast(room);
+    return devHello(ws, room);
   }
 
   if (m.t === 'join') {

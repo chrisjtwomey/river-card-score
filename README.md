@@ -53,6 +53,7 @@ If the table host leaves the table, the badge moves to the first seat.
 
 - **A−** and **A+** in the top bar change the page size, from 80% to 200%, so the table can read it from across the room. The size is remembered in that browser.
 - The 🂠 button replays the deal animation for the round on screen at any time. Once the game is over it becomes 🏆 and replays the result.
+- The 🛠 button opens the dev page on this table, to put a game in play right. See [Fixing a real game](#fixing-a-real-game).
 - The host screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
 
 ### Keeping phone screens on
@@ -223,8 +224,6 @@ npm run dev
 
 Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the host screen and one phone per seat, live, side by side. Press a button and every pane updates together.
 
-The host screen carries a 🛠 button in its top bar whenever the server runs with `DEV=1`, so the page is one tap away from any screen. It opens in a new tab and makes its own table, so a game in play is not touched.
-
 It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
 - **Jump to** — start game, fill bids, fill tricks, next round, end game, bum deal vote, back to lobby, and **randomise**, which shuffles the rules and plays a random number of rounds.
@@ -236,9 +235,22 @@ It talks the same protocol as a phone, so the states it makes are states a real 
 
 The filled bids keep the screw-the-dealer rule, the filled tricks always total the hand size, and every played round gets a trump, so nothing on screen is impossible.
 
+#### Fixing a real game
+
+The host screen always carries a 🛠 button in its top bar, on any server. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
+
+A real table gets the state editor and nothing else. **Force**, **Round** and **State** work. Everything that invents data — new table, jump to, fill scorecard, randomise — is hidden, and the server refuses it even with `DEV=1`. The top bar turns red, and the page says the game is real.
+
+The server decides this, not the page:
+
+- Anything that makes or fills a table of stand-ins needs `DEV=1` **and** a table the dev page itself made.
+- Forcing a state needs only the host or the table host of that table, which is authority they already have.
+- A real table never hands its seat tokens out, so the dev page shows one preview of the host screen and no phones.
+- Forced bids and tricks are checked for shape: one whole number a seat, no bigger than the hand. Junk is dropped rather than stored.
+
 The previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
-Every dev route needs `DEV=1`. On a normal server the page loads and says so, and no table is made.
+Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, says so, and points at the 🛠 button on the host screen, which is the way in to a real table.
 
 ## Test
 

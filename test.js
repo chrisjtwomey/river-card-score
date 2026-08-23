@@ -280,7 +280,42 @@ function client(name, url) {
     d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(150);
     ok(d.errors.some((e) => /DEV=1/.test(e)), 'the dev controls are refused on a normal server');
     ok(!d.state, 'and no table is made');
-    ok(host.state.dev === false, 'and the screens are told not to offer the dev page');
+    ok(host.state.dev === false, 'and the state says tables of stand-ins are off');
+  }
+
+  // ---- but the host of a real table can fix that table, on any server ----
+  {
+    const h = client('fixhost'); await h.ready;
+    h.send({ t: 'create' }); await wait(120);
+    const code = h.hello.code;
+    const p1 = client('fixp1'); await p1.ready;
+    const p2 = client('fixp2'); await p2.ready;
+    p1.send({ t: 'join', code, name: 'Ann' }); await wait(110);
+    p2.send({ t: 'join', code, name: 'Bob' }); await wait(110);
+    h.send({ t: 'config', patch: { max: 1, pattern: 'down', ones: 2 } }); await wait(110);
+    h.send({ t: 'start' }); await wait(150);
+
+    h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, bids: [1, 0], tricks: [1, 0] } } });
+    await wait(150);
+    ok(JSON.stringify(h.state.rounds[0].bids) === '[1,0]', 'the host of a real table can force a round');
+    ok(h.hello.stand === false, 'and is told it is not a table of stand-ins');
+    ok(h.hello.seats.length === 0, 'and gets no seat tokens back');
+
+    h.errors.length = 0;
+    h.send({ t: 'dev', action: 'randomise' }); await wait(140);
+    ok(h.errors.some((e) => /stand-ins/.test(e)), 'but nothing on the page may invent data for it');
+    h.send({ t: 'dev', action: 'endGame' }); await wait(140);
+    ok(h.state.phase === 'bid', 'and it cannot be played out with made-up rounds');
+
+    p2.errors.length = 0;
+    p2.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
+    ok(p2.errors.some((e) => /only the host/.test(e)) && h.state.phase === 'bid',
+       'a player who does not run the table cannot use the dev controls');
+
+    h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: ['x', 9] } } }); await wait(140);
+    ok(h.state.rounds[0].tricks === null, 'junk tricks are dropped, not stored');
+    h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: [5, 0] } } }); await wait(140);
+    ok(JSON.stringify(h.state.rounds[0].tricks) === '[1,0]', 'and a count above the hand size is clamped');
   }
 
   // ---- the dev controls on a server started with DEV=1 ----
@@ -293,7 +328,7 @@ function client(name, url) {
     const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
     d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(200);
     ok(d.hello && d.hello.dev && d.hello.seats.length === 4, 'dev setup makes 4 stand-in seats with tokens');
-    ok(d.state.dev === true, 'and the screens are told to offer the dev page');
+    ok(d.state.dev === true, 'and the state says tables of stand-ins are on');
     d.send({ t: 'dev', action: 'startGame' }); await wait(150);
     d.send({ t: 'dev', action: 'fillBids' }); await wait(150);
     const r0 = d.state.rounds[0];
@@ -324,6 +359,15 @@ function client(name, url) {
     d.send({ t: 'dev', action: 'fillCard' }); await wait(400);
     const many = d.state.rounds.filter(full).length;
     ok(many >= 1 && many <= d.state.rounds.length, 'fillCard with no number plays a random number of rounds');
+
+    // a real table on a dev server is still not a table of stand-ins
+    const real = client('devreal', `ws://127.0.0.1:${port3}/ws`); await real.ready;
+    real.send({ t: 'create' }); await wait(140);
+    real.send({ t: 'dev', action: 'randomise' }); await wait(140);
+    ok(real.errors.some((e) => /stand-ins/.test(e)),
+       'even with DEV=1, a real table cannot have data invented on it');
+    real.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
+    ok(real.state.phase === 'done', 'but its state can still be forced');
     srv3.kill();
   }
 
