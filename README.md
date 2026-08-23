@@ -194,7 +194,9 @@ Open `public/local.html` in a browser. It needs no server and keeps its state in
 
 The deal animation and the finish live in `public/deal.js`, shared by the host screen, the phones and the offline tracker.
 
-Both follow the system "reduce motion" setting. On macOS that is System Settings → Accessibility → Display → Reduce motion. With reduce motion on, the cards fade in at their seats instead of flying, the places fade in together, and no paper falls.
+The screens also move in smaller ways. When a round is scored the standings slide to their new order, each score runs up or down to its new value, and what the round paid floats up out of it in green or red. When a bid lands that player's pill springs, and a ring spreads out of the seat that has to bid next.
+
+Both follow the system "reduce motion" setting. On macOS that is System Settings → Accessibility → Display → Reduce motion. With reduce motion on, the cards fade in at their seats instead of flying, the places fade in together, no paper falls, and the standings simply appear in their new order with the new scores.
 
 To override it, open the page with a flag. The choice is saved for that browser:
 

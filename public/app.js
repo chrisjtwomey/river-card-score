@@ -174,6 +174,7 @@ function syncSetupHints() {
 }
 
 function startGame() {
+  lastTotals = null;                      // a new game starts everybody at 0
   const clean = names.map((n, i) => (n.trim() || `Player ${i + 1}`));
   if (new Set(clean.map((s) => s.toLowerCase())).size !== clean.length) {
     $('#setup-err').textContent = 'Two players have the same name. Make each name different.';
@@ -324,26 +325,39 @@ function renderTrump() {
   });
 }
 
+// The rows slide to their new places, the scores run to their new values, and
+// what the round paid floats up out of them.
+let lastTotals = null;
+
 function renderStandings() {
   const t = totals();
   const box = $('#standings');
-  box.innerHTML = '';
   const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
   const hi = Math.max(...t), lo = Math.min(0, ...t);
   const span = hi - lo;
-  order.forEach((o, rank) => {
-    const lead = o.v === hi && hi !== lo;
-    const row = document.createElement('div');
-    row.className = 'stand-row' + (lead ? ' lead' : '');
-    const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
-    row.innerHTML =
-      `<span class="rank">${rank + 1}</span>` +
-      `<span class="name"></span>` +
-      `<span class="pts">${o.v}</span>` +
-      `<span class="bar"><i style="width:${w}%"></i></span>`;
-    row.querySelector('.name').textContent = S.cfg.names[o.i];
-    box.appendChild(row);
+  const before = UI.fx.barsBefore(box);
+
+  UI.fx.flip(box, () => {
+    box.innerHTML = '';
+    order.forEach((o, rank) => {
+      const lead = o.v === hi && hi !== lo;
+      const row = document.createElement('div');
+      row.className = 'stand-row' + (lead ? ' lead' : '');
+      row.dataset.k = String(o.i);
+      const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
+      row.innerHTML =
+        `<span class="rank">${rank + 1}</span>` +
+        `<span class="name"></span>` +
+        `<span class="pts">${o.v}</span>` +
+        `<span class="bar"><i style="width:${w}%"></i></span>`;
+      row.querySelector('.name').textContent = S.cfg.names[o.i];
+      box.appendChild(row);
+    });
   });
+
+  const now = {};
+  t.forEach((v, i) => { now[String(i)] = v; });
+  lastTotals = UI.fx.scores(box, now, lastTotals, before);
 }
 
 function renderEntry() {

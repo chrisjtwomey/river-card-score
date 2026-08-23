@@ -168,6 +168,130 @@ const UI = (function () {
   }
   document.addEventListener('DOMContentLoaded', liveReload);
 
+  /* ---------- small movements ---------- */
+
+  // The same switch the deal animation uses: the system setting, unless a
+  // ?motion= flag was saved for this browser.
+  function motionOK() {
+    let saved = null;
+    try { saved = localStorage.getItem('river-card-score:motion:v1'); } catch (e) {}
+    if (saved === 'off' || saved === 'reduced') return false;
+    if (saved === 'full') return true;
+    return !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  const movable = (el) => !!(el && el.animate) && motionOK();
+
+  // Rebuild a list, then slide each row from where it was to where it is now.
+  // The rows carry a data-k, so they may be brand new elements: only the place
+  // on screen has to match up.
+  function flip(box, redraw) {
+    const was = new Map();
+    if (motionOK()) {
+      Array.from(box.children).forEach((el) => {
+        if (el.dataset.k) was.set(el.dataset.k, el.getBoundingClientRect().top);
+      });
+    }
+    redraw();
+    if (!was.size) return;
+    Array.from(box.children).forEach((el) => {
+      const from = was.get(el.dataset.k);
+      if (from === undefined || !el.animate) return;
+      const dy = from - el.getBoundingClientRect().top;
+      if (Math.abs(dy) < 1) return;
+      el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }],
+        { duration: 260, easing: 'cubic-bezier(.2,.85,.3,1)' });
+    });
+  }
+
+  // A quick squeeze, for something that has just arrived.
+  function pop(el, scale) {
+    if (!movable(el)) return;
+    el.animate(
+      [{ transform: 'scale(1)' }, { transform: `scale(${scale || 1.12})`, offset: .35 },
+       { transform: 'scale(1)' }],
+      { duration: 320, easing: 'cubic-bezier(.2,.9,.3,1.4)' });
+  }
+
+  // A ring spreading out of something, for "this one now".
+  function ring(el) {
+    if (!movable(el)) return;
+    el.animate(
+      [{ boxShadow: '0 0 0 0 rgba(184,134,43,.55)' }, { boxShadow: '0 0 0 10px rgba(184,134,43,0)' }],
+      { duration: 620, easing: 'ease-out' });
+  }
+
+  // Runs a number to its new value. opts: { ms, fmt }.
+  function count(el, from, to, opts) {
+    const o = opts || {};
+    const fmt = o.fmt || String;
+    if (!el) return;
+    if (from === to || !motionOK() || typeof requestAnimationFrame !== 'function') {
+      el.textContent = fmt(to);
+      return;
+    }
+    const ms = o.ms || 460;
+    const at = (window.performance ? performance.now() : Date.now());
+    el.textContent = fmt(from);
+    const step = (now) => {
+      if (!el.isConnected) return;                 // the list was rebuilt under it
+      const k = Math.min(1, (now - at) / ms);
+      el.textContent = fmt(k < 1 ? Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))) : to);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // A "+12" that floats up and fades, to say what just changed. The element it
+  // is given must be positioned.
+  function rise(host, text, good) {
+    if (!movable(host)) return;
+    const el = document.createElement('span');
+    el.className = 'fxrise' + (good ? ' up' : ' down');
+    el.textContent = text;
+    host.appendChild(el);
+    const a = el.animate(
+      [{ opacity: 0, transform: 'translateY(3px)' },
+       { opacity: 1, transform: 'translateY(-7px)', offset: .25 },
+       { opacity: 1, transform: 'translateY(-13px)', offset: .7 },
+       { opacity: 0, transform: 'translateY(-21px)' }],
+      { duration: 900, easing: 'ease-out' });
+    a.onfinish = () => el.remove();
+  }
+
+  // The standings: rows keyed by data-k, each with a .pts and a .bar i.
+  // Read the bars before the rebuild, so they can glide to their new widths.
+  function barsBefore(box) {
+    const bars = {};
+    box.querySelectorAll('[data-k]').forEach((el) => {
+      const i = el.querySelector('.bar i');
+      if (i) bars[el.dataset.k] = i.style.width || '0%';
+    });
+    return bars;
+  }
+
+  // After the rebuild: glide each bar, run each score to its new value, and
+  // float up what the round paid. `last` is the {key: score} from the render
+  // before, and the new one is returned to keep for the next.
+  function scores(box, values, last, bars) {
+    Object.keys(values).forEach((k) => {
+      const row = box.querySelector(`[data-k="${k}"]`);
+      if (!row) return;
+      const bar = row.querySelector('.bar i');
+      const from = bars && bars[k];
+      if (bar && from && from !== bar.style.width && bar.animate && motionOK()) {
+        bar.animate([{ width: from }, { width: bar.style.width }],
+          { duration: 420, easing: 'cubic-bezier(.2,.85,.3,1)' });
+      }
+      if (!last || last[k] === undefined || last[k] === values[k]) return;
+      const d = values[k] - last[k];
+      count(row.querySelector('.pts'), last[k], values[k]);
+      rise(row, (d > 0 ? '+' : '') + d, d > 0);
+    });
+    return values;
+  }
+
+  const fx = { on: motionOK, flip, pop, ring, count, rise, barsBefore, scores };
+
   /* ---------- sticky offset ---------- */
 
   // The top bar and the standings both stick, so anything below them needs to
@@ -187,5 +311,5 @@ const UI = (function () {
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
   return { wireFullscreen, isFull, keepAwake, wireZoom, measureTopbar,
-           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl };
+           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl, fx };
 })();

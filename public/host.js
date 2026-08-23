@@ -9,6 +9,8 @@ let draft = [];         // host-side trick entry
 let draftKey = '';
 let dealtKey = null;    // the round already dealt on screen
 let lastPhase = null;   // to catch the moment the game ends
+let lastTotals = null;  // seat id -> score, to show what a round paid
+let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addrs = [];         // addresses this server answers on
 let addr = null;        // the one shown in the QR code
 
@@ -179,7 +181,8 @@ function render() {
   $('#subtitle').textContent = lobby
     ? `Table ${ST.code} · waiting to start`
     : `Table ${ST.code} · ${ST.seats.length} players`;
-  if (lobby) { Deal.close(); dealtKey = null; renderLobby(); } else renderGame();
+  if (lobby) { Deal.close(); dealtKey = null; lastTotals = lastBids = null; renderLobby(); }
+  else renderGame();
 }
 
 function renderLobby() {
@@ -331,12 +334,14 @@ function renderTurn(r, n) {
     const isTurn = ST.turn === p;
     const canAmend = ST.phase === 'bid' && Game.changeableSeat(r, n) === p;
     pill.className = 'bidpill' + (isTurn ? ' now' : '') + (bid !== null ? ' in' : '') + (canAmend ? ' amend' : '');
+    pill.dataset.k = String(p);
     if (canAmend) pill.title = 'can still change this bid';
     pill.innerHTML = '<span class="nm"></span><span class="v"></span>';
     pill.querySelector('.nm').textContent = ST.seats[p].name + (p === r.dealer ? ' (D)' : '');
     pill.querySelector('.v').textContent = bid === null ? (isTurn ? 'bidding…' : '—') : bid;
     strip.appendChild(pill);
   });
+  lastBids = Table.bidsAfter(strip, ST, r, lastBids);   // a bid lands, the turn moves on
 
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
 
@@ -397,21 +402,32 @@ function renderTurn(r, n) {
   btn.textContent = ready ? 'Score the round' : `${r.cards - tsum} of ${r.cards} tricks still to give`;
 }
 
+// The rows slide to their new places, the scores run to their new values, and
+// what the round paid floats up out of them.
 function renderStandings() {
   const box = $('#standings');
-  box.innerHTML = '';
   const t = ST.totals;
   const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
   const hi = Math.max(...t), lo = Math.min(0, ...t), span = hi - lo;
-  order.forEach((o, rank) => {
-    const row = document.createElement('div');
-    row.className = 'stand-row' + (o.v === hi && hi !== lo ? ' lead' : '');
-    const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
-    row.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
-      `<span class="pts">${o.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
-    row.querySelector('.name').textContent = ST.seats[o.i].name;
-    box.appendChild(row);
+  const before = UI.fx.barsBefore(box);
+
+  UI.fx.flip(box, () => {
+    box.innerHTML = '';
+    order.forEach((o, rank) => {
+      const row = document.createElement('div');
+      row.className = 'stand-row' + (o.v === hi && hi !== lo ? ' lead' : '');
+      row.dataset.k = ST.seats[o.i].id;
+      const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
+      row.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
+        `<span class="pts">${o.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
+      row.querySelector('.name').textContent = ST.seats[o.i].name;
+      box.appendChild(row);
+    });
   });
+
+  const now = {};
+  ST.seats.forEach((seat, i) => { now[seat.id] = t[i]; });
+  lastTotals = UI.fx.scores(box, now, lastTotals, before);
 }
 
 function renderScorecard() {

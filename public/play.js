@@ -5,6 +5,8 @@ const $ = (s) => document.querySelector(s);
 
 let ST = null, ME = null;      // ME = my seat id
 let WATCH = false;             // this window only shows the seat, it cannot act
+let lastTotals = null;         // seat id -> score, to show what a round paid
+let lastBids = null;           // { key, bids, turn }, to catch a bid landing
 let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
 let lastPhase = null;          // to catch the moment the game ends
@@ -79,7 +81,7 @@ function render() {
   $('#lobby').hidden = !lobby;
   $('#game').hidden = lobby;
   renderCaptain(lobby);
-  if (lobby) return renderLobby(me);
+  if (lobby) { lastTotals = lastBids = null; return renderLobby(me); }
 
   const r = ST.rounds[ST.idx] || null;
   dealWatch(r);
@@ -406,31 +408,44 @@ function renderBidStrip(r) {
     const isTurn = ST.turn === p;
     const pill = document.createElement('div');
     pill.className = 'bidpill' + (isTurn ? ' now' : '') + (bid !== null ? ' in' : '');
+    pill.dataset.k = String(p);
     pill.innerHTML = '<span class="nm"></span><span class="v"></span>';
     pill.querySelector('.nm').textContent = ST.seats[p].name + (p === r.dealer ? ' (D)' : '');
     pill.querySelector('.v').textContent = bid === null ? (isTurn ? '…' : '—') : bid;
     strip.appendChild(pill);
   });
+  lastBids = Table.bidsAfter(strip, ST, r, lastBids);   // a bid lands, the turn moves on
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
   $('#bid-tally').textContent = `${sum} of ${r.cards}`;
 }
 
+// The rows slide to their new places, the scores run to their new values, and
+// what the round paid floats up out of them.
 function renderStandings(me) {
   const box = $('#standings');
-  box.innerHTML = '';
   const t = ST.totals;
-  $('#my-score').textContent = `You: ${t[me]}`;
+  const mine = lastTotals ? lastTotals[ST.seats[me].id] : undefined;
+  UI.fx.count($('#my-score'), mine === undefined ? t[me] : mine, t[me], { fmt: (v) => `You: ${v}` });
   const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
   const hi = Math.max(...t), lo = Math.min(0, ...t), span = hi - lo;
-  order.forEach((o, rank) => {
-    const row = document.createElement('div');
-    row.className = 'stand-row' + (o.v === hi && hi !== lo ? ' lead' : '') + (o.i === me ? ' me' : '');
-    const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
-    row.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
-      `<span class="pts">${o.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
-    row.querySelector('.name').textContent = ST.seats[o.i].name + (o.i === me ? ' (you)' : '');
-    box.appendChild(row);
+  const before = UI.fx.barsBefore(box);
+
+  UI.fx.flip(box, () => {
+    box.innerHTML = '';
+    order.forEach((o, rank) => {
+      const row = document.createElement('div');
+      row.className = 'stand-row' + (o.v === hi && hi !== lo ? ' lead' : '') + (o.i === me ? ' me' : '');
+      row.dataset.k = ST.seats[o.i].id;
+      const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
+      row.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
+        `<span class="pts">${o.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
+      row.querySelector('.name').textContent = ST.seats[o.i].name + (o.i === me ? ' (you)' : '');
+      box.appendChild(row);
+    });
   });
+  const now = {};
+  ST.seats.forEach((seat, i) => { now[seat.id] = t[i]; });
+  lastTotals = UI.fx.scores(box, now, lastTotals, before);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -58,5 +58,26 @@ const Table = (function () {
     else box.scrollTop = top;
   }
 
-  return { scorecardHTML, followCurrent, esc };
+  /* ---------- the bids, as they land ---------- */
+
+  // Pops the pill of a bid that has just arrived, and rings the seat that has
+  // to act now. `last` is { key, bids, turn } from the render before.
+  function bidsAfter(strip, ST, r, last) {
+    const key = `${ST.idx}:${r.redeals || 0}`;
+    const bids = (r.bids || []).slice();
+    const mark = { key, bids, turn: ST.turn };
+    if (!last || last.key !== key) return mark;         // a new round: nothing landed
+    bids.forEach((b, p) => {
+      const had = last.bids[p];
+      if (b === null || b === undefined) return;
+      if (had !== null && had !== undefined) return;    // it was already in
+      UI.fx.pop(strip.querySelector(`.bidpill[data-k="${p}"]`));
+    });
+    if (ST.turn !== null && ST.turn !== last.turn) {
+      UI.fx.ring(strip.querySelector(`.bidpill[data-k="${ST.turn}"]`));
+    }
+    return mark;
+  }
+
+  return { scorecardHTML, followCurrent, esc, bidsAfter };
 })();
