@@ -58,7 +58,21 @@ function renderJoin() {
 
 /* ---------- connection ---------- */
 
+// A link like play.html#c=CODE&t=TOKEN drops that seat into this browser.
+// It is how dev-seed.js hands out seats, and how you move a seat to another
+// device: the token is the seat.
+function claimFromHash() {
+  const h = location.hash || '';
+  const q = new URLSearchParams(h.replace(/^#/, ''));
+  const code = (q.get('c') || '').toUpperCase();
+  const token = q.get('t') || '';
+  if (!code || !token) return;
+  Net.setSession({ code, token, role: 'host', seatId: null });
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
 function boot() {
+  claimFromHash();
   Net.connect({
     onOpen: () => {
       const s = Net.session();

@@ -17,10 +17,24 @@ const KEY_THEME = 'river-card-score:theme:v1';
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
 
+// A link like play.html#c=CODE&t=TOKEN drops that seat into this browser.
+// It is how dev-seed.js hands out seats, and how you move a seat to another
+// device: the token is the seat.
+function claimFromHash() {
+  const h = location.hash || '';
+  const q = new URLSearchParams(h.replace(/^#/, ''));
+  const code = (q.get('c') || '').toUpperCase();
+  const token = q.get('t') || '';
+  if (!code || !token) return;
+  Net.setSession({ code, token, role: 'player', seatId: null });
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
 function boot() {
+  claimFromHash();
   const s = Net.session();
   if (!s || !s.code || s.role !== 'player') { location.href = 'index.html'; return; }
-  ME = s.seatId;
+  ME = s.seatId;                       // null after a hash claim: the hello fills it in
   Net.connect({
     onOpen: () => Net.send({ t: 'resume', code: s.code, token: s.token }),
     onHello: (m) => { ME = m.seatId; },
@@ -38,7 +52,10 @@ function boot() {
 
 function render() {
   const me = mySeat();
-  if (me < 0) { Net.setSession(null); location.href = 'index.html'; return; }
+  if (me < 0) {
+    if (!ME) return;                   // the hello has not arrived yet
+    Net.setSession(null); location.href = 'index.html'; return;
+  }
   $('#my-name').textContent = ST.seats[me].name;
   $('#subtitle').textContent = `Table ${ST.code} · seat ${me + 1} of ${ST.seats.length}`;
 
