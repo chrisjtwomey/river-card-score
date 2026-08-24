@@ -11,6 +11,7 @@ let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
 let lastTrick = null;          // to catch the moment a trick is won
 let seenPlay = false;          // the hand has been on screen at least once
+let trickSig = null;           // what the trick box is currently showing
 let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
 
@@ -142,7 +143,16 @@ function renderPlay(r, me) {
     up.appendChild(k);
   }
 
-  Table.trickEl($('#trick'), ST, me);
+  // Rebuilt only when the cards on the table actually change. A won trick is
+  // gathered into a pile by an animation, and that pile has to stay with its
+  // winner until they lead the next card -- a rebuild would spread it out
+  // again on the next state that arrives.
+  const sig = `${ST.idx}|${p.trick.map((x) => x.p + x.card).join(',')}|` +
+    (p.last ? `${p.last.winner}:${p.last.trick.map((x) => x.p + x.card).join(',')}` : '');
+  if (sig !== trickSig) {
+    trickSig = sig;
+    Table.trickEl($('#trick'), ST, me);
+  }
   $('#play-title').textContent = bidding ? 'Your cards' : 'The hand';
   $('#play-tally').textContent = bidding
     ? `trump ${suit(r.trump).g} · ${r.cards} card${r.cards === 1 ? '' : 's'}`

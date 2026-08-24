@@ -315,7 +315,9 @@ button.pcard:disabled{cursor:not-allowed}
   min-height:96px;padding:10px 6px;border-radius:12px;background:var(--chip);
 }
 .trick:empty{display:none}
-.trick .slot{display:flex;flex-direction:column;align-items:center;gap:5px}
+.trick .slot{display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+/* once the cards are gathered into a pile, the card that took it sits on top */
+.trick .slot.won{z-index:2}
 .trick .slot .who{font-size:12px;font-weight:700;color:var(--ink-dim);white-space:nowrap}
 .trick .slot.won .pcard{box-shadow:0 0 0 3px var(--gold), 0 8px 22px rgba(0,0,0,.3)}
 .trick .slot.won .who{color:var(--gold)}
