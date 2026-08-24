@@ -286,6 +286,10 @@ dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .pcard i{font-size:22px;font-style:normal}
 .pcard.red{color:#c0271d}
 .hand{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+/* the card turned for trumps, over the hand it decides */
+.upcard{display:flex;flex-direction:column;align-items:center;gap:6px}
+.upcard .pcard{box-shadow:0 0 0 2px var(--gold), 0 6px 18px rgba(0,0,0,.3)}
+.upcard .k{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)}
 button.pcard{cursor:pointer;transition:.12s transform,.12s box-shadow;opacity:.45}
 button.pcard.live{opacity:1}
 button.pcard.live:hover{transform:translateY(-5px);box-shadow:0 8px 20px rgba(0,0,0,.32)}

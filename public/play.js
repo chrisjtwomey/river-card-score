@@ -128,6 +128,18 @@ function renderPlay(r, me) {
   const p = ST.play;
   const suit = (k) => (Game.SUITS.find((x) => x.k === k) || { name: 'none', g: '—' });
 
+  // The card the deck turned for trumps, over the hand it decides.
+  const up = $('#upcard');
+  up.innerHTML = '';
+  up.hidden = !p.upcard;
+  if (p.upcard) {
+    up.appendChild(Table.cardEl(p.upcard));
+    const k = document.createElement('span');
+    k.className = 'k';
+    k.textContent = `${suit(r.trump).name} are trumps`;
+    up.appendChild(k);
+  }
+
   Table.trickEl($('#trick'), ST, me);
   $('#play-title').textContent = bidding ? 'Your cards' : 'The hand';
   $('#play-tally').textContent = bidding
