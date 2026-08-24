@@ -201,6 +201,10 @@ const Deal = (function () {
         }
 
         const cutAt = at + 40;
+        // The shuffled z-order has done its work. Left in place it would keep
+        // the pile painted over everything that lands on it later -- the
+        // turned trump card sits right on top of the deck.
+        timers.push(setTimeout(() => { deckEls.forEach((d) => { d.style.zIndex = ''; }); }, cutAt));
         deckEls.forEach((d, i) => {                   // the top half lifts over
           if (i < Math.floor(stackN / 2)) return;
           const rest = deckRest(i), lift = -i * 0.9;
@@ -224,7 +228,10 @@ const Deal = (function () {
       const perCard = virtual
         ? Math.max(24, Math.min(T.gap, Math.round((calm ? 420 : 1200) / Math.max(1, n * passes))))
         : T.gap;
-      const dealAt = shuffleEnd + (virtual ? Math.round(T.start * 0.6) : T.start);
+      // A shuffled deck lingers a moment before it deals, so the table has
+      // time to take the shuffle in. Reduced motion never saw a shuffle, and
+      // a real table never waits.
+      const dealAt = shuffleEnd + (virtual ? (calm ? Math.round(T.start * 0.6) : 3500) : T.start);
       const faces = virtual ? [] : shuffledFaces(n);
       const fanW = Math.min(W * 0.72, 300);
       const lastAt = [], myCards = [];
@@ -348,7 +355,6 @@ const Deal = (function () {
         const tag = document.createElement('div');
         tag.className = 'deal-tag';
         tag.textContent = upFace ? `${SUIT_NAME[String(opts.upcard).slice(-1)]} are trumps` : 'No trumps';
-        if (upFace && upFace.s.red) tag.classList.add('red');
         stage.appendChild(tag);
         anims.push(tag.animate(
           [{ opacity: 0, transform: 'translate(-50%,8px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
