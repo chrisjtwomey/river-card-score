@@ -396,7 +396,7 @@ body.host .toast .note{font-size:19px}
 .deal-tag{
   position:absolute;left:50%;top:calc(50% + 74px);transform:translate(-50%,0);
   font-size:clamp(13px, 1.7vw, 20px);font-weight:800;letter-spacing:.06em;
-  text-transform:uppercase;white-space:nowrap;color:#e0ab48; /* the dark-felt gold: this overlay never goes light */
+  text-transform:uppercase;white-space:nowrap;color:#fff;
   text-shadow:0 2px 12px rgba(0,0,0,.9);opacity:0;
 }
 /* your own cards, dealt face up into a fan you can read */
