@@ -212,10 +212,12 @@ const Deal = (function () {
         });
       };
       const cut = (at) => {
-        // The shuffled z-order has done its work. Left in place it would keep
-        // the pile painted over everything that lands on it later -- the
-        // turned trump card sits right on top of the deck.
-        timers.push(setTimeout(() => { deckEls.forEach((d) => { d.style.zIndex = ''; }); }, at));
+        // The lifted half rises above the whole band, so the cut stays clean
+        // without touching the resting cards: dropping the band here reorders
+        // the pile in one visible frame, and that pop was the glitch.
+        timers.push(setTimeout(() => {
+          deckEls.forEach((d, i) => { if (i >= Math.floor(stackN / 2)) d.style.zIndex = String(30 + i); });
+        }, at));
         deckEls.forEach((d, i) => {                   // the top half lifts over
           if (i < Math.floor(stackN / 2)) return;
           const rest = deckRest(i), lift = -i * 0.9;
@@ -306,6 +308,15 @@ const Deal = (function () {
       }
 
       const dealEnd = dealAt + (given - 1) * perCard + T.fly;
+
+      // The shuffle's z-order has done its work. It has to go before the
+      // turned trump card flips on top of the pile, and by now the deck is
+      // fading out, so nobody sees the pile reorder. Timed from the release
+      // when the deck was waiting on the real dealer.
+      const dropBand = () => timers.push(setTimeout(() => {
+        deckEls.forEach((d) => { d.style.zIndex = ''; });
+      }, dealEnd));
+      if (!waiting) dropBand();
 
       for (let step = 1; step <= n; step++) {          // the names, as each pile lands
         const p = (dealer + step) % n;
@@ -475,8 +486,8 @@ const Deal = (function () {
         // Let the burst in the air come home first, then cut and deal.
         timers.push(setTimeout(() => {
           if (ended || settled) return;
-          deckEls.forEach((d) => { d.style.zIndex = ''; });
           gated.forEach((a) => { try { a.play(); } catch (e) {} });
+          dropBand();
           arm();
         }, Math.max(0, roundEndsAt - Date.now())));
       }
@@ -873,18 +884,22 @@ const Deal = (function () {
     if (!live || live.calm || !live.settled) return;
     const card = live.cards[p], at = live.landedAt[p];
     if (!card || !at || !live.stage.animate) return;
+    // The pile lies face down, and a stamp that inherits its rotateY(180)
+    // prints the number in a mirror. The stamp lies flat; the card stays as
+    // it is.
+    const flat = at.replace('rotateY(180deg)', 'rotateY(0deg)');
 
     const el = document.createElement('div');
     el.className = 'dstamp';
     el.textContent = String(value);
     live.stage.appendChild(el);
     const a = el.animate(
-      [{ transform: `${at} scale(2.7) rotate(-15deg)`, opacity: 0, offset: 0,
+      [{ transform: `${flat} scale(2.7) rotate(-15deg)`, opacity: 0, offset: 0,
          easing: 'cubic-bezier(.2,.9,.3,1.5)' },
-       { transform: `${at} scale(.9) rotate(5deg)`, opacity: 1, offset: .16 },
-       { transform: `${at} scale(1.08) rotate(-1deg)`, opacity: 1, offset: .26 },
-       { transform: `${at} scale(1) rotate(0deg)`, opacity: 1, offset: .74 },
-       { transform: `${at} scale(1.6) rotate(0deg)`, opacity: 0, offset: 1 }],
+       { transform: `${flat} scale(.9) rotate(5deg)`, opacity: 1, offset: .16 },
+       { transform: `${flat} scale(1.08) rotate(-1deg)`, opacity: 1, offset: .26 },
+       { transform: `${flat} scale(1) rotate(0deg)`, opacity: 1, offset: .74 },
+       { transform: `${flat} scale(1.6) rotate(0deg)`, opacity: 0, offset: 1 }],
       { duration: 1200, fill: 'both' });
     a.onfinish = () => el.remove();
 
