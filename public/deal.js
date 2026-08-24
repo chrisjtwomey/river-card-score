@@ -241,7 +241,9 @@ const Deal = (function () {
         for (let step = 1; step <= n; step++) {       // left of the dealer first
           const p = (dealer + step) % n;
           const { x, y } = seat(p);
-          const own = p === mine;
+          // A seat only owns its cards when the deck is virtual. At a real
+          // table every card is decoration, so they all land face up alike.
+          const own = virtual && p === mine;
           // Your own cards spread into a fan you can read. Everybody else gets
           // a neat pile.
           const off = passes > 1 ? k - (passes - 1) / 2 : 0;
