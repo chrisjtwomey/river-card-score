@@ -44,13 +44,18 @@ const MIME = {
 // Every address a phone can use to reach the table. PUBLIC_URL replaces the
 // detected addresses, it does not add to them: behind a proxy or in a
 // container the detected ones are private and no phone can reach them.
+let hiddenNets = false;                    // the OS would not say what they are
 function lanUrls() {
   const named = (process.env.PUBLIC_URL || '').split(',')
     .map((u) => u.trim().replace(/\/$/, '')).filter(Boolean);
   if (named.length) return Array.from(new Set(named));
 
   const out = [];
-  const nets = os.networkInterfaces();
+  // Android keeps the interface list from apps, so on a phone in Termux this
+  // throws. That must not take the server down: an empty list is an answer,
+  // and the pages fall back to the address they were opened at.
+  let nets = {};
+  try { nets = os.networkInterfaces(); } catch (e) { hiddenNets = true; }
   Object.values(nets).forEach((list) => (list || []).forEach((ni) => {
     if (ni.family === 'IPv4' && !ni.internal) out.push(`${SCHEME}://${ni.address}:${PORT}`);
   }));
@@ -1100,13 +1105,26 @@ setInterval(() => {                       // drop idle rooms after 6 hours
   });
 }, 600000);
 
-server.listen(PORT, () => {
+// HOST pins the listening address. Unset, Node takes every address, IPv6 and
+// IPv4 both; HOST=0.0.0.0 is the IPv4-only fallback for a device that will
+// not do the dual-stack bind.
+server.listen({ port: PORT, host: process.env.HOST || undefined }, () => {
   console.log(`Up the River, Down the River — table server (${SCHEME})`);
   console.log(`  host screen:  ${SCHEME}://localhost:${PORT}/host.html`);
   console.log(`  players join: ${SCHEME}://localhost:${PORT}/`);
   const advertised = process.env.PUBLIC_URL ? 'players join at' : 'on this network';
-  lanUrls().forEach((u) => console.log(`  ${advertised}: ${u}/`));
+  const urls = lanUrls();
+  urls.forEach((u) => console.log(`  ${advertised}: ${u}/`));
   if (process.env.PUBLIC_URL) console.log('  PUBLIC_URL is set, so this machine\'s own addresses are not offered');
+  if (!urls.length) {
+    console.log(hiddenNets
+      ? '  this device hides its network addresses from apps (Android does), so none can be shown.'
+      : '  no network address was found on this device.');
+    console.log('  To find it: on a phone that has joined this network, open the Wi-Fi details;');
+    console.log(`  the "router" or "gateway" address is this device. Players join at ${SCHEME}://<that address>:${PORT}/`);
+    console.log(`  Start with PUBLIC_URL=${SCHEME}://<that address>:${PORT} and the QR code will carry it.`);
+    console.log('  If phones still cannot connect, start with HOST=0.0.0.0 as well.');
+  }
   if (!tls) console.log('  note: phones keep the screen awake only over https. Run "npm run cert" and restart.');
   if (DEV) console.log('  live reload is on: a change under public/ reloads every open page');
 });

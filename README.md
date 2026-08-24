@@ -176,6 +176,13 @@ Worth knowing:
 - No laptop? An Android phone can be the server: Node runs in Termux, so the
   hotspot phone itself can run `node server.js`. An iPhone cannot run the
   server.
+- On Android the server cannot see its own addresses (the OS hides them from
+  apps), so the console lists none and the QR code has nothing to carry. Find
+  the address on any phone that has joined the hotspot: in that Wi-Fi network's
+  details, the "router" or "gateway" address is the Android phone. Players join
+  at `http://<that address>:8787/`, and starting the server with
+  `PUBLIC_URL=http://<that address>:8787 node server.js` puts it in the QR
+  code. If phones still cannot connect, add `HOST=0.0.0.0`.
 
 ## Run it with Docker
 
