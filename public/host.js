@@ -161,13 +161,28 @@ function finaleWatch() {
   lastPhase = ST.phase;
 }
 
+let closingDeal = false;   // the held scene is playing the dealer's bid out
+
 function dealWatch() {
   const r = ST.rounds[ST.idx];
   if (ST.phase !== 'bid' || !r) {
-    if (ST.phase !== 'bid') Deal.close('deal');   // the bids are in: show the table again
+    // The dealer's bid ends the bidding, so the scene would close before the
+    // stamp ever landed. Push that last bid in and give the table two
+    // seconds to read it before the cards come down.
+    if (ST.phase === 'tricks' && Deal.isOpen('deal')) {
+      if (!closingDeal) {
+        closingDeal = true;
+        pushDealStatus();
+        setTimeout(() => { closingDeal = false; Deal.close('deal'); }, 2000);
+      }
+    } else if (ST.phase !== 'bid') {
+      Deal.close('deal');                         // game over, or back to the lobby
+      closingDeal = false;
+    }
     if (ST.phase === 'lobby') dealtKey = null;
     return;
   }
+  closingDeal = false;
   if (dealtKey !== roundKey()) { dealtKey = roundKey(); playDealNow(); }
   pushDealStatus();
 }

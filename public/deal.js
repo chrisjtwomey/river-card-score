@@ -240,10 +240,11 @@ const Deal = (function () {
         cut(at + 40);
         shuffleEnd = at + 40 + T.cut;
       } else if (waiting) {
-        // Everything from the cut on is timed from the release, not from the
-        // start of the scene: it sits paused until the trump suit is picked.
-        cut(60);
-        shuffleEnd = 60 + T.cut;
+        // Everything past the shuffle is timed from the release, not from
+        // the start of the scene: it sits paused until the trump suit is
+        // picked. No cut here -- the real dealer has already done all that,
+        // and on screen it only read as a glitch before the deal.
+        shuffleEnd = 60;
       }
 
       /* ---- the deal ---- */
