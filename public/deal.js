@@ -139,11 +139,17 @@ const Deal = (function () {
       };
 
       const T = calm
-        ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220, cut: 170 }
-        : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280, cut: 320 };
+        ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
+        : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280 };
       const anims = [], timers = [];
       const labels = [], cardEls = [], landedAt = [];
       const hold = !!(opts && opts.hold);
+      // The turned card is the last thing the scene says, so a player reads
+      // it in their own time and taps it away. The host screen holds through
+      // the bidding anyway, so it needs none of this.
+      const waitTap = !hold;
+      const skipEl = overlay.querySelector('.deal-skip');
+      if (skipEl) skipEl.textContent = waitTap ? 'tap to continue' : 'tap to skip';
       let ended = false, settled = false;
       // With real cards the deck on screen shuffles along with the dealer,
       // over and over, until the trump suit is picked. Everything after the
@@ -215,39 +221,17 @@ const Deal = (function () {
             { duration: squareMs, delay: at + riffleMs, easing: 'ease-in-out' }));
         });
       };
-      const cut = (at) => {
-        // The lifted half rises above the whole band, so the cut stays clean
-        // without touching the resting cards: dropping the band here reorders
-        // the pile in one visible frame, and that pop was the glitch.
-        timers.push(setTimeout(() => {
-          deckEls.forEach((d, i) => { if (i >= Math.floor(stackN / 2)) d.style.zIndex = String(30 + i); });
-        }, at));
-        deckEls.forEach((d, i) => {                   // the top half lifts over
-          if (i < Math.floor(stackN / 2)) return;
-          const rest = deckRest(i), lift = -i * 0.9;
-          gate(anims[anims.push(d.animate(
-            [{ transform: rest, offset: 0 },
-             { transform: tf(-46, lift - 46, -11, 180, 1.05), offset: .45,
-               easing: 'cubic-bezier(.3,.8,.4,1)' },
-             { transform: tf(0, lift + 3, 1, 180, 1), offset: .82 },
-             { transform: rest, offset: 1 }],
-            { duration: T.cut, delay: at, easing: 'ease-in-out' })) - 1]);
-        });
-      };
-
       const deckReady = T.deckPop + (stackN - 1) * 40;
       let shuffleEnd = deckReady;
       if (!calm && !waiting) {
         let at = deckReady + 60;
         riffle(at); at += roundMs + 80;
         riffle(at); at += roundMs;
-        cut(at + 40);
-        shuffleEnd = at + 40 + T.cut;
+        shuffleEnd = at;
       } else if (waiting) {
         // Everything past the shuffle is timed from the release, not from
         // the start of the scene: it sits paused until the trump suit is
-        // picked. No cut here -- the real dealer has already done all that,
-        // and on screen it only read as a glitch before the deal.
+        // picked.
         shuffleEnd = 60;
       }
 
@@ -452,22 +436,26 @@ const Deal = (function () {
       }
       function settle() { settled = true; anims.forEach((a) => { try { a.finish(); } catch (e) {} }); }
       function skip() {
-        if (hold && !settled) { settle(); return; }   // first tap lands the deal
-        settle(); finish();                            // the next one closes it
+        // The first tap lands the deal; the next one closes it. A scene that
+        // is only waiting to be tapped away is already landed, so one does.
+        if ((hold || waitTap) && !settled) { settle(); return; }
+        settle(); finish();
       }
 
       overlay.addEventListener('pointerdown', skip);
       window.addEventListener('keydown', skip);
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
+      const trumpHold = waitTap ? 0 : T.hold + linger;
       // Timed from the start of the scene, or from the release when the deck
       // is waiting on the real dealer.
-      const naturalEnd = heroAt + T.flip + T.hold + linger;
+      const naturalEnd = heroAt + T.flip + trumpHold;
+      const landedAtEnd = heroAt + T.flip;               // the cards are all down
       function arm() {
-        if (hold) {
+        if (hold || waitTap) {
           timers.push(setTimeout(() => {
             settled = true;
             if (live) { live.settled = true; applyTurn(); }   // now the cards have landed
-          }, naturalEnd - T.hold));
+          }, landedAtEnd));
         } else {
           timers.push(setTimeout(finish, naturalEnd));
         }
@@ -497,7 +485,7 @@ const Deal = (function () {
         }, Math.max(0, roundEndsAt - Date.now())));
       }
 
-      if (hold || waiting) {
+      if (hold || waiting || waitTap) {
         live = {
           kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
           key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
