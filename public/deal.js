@@ -195,10 +195,14 @@ const Deal = (function () {
              { transform: rest, offset: o(splitMs + k * step + landMs) },
              { transform: rest, offset: 1 }],
             { duration: riffleMs, delay: at }));
-          // The card goes on top of the pile as it sets off, not as it
-          // lands, so it rides in over the centre instead of tucking in
-          // behind it. Not how a real riffle works, but it reads better.
-          timers.push(setTimeout(() => { if (!ended) d.style.zIndex = String(k); },
+          // The card goes on top as it sets off, not as it lands, so it
+          // rides in over the centre instead of tucking in behind. The band
+          // starts above the turned card's z-index of 5: that card sits face
+          // down in the middle all through the shuffle, and every rifled
+          // card belongs in front of it. The cut clears the band again
+          // before the trump is turned. Not how a real riffle works, but it
+          // reads better.
+          timers.push(setTimeout(() => { if (!ended) d.style.zIndex = String(10 + k); },
             at + splitMs + k * step));
           // and the whole pile squares up once the last card is in
           anims.push(d.animate(
