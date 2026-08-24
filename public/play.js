@@ -9,6 +9,8 @@ let lastTotals = null;         // seat id -> score, to show what a round paid
 let lastBids = null;           // { key, bids, turn }, to catch a bid landing
 let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
+let lastTrick = null;          // to catch the moment a trick is won
+let seenPlay = false;          // the hand has been on screen at least once
 let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
 
@@ -175,16 +177,37 @@ function renderPlay(r, me) {
       : can.length === hand.length ? `You have no ${suitName(led)}, so play anything.`
       : `Follow ${suitName(led)}.`;
   } else if (p.turn === null) {
-    hint = p.last ? `${ST.seats[p.last.winner].name} won that trick.` : 'Waiting…';
+    hint = p.last
+      ? (p.last.winner === me ? 'You won it.' : `${ST.seats[p.last.winner].name} won that trick.`)
+      : 'Waiting…';
   } else {
     hint = `Waiting for ${ST.seats[p.turn].name}.`;
   }
   $('#hand-hint').textContent = hint;
 
+  // A trick has just been won: the cards go to whoever took it, and the panel
+  // answers in green when that is you.
+  const key = p.last ? `${ST.idx}:${p.won.reduce((a, b) => a + b, 0)}:${p.last.winner}` : null;
+  if (key && key !== lastTrick) {
+    // A phone that reloads onto a finished trick has missed it, so it only
+    // watches from the next one on.
+    const fresh = seenPlay;
+    lastTrick = key;
+    if (fresh) {
+      Table.sweepTrick($('#trick'), ST, me);
+      panel.classList.remove('won', 'lost');
+      void panel.offsetWidth;                     // restart the pulse
+      panel.classList.add(p.last.winner === me ? 'won' : 'lost');
+    }
+  } else if (!key) {
+    panel.classList.remove('won', 'lost');
+  }
+
   // a phone that has gone quiet would stop the table
   const stuck = !bidding && p.turn !== null && !ST.seats[p.turn].online;
   $('#playfor-row').hidden = !(stuck && amHost());
   if (stuck) $('#btn-playfor').textContent = `Play a card for ${ST.seats[p.turn].name}`;
+  seenPlay = true;
 }
 
 // A bum deal throws the hand in. The dealer can do it alone; anybody else asks

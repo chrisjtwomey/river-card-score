@@ -286,6 +286,22 @@ dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .pcard i{font-size:22px;font-style:normal}
 .pcard.red{color:#c0271d}
 .hand{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+/* the panel answers when a trick is settled: green if you took it */
+.play-panel.won{animation:trickwon .9s ease-out}
+.play-panel.lost{animation:tricklost .9s ease-out}
+@keyframes trickwon{
+  0%{border-color:var(--good);box-shadow:0 0 0 2px var(--good), var(--shadow)}
+  70%{border-color:var(--good);box-shadow:0 0 0 2px rgba(79,195,138,.35), var(--shadow)}
+  100%{border-color:var(--line);box-shadow:var(--shadow)}
+}
+@keyframes tricklost{
+  0%{border-color:var(--line);box-shadow:0 0 0 2px rgba(255,255,255,.14), var(--shadow)}
+  100%{border-color:var(--line);box-shadow:var(--shadow)}
+}
+@media (prefers-reduced-motion: reduce){
+  .play-panel.won,.play-panel.lost{animation:none}
+}
+
 /* the card turned for trumps, over the hand it decides */
 .upcard{display:flex;flex-direction:column;align-items:center;gap:6px}
 .upcard .pcard{box-shadow:0 0 0 2px var(--gold), 0 6px 18px rgba(0,0,0,.3)}

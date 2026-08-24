@@ -101,6 +101,40 @@ const Table = (function () {
     });
   }
 
+  // The trick goes to whoever won it: the cards gather onto the winner's card
+  // and the pile settles a little toward them -- down if it is yours, up if it
+  // is not. `me` is the seat watching, or -1. Call it on the render that first
+  // shows a finished trick.
+  function sweepTrick(box, ST, me) {
+    const p = ST.play;
+    const won = box.querySelector('.slot.won');
+    const slots = Array.prototype.slice.call(box.querySelectorAll('.slot'));
+    if (!p || !p.last || !won || slots.length < 2 || !UI.fx.on()) return;
+    const to = won.getBoundingClientRect();
+    const drift = p.last.winner === me ? 26 : -22;
+    slots.forEach((slot, i) => {
+      if (!slot.animate) return;
+      // Only the winner is named once the cards are stacked: four names on one
+      // spot is a smear.
+      const who = slot !== won && slot.querySelector('.who');
+      if (who) {
+        who.animate([{ opacity: 1 }, { opacity: 0 }],
+          { duration: 200, easing: 'ease-out', fill: 'forwards' });
+      }
+      const r = slot.getBoundingClientRect();
+      const dx = Math.round(to.left - r.left), dy = Math.round(to.top - r.top);
+      const tilt = (i - (slots.length - 1) / 2) * 3.5;
+      slot.animate(
+        [{ transform: 'translate(0,0) rotate(0deg)', offset: 0 },
+         { transform: `translate(${dx}px,${dy}px) rotate(${tilt}deg)`, offset: .42,
+           easing: 'cubic-bezier(.25,.85,.3,1.05)' },
+         { transform: `translate(${dx}px,${dy + drift * 0.45}px) rotate(${tilt}deg)`, offset: .68 },
+         { transform: `translate(${dx}px,${dy + drift}px) rotate(${tilt}deg)`, offset: 1 }],
+        { duration: 620, easing: 'ease-out', fill: 'forwards' });
+    });
+    UI.fx.pop(won.querySelector('.pcard'), 1.16);
+  }
+
   /* ---------- the bids, as they land ---------- */
 
   // Pops the pill of a bid that has just arrived, and rings the seat that has
@@ -142,5 +176,5 @@ const Table = (function () {
     });
   }
 
-  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, cardEl, trickEl };
+  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, cardEl, trickEl, sweepTrick };
 })();
