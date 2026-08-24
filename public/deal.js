@@ -125,7 +125,11 @@ const Deal = (function () {
       overlay.hidden = false;
 
       const W = overlay.clientWidth, H = overlay.clientHeight;
-      const rx = Math.min(W * 0.33, 250), ry = Math.min(H * 0.27, 160);
+      const rx = Math.min(W * 0.33, 250);
+      // A wider screen gives the ring more room, so the piles stand clear of
+      // the round line above and the turned card in the middle. A phone has
+      // none to spare, so it keeps the tighter ring.
+      const ry = Math.min(H * 0.27, W < 560 ? 160 : 192);
       // The seat watching sits at the bottom, so the cards come to them. On a
       // screen that belongs to nobody that is seat 0, as before.
       const anchor = mine >= 0 ? mine : 0;
