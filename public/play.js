@@ -556,21 +556,31 @@ function renderBidStrip(r) {
   const strip = $('#bidstrip');
   strip.innerHTML = '';
   if (!r) { $('#bid-tally').textContent = ''; return; }
+  // Once the cards are out these pills carry what each player has won against
+  // what they bid. Only a virtual deck knows that as the hand is played; at a
+  // table with real cards the tricks arrive all at once at the end.
+  const play = ST.phase === 'tricks' && ST.play ? ST.play : null;
+  $('#bid-title').textContent = play ? 'Tricks won' : 'Bids';
   Game.bidOrder(r.dealer, ST.seats.length).forEach((p) => {
     const bid = r.bids ? r.bids[p] : null;
-    const isTurn = ST.turn === p;
+    const won = play ? play.won[p] : null;
+    const isTurn = play ? play.turn === p : ST.turn === p;
     const pill = document.createElement('div');
-    pill.className = 'bidpill' + (isTurn ? ' now' : '') + (bid !== null ? ' in' : '');
+    pill.className = 'bidpill' + (isTurn ? ' now' : '') + (bid !== null ? ' in' : '') +
+      (play && won === bid ? ' hit' : '') + (play && won > bid ? ' over' : '');
     pill.dataset.k = String(p);
     pill.innerHTML = '<span class="nm"></span><span class="v"></span>';
     pill.querySelector('.nm').textContent = ST.seats[p].name + (p === r.dealer ? ' (D)' : '');
-    pill.querySelector('.v').textContent = bid === null ? (isTurn ? '…' : '—') : bid;
+    pill.querySelector('.v').textContent = play ? `${won}/${bid}`
+      : (bid === null ? (isTurn ? '…' : '—') : bid);
     strip.appendChild(pill);
   });
   lastBids = Table.bidsAfter(strip, ST, r, lastBids);   // a bid lands, the turn moves on
   Table.sayBids(ST, r, lastBids.landed, mySeat());     // and a line says so, in case you looked away
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
-  $('#bid-tally').textContent = `${sum} of ${r.cards}`;
+  $('#bid-tally').textContent = play
+    ? `${play.won.reduce((a, v) => a + v, 0)} of ${r.cards} played`
+    : `${sum} of ${r.cards}`;
 }
 
 // The rows slide to their new places, the scores run to their new values, and

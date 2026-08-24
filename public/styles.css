@@ -598,6 +598,10 @@ body.watching .topbar-actions button{pointer-events:auto}
 .bidpill.in .v{color:var(--ink)}
 .bidpill.now{border-color:var(--gold);background:var(--bg2);box-shadow:0 0 0 3px rgba(184,134,43,.18)}
 .bidpill.now .v{color:var(--gold)}
+/* won against bid, while the hand is played: on the bid, or past it */
+.bidpill.hit .v{color:var(--good)}
+.bidpill.over .v{color:var(--red)}
+.bidpill.now.hit .v,.bidpill.now.over .v{color:var(--gold)}
 
 /* player turn panel */
 .turn-panel.mine{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22), var(--shadow)}
