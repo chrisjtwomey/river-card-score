@@ -247,6 +247,10 @@ const Deal = (function () {
       // shuffle all along, so it deals as soon as it is released.
       const dealAt = shuffleEnd + (virtual && !calm ? 3500 : T.start);
       const fanW = Math.min(W * 0.72, 300);
+      // Your own hand sits below the ring, not in it: at a full table the
+      // seats either side of you reach down far enough to clip a fan left at
+      // seat height.
+      const fanY = Math.min(H * 0.34, 240);
       const lastAt = [], myCards = [];
       let given = 0;
 
@@ -262,7 +266,7 @@ const Deal = (function () {
           const off = passes > 1 ? k - (passes - 1) / 2 : 0;
           const step2 = own ? fanW / Math.max(1, passes - 1) : 4.5;
           const gx = x + off * step2;
-          const gy = y + (own ? Math.abs(off) * 2.6 : -k * 1.6);
+          const gy = own ? fanY + Math.abs(off) * 2.6 : y - k * 1.6;
           const tilt = (x / (rx || 1)) * 9 + off * (own ? 3.4 : 2.2);
           const delay = dealAt + given * perCard;
           given += 1;
@@ -310,12 +314,15 @@ const Deal = (function () {
       for (let step = 1; step <= n; step++) {          // the names, as each pile lands
         const p = (dealer + step) % n;
         const { x, y } = seat(p);
+        // Your own cards are named for what they are, above the fan. Every
+        // other pile is named for whose it is, below it.
+        const own = virtual && p === mine;
         const name = document.createElement('div');
-        name.className = 'dname';
-        name.textContent = names[p];
+        name.className = 'dname' + (own ? ' mine' : '');
+        name.textContent = own ? 'Your hand' : names[p];
         labels[p] = name;
-        name.style.left = `calc(50% + ${x}px)`;
-        name.style.top = `calc(50% + ${y + 56}px)`;
+        name.style.left = `calc(50% + ${own ? 0 : x}px)`;
+        name.style.top = `calc(50% + ${own ? fanY - 76 : y + 56}px)`;
         stage.appendChild(name);
         gate(anims[anims.push(name.animate(
           [{ opacity: 0, transform: 'translate(-50%,6px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
@@ -386,30 +393,61 @@ const Deal = (function () {
           easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }
       ));
 
-      // The line that names the trump, under the turned card.
-      let tagEl = null;
-      if (virtual || trumpK || waiting) {
-        tagEl = document.createElement('div');
-        tagEl.className = 'deal-tag';
-        tagEl.textContent = virtual
-          ? (upFace ? `${SUIT_NAME[String(opts.upcard).slice(-1)]} are trumps` : 'No trumps')
-          : (trumpK ? (SUIT_NAME[trumpK] ? `${SUIT_NAME[trumpK]} are trumps` : 'No trumps') : '');
-        stage.appendChild(tagEl);
-        gate(anims[anims.push(tagEl.animate(
+      /* ---- what is happening, just above the deck ---- */
+      // Nothing is shuffled under reduced motion, so there is nothing to say.
+      const doing = calm ? '' : (virtual ? 'Shuffling…' : `${names[dealer]} is dealing…`);
+      if (doing) {
+        const doingEl = document.createElement('div');
+        doingEl.className = 'deal-doing';
+        doingEl.textContent = doing;
+        stage.appendChild(doingEl);
+        // fill 'forwards': a backwards fill on the fade out would reach back
+        // and cancel the fade in.
+        anims.push(doingEl.animate(
           [{ opacity: 0, transform: 'translate(-50%,8px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
-          { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'both' }
-        )) - 1]);
+          { duration: 300, delay: T.fade + 200, easing: 'ease-out', fill: 'forwards' }));
+        // It goes as soon as the shuffle is over, well before the cards move.
+        const at = Math.max(0, Math.min(dealAt - 320, shuffleEnd + 400));
+        anims.push(gate(doingEl.animate(
+          [{ opacity: 1, transform: 'translate(-50%,0)' }, { opacity: 0, transform: 'translate(-50%,-8px)' }],
+          { duration: 280, delay: at, easing: 'ease-out', fill: 'forwards' })));
       }
+
+      /* ---- the trump, in the band under the round line ---- */
+      const tagEl = document.createElement('div');
+      tagEl.className = 'deal-tag';
+      const trumpLine = (k) => (SUIT_NAME[k] ? `${SUIT_NAME[k]} are trumps` : 'No trumps');
+      tagEl.textContent = virtual
+        ? (upFace ? trumpLine(String(opts.upcard).slice(-1)) : 'No trumps')
+        : (trumpK ? trumpLine(trumpK) : '');
+      gate(anims[anims.push(tagEl.animate(
+        [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
+        { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'forwards' }
+      )) - 1]);
 
       // What the trump pick paints, whenever it lands or changes.
       const trumpSet = virtual ? null : (k) => {
         setHeroFace(k);
-        if (tagEl) tagEl.textContent = SUIT_NAME[k] ? `${SUIT_NAME[k]} are trumps` : 'No trumps';
+        tagEl.textContent = trumpLine(k);
       };
 
       const status = document.createElement('div');
       status.className = 'deal-status';
       head.appendChild(status);
+
+      // The trump line goes last in the head, then drops most of the way
+      // down the empty band between the round line and the top of the ring,
+      // so it belongs to neither.
+      head.appendChild(tagEl);
+      {
+        const ringTop = H / 2 - ry - 56;              // the top card's top edge
+        // Measured from the free space below the line, so a screen with a
+        // narrow band moves it a little and never pushes it into the cards.
+        // offsetTop, not a client rect: the line is already carrying its
+        // entry animation, and a transform would skew what a rect reports.
+        const foot = head.offsetTop + tagEl.offsetTop + tagEl.getBoundingClientRect().height;
+        tagEl.style.marginTop = `${Math.max(6, Math.round((ringTop - foot) * 0.45))}px`;
+      }
       if (hold) {
         anims.push(status.animate(
           [{ opacity: 0 }, { opacity: 1 }],

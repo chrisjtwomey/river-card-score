@@ -378,6 +378,11 @@ body.host .toast .note{font-size:19px}
   font-size:14px;font-weight:700;color:#f3efe2;text-shadow:0 2px 8px rgba(0,0,0,.7);
   white-space:nowrap;opacity:0;
 }
+/* the heading over your own hand */
+.dname.mine{
+  font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.92);
+}
 .deal-head{
   position:absolute;left:0;right:0;top:clamp(14px, 5vh, 60px);
   display:flex;flex-direction:column;align-items:center;gap:8px;
@@ -390,12 +395,19 @@ body.host .toast .note{font-size:19px}
 }
 .deal-status{
   font-size:clamp(14px, 2.1vw, 24px);font-weight:600;color:rgba(255,255,255,.85);
-  text-shadow:0 2px 12px rgba(0,0,0,.85);opacity:0;
+  text-shadow:0 2px 12px rgba(0,0,0,.85);opacity:0;min-height:1.2em;
 }
-/* what the turned card means, under the turned card */
+/* what the table is doing, just above the deck it is doing it to */
+.deal-doing{
+  position:absolute;left:50%;top:calc(50% - 86px);transform:translate(-50%,0);
+  font-size:clamp(13px, 1.6vw, 18px);font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.9);
+  text-shadow:0 2px 12px rgba(0,0,0,.9);opacity:0;pointer-events:none;
+}
+/* what the turned card means: a line in the head, under the round line */
 .deal-tag{
-  position:absolute;left:50%;top:calc(50% + 88px);transform:translate(-50%,0);
-  font-size:clamp(13px, 1.7vw, 20px);font-weight:800;letter-spacing:.06em;
+  min-height:1.2em;
+  font-size:clamp(18px, 2.8vw, 28px);font-weight:800;letter-spacing:.06em;
   text-transform:uppercase;white-space:nowrap;color:#fff;
   text-shadow:0 2px 12px rgba(0,0,0,.9);opacity:0;
 }
@@ -502,7 +514,7 @@ body.host .toast .note{font-size:19px}
   .dcard{width:52px;height:74px;margin:-37px 0 0 -26px}
   .dcard .front .big{font-size:26px}
   .dcard.hero{width:70px;height:98px;margin:-49px 0 0 -35px}
-  .deal-tag{top:calc(50% + 74px)}
+  .deal-doing{top:calc(50% - 72px)}
   .dstamp{font-size:34px}
   .fin-card .cup{font-size:34px}
 }
