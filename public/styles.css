@@ -318,7 +318,11 @@ button.pcard:disabled{cursor:not-allowed}
   display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:flex-start;
   min-height:96px;padding:10px 6px;border-radius:12px;background:var(--chip);
 }
+.trick{position:relative}
 .trick:empty{display:none}
+/* a won pile on its way out: pinned where it stood, clear of the new cards */
+.trickghost{position:absolute;inset:0;pointer-events:none}
+.trickghost .slot{position:absolute}
 .trick .slot{display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
 /* once the cards are gathered into a pile, the card that took it sits on top */
 .trick .slot.won{z-index:2}

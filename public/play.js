@@ -12,6 +12,7 @@ let dealtKey = null;           // the round already dealt on this phone
 let lastTrick = null;          // to catch the moment a trick is won
 let seenPlay = false;          // the hand has been on screen at least once
 let trickSig = null;           // what the trick box is currently showing
+let wonMine = false;           // whose way the last pile was leaning
 let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
 
@@ -150,8 +151,14 @@ function renderPlay(r, me) {
   const sig = `${ST.idx}|${p.trick.map((x) => x.p + x.card).join(',')}|` +
     (p.last ? `${p.last.winner}:${p.last.trick.map((x) => x.p + x.card).join(',')}` : '');
   if (sig !== trickSig) {
+    const box = $('#trick');
+    // A gathered pile is not simply dropped: it carries on out of the way
+    // while the card that replaces it comes up.
+    const going = trickSig !== null && box.querySelector(':scope > .slot.won')
+      && Table.sweepOut(box, wonMine ? 64 : -56);
     trickSig = sig;
-    Table.trickEl($('#trick'), ST, me);
+    Table.trickEl(box, ST, me);
+    if (going) Table.trickIn(box);
   }
   $('#play-title').textContent = bidding ? 'Your cards' : 'The hand';
   $('#play-tally').textContent = bidding
@@ -203,6 +210,7 @@ function renderPlay(r, me) {
     // watches from the next one on.
     const fresh = seenPlay;
     lastTrick = key;
+    wonMine = p.last.winner === me;
     if (fresh) {
       Table.sweepTrick($('#trick'), ST, me);
       panel.classList.remove('won', 'lost');

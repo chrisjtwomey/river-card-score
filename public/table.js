@@ -83,9 +83,11 @@ const Table = (function () {
   }
 
   // The cards on the table: the trick being played, or the one just won.
+  // Only the slots are cleared, never the whole box: a pile on its way out
+  // lives in there too, and it has to see itself off.
   function trickEl(box, ST, me) {
     const p = ST.play;
-    box.innerHTML = '';
+    Array.prototype.forEach.call(box.querySelectorAll(':scope > .slot'), (s) => s.remove());
     if (!p) return;
     const held = !p.trick.length && p.last;
     const cards = held ? p.last.trick : p.trick;
@@ -135,6 +137,46 @@ const Table = (function () {
     UI.fx.pop(won.querySelector('.pcard'), 1.16);
   }
 
+  // The pile a trick was gathered into is swept away as the next card lands:
+  // it carries on the way it was already leaning, so the two read as one move.
+  // `drift` is how far and which way. Returns true if anything left.
+  function sweepOut(box, drift) {
+    const slots = Array.prototype.slice.call(box.querySelectorAll(':scope > .slot'));
+    if (!slots.length || !UI.fx.on() || !box.animate) return false;
+    const br = box.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    ghost.className = 'trickghost';
+    slots.forEach((s) => {
+      // Read where it actually sits -- the gather left a transform on it --
+      // then drop the transform and pin it there, so the pile can leave as
+      // one piece without the new card having to wait for it.
+      const r = s.getBoundingClientRect();
+      s.getAnimations().forEach((a) => { try { a.cancel(); } catch (e) {} });
+      s.style.position = 'absolute';
+      s.style.left = `${Math.round(r.left - br.left)}px`;
+      s.style.top = `${Math.round(r.top - br.top)}px`;
+      ghost.appendChild(s);
+    });
+    box.appendChild(ghost);
+    const out = ghost.animate(
+      [{ transform: 'translateY(0) scale(1)', opacity: 1 },
+       { transform: `translateY(${drift}px) scale(.86)`, opacity: 0 }],
+      { duration: 220, easing: 'cubic-bezier(.4,0,.7,.4)', fill: 'forwards' });
+    out.onfinish = () => ghost.remove();
+    return true;
+  }
+
+  // The cards that replace it come up as it goes.
+  function trickIn(box) {
+    if (!UI.fx.on()) return;
+    Array.prototype.forEach.call(box.querySelectorAll(':scope > .slot'), (s) => {
+      if (!s.animate) return;
+      s.animate([{ opacity: 0, transform: 'translateY(10px) scale(.96)' },
+                 { opacity: 1, transform: 'none' }],
+        { duration: 200, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+    });
+  }
+
   /* ---------- the bids, as they land ---------- */
 
   // Pops the pill of a bid that has just arrived, and rings the seat that has
@@ -176,5 +218,6 @@ const Table = (function () {
     });
   }
 
-  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, cardEl, trickEl, sweepTrick };
+  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, cardEl, trickEl,
+           sweepTrick, sweepOut, trickIn };
 })();
