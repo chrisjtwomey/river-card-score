@@ -241,6 +241,9 @@ function dealWatch(r) {
   dealtKey = key;
   if (first) return;                                  // do not replay on a reload
   const virtual = ST.cfg.deck === 'virtual';
+  // The dealer is the one shuffling the real deck, and this phone is where
+  // the trump suit is picked. The scene would only be in the way.
+  if (!virtual && ST.cfg.trump && r.dealer === mySeat()) return;
   Deal.play({
     names: ST.seats.map((s) => s.name),
     dealer: r.dealer, cards: r.cards, round: ST.idx + 1,

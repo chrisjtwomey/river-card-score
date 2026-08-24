@@ -166,32 +166,43 @@ const Deal = (function () {
         fade(d, [{ opacity: 0 }, { opacity: 1 }], pop, anims);
       }
 
-      /* ---- the shuffle: bursts and a cut ---- */
-      // The shuffle the way pakastin's deck-of-cards does it: every card is
-      // thrown its own random way sideways, a beat apart up the stack, then
-      // the pile snaps back together in a new order.
-      const throwMs = 200, backMs = 200, cascade = 4;
-      const roundMs = throwMs + backMs + (stackN - 1) * cascade;
-      const burst = (at) => {
-        const order = deckEls.map((x, i) => i);          // the new pile order
-        for (let i = order.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          const t2 = order[i]; order[i] = order[j]; order[j] = t2;
-        }
+      /* ---- the shuffle: a riffle and a cut ---- */
+      // A top-down riffle out of the cards already on the table: the pile
+      // splits into two half-stacks, corners toward each other, then the
+      // cards slide home one at a time in alternate order -- that cascade is
+      // the riffle -- and the pile squares up. The interleave order becomes
+      // the new z-order, so the pile is genuinely reshuffled.
+      const splitMs = 240, step = 40, landMs = 180, squareMs = 140;
+      const riffleMs = splitMs + (stackN - 1) * step + landMs;
+      const roundMs = riffleMs + squareMs;
+      const half = Math.ceil(stackN / 2);
+      const riffle = (at) => {
         deckEls.forEach((d, i) => {
           const rest = deckRest(i), lift = -i * 0.9;
-          const side = Math.random() < 0.5 ? -1 : 1;
-          const dx = side * (24 + Math.random() * 52);
-          const thrown = tf(dx, lift + (Math.random() * 8 - 4), 0, 180, 1);
-          const wait = at + i * cascade;
+          const left = i < half;
+          const side = left ? -1 : 1;
+          const j = left ? i : i - half;              // place within the half
+          const k = left ? j * 2 : j * 2 + 1;         // landing order: L R L R...
+          const apart = tf(side * (44 + Math.random() * 6),
+                           lift + j * 1.4 + (Math.random() * 4 - 2),
+                           side * (12 + Math.random() * 3), 180, 1);
+          const o = (ms) => Math.max(0, Math.min(1, ms / riffleMs));
           anims.push(d.animate(
-            [{ transform: rest, easing: 'cubic-bezier(.65,0,.35,1)' },
-             { transform: thrown, offset: throwMs / (throwMs + backMs),
-               easing: 'cubic-bezier(.65,0,.35,1)' },
+            [{ transform: rest, offset: 0, easing: 'cubic-bezier(.3,.8,.35,1)' },
+             { transform: apart, offset: o(splitMs), easing: 'linear' },
+             { transform: apart, offset: o(splitMs + k * step),
+               easing: 'cubic-bezier(.25,.8,.3,1.12)' },
+             { transform: rest, offset: o(splitMs + k * step + landMs) },
+             { transform: rest, offset: 1 }],
+            { duration: riffleMs, delay: at }));
+          // each card joins the pile on top of the one before it
+          timers.push(setTimeout(() => { if (!ended) d.style.zIndex = String(k); },
+            at + splitMs + k * step + Math.round(landMs * 0.6)));
+          // and the whole pile squares up once the last card is in
+          anims.push(d.animate(
+            [{ transform: rest }, { transform: tf(0, lift, 0, 180, 1.02), offset: .5 },
              { transform: rest }],
-            { duration: throwMs + backMs, delay: wait }));
-          // it takes its new place in the pile as it comes back
-          timers.push(setTimeout(() => { if (!ended) d.style.zIndex = String(order[i]); }, wait + throwMs));
+            { duration: squareMs, delay: at + riffleMs, easing: 'ease-in-out' }));
         });
       };
       const cut = (at) => {
@@ -216,8 +227,8 @@ const Deal = (function () {
       let shuffleEnd = deckReady;
       if (!calm && !waiting) {
         let at = deckReady + 60;
-        burst(at); at += roundMs;
-        burst(at); at += roundMs;
+        riffle(at); at += roundMs + 80;
+        riffle(at); at += roundMs;
         cut(at + 40);
         shuffleEnd = at + 40 + T.cut;
       } else if (waiting) {
@@ -440,14 +451,14 @@ const Deal = (function () {
         }
       }
 
-      // While the real dealer shuffles, so does the deck on screen: one burst
-      // at a time, until the trump suit is picked.
+      // While the real dealer shuffles, so does the deck on screen: one
+      // riffle at a time, until the trump suit is picked.
       let loopTimer = null, roundEndsAt = 0, released = false;
-      function loopBurst() {
+      function loopRiffle() {
         if (ended || settled) return;
-        burst(0);
+        riffle(0);
         roundEndsAt = Date.now() + roundMs;
-        loopTimer = setTimeout(loopBurst, roundMs + 460);
+        loopTimer = setTimeout(loopRiffle, roundMs + 380);
         timers.push(loopTimer);
       }
       function release() {
@@ -474,7 +485,7 @@ const Deal = (function () {
         };
         if (hold && last && last.key === live.key) update(last);   // re-opened: catch up
       }
-      if (waiting) loopBurst();
+      if (waiting) loopRiffle();
       else arm();
     });
   }
