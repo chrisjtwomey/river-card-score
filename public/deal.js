@@ -5,7 +5,6 @@ const Deal = (function () {
   const KEY_MOTION = 'river-card-score:motion:v1';
   let live = null;        // the scene on screen, while it is held open
   let last = null;        // the last status shown, to restore it on re-open
-  const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const FACES = [{ g: '♠', red: false }, { g: '♥', red: true }, { g: '♦', red: true }, { g: '♣', red: false }];
 
   // 'full' | 'reduced' | 'off'.  ?motion=full in the URL wins and is remembered.
@@ -40,16 +39,6 @@ const Deal = (function () {
   const tf = (x, y, tilt, face, sc) =>
     `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(${face}deg) scale(${sc})`;
 
-  function shuffledFaces(n) {
-    const deck = [];
-    FACES.forEach((s) => RANKS.forEach((r) => deck.push({ r, s })));
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
-    }
-    return deck.slice(0, n);
-  }
-
   function cardEl(face, cls) {
     const el = document.createElement('div');
     el.className = 'dcard' + (cls ? ' ' + cls : '');
@@ -71,10 +60,13 @@ const Deal = (function () {
      blank front instead of its back. So a card only ever moves, and the two
      faces do the fading. */
   function fade(card, frames, opts, into) {
+    const made = [];
     Array.prototype.forEach.call(card.querySelectorAll('.face'), (f) => {
       const a = f.animate(frames, opts);
       if (into) into.push(a);
+      made.push(a);
     });
+    return made;
   }
 
   function overlayEl() {
@@ -90,10 +82,14 @@ const Deal = (function () {
     return el;
   }
 
-  /* opts: { names, dealer, cards, round, hold, linger, deck, mine, hand, upcard }.
-     With deck 'virtual' the deck is shuffled and cut on screen, the whole hand
-     is dealt round the table, and the turned card is the real one. `mine` is
-     the seat watching, `hand` the cards it was given: those land face up.
+  /* opts: { names, dealer, cards, round, hold, linger, deck, mine, hand,
+     upcard, trump, waitTrump }.
+     The deck is shuffled and cut on screen, and the whole hand is dealt round
+     the table, face down. With deck 'virtual' the turned card is the real one
+     and your own cards land face up: `mine` is the seat watching, `hand` the
+     cards it was given. With real cards and waitTrump, the deck shuffles over
+     and over -- the real dealer is shuffling too -- and the cut and the deal
+     play once update() brings the trump suit the dealer turned.
      linger adds milliseconds to the pause before it clears itself.
      With hold, the scene stays on screen after the deal, until close() is
      called, so the table can see the hand while the bids come in.
@@ -112,6 +108,7 @@ const Deal = (function () {
       const mine = (opts && typeof opts.mine === 'number' && opts.mine >= 0) ? opts.mine : -1;
       const myHand = (virtual && opts && opts.hand) || [];
       const upFace = virtual ? faceOf(opts && opts.upcard) : null;
+      const trumpK = (!virtual && opts && opts.trump) ? String(opts.trump) : null;
 
       if (!n || !stage || !stage.animate) {
         console.warn('[deal] skipped: no players, or no Web Animations API');
@@ -144,13 +141,19 @@ const Deal = (function () {
       const labels = [], cardEls = [], landedAt = [];
       const hold = !!(opts && opts.hold);
       let ended = false, settled = false;
+      // With real cards the deck on screen shuffles along with the dealer,
+      // over and over, until the trump suit is picked. Everything after the
+      // shuffle is built now but held paused, and released by that pick.
+      const waiting = !virtual && !calm && !!(opts && opts.waitTrump);
+      const gated = [];
+      const gate = (a) => { if (waiting) { a.pause(); gated.push(a); } return a; };
 
       /* ---- the deck in the middle, face down ---- */
-      // A virtual deck is a real stack: it is shuffled, cut, and dealt from, so
-      // it needs enough cards in it to read as one.
-      const stackN = virtual ? 9 : 3;
+      // The deck is a real stack: it is shuffled, cut, and dealt from, so it
+      // needs enough cards in it to read as one.
+      const stackN = 9;
       const deckEls = [];
-      const deckRest = (i) => tf(0, -i * 0.9, (i - (stackN - 1) / 2) * (virtual ? 2.2 : 3.4), 180, 1);
+      const deckRest = (i) => tf(0, -i * 0.9, (i - (stackN - 1) / 2) * 2.2, 180, 1);
       for (let i = 0; i < stackN; i++) {
         const d = cardEl(null, 'deck');
         const rest = deckRest(i);
@@ -163,76 +166,78 @@ const Deal = (function () {
         fade(d, [{ opacity: 0 }, { opacity: 1 }], pop, anims);
       }
 
-      /* ---- the shuffle: two bursts and a cut ---- */
-      // Only a virtual deck is shuffled on screen. At a real table the dealer
-      // does that with their own hands, and the flourish would only hold
-      // everybody up.
-      const deckReady = T.deckPop + (stackN - 1) * 40;
-      let shuffleEnd = deckReady;
-      if (virtual && !calm) {
-        // The shuffle the way pakastin's deck-of-cards does it: every card is
-        // thrown its own random way sideways, a beat apart up the stack, then
-        // the pile snaps back together in a new order. Twice.
-        const throwMs = 200, backMs = 200, cascade = 4;
-        const roundMs = throwMs + backMs + (stackN - 1) * cascade;
-        let at = deckReady + 60;
-        for (let round = 0; round < 2; round++) {
-          const order = deckEls.map((x, i) => i);          // the new pile order
-          for (let i = order.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            const t2 = order[i]; order[i] = order[j]; order[j] = t2;
-          }
-          deckEls.forEach((d, i) => {
-            const rest = deckRest(i), lift = -i * 0.9;
-            const side = Math.random() < 0.5 ? -1 : 1;
-            const dx = side * (24 + Math.random() * 52);
-            const thrown = tf(dx, lift + (Math.random() * 8 - 4), 0, 180, 1);
-            const wait = at + i * cascade;
-            anims.push(d.animate(
-              [{ transform: rest, easing: 'cubic-bezier(.65,0,.35,1)' },
-               { transform: thrown, offset: throwMs / (throwMs + backMs),
-                 easing: 'cubic-bezier(.65,0,.35,1)' },
-               { transform: rest }],
-              { duration: throwMs + backMs, delay: wait }));
-            // it takes its new place in the pile as it comes back
-            timers.push(setTimeout(() => { d.style.zIndex = String(order[i]); }, wait + throwMs));
-          });
-          at += roundMs;
+      /* ---- the shuffle: bursts and a cut ---- */
+      // The shuffle the way pakastin's deck-of-cards does it: every card is
+      // thrown its own random way sideways, a beat apart up the stack, then
+      // the pile snaps back together in a new order.
+      const throwMs = 200, backMs = 200, cascade = 4;
+      const roundMs = throwMs + backMs + (stackN - 1) * cascade;
+      const burst = (at) => {
+        const order = deckEls.map((x, i) => i);          // the new pile order
+        for (let i = order.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t2 = order[i]; order[i] = order[j]; order[j] = t2;
         }
-
-        const cutAt = at + 40;
+        deckEls.forEach((d, i) => {
+          const rest = deckRest(i), lift = -i * 0.9;
+          const side = Math.random() < 0.5 ? -1 : 1;
+          const dx = side * (24 + Math.random() * 52);
+          const thrown = tf(dx, lift + (Math.random() * 8 - 4), 0, 180, 1);
+          const wait = at + i * cascade;
+          anims.push(d.animate(
+            [{ transform: rest, easing: 'cubic-bezier(.65,0,.35,1)' },
+             { transform: thrown, offset: throwMs / (throwMs + backMs),
+               easing: 'cubic-bezier(.65,0,.35,1)' },
+             { transform: rest }],
+            { duration: throwMs + backMs, delay: wait }));
+          // it takes its new place in the pile as it comes back
+          timers.push(setTimeout(() => { if (!ended) d.style.zIndex = String(order[i]); }, wait + throwMs));
+        });
+      };
+      const cut = (at) => {
         // The shuffled z-order has done its work. Left in place it would keep
         // the pile painted over everything that lands on it later -- the
         // turned trump card sits right on top of the deck.
-        timers.push(setTimeout(() => { deckEls.forEach((d) => { d.style.zIndex = ''; }); }, cutAt));
+        timers.push(setTimeout(() => { deckEls.forEach((d) => { d.style.zIndex = ''; }); }, at));
         deckEls.forEach((d, i) => {                   // the top half lifts over
           if (i < Math.floor(stackN / 2)) return;
           const rest = deckRest(i), lift = -i * 0.9;
-          anims.push(d.animate(
+          gate(anims[anims.push(d.animate(
             [{ transform: rest, offset: 0 },
              { transform: tf(-46, lift - 46, -11, 180, 1.05), offset: .45,
                easing: 'cubic-bezier(.3,.8,.4,1)' },
              { transform: tf(0, lift + 3, 1, 180, 1), offset: .82 },
              { transform: rest, offset: 1 }],
-            { duration: T.cut, delay: cutAt, easing: 'ease-in-out' }));
+            { duration: T.cut, delay: at, easing: 'ease-in-out' })) - 1]);
         });
-        shuffleEnd = cutAt + T.cut;
+      };
+
+      const deckReady = T.deckPop + (stackN - 1) * 40;
+      let shuffleEnd = deckReady;
+      if (!calm && !waiting) {
+        let at = deckReady + 60;
+        burst(at); at += roundMs;
+        burst(at); at += roundMs;
+        cut(at + 40);
+        shuffleEnd = at + 40 + T.cut;
+      } else if (waiting) {
+        // Everything from the cut on is timed from the release, not from the
+        // start of the scene: it sits paused until the trump suit is picked.
+        cut(60);
+        shuffleEnd = 60 + T.cut;
       }
 
       /* ---- the deal ---- */
-      // A virtual deck deals the whole hand, one card at a time, round and
-      // round the table. A real table only needs the flourish, so it deals one
-      // card each and stops. The whole deal takes about the same time either
-      // way: with more cards to give out, they go faster.
-      const passes = virtual ? cards : 1;
-      const perCard = virtual
-        ? Math.max(24, Math.min(T.gap, Math.round((calm ? 420 : 1200) / Math.max(1, n * passes))))
-        : T.gap;
-      // A shuffled deck lingers a moment before it deals, so the table has
-      // time to take the shuffle in. Reduced motion never saw a shuffle, and
-      // a real table never waits.
-      const dealAt = shuffleEnd + (virtual ? (calm ? Math.round(T.start * 0.6) : 3500) : T.start);
-      const faces = virtual ? [] : shuffledFaces(n);
+      // The whole hand goes out, one card at a time, round and round the
+      // table. The deal takes about the same time whatever the hand size:
+      // with more cards to give out, they go faster.
+      const passes = cards;
+      const perCard = Math.max(24, Math.min(T.gap,
+        Math.round((calm ? 420 : 1200) / Math.max(1, n * passes))));
+      // A virtual deck lingers a moment after its shuffle, so the table has
+      // time to take it in. A real table has been watching its dealer
+      // shuffle all along, so it deals as soon as it is released.
+      const dealAt = shuffleEnd + (virtual && !calm ? 3500 : T.start);
       const fanW = Math.min(W * 0.72, 300);
       const lastAt = [], myCards = [];
       let given = 0;
@@ -255,9 +260,9 @@ const Deal = (function () {
           given += 1;
           lastAt[p] = delay;
 
-          // A card only shows its face if it is yours, or if this is the old
-          // flourish at a table playing with real cards.
-          const face = own ? faceOf(myHand[k]) : (virtual ? null : faces[step - 1]);
+          // Only your own cards show their faces, and only a virtual deck
+          // knows them. Everything else lands face down, like the real thing.
+          const face = own ? faceOf(myHand[k]) : null;
           const up = !!face;
           const card = cardEl(face, own ? 'mine' : '');
           stage.appendChild(card);
@@ -268,17 +273,18 @@ const Deal = (function () {
           const flight = { duration: T.fly, delay, fill: 'both',
                            easing: calm ? 'ease-out' : 'cubic-bezier(.25,.8,.3,1)' };
           if (!calm) {
-            anims.push(card.animate(
+            gate(anims[anims.push(card.animate(
               [{ transform: tf(0, 0, 0, 180, .9), offset: 0 },
                { transform: tf(gx * 0.55, gy * 0.55 - 26, tilt * 0.6, up ? 90 : 180, 1.06), offset: .55 },
-               { transform: landed, offset: 1 }], flight));
+               { transform: landed, offset: 1 }], flight)) - 1]);
           } else {
             card.style.transform = landed;
           }
           // Held at nothing until its turn comes: the card is not on the table
           // before it is dealt.
           fade(card, [{ opacity: 0 }, { opacity: 1 }],
-            { duration: calm ? T.fly : 140, delay, easing: 'ease-out', fill: 'both' }, anims);
+            { duration: calm ? T.fly : 140, delay, easing: 'ease-out', fill: 'both' }, anims)
+            .forEach(gate);
         }
       }
 
@@ -294,37 +300,47 @@ const Deal = (function () {
         name.style.left = `calc(50% + ${x}px)`;
         name.style.top = `calc(50% + ${y + 56}px)`;
         stage.appendChild(name);
-        anims.push(name.animate(
+        gate(anims[anims.push(name.animate(
           [{ opacity: 0, transform: 'translate(-50%,6px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
           { duration: 220, delay: lastAt[p] + T.fly - 120, easing: 'ease-out', fill: 'both' }
-        ));
+        )) - 1]);
       }
 
       // Your hand settles: the fan lifts, card by card, once it is all in.
       if (!calm && myCards.length > 1) {
         myCards.forEach((c, k) => {
           const at = tf(c.gx, c.gy, c.tilt, 0, 1);
-          anims.push(c.el.animate(
+          gate(anims[anims.push(c.el.animate(
             [{ transform: at }, { transform: tf(c.gx, c.gy - 9, c.tilt, 0, 1.06), offset: .45 },
              { transform: at }],
-            { duration: 380, delay: dealEnd + 40 + k * 34, easing: 'cubic-bezier(.2,.9,.3,1.35)' }));
+            { duration: 380, delay: dealEnd + 40 + k * 34, easing: 'cubic-bezier(.2,.9,.3,1.35)' })) - 1]);
         });
       }
 
       // The deck goes quiet once it has given everything out.
-      if (virtual) {
-        deckEls.forEach((d, i) => fade(d,
-          [{ opacity: 1 }, { opacity: i === stackN - 1 ? .5 : .18 }],
-          { duration: 320, delay: dealEnd - 200, easing: 'ease-out', fill: 'both' }, anims));
-      }
+      deckEls.forEach((d, i) => fade(d,
+        [{ opacity: 1 }, { opacity: i === stackN - 1 ? .5 : .18 }],
+        { duration: 320, delay: dealEnd - 200, easing: 'ease-out', fill: 'both' }, anims)
+        .forEach(gate));
 
       /* ---- the card turned for trumps ---- */
       const heroAt = dealEnd + (virtual ? 260 : 140);
       const hero = cardEl(upFace, 'hero');
+      const heroFront = hero.querySelector('.front');
       if (!upFace) {
-        hero.querySelector('.front').innerHTML =
+        heroFront.innerHTML =
           '<div class="quad"><span>♠</span><span>♥</span><span>♦</span><span>♣</span></div>';
       }
+      // A real table knows only the suit, not the card, so the hero wears the
+      // suit alone. It can be set again: the host may correct a mis-tap.
+      const setHeroFace = (k) => {
+        if (virtual) return;
+        const su = SUIT_OF[k];
+        heroFront.classList.toggle('red', !!(su && su.red));
+        heroFront.innerHTML = '<span class="big"></span>';
+        heroFront.querySelector('.big').textContent = su ? su.g : 'NT';
+      };
+      if (trumpK) setHeroFace(trumpK);
       hero.style.transform = calm ? 'rotateY(0deg)' : 'rotateY(180deg)';
       stage.appendChild(hero);
       const turn = { duration: T.flip, delay: heroAt, fill: 'both',
@@ -333,9 +349,9 @@ const Deal = (function () {
         hero.style.transform = tf(0, 0, 0, 0, 1.15);
         fade(hero, [{ opacity: 0 }, { opacity: 1 }], turn, anims);
       } else {
-        anims.push(hero.animate(
+        gate(anims[anims.push(hero.animate(
           [{ transform: tf(0, 0, 0, 180, .8) },
-           { transform: tf(0, virtual ? -10 : 0, 0, 0, 1.15) }], turn));
+           { transform: tf(0, virtual ? -10 : 0, 0, 0, 1.15) }], turn)) - 1]);
       }
 
       // The round line sits across the top of the screen, clear of the cards.
@@ -349,20 +365,30 @@ const Deal = (function () {
       head.appendChild(cap);
       anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'translateY(0)' }],
-        { duration: 300, delay: heroAt + 120, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }
+        { duration: 300, delay: waiting ? 420 : heroAt + 120,
+          easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }
       ));
 
-      // With a virtual deck the turned card decides trumps, so say which.
-      if (virtual) {
-        const tag = document.createElement('div');
-        tag.className = 'deal-tag';
-        tag.textContent = upFace ? `${SUIT_NAME[String(opts.upcard).slice(-1)]} are trumps` : 'No trumps';
-        stage.appendChild(tag);
-        anims.push(tag.animate(
+      // The line that names the trump, under the turned card.
+      let tagEl = null;
+      if (virtual || trumpK || waiting) {
+        tagEl = document.createElement('div');
+        tagEl.className = 'deal-tag';
+        tagEl.textContent = virtual
+          ? (upFace ? `${SUIT_NAME[String(opts.upcard).slice(-1)]} are trumps` : 'No trumps')
+          : (trumpK ? (SUIT_NAME[trumpK] ? `${SUIT_NAME[trumpK]} are trumps` : 'No trumps') : '');
+        stage.appendChild(tagEl);
+        gate(anims[anims.push(tagEl.animate(
           [{ opacity: 0, transform: 'translate(-50%,8px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
           { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'both' }
-        ));
+        )) - 1]);
       }
+
+      // What the trump pick paints, whenever it lands or changes.
+      const trumpSet = virtual ? null : (k) => {
+        setHeroFace(k);
+        if (tagEl) tagEl.textContent = SUIT_NAME[k] ? `${SUIT_NAME[k]} are trumps` : 'No trumps';
+      };
 
       const status = document.createElement('div');
       status.className = 'deal-status';
@@ -370,7 +396,7 @@ const Deal = (function () {
       if (hold) {
         anims.push(status.animate(
           [{ opacity: 0 }, { opacity: 1 }],
-          { duration: 260, delay: dealEnd + 380, easing: 'ease-out', fill: 'both' }
+          { duration: 260, delay: waiting ? 520 : dealEnd + 380, easing: 'ease-out', fill: 'both' }
         ));
       }
 
@@ -400,21 +426,56 @@ const Deal = (function () {
       overlay.addEventListener('pointerdown', skip);
       window.addEventListener('keydown', skip);
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
+      // Timed from the start of the scene, or from the release when the deck
+      // is waiting on the real dealer.
       const naturalEnd = heroAt + T.flip + T.hold + linger;
-      if (hold) {
+      function arm() {
+        if (hold) {
+          timers.push(setTimeout(() => {
+            settled = true;
+            if (live) { live.settled = true; applyTurn(); }   // now the cards have landed
+          }, naturalEnd - T.hold));
+        } else {
+          timers.push(setTimeout(finish, naturalEnd));
+        }
+      }
+
+      // While the real dealer shuffles, so does the deck on screen: one burst
+      // at a time, until the trump suit is picked.
+      let loopTimer = null, roundEndsAt = 0, released = false;
+      function loopBurst() {
+        if (ended || settled) return;
+        burst(0);
+        roundEndsAt = Date.now() + roundMs;
+        loopTimer = setTimeout(loopBurst, roundMs + 460);
+        timers.push(loopTimer);
+      }
+      function release() {
+        if (released || ended) return;
+        released = true;
+        if (loopTimer) clearTimeout(loopTimer);
+        if (settled) return;               // a tap already landed everything
+        // Let the burst in the air come home first, then cut and deal.
+        timers.push(setTimeout(() => {
+          if (ended || settled) return;
+          deckEls.forEach((d) => { d.style.zIndex = ''; });
+          gated.forEach((a) => { try { a.play(); } catch (e) {} });
+          arm();
+        }, Math.max(0, roundEndsAt - Date.now())));
+      }
+
+      if (hold || waiting) {
         live = {
           kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
           key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
           bids: null,                       // what was on the table at the last update
+          release: waiting ? release : null,
+          trumpSet,                         // repaints the suit if the host corrects it
         };
-        timers.push(setTimeout(() => {
-          settled = true;
-          if (live) { live.settled = true; applyTurn(); }   // now the cards have landed
-        }, naturalEnd - T.hold));
-        if (last && last.key === live.key) update(last);   // re-opened: catch up
-      } else {
-        timers.push(setTimeout(finish, naturalEnd));
+        if (hold && last && last.key === live.key) update(last);   // re-opened: catch up
       }
+      if (waiting) loopBurst();
+      else arm();
     });
   }
 
@@ -829,6 +890,10 @@ const Deal = (function () {
   function update(o) {
     if (o) last = o;
     if (!live || live.kind !== 'deal') return;
+    if (o && o.trump) {
+      if (live.trumpSet) live.trumpSet(o.trump);
+      if (live.release) { live.release(); live.release = null; }
+    }
     const bids = (o && o.bids) || [];
     // Anything new since the last push gets stamped on its card. A scene that
     // has just opened has nothing to compare with, so it stamps nothing.

@@ -85,6 +85,8 @@ function render() {
 
   const r = ST.rounds[ST.idx] || null;
   dealWatch(r);
+  // A deal waiting on the real dealer is released by the trump being picked.
+  if (r && ST.cfg.deck !== 'virtual' && Deal.isOpen('deal')) Deal.update({ trump: r.trump || null });
   finaleWatch();
   UI.keepAwake(ST.phase !== 'lobby').then((s) => {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
@@ -248,6 +250,10 @@ function dealWatch(r) {
     mine: mySeat(),
     hand: ST.hand || [],
     upcard: ST.play ? ST.play.upcard : null,
+    trump: r.trump || null,
+    // With real cards the deck on screen shuffles along with the dealer, and
+    // deals only once the trump suit is picked.
+    waitTrump: !virtual && !!ST.cfg.trump && !r.trump,
     linger: virtual ? 300 : 1000,   // a phone gets longer to read a bare deal
   });
 }

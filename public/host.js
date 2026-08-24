@@ -115,9 +115,13 @@ function playDealNow(mode) {
     dealer: r.dealer, cards: r.cards, round: i + 1,
     hold: ST.phase === 'bid', key: roundKey(),
     // With a virtual deck the table has no cards of its own, so this screen
-    // shuffles, deals the whole hand, and turns the card it turned.
+    // shuffles, deals the whole hand, and turns the card it turned. With real
+    // cards the deck on screen shuffles along with the dealer, and deals only
+    // once the trump suit is picked.
     deck: ST.cfg.deck,
     upcard: ST.play ? ST.play.upcard : null,
+    trump: r.trump || null,
+    waitTrump: ST.cfg.deck !== 'virtual' && !!ST.cfg.trump && !r.trump && ST.phase === 'bid',
   }, mode);
   pushDealStatus();          // fill in the bids that are already made
   return p;
@@ -127,11 +131,14 @@ function playDealNow(mode) {
 function pushDealStatus() {
   const r = ST && ST.rounds[ST.idx];
   if (!r || !Deal.isOpen('deal')) return;
+  const shuffling = ST.cfg.deck !== 'virtual' && ST.cfg.trump && !r.trump;
   Deal.update({
     key: roundKey(),
     bids: r.bids || [],
     turn: ST.turn,
+    trump: r.trump || null,
     text: ST.phase !== 'bid' ? 'All bids are in'
+      : shuffling ? `${ST.seats[r.dealer].name} shuffles — turn the top card`
       : (ST.turn === null ? 'All bids are in' : `Waiting for ${ST.seats[ST.turn].name} to bid`),
   });
 }
