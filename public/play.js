@@ -74,6 +74,11 @@ function render() {
   }
   $('#my-name').textContent = ST.seats[me].name;
   $('#subtitle').textContent = `Table ${ST.code} · seat ${me + 1} of ${ST.seats.length}`;
+  // With a photo set, the pip in the corner is you.
+  const pipAv = Avatar.url(ST.code, ST.seats[me]);
+  const pip = $('#pip');
+  pip.classList.toggle('avpic', !!pipAv);
+  pip.style.backgroundImage = pipAv ? `url("${pipAv}")` : '';
 
   const lobby = ST.phase === 'lobby';
   $('#lobby').hidden = !lobby;
@@ -373,9 +378,14 @@ let avPicker = null, avSent = false;
 function renderAvatar(me) {
   const mount = $('#lobby-av');
   if (!mount) return;
+  // Inside the dev previews every seat is a frame in one browser, so the
+  // phone's remembered photo belongs to nobody in particular. A frame sets
+  // only what is picked in it, and neither keeps that pick nor helps itself
+  // to one another frame made.
+  const framed = window.top !== window.self;
   if (!avPicker) {
     avPicker = Avatar.picker((d) => {
-      Avatar.remember(d);
+      if (!framed) Avatar.remember(d);
       avSent = true;
       Net.send({ t: 'avatar', data: d });
     });
@@ -383,7 +393,7 @@ function renderAvatar(me) {
   }
   const seat = me >= 0 ? ST.seats[me] : null;
   // A picture picked before the seat existed is handed over now, once.
-  if (seat && !seat.av && !avSent) {
+  if (!framed && seat && !seat.av && !avSent) {
     const kept = Avatar.saved();
     if (kept) { avSent = true; Net.send({ t: 'avatar', data: kept }); return; }
   }

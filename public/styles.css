@@ -74,6 +74,8 @@ p{margin:0}
 a.pip{text-decoration:none;cursor:pointer;transition:.12s transform,.12s box-shadow}
 a.pip:hover{transform:translateY(-1px);box-shadow:0 4px 0 rgba(0,0,0,.25)}
 a.pip:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+/* with a photo set, the pip is the player */
+.pip.avpic{background:#f3efe2 center/cover no-repeat;color:transparent}
 .sub{font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-actions{display:flex;gap:8px;flex:none}
 .topbar .btn{background:rgba(255,255,255,.14);color:#f3efe2;border-color:transparent}
