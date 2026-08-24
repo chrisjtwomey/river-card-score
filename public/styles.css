@@ -798,3 +798,22 @@ body.host .scorecard-panel .table-wrap{
 .avside{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .avside .row-actions{margin:0}
 .avside small{opacity:.7}
+
+/* ---------- past games, one to a screen ---------- */
+.deck-nav{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  margin:0 0 8px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;opacity:.75;
+}
+.deck-nav .btn{padding:2px 12px;font-size:20px;line-height:1.2}
+.deck-nav .btn:disabled{opacity:.3}
+.deck-count{min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
+/* One game fills the width, and the swipe settles on whole games only. */
+.deck{
+  display:flex;overflow-x:auto;overflow-y:visible;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0;outline:none;
+}
+.deck::-webkit-scrollbar{display:none}
+.gamecard{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;min-width:0}
+.gamecard > .panel{margin-inline:0}
+.game-head .game-win{margin:2px 0 4px;font-size:clamp(22px,5vw,34px);line-height:1.1}
+.game-head .game-when{margin:0}

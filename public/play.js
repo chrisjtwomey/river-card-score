@@ -111,6 +111,7 @@ function render() {
 function renderWinner() {
   const panel = $('#winner-panel');
   const done = ST.phase === 'done';
+  if (done) Games.keep(ST, mySeat());
   panel.hidden = !done;
   if (!done) return;
   const t = ST.totals, top = Math.max.apply(null, t);

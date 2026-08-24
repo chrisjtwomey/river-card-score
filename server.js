@@ -18,6 +18,8 @@ const ROOT = __dirname;
 const PUB = path.join(ROOT, 'public');
 // A phone only gets the screen lock (and other secure-context features) over
 // https. Drop a key and certificate in certs/ (npm run cert) to serve https.
+const DATA = process.env.DATA_DIR || path.join(__dirname, 'data');
+const KEEP_GAMES = Math.max(1, Number(process.env.KEEP_GAMES) || 200);
 const TLS_KEY = process.env.TLS_KEY || path.join(__dirname, 'certs', 'key.pem');
 const TLS_CERT = process.env.TLS_CERT || path.join(__dirname, 'certs', 'cert.pem');
 let tls = null;
@@ -134,6 +136,23 @@ function handler(req, res) {
     } catch (e) {
       res.writeHead(500).end('qr failed');
     }
+    return;
+  }
+
+  if (url === '/games.json') {                     // what the table has on file
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-cache' });
+    res.end(JSON.stringify({ games: listGames(query.get('code')) }));
+    return;
+  }
+
+  if (url.startsWith('/game/')) {                  // one finished game, whole
+    const rec = readGame(url.slice('/game/'.length).replace(/\.json$/, ''));
+    if (!rec) { res.writeHead(404, { 'content-type': 'text/plain' }).end('no such game'); return; }
+    res.writeHead(200, {
+      'content-type': 'application/json',
+      'cache-control': 'public, max-age=31536000, immutable',   // a finished game never changes
+    });
+    res.end(JSON.stringify(rec));
     return;
   }
 
@@ -259,6 +278,7 @@ function publicState(room) {
     totals: n ? G.totals(room.cfg, room.rounds, n).map((v, i) => v + (bonus[i] || 0)) : [],
     bonus,                          // what the accolades paid, once they are drawn
     awards: room.awards || null,    // the three drawn at the end
+    gameId: room.phase === 'done' ? (room.gameId || null) : null,
     play: playPublic(room),         // the cards on the table, never the hands
     dev: DEV,                       // the host screen offers the dev page when it is on
   };
@@ -384,10 +404,77 @@ function finishGame(room) {
   const earned = A.list(room.rounds, n, (b, w) => G.roundScore(b, w, room.cfg));
   room.awards = A.pick(earned, room.cfg.accoladeCount);
   room.bonus = A.bonus(room.awards, n, room.cfg.accoladePay);
+  if (!room.gameId) room.gameId = token().slice(0, 12);
+  saveGame(room);
+}
+
+/* A finished game, as it is kept. It is the scorecard and nothing else: no
+   tokens, no pictures, no hands. The same shape goes to the phones, so one
+   reader draws either. */
+function gameRecord(room) {
+  const n = room.seats.length;
+  const bonus = room.bonus || Array(n).fill(0);
+  const totals = n ? G.totals(room.cfg, room.rounds, n).map((v, i) => v + (bonus[i] || 0)) : [];
+  const best = totals.length ? Math.max.apply(null, totals) : 0;
+  return {
+    id: room.gameId,
+    code: room.code,
+    at: room.finishedAt || (room.finishedAt = Date.now()),
+    cfg: room.cfg,
+    seats: room.seats.map((s) => ({ id: s.id, name: s.name })),
+    rounds: room.rounds,
+    totals,
+    bonus,
+    awards: room.awards || [],
+    winners: totals.map((v, i) => (v === best ? i : -1)).filter((i) => i >= 0),
+  };
+}
+
+/* Games are kept as one file each, newest last by name. Past the cap the
+   oldest go. A table that finishes twice -- a score put right, say -- writes
+   over its own file. */
+function saveGame(room) {
+  let rec;
+  try { rec = gameRecord(room); } catch (e) { console.warn('[games] could not build the record:', e.message); return; }
+  try {
+    fs.mkdirSync(DATA, { recursive: true });
+    fs.writeFileSync(path.join(DATA, `${rec.at}-${rec.id}.json`), JSON.stringify(rec));
+    const kept = fs.readdirSync(DATA).filter((f) => f.endsWith('.json')).sort();
+    kept.slice(0, Math.max(0, kept.length - KEEP_GAMES))
+      .forEach((f) => { try { fs.unlinkSync(path.join(DATA, f)); } catch (e) {} });
+  } catch (e) {
+    console.warn('[games] could not write the record:', e.message);
+  }
+}
+
+// One game off the disk, by its id, or null.
+function readGame(id) {
+  if (!/^[0-9a-f]{12}$/.test(String(id || ''))) return null;
+  try {
+    const f = fs.readdirSync(DATA).find((x) => x.endsWith(`-${id}.json`));
+    return f ? JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')) : null;
+  } catch (e) { return null; }
+}
+
+// What the table has on file for one code: newest first, the headline only.
+function listGames(code) {
+  const want = String(code || '').toUpperCase();
+  try {
+    return fs.readdirSync(DATA).filter((f) => f.endsWith('.json')).sort().reverse()
+      .map((f) => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch (e) { return null; } })
+      .filter((r) => r && (!want || r.code === want))
+      .slice(0, KEEP_GAMES)
+      .map((r) => ({ id: r.id, code: r.code, at: r.at,
+                     names: r.seats.map((s) => s.name), totals: r.totals, winners: r.winners }));
+  } catch (e) { return []; }
 }
 
 // Back into play: the accolades are not settled after all.
 function unfinish(room) { room.awards = null; room.bonus = null; }
+
+/* A fresh set of rounds is a fresh game, and it gets a file of its own. Going
+   back into a game that was already over does not: it writes over its own. */
+function newGame(room) { room.gameId = null; room.finishedAt = null; }
 
 // The round is over, however the tricks were counted.
 function scoreRound(room, values) {
@@ -430,6 +517,7 @@ function devStart(room) {
   syncCfg(room);
   const first = Math.max(0, seatIndex(room, room.firstDealerId));
   room.rounds = G.buildRounds(room.cfg, n, first);
+  newGame(room);
   room.idx = 0;
   room.rounds[0].bids = Array(n).fill(null);
   room.phase = 'bid';
@@ -843,6 +931,7 @@ function handle(ws, m) {
       syncCfg(room);
       const first = Math.max(0, seatIndex(room, room.firstDealerId));
       room.rounds = G.buildRounds(room.cfg, n, first);
+      newGame(room);
       room.idx = 0;
       room.rounds[0].bids = Array(n).fill(null);
       room.phase = 'bid';

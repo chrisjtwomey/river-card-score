@@ -194,6 +194,7 @@ function render() {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
   const over = ST.phase === 'done';
+  if (over) Games.keep(ST, -1);
   $('#btn-deal').hidden = lobby;
   $('#btn-deal').textContent = over ? '🏆' : '🂠';
   $('#btn-deal').title = over ? 'Play the result again' : 'Play the deal animation';

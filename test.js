@@ -1,8 +1,13 @@
 const { spawn } = require('child_process');
 const path = __dirname;
+const path2 = require('path');
 const WebSocket = require('ws');
 const PORT = Number(process.env.TEST_PORT) || 8899;
-const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120' }, stdio: ['ignore', 'pipe', 'pipe'] });
+const fs = require('fs');
+const os = require('os');
+// The finished games are written to a folder of their own, thrown away after.
+const DATA_DIR = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-games-'));
+const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120', DATA_DIR, KEEP_GAMES: '3' }, stdio: ['ignore', 'pipe', 'pipe'] });
 srv.stderr.on('data', d => process.stderr.write('[srv] ' + d));
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -500,7 +505,7 @@ function client(name, url) {
   {
     const port3 = PORT + 2;
     const srv3 = spawn('node', [path + '/server.js'], {
-      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', TRICK_HOLD: '120' }, stdio: 'ignore',
+      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', TRICK_HOLD: '120', DATA_DIR }, stdio: 'ignore',
     });
     await wait(700);
     const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
@@ -688,11 +693,70 @@ function client(name, url) {
     h.ws.close(); a.ws.close(); b.ws.close();
   }
 
+  // ---- a finished game is kept on file ----
+  {
+    const port4 = PORT + 3;
+    const srv4 = spawn('node', [path + '/server.js'], {
+      env: { ...process.env, PORT: port4, NO_TLS: '1', DEV: '1', TRICK_HOLD: '60',
+             DATA_DIR, KEEP_GAMES: '3' }, stdio: 'ignore',
+    });
+    await wait(800);
+    const d = client('gamefile', `ws://127.0.0.1:${port4}/ws`); await d.ready;
+    d.send({ t: 'dev', action: 'setup', players: 3 }); await wait(300);
+    d.send({ t: 'dev', action: 'startGame' }); await wait(200);
+    d.send({ t: 'dev', action: 'endGame' }); await wait(900);
+    ok(d.state.phase === 'done', 'the stand-in table plays a game out');
+    const id = d.state.gameId;
+    ok(typeof id === 'string' && id.length === 12, 'a finished game gets an id in the state');
+
+    const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json'));
+    ok(files.some((f) => f.includes(id)), 'and a file of its own on the table');
+
+    const rec = await fetch(`http://127.0.0.1:${port4}/game/${id}`).then((r) => r.json());
+    ok(rec.id === id && rec.code === d.state.code, 'GET /game/<id> gives the game back');
+    ok(rec.rounds.length === d.state.rounds.length && rec.seats.length === 3,
+       'with every round and every seat');
+    ok(JSON.stringify(rec.totals) === JSON.stringify(d.state.totals), 'and the totals as they stood');
+    ok(rec.winners.length >= 1 && rec.totals[rec.winners[0]] === Math.max(...rec.totals),
+       'the winner is named in the record');
+    ok(JSON.stringify(rec).indexOf('token') < 0, 'and no token rides along with it');
+
+    const list = await fetch(`http://127.0.0.1:${port4}/games.json?code=${d.state.code}`).then((r) => r.json());
+    ok(list.games.length === 1 && list.games[0].id === id, 'GET /games.json finds it by table code');
+    ok(!list.games[0].rounds, 'the listing is the headline only');
+    const none = await fetch(`http://127.0.0.1:${port4}/games.json?code=ZZZZ`).then((r) => r.json());
+    ok(none.games.length === 0, 'and finds nothing for a table that never played');
+    ok((await fetch(`http://127.0.0.1:${port4}/game/nosuchgameid`)).status === 404,
+       'an id that is not a game is a 404');
+
+    // a second game on the same table is a second record
+    d.send({ t: 'dev', action: 'lobby' }); await wait(200);
+    d.send({ t: 'dev', action: 'startGame' }); await wait(200);
+    d.send({ t: 'dev', action: 'endGame' }); await wait(900);
+    ok(d.state.gameId !== id, 'a new game on the same table gets a new id');
+    const two = await fetch(`http://127.0.0.1:${port4}/games.json?code=${d.state.code}`).then((r) => r.json());
+    ok(two.games.length === 2 && two.games[0].id === d.state.gameId,
+       'both are on file, newest first');
+
+    // past the cap the oldest go
+    for (let i = 0; i < 3; i++) {
+      d.send({ t: 'dev', action: 'lobby' }); await wait(150);
+      d.send({ t: 'dev', action: 'startGame' }); await wait(150);
+      d.send({ t: 'dev', action: 'endGame' }); await wait(900);
+    }
+    ok(fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length === 3,
+       'the table keeps no more than the cap  got ' +
+       fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length);
+    ok((await fetch(`http://127.0.0.1:${port4}/game/${id}`)).status === 404,
+       'and the oldest is gone');
+    d.ws.close(); srv4.kill();
+  }
+
   // ---- PUBLIC_URL replaces the detected addresses ----
   {
     const port2 = PORT + 1;
     const srv2 = spawn('node', [path + '/server.js'], {
-      env: { ...process.env, PORT: port2, NO_TLS: '1', PUBLIC_URL: 'https://table.example.com/' },
+      env: { ...process.env, PORT: port2, NO_TLS: '1', PUBLIC_URL: 'https://table.example.com/', DATA_DIR },
       stdio: 'ignore',
     });
     await wait(700);
@@ -702,6 +766,7 @@ function client(name, url) {
     srv2.kill();
   }
 
+  try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch (e) {}
   console.log(fails ? `\n${fails} FAILURES` : '\nall integration checks passed');
   srv.kill(); process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); srv.kill(); process.exit(1); });
