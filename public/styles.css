@@ -402,6 +402,11 @@ body.host .toast .note{font-size:19px}
     linear-gradient(160deg,#1c6b48,#0d3f2a);
   border:2px solid #f0ead9;
 }
+/* a player's picture, where the stripes would be */
+.dcard .back.av{
+  background:#0d3f2a center/cover no-repeat;
+  border-color:#f0ead9;
+}
 .dcard.hero{width:86px;height:120px;margin:-60px 0 0 -43px;z-index:5}
 .dcard.hero .front{
   background:#fbf9f3;border:2px solid var(--gold);
@@ -777,3 +782,19 @@ body.host .scorecard-panel .table-wrap{
 .captain-panel .code-badge{font-size:46px;letter-spacing:.16em}
 .captain-panel .qrbox img{width:150px;height:150px}
 .captain-panel .joinrow{gap:14px}
+
+/* ---------- a player's picture ---------- */
+.avrow{display:flex;gap:14px;align-items:flex-start;margin:10px 0 4px}
+.avshot{
+  flex:none;width:64px;height:90px;border-radius:8px;display:grid;place-items:center;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.10) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg,#1c6b48,#0d3f2a);
+  border:2px solid #f0ead9;box-shadow:0 6px 18px rgba(0,0,0,.28);
+}
+.avshot.has{background-size:cover;background-position:center;background-repeat:no-repeat}
+.avshot.has .avhint{display:none}
+.avhint{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.avside{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.avside .row-actions{margin:0}
+.avside small{opacity:.7}

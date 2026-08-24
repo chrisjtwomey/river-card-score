@@ -39,7 +39,10 @@ const Deal = (function () {
   const tf = (x, y, tilt, face, sc) =>
     `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(${face}deg) scale(${sc})`;
 
-  function cardEl(face, cls) {
+  /* `av` is a player's picture. It goes on the back, which carries its own
+     rotateY(180deg) and so faces the room the right way up when the card is
+     lying face down. Nothing else about the card changes. */
+  function cardEl(face, cls, av) {
     const el = document.createElement('div');
     el.className = 'dcard' + (cls ? ' ' + cls : '');
     const front = document.createElement('div');
@@ -50,7 +53,8 @@ const Deal = (function () {
       front.querySelector('.big').textContent = face.s.g;
     }
     const back = document.createElement('div');
-    back.className = 'face back';
+    back.className = 'face back' + (av ? ' av' : '');
+    if (av) back.style.backgroundImage = `url("${av}")`;
     el.append(front, back);
     return el;
   }
@@ -83,7 +87,7 @@ const Deal = (function () {
   }
 
   /* opts: { names, dealer, cards, round, hold, linger, deck, mine, hand,
-     upcard, trump, waitTrump }.
+     upcard, trump, waitTrump, avatars }.
      The deck is shuffled and cut on screen, and the whole hand is dealt round
      the table, face down. With deck 'virtual' the turned card is the real one
      and your own cards land face up: `mine` is the seat watching, `hand` the
@@ -108,6 +112,10 @@ const Deal = (function () {
       const virtual = !!(opts && opts.deck === 'virtual');
       const mine = (opts && typeof opts.mine === 'number' && opts.mine >= 0) ? opts.mine : -1;
       const myHand = (virtual && opts && opts.hand) || [];
+      // A picture per seat, or nothing. It rides on the last card that seat is
+      // dealt -- the one on top of its pile. The cards under it keep the back
+      // every other card has.
+      const avatars = (opts && opts.avatars) || [];
       const upFace = virtual ? faceOf(opts && opts.upcard) : null;
       const trumpK = (!virtual && opts && opts.trump) ? String(opts.trump) : null;
 
@@ -277,7 +285,7 @@ const Deal = (function () {
           // knows them. Everything else lands face down, like the real thing.
           const face = own ? faceOf(myHand[k]) : null;
           const up = !!face;
-          const card = cardEl(face, own ? 'mine' : '');
+          const card = cardEl(face, own ? 'mine' : '', k === passes - 1 ? avatars[p] : null);
           stage.appendChild(card);
           const landed = tf(gx, gy, tilt, up ? 0 : 180, 1);
           cardEls[p] = card;                          // the top of that seat's pile

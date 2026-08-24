@@ -43,6 +43,20 @@ document.addEventListener('DOMContentLoaded', () => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
   });
 
+  /* The picture is picked here but sent from the player page: this page walks
+     away the moment the seat exists, and a socket closing mid-send would lose
+     it. The phone keeps the copy, and the player page hands it over. */
+  let av = Avatar.saved();
+  const pickers = ['#join-av', '#new-av'].map((sel) => {
+    const pk = Avatar.picker((d) => {
+      av = d;
+      Avatar.remember(d);
+      pickers.forEach((o) => { if (o !== pk) o.show(d); });
+    });
+    $(sel).appendChild(pk.el);
+    pk.show(av);
+    return pk;
+  });
   const err = (msg) => { $('#join-err').textContent = msg; $('#join-err').hidden = !msg; };
 
   $('#btn-join').addEventListener('click', () => {

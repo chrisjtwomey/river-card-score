@@ -137,6 +137,22 @@ function handler(req, res) {
     return;
   }
 
+  if (url.startsWith('/avatar/')) {                // a player's picture, by seat
+    const part = url.split('/');                   // '', 'avatar', code, seat
+    const room = rooms.get(String(part[2] || '').toUpperCase());
+    const seat = room && room.seats.find((x) => x.id === part[3]);
+    if (!seat || !seat.av) { res.writeHead(404, { 'content-type': 'text/plain' }).end('no picture'); return; }
+    // The version is in the address, so a hit on the right one can be held for
+    // good. A guess at the address must not be.
+    res.writeHead(200, {
+      'content-type': seat.av.type,
+      'cache-control': query.get('v') === seat.av.ver
+        ? 'public, max-age=31536000, immutable' : 'no-cache',
+    });
+    res.end(seat.av.buf);
+    return;
+  }
+
   if (url === '/') url = '/index.html';
   const file = url === '/game.js' ? path.join(ROOT, 'game.js') : path.join(PUB, url);
   const safe = path.normalize(file);
@@ -158,6 +174,28 @@ const server = tls ? https.createServer(tls, handler) : http.createServer(handle
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no I, L, O, 0, 1
 const rooms = new Map();
 const token = () => crypto.randomBytes(12).toString('hex');
+
+/* ---------------- player pictures ---------------- */
+
+/* A seat may carry a picture. It never rides in the state: the state goes out
+   on every bid and every card, and a picture in there would go with it. The
+   state carries a version only, and the picture itself is fetched once over
+   HTTP and held in the browser cache. */
+const AV_TYPES = { 'image/webp': 1, 'image/jpeg': 1, 'image/png': 1 };
+const AV_MAX = 48 * 1024;
+
+// Returns null when the picture is set, or a line to show the player.
+function setAvatar(seat, data) {
+  if (data === null || data === undefined || data === '') { seat.av = null; return null; }
+  const m = /^data:([a-z/+.-]+);base64,([A-Za-z0-9+/=]*)$/.exec(String(data));
+  if (!m) return 'that picture did not arrive in a form the table understands';
+  if (!AV_TYPES[m[1]]) return 'the picture must be a WebP, a JPEG or a PNG';
+  const buf = Buffer.from(m[2], 'base64');
+  if (!buf.length) return 'that picture is empty';
+  if (buf.length > AV_MAX) return 'that picture is too big';
+  seat.av = { buf, type: m[1], ver: token().slice(0, 8) };
+  return null;
+}
 
 function newCode() {
   let c;
@@ -210,7 +248,8 @@ function publicState(room) {
     code: room.code,
     phase: room.phase,
     cfg: room.cfg,
-    seats: room.seats.map((s) => ({ id: s.id, name: s.name, online: s.online })),
+    seats: room.seats.map((s) => ({ id: s.id, name: s.name, online: s.online,
+                                    av: s.av ? s.av.ver : null })),
     firstDealerId: room.firstDealerId,
     captainId: room.captainId,
     rounds: room.rounds,
@@ -659,10 +698,29 @@ function handle(ws, m) {
       case 'bumVote': devBumVote(room); break;
       case 'fillCard': devFillCard(room, m.rounds); break;
       case 'randomise': devRandomise(room); break;
+      case 'avatar': {
+        const seat = room.seats[Number(m.seat)];
+        if (!seat) return fail(ws, 'no such seat');
+        const bad = setAvatar(seat, m.data);
+        if (bad) return fail(ws, bad);
+        break;
+      }
       case 'patch': devPatch(room, m.patch || {}); break;
       default: return fail(ws, 'unknown dev action');
     }
     return devHello(ws, room);
+  }
+
+  if (m.t === 'avatar') {
+    const room = ws.ctx && ws.ctx.room;
+    if (!room) return fail(ws, 'take a seat first');
+    if (ws.ctx.role !== 'player' || !ws.ctx.seatId) return fail(ws, 'only a player has a picture');
+    if (room.phase !== 'lobby') return fail(ws, 'the pictures are set before the game starts');
+    const seat = room.seats.find((x) => x.id === ws.ctx.seatId);
+    if (!seat) return fail(ws, 'that seat is gone');
+    const bad = setAvatar(seat, m.data);
+    if (bad) return fail(ws, bad);
+    return broadcast(room);
   }
 
   if (m.t === 'join') {

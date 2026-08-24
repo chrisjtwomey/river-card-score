@@ -263,6 +263,49 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-act]').forEach((b) =>
     b.addEventListener('click', () => act(b.dataset.act)));
 
+  /* Stand-in photos, so the picture on a card can be tested without anybody
+     uploading anything. Each seat gets its own colour and its own initial. */
+  const AV_INK = ['#c0271d', '#1c6b48', '#2b5f9e', '#8a4bb5', '#b8862b', '#0f8a8a',
+                  '#b5426f', '#4a6b1c'];
+  function standInAvatar(name, i) {
+    const cv = document.createElement('canvas');
+    cv.width = Avatar.W; cv.height = Avatar.H;
+    const cx = cv.getContext('2d');
+    const ink = AV_INK[i % AV_INK.length];
+    const g = cx.createLinearGradient(0, 0, cv.width, cv.height);
+    g.addColorStop(0, ink);
+    g.addColorStop(1, '#101512');
+    cx.fillStyle = g;
+    cx.fillRect(0, 0, cv.width, cv.height);
+    cx.strokeStyle = 'rgba(255,255,255,.22)';
+    cx.lineWidth = 6;
+    for (let k = -cv.height; k < cv.width; k += 22) {     // a hint of a pattern
+      cx.beginPath(); cx.moveTo(k, 0); cx.lineTo(k + cv.height, cv.height); cx.stroke();
+    }
+    // The initial sits high, so the eye can tell the seats apart in a fan.
+    cx.fillStyle = '#fff';
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+    cx.font = `700 ${Math.round(cv.width * .58)}px system-ui, sans-serif`;
+    cx.shadowColor = 'rgba(0,0,0,.6)';
+    cx.shadowBlur = 16;
+    cx.fillText((name || '?').trim().charAt(0).toUpperCase(), cv.width / 2, cv.height * .38);
+    cx.shadowBlur = 0;
+    cx.font = `600 ${Math.round(cv.width * .13)}px system-ui, sans-serif`;
+    cx.fillStyle = 'rgba(255,255,255,.8)';
+    cx.fillText(String(name || '').slice(0, 9), cv.width / 2, cv.height * .78);
+    return cv.toDataURL('image/webp', .8);
+  }
+
+  $('#btn-avatars').addEventListener('click', () => {
+    if (!ST || !ST.seats) return;
+    ST.seats.forEach((s, i) => act('avatar', { seat: i, data: standInAvatar(s.name, i) }));
+  });
+  $('#btn-no-avatars').addEventListener('click', () => {
+    if (!ST || !ST.seats) return;
+    ST.seats.forEach((s, i) => act('avatar', { seat: i, data: null }));
+  });
+
   $('#btn-rebuild').addEventListener('click', () =>
     act('setup', { players: Number($('#players').value) || 4 }));
   $('#players').addEventListener('change', () =>

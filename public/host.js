@@ -119,6 +119,7 @@ function playDealNow(mode) {
     // cards the deck on screen shuffles along with the dealer, and deals only
     // once the trump suit is picked.
     deck: ST.cfg.deck,
+    avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
     upcard: ST.play ? ST.play.upcard : null,
     trump: r.trump || null,
     waitTrump: ST.cfg.deck !== 'virtual' && !!ST.cfg.trump && !r.trump && ST.phase === 'bid',

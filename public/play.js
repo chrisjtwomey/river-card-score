@@ -303,6 +303,7 @@ function dealWatch(r) {
     // With a virtual deck the cards come to you: your own land face up in a
     // fan, so the scene already shows the hand and needs no extra pause.
     deck: ST.cfg.deck,
+    avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
     mine: mySeat(),
     hand: ST.hand || [],
     upcard: ST.play ? ST.play.upcard : null,
@@ -370,7 +371,33 @@ function renderJoinBox() {
   if (img.getAttribute('src') !== src) img.src = src;
 }
 
+/* The picture, picked here or brought from the join page. It is built once and
+   kept: rebuilding it on every state would throw away a pick in flight. */
+let avPicker = null, avSent = false;
+
+function renderAvatar(me) {
+  const mount = $('#lobby-av');
+  if (!mount) return;
+  if (!avPicker) {
+    avPicker = Avatar.picker((d) => {
+      Avatar.remember(d);
+      avSent = true;
+      Net.send({ t: 'avatar', data: d });
+    });
+    mount.appendChild(avPicker.el);
+  }
+  const seat = me >= 0 ? ST.seats[me] : null;
+  // A picture picked before the seat existed is handed over now, once.
+  if (seat && !seat.av && !avSent) {
+    const kept = Avatar.saved();
+    if (kept) { avSent = true; Net.send({ t: 'avatar', data: kept }); return; }
+  }
+  if (seat && seat.av) avSent = true;
+  avPicker.show(Avatar.url(ST.code, seat));
+}
+
 function renderLobby(me) {
+  renderAvatar(me);
   const box = $('#lobby-seats');
   box.innerHTML = '';
   const boss = amHost();

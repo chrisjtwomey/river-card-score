@@ -636,6 +636,58 @@ function client(name, url) {
     srv3.kill();
   }
 
+  // ---- a player's picture ----
+  {
+    const h = client('avhost'); await h.ready; h.send({ t: 'create' }); await wait(150);
+    const code = h.hello.code;
+    const a = client('ava'); await a.ready; a.send({ t: 'join', code, name: 'Ava' }); await wait(150);
+    const b = client('bob'); await b.ready; b.send({ t: 'join', code, name: 'Bob' }); await wait(150);
+
+    const seatOf = (st, id) => st.seats.find((x) => x.id === id);
+    ok(seatOf(h.state, a.seatId).av === null, 'a new seat has no picture');
+    const url = (st, id, v) => `http://127.0.0.1:${PORT}/avatar/${st.code}/${id}` + (v ? `?v=${v}` : '');
+    ok((await fetch(url(h.state, a.seatId))).status === 404, 'a seat with no picture serves a 404');
+
+    // a one-pixel PNG is enough: the bytes only have to come back whole
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    a.send({ t: 'avatar', data: 'data:image/png;base64,' + png }); await wait(150);
+    const ver = seatOf(h.state, a.seatId).av;
+    ok(typeof ver === 'string' && ver.length === 8, 'the state carries a version, not the picture');
+    ok(JSON.stringify(h.state).indexOf(png.slice(0, 24)) < 0, 'and the picture itself never rides in the state');
+    ok(seatOf(h.state, b.seatId).av === null, 'a picture belongs to one seat only');
+
+    const got = await fetch(url(h.state, a.seatId, ver));
+    ok(got.status === 200 && got.headers.get('content-type') === 'image/png',
+       'the picture comes back over HTTP as the type it was sent');
+    ok(/immutable/.test(got.headers.get('cache-control') || ''),
+       'the right version may be held in the cache for good');
+    ok(Buffer.from(await got.arrayBuffer()).equals(Buffer.from(png, 'base64')),
+       'the bytes come back whole');
+    const stale = await fetch(url(h.state, a.seatId, 'deadbeef'));
+    ok(!/immutable/.test(stale.headers.get('cache-control') || ''),
+       'a guess at the version may not');
+
+    a.errors.length = 0;
+    a.send({ t: 'avatar', data: 'data:text/html;base64,' + png }); await wait(120);
+    ok(a.errors.some((e) => /WebP/.test(e)), 'only a WebP, a JPEG or a PNG is taken');
+    a.send({ t: 'avatar', data: 'data:image/png;base64,' + 'A'.repeat(80000) }); await wait(150);
+    ok(a.errors.some((e) => /too big/.test(e)), 'an oversized picture is refused');
+    ok(seatOf(h.state, a.seatId).av === ver, 'and a refused picture leaves the old one alone');
+
+    a.send({ t: 'avatar', data: null }); await wait(150);
+    ok(seatOf(h.state, a.seatId).av === null, 'a player can take their picture down');
+
+    b.send({ t: 'avatar', data: 'data:image/png;base64,' + png }); await wait(150);
+    h.send({ t: 'start' }); await wait(200);
+    b.errors.length = 0;
+    b.send({ t: 'avatar', data: 'data:image/png;base64,' + png }); await wait(120);
+    ok(b.errors.some((e) => /before the game starts/.test(e)),
+       'the pictures are set in the lobby, not mid-game');
+    ok(seatOf(h.state, b.seatId).av !== null, 'and the one already set stays up');
+
+    h.ws.close(); a.ws.close(); b.ws.close();
+  }
+
   // ---- PUBLIC_URL replaces the detected addresses ----
   {
     const port2 = PORT + 1;
