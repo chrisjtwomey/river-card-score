@@ -195,7 +195,14 @@ const Deal = (function () {
       const riffleMs = splitMs + (stackN - 1) * step + landMs;
       const roundMs = riffleMs + squareMs;
       const half = Math.ceil(stackN / 2);
-      const riffle = (at) => {
+      /* One riffle. `into` collects what it starts: the loop that runs while a
+         real dealer shuffles calls this over and over, and it has to be able to
+         call off the round before it. Left to pile up, a card ends up carrying
+         dozens of live transforms at once, and Chrome gives up keeping the card
+         in three dimensions -- the back stops facing the room and the blank
+         front is painted instead. */
+      const riffle = (at, into) => {
+        const made = into || anims;
         deckEls.forEach((d, i) => {
           const rest = deckRest(i), lift = -i * 0.9;
           const left = i < half;
@@ -206,7 +213,7 @@ const Deal = (function () {
                            lift + j * 1.4 + (Math.random() * 4 - 2),
                            side * (12 + Math.random() * 3), 180, 1);
           const o = (ms) => Math.max(0, Math.min(1, ms / riffleMs));
-          anims.push(d.animate(
+          made.push(d.animate(
             [{ transform: rest, offset: 0, easing: 'cubic-bezier(.3,.8,.35,1)' },
              { transform: apart, offset: o(splitMs), easing: 'linear' },
              { transform: apart, offset: o(splitMs + k * step),
@@ -221,10 +228,11 @@ const Deal = (function () {
           // card belongs in front of it. The cut clears the band again
           // before the trump is turned. Not how a real riffle works, but it
           // reads better.
-          timers.push(setTimeout(() => { if (!ended) d.style.zIndex = String(10 + k); },
-            at + splitMs + k * step));
+          timers.push(setTimeout(() => {
+            if (!ended && !settled) d.style.zIndex = String(10 + k);
+          }, at + splitMs + k * step));
           // and the whole pile squares up once the last card is in
-          anims.push(d.animate(
+          made.push(d.animate(
             [{ transform: rest }, { transform: tf(0, lift, 0, 180, 1.02), offset: .5 },
              { transform: rest }],
             { duration: squareMs, delay: at + riffleMs, easing: 'ease-in-out' }));
@@ -471,6 +479,7 @@ const Deal = (function () {
         ended = true;
         if (live && live.finish === finish) live = null;
         timers.forEach(clearTimeout);
+        dropLoop();
         overlay.removeEventListener('pointerdown', skip);
         window.removeEventListener('keydown', skip);
         const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
@@ -481,7 +490,12 @@ const Deal = (function () {
           resolve();
         };
       }
-      function settle() { settled = true; anims.forEach((a) => { try { a.finish(); } catch (e) {} }); }
+      function settle() {
+        settled = true;
+        dropLoop();
+        anims.forEach((a) => { try { a.finish(); } catch (e) {} });
+        deckEls.forEach((d) => { d.style.zIndex = ''; });
+      }
       function skip() {
         // The first tap lands the deal; the next one closes it. A scene that
         // is only waiting to be tapped away is already landed, so one does.
@@ -510,10 +524,15 @@ const Deal = (function () {
 
       // While the real dealer shuffles, so does the deck on screen: one
       // riffle at a time, until the trump suit is picked.
-      let loopTimer = null, roundEndsAt = 0, released = false;
+      let loopTimer = null, roundEndsAt = 0, released = false, loopAnims = [];
+      function dropLoop() {
+        loopAnims.forEach((a) => { try { a.cancel(); } catch (e) {} });
+        loopAnims = [];
+      }
       function loopRiffle() {
         if (ended || settled) return;
-        riffle(0);
+        dropLoop();                        // last round's, before this round's
+        riffle(0, loopAnims);
         roundEndsAt = Date.now() + roundMs;
         loopTimer = setTimeout(loopRiffle, roundMs + 380);
         timers.push(loopTimer);
@@ -526,6 +545,7 @@ const Deal = (function () {
         // Let the burst in the air come home first, then cut and deal.
         timers.push(setTimeout(() => {
           if (ended || settled) return;
+          dropLoop();                      // the round is home; let go of it
           gated.forEach((a) => { try { a.play(); } catch (e) {} });
           dropBand();
           arm();
