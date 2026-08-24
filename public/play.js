@@ -238,10 +238,17 @@ function dealWatch(r) {
   const first = dealtKey === null && ST.idx > 0;     // a reload part way through
   dealtKey = key;
   if (first) return;                                  // do not replay on a reload
+  const virtual = ST.cfg.deck === 'virtual';
   Deal.play({
     names: ST.seats.map((s) => s.name),
     dealer: r.dealer, cards: r.cards, round: ST.idx + 1,
-    linger: 1000,               // a phone gets a second longer to read it
+    // With a virtual deck the cards come to you: your own land face up in a
+    // fan, so the scene already shows the hand and needs no extra pause.
+    deck: ST.cfg.deck,
+    mine: mySeat(),
+    hand: ST.hand || [],
+    upcard: ST.play ? ST.play.upcard : null,
+    linger: virtual ? 300 : 1000,   // a phone gets longer to read a bare deal
   });
 }
 

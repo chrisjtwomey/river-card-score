@@ -22,6 +22,24 @@ const Deal = (function () {
     return reduce ? 'reduced' : 'full';
   }
 
+  // A card from the server, 'TH' or '9S', turned into a face this scene can
+  // draw. Deal.js stands alone -- the offline tracker has no game.js -- so it
+  // reads the card itself.
+  const SUIT_OF = { S: FACES[0], H: FACES[1], D: FACES[2], C: FACES[3] };
+  const SUIT_NAME = { S: 'Spades', H: 'Hearts', D: 'Diamonds', C: 'Clubs' };
+  function faceOf(card) {
+    const c = String(card || '');
+    const s = SUIT_OF[c.slice(-1)];
+    if (!s) return null;
+    const r = c.slice(0, -1);
+    return { r: r === 'T' ? '10' : r, s };
+  }
+
+  // Every card on this stage is placed the same way, so a move only has to say
+  // what changed: where it sits, how it lies, which way up, how big.
+  const tf = (x, y, tilt, face, sc) =>
+    `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(${face}deg) scale(${sc})`;
+
   function shuffledFaces(n) {
     const deck = [];
     FACES.forEach((s) => RANKS.forEach((r) => deck.push({ r, s })));
@@ -48,6 +66,17 @@ const Deal = (function () {
     return el;
   }
 
+  /* Fading a card is not free: an animated opacity makes the browser give up
+     `transform-style: preserve-3d`, and a card lying face down then paints a
+     blank front instead of its back. So a card only ever moves, and the two
+     faces do the fading. */
+  function fade(card, frames, opts, into) {
+    Array.prototype.forEach.call(card.querySelectorAll('.face'), (f) => {
+      const a = f.animate(frames, opts);
+      if (into) into.push(a);
+    });
+  }
+
   function overlayEl() {
     let el = document.getElementById('deal');
     if (el) return el;
@@ -61,7 +90,10 @@ const Deal = (function () {
     return el;
   }
 
-  /* opts: { names, dealer, cards, round, hold, linger }.
+  /* opts: { names, dealer, cards, round, hold, linger, deck, mine, hand, upcard }.
+     With deck 'virtual' the deck is shuffled and cut on screen, the whole hand
+     is dealt round the table, and the turned card is the real one. `mine` is
+     the seat watching, `hand` the cards it was given: those land face up.
      linger adds milliseconds to the pause before it clears itself.
      With hold, the scene stays on screen after the deal, until close() is
      called, so the table can see the hand while the bids come in.
@@ -76,6 +108,10 @@ const Deal = (function () {
       const cards = (opts && opts.cards) || 1;
       const dealer = (opts && opts.dealer) || 0;
       const m = force || mode();
+      const virtual = !!(opts && opts.deck === 'virtual');
+      const mine = (opts && typeof opts.mine === 'number' && opts.mine >= 0) ? opts.mine : -1;
+      const myHand = (virtual && opts && opts.hand) || [];
+      const upFace = virtual ? faceOf(opts && opts.upcard) : null;
 
       if (!n || !stage || !stage.animate) {
         console.warn('[deal] skipped: no players, or no Web Animations API');
@@ -93,54 +129,144 @@ const Deal = (function () {
 
       const W = overlay.clientWidth, H = overlay.clientHeight;
       const rx = Math.min(W * 0.33, 250), ry = Math.min(H * 0.27, 160);
-      const seat = (p) => {                       // seat 0 sits at the bottom
-        const a = (Math.PI / 2) + (p * 2 * Math.PI / n);
+      // The seat watching sits at the bottom, so the cards come to them. On a
+      // screen that belongs to nobody that is seat 0, as before.
+      const anchor = mine >= 0 ? mine : 0;
+      const seat = (p) => {
+        const a = (Math.PI / 2) + ((((p - anchor) % n) + n) % n) * 2 * Math.PI / n;
         return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
       };
 
       const T = calm
-        ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
-        : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280 };
+        ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220,
+            riffle: 200, cut: 170 }
+        : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280,
+            riffle: 380, cut: 320 };
       const anims = [], timers = [];
       const labels = [], cardEls = [], landedAt = [];
       const hold = !!(opts && opts.hold);
       let ended = false, settled = false;
 
-      for (let i = 0; i < 3; i++) {               // the deck, face down in the middle
+      /* ---- the deck in the middle, face down ---- */
+      // A virtual deck is a real stack: it is shuffled, cut, and dealt from, so
+      // it needs enough cards in it to read as one.
+      const stackN = virtual ? 6 : 3;
+      const deckEls = [];
+      const deckRest = (i) => tf(0, -i * 0.9, (i - (stackN - 1) / 2) * 3.4, 180, 1);
+      for (let i = 0; i < stackN; i++) {
         const d = cardEl(null, 'deck');
-        const rest = `translate3d(0,0,0) rotate(${(i - 1) * 4}deg) rotateY(180deg)`;
+        const rest = deckRest(i);
         d.style.transform = rest;
         stage.appendChild(d);
-        anims.push(d.animate(
-          calm
-            ? [{ transform: rest, opacity: 0 }, { transform: rest, opacity: 1 }]
-            : [{ transform: rest + ' scale(.5)', opacity: 0 }, { transform: rest + ' scale(1)', opacity: 1 }],
-          { duration: T.deckPop, delay: i * 40, easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.4)', fill: 'both' }
-        ));
+        deckEls.push(d);
+        const pop = { duration: T.deckPop, delay: i * 40, fill: 'both',
+                      easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.4)' };
+        if (!calm) anims.push(d.animate([{ transform: rest + ' scale(.5)' }, { transform: rest + ' scale(1)' }], pop));
+        fade(d, [{ opacity: 0 }, { opacity: 1 }], pop, anims);
       }
 
-      const faces = shuffledFaces(n);
-      for (let step = 1; step <= n; step++) {     // dealing order: left of the dealer first
+      /* ---- the shuffle: two riffles and a cut ---- */
+      // Only a virtual deck is shuffled on screen. At a real table the dealer
+      // does that with their own hands, and the flourish would only hold
+      // everybody up.
+      const deckReady = T.deckPop + (stackN - 1) * 40;
+      let shuffleEnd = deckReady;
+      if (virtual && !calm) {
+        const half = Math.ceil(stackN / 2);
+        const riffle = (at) => deckEls.forEach((d, i) => {
+          const side = i < half ? -1 : 1;             // the deck splits in two
+          const rest = deckRest(i);
+          const lift = -i * 0.9;
+          anims.push(d.animate(
+            [{ transform: rest, offset: 0 },
+             { transform: tf(side * 38, lift - 6, side * 9, 180, 1), offset: .34,
+               easing: 'cubic-bezier(.3,.8,.4,1)' },
+             { transform: tf(side * 12, lift - 10, side * 4, 180, 1), offset: .62 },
+             { transform: rest, offset: .86, easing: 'cubic-bezier(.2,.9,.3,1.5)' },
+             { transform: rest, offset: 1 }],
+            { duration: T.riffle, delay: at, easing: 'ease-in-out', fill: 'both' }));
+        });
+        riffle(deckReady + 60);
+        riffle(deckReady + 60 + T.riffle);
+
+        const cutAt = deckReady + 60 + T.riffle * 2 + 40;
+        deckEls.forEach((d, i) => {                   // the top half lifts over
+          if (i < Math.floor(stackN / 2)) return;
+          const rest = deckRest(i), lift = -i * 0.9;
+          anims.push(d.animate(
+            [{ transform: rest, offset: 0 },
+             { transform: tf(-46, lift - 46, -11, 180, 1.05), offset: .45,
+               easing: 'cubic-bezier(.3,.8,.4,1)' },
+             { transform: tf(0, lift + 3, 1, 180, 1), offset: .82 },
+             { transform: rest, offset: 1 }],
+            { duration: T.cut, delay: cutAt, easing: 'ease-in-out', fill: 'both' }));
+        });
+        shuffleEnd = cutAt + T.cut;
+      }
+
+      /* ---- the deal ---- */
+      // A virtual deck deals the whole hand, one card at a time, round and
+      // round the table. A real table only needs the flourish, so it deals one
+      // card each and stops. The whole deal takes about the same time either
+      // way: with more cards to give out, they go faster.
+      const passes = virtual ? cards : 1;
+      const perCard = virtual
+        ? Math.max(24, Math.min(T.gap, Math.round((calm ? 420 : 1200) / Math.max(1, n * passes))))
+        : T.gap;
+      const dealAt = shuffleEnd + (virtual ? Math.round(T.start * 0.6) : T.start);
+      const faces = virtual ? [] : shuffledFaces(n);
+      const fanW = Math.min(W * 0.72, 300);
+      const lastAt = [], myCards = [];
+      let given = 0;
+
+      for (let k = 0; k < passes; k++) {
+        for (let step = 1; step <= n; step++) {       // left of the dealer first
+          const p = (dealer + step) % n;
+          const { x, y } = seat(p);
+          const own = p === mine;
+          // Your own cards spread into a fan you can read. Everybody else gets
+          // a neat pile.
+          const off = passes > 1 ? k - (passes - 1) / 2 : 0;
+          const step2 = own ? fanW / Math.max(1, passes - 1) : 4.5;
+          const gx = x + off * step2;
+          const gy = y + (own ? Math.abs(off) * 2.6 : -k * 1.6);
+          const tilt = (x / (rx || 1)) * 9 + off * (own ? 3.4 : 2.2);
+          const delay = dealAt + given * perCard;
+          given += 1;
+          lastAt[p] = delay;
+
+          // A card only shows its face if it is yours, or if this is the old
+          // flourish at a table playing with real cards.
+          const face = own ? faceOf(myHand[k]) : (virtual ? null : faces[step - 1]);
+          const up = !!face;
+          const card = cardEl(face, own ? 'mine' : '');
+          stage.appendChild(card);
+          const landed = tf(gx, gy, tilt, up ? 0 : 180, 1);
+          cardEls[p] = card;                          // the top of that seat's pile
+          landedAt[p] = landed;
+          if (own) myCards.push({ el: card, gx, gy, tilt });
+          const flight = { duration: T.fly, delay, fill: 'both',
+                           easing: calm ? 'ease-out' : 'cubic-bezier(.25,.8,.3,1)' };
+          if (!calm) {
+            anims.push(card.animate(
+              [{ transform: tf(0, 0, 0, 180, .9), offset: 0 },
+               { transform: tf(gx * 0.55, gy * 0.55 - 26, tilt * 0.6, up ? 90 : 180, 1.06), offset: .55 },
+               { transform: landed, offset: 1 }], flight));
+          } else {
+            card.style.transform = landed;
+          }
+          // Held at nothing until its turn comes: the card is not on the table
+          // before it is dealt.
+          fade(card, [{ opacity: 0 }, { opacity: 1 }],
+            { duration: calm ? T.fly : 140, delay, easing: 'ease-out', fill: 'both' }, anims);
+        }
+      }
+
+      const dealEnd = dealAt + (given - 1) * perCard + T.fly;
+
+      for (let step = 1; step <= n; step++) {          // the names, as each pile lands
         const p = (dealer + step) % n;
         const { x, y } = seat(p);
-        const tilt = (x / (rx || 1)) * 9;
-        const delay = T.start + (step - 1) * T.gap;
-
-        const card = cardEl(faces[step - 1]);
-        card.style.opacity = '0';
-        stage.appendChild(card);
-        const landed = `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(0deg) scale(1)`;
-        cardEls[p] = card;
-        landedAt[p] = landed;
-        anims.push(card.animate(
-          calm
-            ? [{ transform: landed, opacity: 0 }, { transform: landed, opacity: 1 }]
-            : [{ transform: 'translate3d(0,0,0) rotate(0deg) rotateY(180deg) scale(.9)', opacity: 1, offset: 0 },
-               { transform: `translate3d(${x * 0.55}px,${y * 0.55 - 26}px,0) rotate(${tilt * 0.6}deg) rotateY(90deg) scale(1.06)`, opacity: 1, offset: .55 },
-               { transform: landed, opacity: 1, offset: 1 }],
-          { duration: T.fly, delay, easing: calm ? 'ease-out' : 'cubic-bezier(.25,.8,.3,1)', fill: 'both' }
-        ));
-
         const name = document.createElement('div');
         name.className = 'dname';
         name.textContent = names[p];
@@ -150,24 +276,47 @@ const Deal = (function () {
         stage.appendChild(name);
         anims.push(name.animate(
           [{ opacity: 0, transform: 'translate(-50%,6px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
-          { duration: 220, delay: delay + T.fly - 120, easing: 'ease-out', fill: 'both' }
+          { duration: 220, delay: lastAt[p] + T.fly - 120, easing: 'ease-out', fill: 'both' }
         ));
       }
 
-      const dealEnd = T.start + (n - 1) * T.gap + T.fly;
-      const hero = cardEl(null, 'hero');
-      hero.querySelector('.front').innerHTML =
-        '<div class="quad"><span>♠</span><span>♥</span><span>♦</span><span>♣</span></div>';
+      // Your hand settles: the fan lifts, card by card, once it is all in.
+      if (!calm && myCards.length > 1) {
+        myCards.forEach((c, k) => {
+          const at = tf(c.gx, c.gy, c.tilt, 0, 1);
+          anims.push(c.el.animate(
+            [{ transform: at }, { transform: tf(c.gx, c.gy - 9, c.tilt, 0, 1.06), offset: .45 },
+             { transform: at }],
+            { duration: 380, delay: dealEnd + 40 + k * 34, easing: 'cubic-bezier(.2,.9,.3,1.35)' }));
+        });
+      }
+
+      // The deck goes quiet once it has given everything out.
+      if (virtual) {
+        deckEls.forEach((d, i) => fade(d,
+          [{ opacity: 1 }, { opacity: i === stackN - 1 ? .5 : .18 }],
+          { duration: 320, delay: dealEnd - 200, easing: 'ease-out', fill: 'both' }, anims));
+      }
+
+      /* ---- the card turned for trumps ---- */
+      const heroAt = dealEnd + (virtual ? 260 : 140);
+      const hero = cardEl(upFace, 'hero');
+      if (!upFace) {
+        hero.querySelector('.front').innerHTML =
+          '<div class="quad"><span>♠</span><span>♥</span><span>♦</span><span>♣</span></div>';
+      }
       hero.style.transform = calm ? 'rotateY(0deg)' : 'rotateY(180deg)';
       stage.appendChild(hero);
-      anims.push(hero.animate(
-        calm
-          ? [{ transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)', opacity: 0 },
-             { transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)', opacity: 1 }]
-          : [{ transform: 'translate3d(0,0,0) rotateY(180deg) scale(.8)' },
-             { transform: 'translate3d(0,0,0) rotateY(0deg) scale(1.15)' }],
-        { duration: T.flip, delay: dealEnd + 140, easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }
-      ));
+      const turn = { duration: T.flip, delay: heroAt, fill: 'both',
+                     easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.3)' };
+      if (calm) {
+        hero.style.transform = tf(0, 0, 0, 0, 1.15);
+        fade(hero, [{ opacity: 0 }, { opacity: 1 }], turn, anims);
+      } else {
+        anims.push(hero.animate(
+          [{ transform: tf(0, 0, 0, 180, .8) },
+           { transform: tf(0, virtual ? -10 : 0, 0, 0, 1.15) }], turn));
+      }
 
       // The round line sits across the top of the screen, clear of the cards.
       const head = document.createElement('div');
@@ -180,8 +329,21 @@ const Deal = (function () {
       head.appendChild(cap);
       anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'translateY(0)' }],
-        { duration: 300, delay: dealEnd + 260, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }
+        { duration: 300, delay: heroAt + 120, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }
       ));
+
+      // With a virtual deck the turned card decides trumps, so say which.
+      if (virtual) {
+        const tag = document.createElement('div');
+        tag.className = 'deal-tag';
+        tag.textContent = upFace ? `${SUIT_NAME[String(opts.upcard).slice(-1)]} are trumps` : 'No trumps';
+        if (upFace && upFace.s.red) tag.classList.add('red');
+        stage.appendChild(tag);
+        anims.push(tag.animate(
+          [{ opacity: 0, transform: 'translate(-50%,8px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
+          { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'both' }
+        ));
+      }
 
       const status = document.createElement('div');
       status.className = 'deal-status';
@@ -219,7 +381,7 @@ const Deal = (function () {
       overlay.addEventListener('pointerdown', skip);
       window.addEventListener('keydown', skip);
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
-      const naturalEnd = dealEnd + 140 + T.flip + T.hold + linger;
+      const naturalEnd = heroAt + T.flip + T.hold + linger;
       if (hold) {
         live = {
           kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
@@ -261,21 +423,34 @@ const Deal = (function () {
     const up = 'drop-shadow(0 16px 18px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(255,255,255,.4))';
     const tip = `${at} translateY(-11px) rotateX(-26deg)`;
 
+    // The transform rides on the card, but the shadow has to ride on the
+    // faces: a filter on the card itself would flatten its 3D, and a card
+    // lying face down would paint a blank front instead of its back.
     const frames = [
-      { transform: at, filter: rest, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
-      { transform: tip, filter: up, offset: o(UP), easing: 'linear' },
+      { transform: at, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
+      { transform: tip, offset: o(UP), easing: 'linear' },
+    ];
+    const glow = [
+      { filter: rest, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
+      { filter: up, offset: o(UP), easing: 'linear' },
     ];
     for (let ms = SHIVER_IN, i = 0; ms <= SHIVER_OUT; ms += SIDE, i++) {
       const dir = i % 2 === 0 ? 1 : -1;
       frames.push({
         transform: `${tip} translateX(${dir * 3}px) rotate(${dir * 1.2}deg)`,
-        filter: up, offset: o(ms), easing: 'linear',
+        offset: o(ms), easing: 'linear',
       });
     }
-    frames.push({ transform: tip, filter: up, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
-    frames.push({ transform: at, filter: rest, offset: o(FLAT) });
-    frames.push({ transform: at, filter: rest, offset: 1 });
-    live.turnAnim = card.animate(frames, { duration: D, iterations: Infinity });
+    frames.push({ transform: tip, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
+    frames.push({ transform: at, offset: o(FLAT) });
+    frames.push({ transform: at, offset: 1 });
+    glow.push({ filter: up, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
+    glow.push({ filter: rest, offset: o(FLAT) });
+    glow.push({ filter: rest, offset: 1 });
+    const opt = { duration: D, iterations: Infinity };
+    const set = [card.animate(frames, opt)];
+    card.querySelectorAll('.face').forEach((f) => set.push(f.animate(glow, opt)));
+    live.turnAnim = { cancel: () => set.forEach((a) => a.cancel()) };
   }
 
   /* The finish, in three moves:
@@ -483,12 +658,13 @@ const Deal = (function () {
       if (awards.length) timers.push(setTimeout(() => { cap.textContent = 'Game over'; }, winAt - 200));
 
       /* ---- 3. the winner, once every accolade is in ---- */
-      anims.push(card.animate(
-        calm ? [{ opacity: 0 }, { opacity: 1 }]
-             : [{ transform: 'rotateY(180deg) scale(.6)', opacity: 0 },
-                { transform: 'rotateY(180deg) scale(1)', opacity: 1 }],
-        { duration: calm ? 200 : 380, delay: Math.max(0, winAt - 700),
-          easing: 'cubic-bezier(.2,.9,.3,1.35)', fill: 'both' }));
+      const rise = { duration: calm ? 200 : 380, delay: Math.max(0, winAt - 700),
+                     easing: 'cubic-bezier(.2,.9,.3,1.35)', fill: 'both' };
+      if (!calm) {
+        anims.push(card.animate(
+          [{ transform: 'rotateY(180deg) scale(.6)' }, { transform: 'rotateY(180deg) scale(1)' }], rise));
+      }
+      fade(card, [{ opacity: 0 }, { opacity: 1 }], rise, anims);
       anims.push(card.animate(
         calm ? [{ transform: 'rotateY(0deg) scale(1.16)' }]
              : [{ transform: 'rotateY(180deg) scale(1)', offset: 0 },

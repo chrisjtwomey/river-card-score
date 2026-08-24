@@ -114,6 +114,10 @@ function playDealNow(mode) {
     names: ST.seats.map((s) => s.name),
     dealer: r.dealer, cards: r.cards, round: i + 1,
     hold: ST.phase === 'bid', key: roundKey(),
+    // With a virtual deck the table has no cards of its own, so this screen
+    // shuffles, deals the whole hand, and turns the card it turned.
+    deck: ST.cfg.deck,
+    upcard: ST.play ? ST.play.upcard : null,
   }, mode);
   pushDealStatus();          // fill in the bids that are already made
   return p;
