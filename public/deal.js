@@ -195,9 +195,11 @@ const Deal = (function () {
              { transform: rest, offset: o(splitMs + k * step + landMs) },
              { transform: rest, offset: 1 }],
             { duration: riffleMs, delay: at }));
-          // each card joins the pile on top of the one before it
+          // The card goes on top of the pile as it sets off, not as it
+          // lands, so it rides in over the centre instead of tucking in
+          // behind it. Not how a real riffle works, but it reads better.
           timers.push(setTimeout(() => { if (!ended) d.style.zIndex = String(k); },
-            at + splitMs + k * step + Math.round(landMs * 0.6)));
+            at + splitMs + k * step));
           // and the whole pile squares up once the last card is in
           anims.push(d.animate(
             [{ transform: rest }, { transform: tf(0, lift, 0, 180, 1.02), offset: .5 },
