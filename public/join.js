@@ -3,24 +3,9 @@
 const $ = (s) => document.querySelector(s);
 
 /* theme, shared with the offline app */
-const KEY_THEME = 'river-card-score:theme:v1';
-(function initTheme() {
-  let t = null;
-  try { t = localStorage.getItem(KEY_THEME); } catch (e) {}
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-  document.addEventListener('DOMContentLoaded', () => {
-    $('#btn-theme').addEventListener('click', () => {
-      const now = document.documentElement.getAttribute('data-theme');
-      const next = now === 'dark' ? 'light' : now === 'light' ? null : 'dark';
-      if (next) document.documentElement.setAttribute('data-theme', next);
-      else document.documentElement.removeAttribute('data-theme');
-      try { next ? localStorage.setItem(KEY_THEME, next) : localStorage.removeItem(KEY_THEME); } catch (e) {}
-    });
-  });
-})();
-
 document.addEventListener('DOMContentLoaded', () => {
   UI.wireFullscreen('#btn-full');
+  UI.wireTheme('#btn-theme');
   const code = new URLSearchParams(location.search).get('code');
   if (code) $('#in-code').value = code.toUpperCase().slice(0, 4);
 

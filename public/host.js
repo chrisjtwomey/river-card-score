@@ -14,13 +14,6 @@ let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addrs = [];         // addresses this server answers on
 let addr = null;        // the one shown in the QR code
 
-/* ---------- theme ---------- */
-const KEY_THEME = 'river-card-score:theme:v1';
-(function () {
-  let t = null; try { t = localStorage.getItem(KEY_THEME); } catch (e) {}
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-})();
-
 /* ---------- join address and QR ---------- */
 
 const isLocal = (u) => UI.isLocalUrl(u);
@@ -574,13 +567,7 @@ function renderWinner(done) {
 /* ---------- wiring ---------- */
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('#btn-theme').addEventListener('click', () => {
-    const now = document.documentElement.getAttribute('data-theme');
-    const next = now === 'dark' ? 'light' : now === 'light' ? null : 'dark';
-    if (next) document.documentElement.setAttribute('data-theme', next);
-    else document.documentElement.removeAttribute('data-theme');
-    try { next ? localStorage.setItem(KEY_THEME, next) : localStorage.removeItem(KEY_THEME); } catch (e) {}
-  });
+  UI.wireTheme('#btn-theme');
 
   const patch = (p) => Net.send({ t: 'config', patch: p });
   $('#cfg-max').addEventListener('change', (e) => patch({ max: e.target.value }));

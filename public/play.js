@@ -16,12 +16,6 @@ let wonMine = false;           // whose way the last pile was leaning
 let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
 
-const KEY_THEME = 'river-card-score:theme:v1';
-(function () {
-  let t = null; try { t = localStorage.getItem(KEY_THEME); } catch (e) {}
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-})();
-
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
 
@@ -649,13 +643,7 @@ function renderStandings(me) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('#btn-theme').addEventListener('click', () => {
-    const now = document.documentElement.getAttribute('data-theme');
-    const next = now === 'dark' ? 'light' : now === 'light' ? null : 'dark';
-    if (next) document.documentElement.setAttribute('data-theme', next);
-    else document.documentElement.removeAttribute('data-theme');
-    try { next ? localStorage.setItem(KEY_THEME, next) : localStorage.removeItem(KEY_THEME); } catch (e) {}
-  });
+  UI.wireTheme('#btn-theme');
   UI.wireFullscreen('#btn-full');
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
   // The dealer and the table host deal again on the spot, so they are asked

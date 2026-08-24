@@ -20,11 +20,6 @@ let LIVE = false;                // fixing a real table, not a table of stand-in
   if (c && t) { LIVE = true; CODE = c; HOST_TOKEN = t; }
 })();
 
-(function theme() {
-  let t = null; try { t = localStorage.getItem('river-card-score:theme:v1'); } catch (e) {}
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-})();
-
 /* ---------- socket ---------- */
 
 function connect() {
@@ -251,14 +246,7 @@ function applyMode() {
 
 document.addEventListener('DOMContentLoaded', () => {
   applyMode();
-  $('#btn-theme').addEventListener('click', () => {
-    const now = document.documentElement.getAttribute('data-theme');
-    const next = now === 'dark' ? 'light' : now === 'light' ? null : 'dark';
-    if (next) document.documentElement.setAttribute('data-theme', next);
-    else document.documentElement.removeAttribute('data-theme');
-    try { next ? localStorage.setItem('river-card-score:theme:v1', next)
-               : localStorage.removeItem('river-card-score:theme:v1'); } catch (e) {}
-  });
+  UI.wireTheme('#btn-theme');
 
   document.querySelectorAll('[data-act]').forEach((b) =>
     b.addEventListener('click', () => act(b.dataset.act)));

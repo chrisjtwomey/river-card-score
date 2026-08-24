@@ -7,7 +7,6 @@
 
 const KEY_GAME = 'river-card-score:game:v1';
 const KEY_SEATS = 'river-card-score:seats:v1';
-const KEY_THEME = 'river-card-score:theme:v1';
 const KEY_MOTION = 'river-card-score:motion:v1';
 
 const SUITS = [
@@ -56,21 +55,7 @@ function loadSeats() {
 
 /* ---------- theme ---------- */
 
-function applyTheme(t) {
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-  else document.documentElement.removeAttribute('data-theme');
-}
-function initTheme() {
-  let t = null;
-  try { t = localStorage.getItem(KEY_THEME); } catch (e) {}
-  applyTheme(t);
-  $('#btn-theme').addEventListener('click', () => {
-    const now = document.documentElement.getAttribute('data-theme');
-    const next = now === 'dark' ? 'light' : now === 'light' ? null : 'dark';
-    applyTheme(next);
-    try { next ? localStorage.setItem(KEY_THEME, next) : localStorage.removeItem(KEY_THEME); } catch (e) {}
-  });
-}
+function initTheme() { UI.wireTheme('#btn-theme'); }
 
 /* ---------- rules helpers ---------- */
 

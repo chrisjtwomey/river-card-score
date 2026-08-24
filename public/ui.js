@@ -13,6 +13,62 @@ const UI = (function () {
     }
   }
 
+  /* ---------- light and dark ---------- */
+
+  /* The button is a switch, not a cycle. It reads what the page is actually
+     showing -- the choice if one was made, the system otherwise -- and sets
+     the other one. So one press always changes what you see. Before a first
+     press the page follows the system, as it always did. */
+  const THEME_KEY = 'river-card-score:theme:v1';
+
+  function themeSaved() {
+    try {
+      const t = localStorage.getItem(THEME_KEY);
+      return t === 'light' || t === 'dark' ? t : null;
+    } catch (e) { return null; }
+  }
+
+  // What the eye sees right now.
+  function themeShown() {
+    const set = root.getAttribute('data-theme');
+    if (set === 'light' || set === 'dark') return set;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark' : 'light';
+  }
+
+  function setTheme(t) {
+    if (t) root.setAttribute('data-theme', t);
+    else root.removeAttribute('data-theme');
+    try { t ? localStorage.setItem(THEME_KEY, t) : localStorage.removeItem(THEME_KEY); } catch (e) {}
+  }
+
+  // Puts the saved choice on the page. Call it as early as the script runs.
+  function startTheme() {
+    const t = themeSaved();
+    if (t) root.setAttribute('data-theme', t);
+    return t;
+  }
+
+  function wireTheme(sel) {
+    startTheme();
+    const btn = document.querySelector(sel);
+    if (!btn) return;
+    const label = () => {
+      const to = themeShown() === 'dark' ? 'light' : 'dark';
+      btn.title = `Switch to ${to}`;
+      btn.setAttribute('aria-label', btn.title);
+    };
+    btn.addEventListener('click', () => { setTheme(themeShown() === 'dark' ? 'light' : 'dark'); label(); });
+    // Until a choice is made the page follows the system, so the button has to
+    // keep up with it.
+    if (window.matchMedia) {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mq.addEventListener) mq.addEventListener('change', label);
+      else if (mq.addListener) mq.addListener(label);
+    }
+    label();
+  }
+
   // Hides itself on browsers without full screen, such as Safari on iPhone.
   function wireFullscreen(sel) {
     const btn = document.querySelector(sel);
@@ -375,8 +431,10 @@ const UI = (function () {
   }
   window.addEventListener('resize', measureTopbar);
   window.addEventListener('load', measureTopbar);
+  startTheme();                       // before the first paint, so there is no flash
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
   return { wireFullscreen, isFull, keepAwake, wireZoom, measureTopbar,
-           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl, fx, ask };
+           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl, fx, ask,
+           wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
 })();

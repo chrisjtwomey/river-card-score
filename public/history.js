@@ -6,13 +6,6 @@
 
 const $ = (s) => document.querySelector(s);
 
-const KEY_THEME = 'river-card-score:theme:v1';
-(function initTheme() {
-  let t = null;
-  try { t = localStorage.getItem(KEY_THEME); } catch (e) {}
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-})();
-
 let GAMES = [];
 
 const when = (ms) => {
@@ -138,13 +131,7 @@ function findOnTable() {
 
 document.addEventListener('DOMContentLoaded', () => {
   UI.wireFullscreen('#btn-full');
-  $('#btn-theme').addEventListener('click', () => {
-    const now = document.documentElement.getAttribute('data-theme');
-    const next = now === 'dark' ? 'light' : now === 'light' ? null : 'dark';
-    if (next) document.documentElement.setAttribute('data-theme', next);
-    else document.documentElement.removeAttribute('data-theme');
-    try { next ? localStorage.setItem(KEY_THEME, next) : localStorage.removeItem(KEY_THEME); } catch (e) {}
-  });
+  UI.wireTheme('#btn-theme');
 
   show(Games.all());
 
