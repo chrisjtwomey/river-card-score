@@ -98,6 +98,7 @@ const Deal = (function () {
     close();
     return new Promise((resolve) => {
       const overlay = overlayEl();
+      overlay.classList.remove('solid');
       const stage = overlay.querySelector('.deal-stage');
       const names = (opts && opts.names) || [];
       const n = names.length;
@@ -604,6 +605,9 @@ const Deal = (function () {
     close();
     return new Promise((resolve) => {
       const overlay = overlayEl();
+      // The page behind already names the winner, so this scene must not let
+      // anything through: the accolades come first.
+      overlay.classList.add('solid');
       const stage = overlay.querySelector('.deal-stage');
       const names = (opts && opts.names) || [];
       const totals = (opts && opts.totals) || [];
@@ -636,10 +640,10 @@ const Deal = (function () {
       // gap is how long each place is left alone on screen before the next one
       // comes up, so the table can take them in one at a time.
       const T = calm
-        ? { fade: 120, gap: 180, flip: 240, out: 220, acc: 8000, settle: 5000, hold: 2400 }
-        : { fade: 200, gap: 480, flip: 620, out: 320, acc: 8000, settle: 5000, hold: 4200 };
+        ? { fade: 120, gap: 180, flip: 240, out: 220, acc: 8000, settle: 4000, hold: 2400 }
+        : { fade: 200, gap: 480, flip: 620, out: 320, acc: 8000, settle: 4000, hold: 4200 };
       const anims = [], timers = [];
-      let ended = false, settled = false, raf = 0;
+      let ended = false, settled = false, raf = 0, bob = null;
 
       const head = document.createElement('div');            // the line across the top
       head.className = 'deal-head';
@@ -660,6 +664,13 @@ const Deal = (function () {
       card.querySelector('.front').innerHTML = '<div class="cup">🏆</div>';
       card.style.transform = 'rotateY(180deg)';
       box.appendChild(card);
+
+      const note = document.createElement('div');            // what the table is waiting for
+      note.className = 'fin-note';
+      note.textContent = awards.length
+        ? `${awards.length} accolade${awards.length === 1 ? '' : 's'} to come`
+        : 'Final scores';
+      box.appendChild(note);
 
       const title = document.createElement('div');
       title.className = 'fin-title';
@@ -715,6 +726,20 @@ const Deal = (function () {
 
       anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
 
+      /* The trophy lies face down from the first frame, so the top of the scene
+         is not a hole while the table reads the scores. Only the faces fade: an
+         opacity on the card would flatten it, and the back would paint as a
+         blank front. It breathes until the winner turns it over. */
+      fade(card, [{ opacity: 0 }, { opacity: 1 }],
+        { duration: calm ? 200 : 420, delay: T.fade + 120, easing: 'ease-out', fill: 'both' }, anims);
+      if (!calm && card.animate) {
+        bob = card.animate(
+          [{ transform: 'rotateY(180deg) translateY(-5px) rotate(-1.4deg)' },
+           { transform: 'rotateY(180deg) translateY(5px) rotate(1.4deg)' }],
+          { duration: 3600, delay: T.fade, direction: 'alternate', iterations: Infinity,
+            easing: 'ease-in-out' });
+      }
+
       /* ---- 1. the places, as they stood before the accolades ---- */
       const order0 = names.map((nm, i) => i).sort((a, b) => cur[b] - cur[a]);
       const start = T.fade + (calm ? 200 : 520);
@@ -728,10 +753,17 @@ const Deal = (function () {
       });
       const runAt = start + n * T.gap + T.settle;
 
+      // The note holds the space under the card, then clears it just before the
+      // first accolade rises into the same place.
+      const noteMs = Math.max(700, runAt - 500);
+      const noteIn = Math.min(.4, 420 / noteMs);
+      const noteOut = Math.max(noteIn, 1 - Math.min(.4, 300 / noteMs));
+      anims.push(note.animate(
+        [{ opacity: 0, offset: 0 }, { opacity: 1, offset: noteIn },
+         { opacity: 1, offset: noteOut }, { opacity: 0, offset: 1 }],
+        { duration: noteMs, delay: T.fade + 200, easing: 'ease-out', fill: 'both' }));
+
       /* ---- 2. the accolades, one at a time, paying as they land ---- */
-      if (awards.length) {
-        timers.push(setTimeout(() => { cap.textContent = 'Accolades'; }, runAt - 200));
-      }
       // Where each beat falls inside one accolade: it rises, the points chip
       // pops, the score runs up, then it leaves.
       const o = (ms) => Math.max(0, Math.min(1, ms / T.acc));
@@ -794,16 +826,23 @@ const Deal = (function () {
         }
       });
       const winAt = runAt + awards.length * T.acc + (calm ? 60 : 300);
-      if (awards.length) timers.push(setTimeout(() => { cap.textContent = 'Game over'; }, winAt - 200));
+
+      /* The card steps out of the way while the accolades use that space, and
+         comes back for the flip. These fades hold forwards only: a backwards
+         fill would reach back over the fade that first brought the card up. */
+      if (awards.length) {
+        fade(card, [{ opacity: 1 }, { opacity: 0 }],
+          { duration: 320, delay: Math.max(0, runAt - 620), easing: 'ease-out', fill: 'forwards' },
+          anims);
+        fade(card, [{ opacity: 0 }, { opacity: 1 }],
+          { duration: calm ? 200 : 380, delay: Math.max(0, winAt - 620), easing: 'ease-out',
+            fill: 'forwards' }, anims);
+      }
+      // The breathing stops before the card leaves, so the flip starts square.
+      timers.push(setTimeout(() => { if (bob) { bob.cancel(); bob = null; } },
+        Math.max(0, (awards.length ? runAt : winAt) - 700)));
 
       /* ---- 3. the winner, once every accolade is in ---- */
-      const rise = { duration: calm ? 200 : 380, delay: Math.max(0, winAt - 700),
-                     easing: 'cubic-bezier(.2,.9,.3,1.35)', fill: 'both' };
-      if (!calm) {
-        anims.push(card.animate(
-          [{ transform: 'rotateY(180deg) scale(.6)' }, { transform: 'rotateY(180deg) scale(1)' }], rise));
-      }
-      fade(card, [{ opacity: 0 }, { opacity: 1 }], rise, anims);
       anims.push(card.animate(
         calm ? [{ transform: 'rotateY(0deg) scale(1.16)' }]
              : [{ transform: 'rotateY(180deg) scale(1)', offset: 0 },
@@ -876,6 +915,7 @@ const Deal = (function () {
         if (live && live.finish === finish) live = null;
         timers.forEach(clearTimeout);
         if (raf) cancelAnimationFrame(raf);
+        if (bob) { bob.cancel(); bob = null; }
         overlay.removeEventListener('pointerdown', skip);
         window.removeEventListener('keydown', skip);
         const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
@@ -893,7 +933,7 @@ const Deal = (function () {
         timers.length = 0;
         names.forEach((nm, i) => { cur[i] = final[i]; rows[i].sc.textContent = String(final[i]); });
         relayout(false);
-        cap.textContent = 'Game over';
+        if (bob) { bob.cancel(); bob = null; }
         anims.forEach((a) => { try { a.finish(); } catch (e) {} });
         sub.textContent = points(best);
       }

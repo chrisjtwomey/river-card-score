@@ -368,6 +368,12 @@ body.host .toast .note{font-size:19px}
   backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
   perspective:1100px;cursor:pointer;
 }
+/* The finale hides the page, not just dims it: the winner panel behind it
+   would give the result away before the accolades are read. */
+.deal.solid{
+  background:radial-gradient(ellipse at 50% 45%, rgba(20,84,58,.965), rgba(6,10,7,1) 68%);
+  backdrop-filter:blur(16px) saturate(.4);-webkit-backdrop-filter:blur(16px) saturate(.4);
+}
 .deal-stage{position:absolute;inset:0}
 .deal-skip{
   position:absolute;left:0;right:0;bottom:18px;text-align:center;
@@ -479,6 +485,12 @@ body.host .toast .note{font-size:19px}
    and a card lying face down would show a blank front, not its back */
 .fin .dcard.fin-card .face{opacity:0}
 .fin-card .cup{font-size:46px;line-height:1}
+/* the line under the card, while the scores are not yet final */
+.fin-note{
+  font-size:clamp(12px,1.8vw,19px);font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(255,255,255,.6);min-height:1.2em;opacity:0;
+  text-shadow:0 2px 12px rgba(0,0,0,.85);
+}
 .fin-title{
   font-size:clamp(26px,6vw,64px);font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1.05;
   color:#fff;text-shadow:0 0 28px rgba(240,200,120,.6),0 3px 18px rgba(0,0,0,.9);opacity:0;
@@ -513,8 +525,8 @@ body.host .toast .note{font-size:19px}
   align-items:center;justify-content:center;gap:clamp(4px,1.2vh,12px);
   padding:0 18px;text-align:center;opacity:0;
 }
-/* A big screen carries a big "Accolades" heading, and the award centres
-   itself right under it. Hold it clear. */
+/* A big screen carries a big heading, and the award centres itself right
+   under it. Hold it clear. */
 @media (min-width:700px){
   .fin-award{padding-top:clamp(64px,11vh,132px)}
 }
