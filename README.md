@@ -143,6 +143,40 @@ Phones reconnect on their own. A player who closes the page and comes back is of
 - Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
 - How many accolades are drawn at the end, from none to five, and what each one pays: 20, 10, 5, or nothing. See [Accolades](#accolades).
 
+## Play with no internet
+
+The game never talks to the internet. The pages, the fonts and the QR code all
+come from the server, so a table works anywhere the phones can reach the
+machine that runs it — a plane included. The internet was never the
+requirement; a machine on the same network running the server is.
+
+One phone makes the network, a laptop runs the table:
+
+1. **Before the trip, with internet:** put the project on the laptop and run
+   `npm install` once.
+2. **On the plane:** turn on one phone's hotspot. It needs no signal — the
+   hotspot is only a local network.
+3. Join the laptop to that hotspot and run `npm start`.
+4. The console prints the address the hotspot gave the laptop. Open the host
+   screen there, or open the site on any phone and press **Start a table and
+   play** — the table host is a player, so no host screen is needed.
+5. Everyone else joins the hotspot and scans the QR code as normal.
+
+Worth knowing:
+
+- If the laptop holds more than one address, the picker on the host screen
+  chooses which one goes into the QR code. Pick the hotspot one.
+- Some hotspots keep their devices apart from each other ("client
+  isolation"). The phones only need to reach the laptop, and that path
+  generally stays open. If a phone cannot load the page, look for that
+  setting on the hotspot.
+- Over plain `http` a phone may dim and sleep between turns. `npm run cert`
+  and a restart give the server `https`, and then the pages hold the screen
+  awake.
+- No laptop? An Android phone can be the server: Node runs in Termux, so the
+  hotspot phone itself can run `node server.js`. An iPhone cannot run the
+  server.
+
 ## Run it with Docker
 
 ```sh
