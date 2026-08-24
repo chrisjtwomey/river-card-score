@@ -138,10 +138,8 @@ const Deal = (function () {
       };
 
       const T = calm
-        ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220,
-            riffle: 200, cut: 170 }
-        : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280,
-            riffle: 380, cut: 320 };
+        ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220, cut: 170 }
+        : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280, cut: 320 };
       const anims = [], timers = [];
       const labels = [], cardEls = [], landedAt = [];
       const hold = !!(opts && opts.hold);
@@ -150,9 +148,9 @@ const Deal = (function () {
       /* ---- the deck in the middle, face down ---- */
       // A virtual deck is a real stack: it is shuffled, cut, and dealt from, so
       // it needs enough cards in it to read as one.
-      const stackN = virtual ? 6 : 3;
+      const stackN = virtual ? 9 : 3;
       const deckEls = [];
-      const deckRest = (i) => tf(0, -i * 0.9, (i - (stackN - 1) / 2) * 3.4, 180, 1);
+      const deckRest = (i) => tf(0, -i * 0.9, (i - (stackN - 1) / 2) * (virtual ? 2.2 : 3.4), 180, 1);
       for (let i = 0; i < stackN; i++) {
         const d = cardEl(null, 'deck');
         const rest = deckRest(i);
@@ -165,31 +163,44 @@ const Deal = (function () {
         fade(d, [{ opacity: 0 }, { opacity: 1 }], pop, anims);
       }
 
-      /* ---- the shuffle: two riffles and a cut ---- */
+      /* ---- the shuffle: two bursts and a cut ---- */
       // Only a virtual deck is shuffled on screen. At a real table the dealer
       // does that with their own hands, and the flourish would only hold
       // everybody up.
       const deckReady = T.deckPop + (stackN - 1) * 40;
       let shuffleEnd = deckReady;
       if (virtual && !calm) {
-        const half = Math.ceil(stackN / 2);
-        const riffle = (at) => deckEls.forEach((d, i) => {
-          const side = i < half ? -1 : 1;             // the deck splits in two
-          const rest = deckRest(i);
-          const lift = -i * 0.9;
-          anims.push(d.animate(
-            [{ transform: rest, offset: 0 },
-             { transform: tf(side * 38, lift - 6, side * 9, 180, 1), offset: .34,
-               easing: 'cubic-bezier(.3,.8,.4,1)' },
-             { transform: tf(side * 12, lift - 10, side * 4, 180, 1), offset: .62 },
-             { transform: rest, offset: .86, easing: 'cubic-bezier(.2,.9,.3,1.5)' },
-             { transform: rest, offset: 1 }],
-            { duration: T.riffle, delay: at, easing: 'ease-in-out', fill: 'both' }));
-        });
-        riffle(deckReady + 60);
-        riffle(deckReady + 60 + T.riffle);
+        // The shuffle the way pakastin's deck-of-cards does it: every card is
+        // thrown its own random way sideways, a beat apart up the stack, then
+        // the pile snaps back together in a new order. Twice.
+        const throwMs = 200, backMs = 200, cascade = 4;
+        const roundMs = throwMs + backMs + (stackN - 1) * cascade;
+        let at = deckReady + 60;
+        for (let round = 0; round < 2; round++) {
+          const order = deckEls.map((x, i) => i);          // the new pile order
+          for (let i = order.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const t2 = order[i]; order[i] = order[j]; order[j] = t2;
+          }
+          deckEls.forEach((d, i) => {
+            const rest = deckRest(i), lift = -i * 0.9;
+            const side = Math.random() < 0.5 ? -1 : 1;
+            const dx = side * (24 + Math.random() * 52);
+            const thrown = tf(dx, lift + (Math.random() * 8 - 4), 0, 180, 1);
+            const wait = at + i * cascade;
+            anims.push(d.animate(
+              [{ transform: rest, easing: 'cubic-bezier(.65,0,.35,1)' },
+               { transform: thrown, offset: throwMs / (throwMs + backMs),
+                 easing: 'cubic-bezier(.65,0,.35,1)' },
+               { transform: rest }],
+              { duration: throwMs + backMs, delay: wait }));
+            // it takes its new place in the pile as it comes back
+            timers.push(setTimeout(() => { d.style.zIndex = String(order[i]); }, wait + throwMs));
+          });
+          at += roundMs;
+        }
 
-        const cutAt = deckReady + 60 + T.riffle * 2 + 40;
+        const cutAt = at + 40;
         deckEls.forEach((d, i) => {                   // the top half lifts over
           if (i < Math.floor(stackN / 2)) return;
           const rest = deckRest(i), lift = -i * 0.9;
@@ -199,7 +210,7 @@ const Deal = (function () {
                easing: 'cubic-bezier(.3,.8,.4,1)' },
              { transform: tf(0, lift + 3, 1, 180, 1), offset: .82 },
              { transform: rest, offset: 1 }],
-            { duration: T.cut, delay: cutAt, easing: 'ease-in-out', fill: 'both' }));
+            { duration: T.cut, delay: cutAt, easing: 'ease-in-out' }));
         });
         shuffleEnd = cutAt + T.cut;
       }
