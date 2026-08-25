@@ -17,6 +17,7 @@ echo "==> the node project"
 rm -rf "$project"
 mkdir -p "$project/node_modules"
 cp "$root/server.js" "$root/game.js" "$root/package.json" "$project/"
+cp -R "$root/lib" "$project/lib"
 cp -R "$root/public" "$project/public"
 # Only what the server requires. Both are pure JavaScript, so nothing here is
 # built for the phone's architecture.

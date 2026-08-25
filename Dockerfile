@@ -8,6 +8,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY game.js server.js make-cert.js ./
+COPY lib ./lib
 COPY public ./public
 
 ENV PORT=8787

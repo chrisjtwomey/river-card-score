@@ -15,6 +15,8 @@ const G = require('./game.js');
 const A = require('./public/accolades.js');
 const Games = require('./lib/games.js');
 const Http = require('./lib/http.js');
+const Deck = require('./lib/deck.js');
+const Dev = require('./lib/dev.js');
 
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = __dirname;
@@ -56,6 +58,13 @@ function pictureOf(code, seatId) {
   const seat = room && room.seats.find((x) => x.id === seatId);
   return (seat && seat.av) || null;
 }
+
+/* ---------------- what a socket is told ---------------- */
+
+// The two smallest verbs on a socket, and everything uses them: they are
+// declared before anything that could ask.
+function send(ws, obj) { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+function fail(ws, msg) { send(ws, { t: 'error', msg }); }
 
 /* ---------------- rooms ---------------- */
 
@@ -117,7 +126,7 @@ function createRoom() {
 }
 
 const seatIndex = (room, id) => room.seats.findIndex((s) => s.id === id);
-const curRound = (room) => room.rounds[room.idx] || null;
+function curRound(room) { return room.rounds[room.idx] || null; }
 
 function syncCfg(room) {
   const n = Math.max(2, room.seats.length);
@@ -191,79 +200,6 @@ function bumDeal(room) {
   return true;
 }
 
-/* ---------------- the virtual deck ---------------- */
-
-const TRICK_HOLD = Number(process.env.TRICK_HOLD) || 1500;   // how long a finished trick stays up
-const virtual = (room) => room.cfg.deck === 'virtual';
-
-// Shuffle, deal, and turn the next card for trump. With no card left over --
-// four players at thirteen cards -- the hand is played at no trumps.
-function dealHands(room) {
-  const r = curRound(room), n = room.seats.length;
-  if (!r) return;
-  const d = G.shuffle(G.deck());
-  const hands = [];
-  for (let p = 0; p < n; p++) hands.push(G.sortHand(d.splice(0, r.cards)));
-  const up = (room.cfg.trump && d.length) ? d.shift() : null;
-  r.trump = room.cfg.trump ? (up ? G.suitOf(up) : 'NT') : null;
-  room.play = { round: room.idx, hands, upcard: up, trick: [], turn: null,
-                won: Array(n).fill(0), last: null };
-}
-
-// The bids are in: the player left of the dealer leads the first trick.
-function startPlay(room) {
-  const r = curRound(room), n = room.seats.length;
-  if (!room.play || room.play.round !== room.idx) dealHands(room);
-  room.play.trick = [];
-  room.play.last = null;
-  room.play.turn = (r.dealer + 1) % n;
-}
-
-// What everybody may see: the cards on the table, how many are left in each
-// hand, and who won the last trick. Never a hand.
-function playPublic(room) {
-  const p = room.play;
-  if (!p) return null;
-  return { turn: p.turn, trick: p.trick, won: p.won, last: p.last,
-           upcard: p.upcard, counts: p.hands.map((h) => h.length) };
-}
-
-// One card. The server holds the rules, so a phone cannot renege.
-function playCard(ws, room, p, card) {
-  const play = room.play, r = curRound(room), n = room.seats.length;
-  if (play.turn !== p) return fail(ws, 'not your turn');
-  const hand = play.hands[p];
-  if (hand.indexOf(card) < 0) return fail(ws, 'you do not hold that card');
-  const led = play.trick.length ? G.suitOf(play.trick[0].card) : null;
-  if (G.legalPlays(hand, led).indexOf(card) < 0) {
-    const suit = G.SUITS.find((x) => x.k === led);
-    return fail(ws, `you must follow ${suit ? suit.name.toLowerCase() : 'the suit led'}`);
-  }
-
-  if (!play.trick.length) play.last = null;        // the last trick has had its moment
-  hand.splice(hand.indexOf(card), 1);
-  play.trick.push({ p, card });
-  if (play.trick.length < n) {
-    play.turn = (p + 1) % n;
-    return broadcast(room);
-  }
-
-  // the trick is full: name the winner and hold it up for the table
-  const winner = G.trickWinner(play.trick, r.trump);
-  play.won[winner] += 1;
-  play.last = { trick: play.trick.slice(), winner };
-  play.trick = [];
-  play.turn = null;
-  const tag = play, at = room.idx;
-  setTimeout(() => {
-    if (room.play !== tag || room.idx !== at) return;      // the game moved on
-    if (tag.hands.every((h) => !h.length)) scoreRound(room, tag.won.slice());
-    else tag.turn = winner;
-    broadcast(room);
-  }, TRICK_HOLD);
-  return broadcast(room);
-}
-
 // The last round is in. A few of the accolades the table earned are drawn at
 // random and paid, and only then is the winner known.
 function finishGame(room) {
@@ -299,231 +235,26 @@ function scoreRound(room, values) {
   }
 }
 
-/* ---------------- dev controls (DEV=1 only) ---------------- */
+// The dealer, when the table plays with no real cards. It holds the hands and
+// the rules of a trick; scoring a finished round is the table's own business,
+// so it hands that back.
+const { TRICK_HOLD, virtual, dealHands, startPlay, playPublic, playCard } = Deck({
+  G, curRound, broadcast, fail, scoreRound,
+});
 
-const DEV_NAMES = ['Amy', 'Hugh', 'Joe', 'Nia', 'Owen', 'Pia', 'Rhys', 'Sian'];
-const rand = (n) => Math.floor(Math.random() * n);
-
-function devSeats(room, count) {
-  room.stand = true;            // a table of stand-ins, never a real game
-  room.seats = [];
-  for (let i = 0; i < Math.max(2, Math.min(8, count)); i++) {
-    room.seats.push({ id: token().slice(0, 8), name: DEV_NAMES[i], token: token(), watch: token(), online: false });
-  }
-  room.captainId = room.seats[0].id;
-  room.firstDealerId = null;
-  room.phase = 'lobby';
-  room.rounds = [];
-  room.idx = 0;
-  room.vote = null;
-  unfinish(room);
-  syncCfg(room);
-}
-
-function devStart(room) {
-  const n = room.seats.length;
-  syncCfg(room);
-  const first = Math.max(0, seatIndex(room, room.firstDealerId));
-  room.rounds = G.buildRounds(room.cfg, n, first);
-  newGame(room);
-  room.idx = 0;
-  room.rounds[0].bids = Array(n).fill(null);
-  room.phase = 'bid';
-  room.vote = null;
-  room.play = null;
-  unfinish(room);
-  if (virtual(room)) dealHands(room);
-}
-
-// Bids that a real table could make, including the screw-the-dealer rule.
-function devFillBids(room) {
-  const r = curRound(room), n = room.seats.length;
-  if (!r) return;
-  if (!r.bids) r.bids = Array(n).fill(null);
-  let p = G.turnSeat(r, n);
-  while (p !== null) {
-    const forbidden = G.forbiddenBid(r, p, room.cfg, n);
-    const choices = [];
-    for (let v = 0; v <= r.cards; v++) if (v !== forbidden) choices.push(v);
-    r.bids[p] = choices[rand(choices.length)];
-    p = G.turnSeat(r, n);
-  }
-  room.phase = 'tricks';
-  if (virtual(room)) startPlay(room);
-}
-
-// Play the hand out at once, with no pause between the tricks. Only the dev
-// page does this: a real table watches each trick land.
-function devPlayOut(room) {
-  const r = curRound(room), n = room.seats.length, play = room.play;
-  if (!play) return;
-  if (play.turn === null) play.turn = (r.dealer + 1) % n;
-  let guard = 400;
-  while (guard-- > 0 && play.hands.some((h) => h.length)) {
-    const p = play.turn;
-    const led = play.trick.length ? G.suitOf(play.trick[0].card) : null;
-    const can = G.legalPlays(play.hands[p], led);
-    const card = can[rand(can.length)];
-    play.hands[p].splice(play.hands[p].indexOf(card), 1);
-    play.trick.push({ p, card });
-    if (play.trick.length < n) { play.turn = (p + 1) % n; continue; }
-    const w = G.trickWinner(play.trick, r.trump);
-    play.won[w] += 1;
-    play.last = { trick: play.trick.slice(), winner: w };
-    play.trick = [];
-    play.turn = w;
-  }
-  scoreRound(room, play.won.slice());
-}
-
-function devFillTricks(room) {
-  const r = curRound(room), n = room.seats.length;
-  if (!r || !r.bids || r.bids.some((b) => b === null)) return;
-  if (virtual(room)) return devPlayOut(room);        // the cards decide, and score
-  const out = Array(n).fill(0);
-  for (let i = 0; i < r.cards; i++) out[rand(n)] += 1;
-  r.tricks = out;
-}
-
-function devNextRound(room) {
-  if (!room.rounds.length) { devStart(room); return; }
-  if (room.phase === 'done') return;
-  const r = curRound(room);
-  if (r && room.cfg.trump && !r.trump && !virtual(room)) r.trump = G.SUITS[rand(G.SUITS.length)].k;
-  const at = room.idx;
-  devFillBids(room);
-  devFillTricks(room);
-  if (room.idx !== at) return;                       // a virtual hand scored itself
-  scoreRound(room, curRound(room).tricks);           // the same road a real round takes
-}
-
-function devEndGame(room) {
-  if (!room.rounds.length) devStart(room);
-  let guard = 60;
-  while (room.phase !== 'done' && guard-- > 0) devNextRound(room);
-}
-
-// Fill the scorecard. Plays whole rounds of bids and tricks that a real table
-// could make, and leaves the next round waiting for its bids. The rules, the
-// seats and the first dealer stay as they are. `count` rounds, or a random
-// number of them when `count` is not a number.
-function devFillCard(room, count) {
-  devStart(room);                       // an empty card, built from the rules in force
-  const total = room.rounds.length;
-  let want = Number(count);
-  if (!Number.isFinite(want)) want = 1 + rand(total);
-  want = Math.max(0, Math.min(Math.round(want), total));
-  for (let i = 0; i < want; i++) devNextRound(room);
-}
-
-function devBumVote(room) {
-  const r = curRound(room);
-  if (!r) return;
-  const by = room.seats.findIndex((seat, i) => i !== r.dealer && seat.id !== room.captainId);
-  if (by < 0) return;
-  room.vote = { kind: 'bumdeal', by, round: room.idx, yes: [by], no: [] };
-}
-
-// A table part way through, with the rules shuffled about.
-function devRandomise(room) {
-  const n = room.seats.length;
-  room.cfg.max = 2 + rand(Math.min(6, G.maxCardsFor(n) - 1));
-  room.cfg.pattern = ['downup', 'updown', 'down', 'up'][rand(4)];
-  room.cfg.ones = 1 + rand(n);
-  room.cfg.bonus = [10, 5, 1, 0][rand(4)];
-  room.cfg.miss = Object.keys(G.MISS_RULES)[rand(5)];
-  room.cfg.screw = rand(2) === 0;
-  room.onesLocked = true;
-  room.firstDealerId = room.seats[rand(n)].id;
-  room.captainId = room.seats[rand(n)].id;
-  devStart(room);
-  const played = rand(room.rounds.length);
-  for (let i = 0; i < played; i++) devNextRound(room);
-  if (room.phase === 'bid' && rand(2) === 0) {          // part way through the bids
-    const r = curRound(room);
-    const order = G.bidOrder(r.dealer, n);
-    const upto = rand(n);
-    for (let i = 0; i < upto; i++) r.bids[order[i]] = rand(r.cards + 1);
-  }
-  const r = curRound(room);
-  if (r && room.cfg.trump && rand(3) > 0) r.trump = G.SUITS[rand(G.SUITS.length)].k;
-}
-
-// Bids and tricks come in from the dev page, so keep the shape right: one
-// whole number a seat, inside the hand. The values themselves may still be as
-// odd as the page likes, which is the point of the page.
-function devNums(v, n, cards, allowNull) {
-  if (!Array.isArray(v)) return null;
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const x = v[i];
-    if (x === null || x === undefined) {
-      if (!allowNull) return null;
-      out.push(null);
-      continue;
-    }
-    const k = Math.round(Number(x));
-    if (!Number.isFinite(k)) return null;
-    out.push(Math.max(0, Math.min(k, cards)));
-  }
-  return out;
-}
-
-// Force values the protocol would not allow, for looking at a screen.
-function devPatch(room, p) {
-  const n = room.seats.length;
-  if (p.cfg && room.stand) Object.assign(room.cfg, p.cfg);
-  if (typeof p.idx === 'number' && room.rounds.length) {
-    room.idx = Math.max(0, Math.min(p.idx, room.rounds.length));
-    if (room.idx < room.rounds.length && !room.rounds[room.idx].bids) {
-      room.rounds[room.idx].bids = Array(n).fill(null);
-    }
-  }
-  if (p.phase && ['lobby', 'bid', 'tricks', 'done'].includes(p.phase)) {
-    room.phase = p.phase;
-    if (p.phase === 'done') finishGame(room);
-    else unfinish(room);
-  }
-  if (p.captainId && seatIndex(room, p.captainId) >= 0) room.captainId = p.captainId;
-  if ('firstDealerId' in p) {
-    room.firstDealerId = (p.firstDealerId && seatIndex(room, p.firstDealerId) >= 0) ? p.firstDealerId : null;
-  }
-  if (p.hands && room.play && room.stand && Array.isArray(p.hands)) {
-    room.play.hands = p.hands.map((h) => (Array.isArray(h) ? h.slice(0, 13) : []));
-  }
-  if (p.round && room.rounds[p.round.i]) {
-    const r = room.rounds[p.round.i];
-    if ('bids' in p.round) r.bids = devNums(p.round.bids, n, r.cards, true);
-    if ('tricks' in p.round) r.tricks = devNums(p.round.tricks, n, r.cards, false);
-    if ('trump' in p.round) r.trump = p.round.trump;
-    if ('redeals' in p.round) r.redeals = Number(p.round.redeals) || 0;
-  }
-  if (p.vote === null) room.vote = null;
-}
+// The dev controls. Nothing here is reachable unless a 'dev' message asks for
+// it, and the half that invents data answers only a table of stand-ins.
+const { handleDev, devHello } = Dev({
+  DEV, G, A, token, createRoom, attach, send, fail, broadcast, seatIndex, curRound,
+  syncCfg, newGame, unfinish, setAvatar, virtual, dealHands, startPlay, scoreRound,
+  finishGame,
+});
 
 /* ---------------- socket protocol ---------------- */
 
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-const send = (ws, obj) => { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); };
-const fail = (ws, msg) => send(ws, { t: 'error', msg });
 
-// What the dev page gets back after every action. The seat tokens go with it
-// only for a table of stand-ins, so the previews can open each phone. A real
-// table never hands its seats out.
-function devHello(ws, room) {
-  // A table of stand-ins hands over the seats themselves, so every phone in
-  // the previews can be played. A real table hands over watch tokens instead:
-  // they open the same screen, but they cannot act and nobody comes online.
-  send(ws, {
-    t: 'hello', role: 'host', code: room.code, token: room.hostToken,
-    dev: true, stand: !!room.stand,
-    seats: room.seats.map((x) => (room.stand
-      ? { id: x.id, name: x.name, token: x.token }
-      : { id: x.id, name: x.name, watch: x.watch })),
-  });
-  return broadcast(room);
-}
 
 function attach(ws, room, ctx) {
   if (ws.ctx && ws.ctx.room && ws.ctx.room !== room) ws.ctx.room.sockets.delete(ws);
@@ -560,52 +291,7 @@ function handle(ws, m) {
     return broadcast(room);
   }
 
-  /* The dev page, two ways in.
-     With DEV=1 it makes a table of stand-in players and may do anything to it,
-     including inventing bids and scores. From the host screen of a real table
-     it may only force that table's own state, to fix a game in play. */
-  if (m.t === 'dev') {
-    if (m.action === 'setup') {
-      if (!DEV) return fail(ws, 'a table of stand-ins needs the server started with DEV=1');
-      const made = createRoom();
-      attach(ws, made, { role: 'host' });
-      devSeats(made, Number(m.players) || 4);
-      return devHello(ws, made);
-    }
-    const room = ws.ctx && ws.ctx.room;
-    if (!room) return fail(ws, 'open a table first');
-    if (ws.ctx.role === 'watch') return fail(ws, 'this window is only watching');
-    const mine = ws.ctx.seatId ? seatIndex(room, ws.ctx.seatId) : -1;
-    const runs = ws.ctx.role === 'host' || (mine >= 0 && room.seats[mine].id === room.captainId);
-    if (!runs) return fail(ws, 'only the host can use the dev controls');
-    // Everything that invents data belongs to a table of stand-ins. A real
-    // table gets the state editor and nothing else.
-    if (m.action !== 'patch' && !(DEV && room.stand)) {
-      return fail(ws, 'that control only works on a table of stand-ins');
-    }
-    switch (m.action) {
-      case 'players': devSeats(room, Number(m.players) || 4); break;
-      case 'startGame': devStart(room); break;
-      case 'fillBids': devFillBids(room); break;
-      case 'fillTricks': devFillTricks(room); break;
-      case 'nextRound': devNextRound(room); break;
-      case 'endGame': devEndGame(room); break;
-      case 'lobby': room.phase = 'lobby'; room.rounds = []; room.idx = 0; room.vote = null; unfinish(room); break;
-      case 'bumVote': devBumVote(room); break;
-      case 'fillCard': devFillCard(room, m.rounds); break;
-      case 'randomise': devRandomise(room); break;
-      case 'avatar': {
-        const seat = room.seats[Number(m.seat)];
-        if (!seat) return fail(ws, 'no such seat');
-        const bad = setAvatar(seat, m.data);
-        if (bad) return fail(ws, bad);
-        break;
-      }
-      case 'patch': devPatch(room, m.patch || {}); break;
-      default: return fail(ws, 'unknown dev action');
-    }
-    return devHello(ws, room);
-  }
+  if (m.t === 'dev') return handleDev(ws, m);
 
   if (m.t === 'avatar') {
     const room = ws.ctx && ws.ctx.room;
