@@ -13,6 +13,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # The last step writes the APK to the release.
+    permissions:
+      contents: write
     # A step's own `if` cannot read secrets, so the answer to "is there a
     # keystore?" is carried here.
     env:

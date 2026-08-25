@@ -27,9 +27,12 @@ for dep in ws qrcode-generator; do
   fi
   cp -R "$root/node_modules/$dep" "$project/node_modules/$dep"
 done
-# The phone has no certificate and no writable folder beside the project, so
-# the service passes PORT, DATA_DIR and NO_TLS in the environment instead.
-find "$project" -name '*.map' -delete
+# Every file here is unpacked onto the phone at first run, so carry only what
+# the server loads: no tests, no sources of other builds, no documentation.
+find "$project/node_modules" -type d \( -name test -o -name tests -o -name examples \
+  -o -name experiment -o -name .github \) -prune -exec rm -rf {} +
+find "$project/node_modules" -type f \( -name '*.map' -o -name '*.ts' -o -name '*.mjs' \
+  -o -name '*.md' -o -name '.editorconfig' -o -name '*.yml' \) -delete
 echo "    $(du -sh "$project" | cut -f1)"
 
 echo "==> libnode.so $NODE_MOBILE_VERSION"
