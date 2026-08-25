@@ -41,6 +41,10 @@ public class NodeService extends Service {
   private static boolean nodeStarted = false;
   private PowerManager.WakeLock wakeLock;
 
+  /** True once the server is up in this process. The chooser asks before it
+      offers to start another one: node cannot be started twice here. */
+  public static boolean isRunning() { return nodeStarted; }
+
   static {
     System.loadLibrary("node");
     System.loadLibrary("native-lib");

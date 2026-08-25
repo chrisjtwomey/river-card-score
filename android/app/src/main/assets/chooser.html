@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Up the River, Down the River</title>
+<!-- The game's own stylesheet, put here by tools/prepare.sh with the rest of
+     the server. The chooser then looks like the pages it opens. -->
+<link rel="stylesheet" href="nodejs-project/public/styles.css">
+<style>
+  /* The app has no theme button, so the phone's own setting decides. */
+  main{padding-top:14px}
+  .lead{font-size:15px;line-height:1.5}
+  .say{min-height:20px;font-size:13px;color:var(--ink-dim);text-align:center}
+  .say.bad{color:var(--red)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="pip">&spades;</span>
+    <div>
+      <h1>Up the River, Down the River</h1>
+      <p class="sub">Table server</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="panel" id="open" hidden>
+    <h2>A table is open</h2>
+    <p class="hint">The server is running on this phone. It keeps running while the app is closed.</p>
+    <div class="row-actions even">
+      <button class="btn primary" data-do="resume" type="button">Back to the table</button>
+      <button class="btn ghost danger" data-do="stop" type="button">Stop the table</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Host</h2>
+    <p class="lead">This phone runs the table and plays on it. Everyone else joins with a browser, so nobody else needs the app.</p>
+    <button class="btn primary big" data-do="host" type="button">Host a table and play</button>
+    <p class="say" id="say"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Join</h2>
+    <p class="lead">Somebody else is hosting. Point a camera at their QR code and the table opens in the browser &mdash; or type their address here to open it in the app.</p>
+    <label class="field">
+      <span>The host's address</span>
+      <input id="addr" type="text" inputmode="url" autocapitalize="off" autocomplete="off"
+             spellcheck="false" placeholder="192.168.1.5:8787">
+    </label>
+    <button class="btn big" data-do="join" type="button">Join a table</button>
+  </section>
+</main>
+
+<script>
+  // The app is told what to do through a link it recognises. Nothing else on
+  // this page talks to Android.
+  const tell = (what, arg) => { location.href = 'rivertable://' + what + (arg ? '?addr=' + encodeURIComponent(arg) : ''); };
+  const say = (text, bad) => {
+    const el = document.getElementById('say');
+    el.textContent = text || '';
+    el.classList.toggle('bad', !!bad);
+  };
+  window.appSay = say;                       // the app calls this while starting
+
+  const addr = document.getElementById('addr');
+  try { addr.value = localStorage.getItem('lastHost') || ''; } catch (e) {}
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-do]');
+    if (!btn) return;
+    const what = btn.dataset.do;
+    if (what === 'join') {
+      const typed = addr.value.trim();
+      if (!typed) { addr.focus(); return; }
+      try { localStorage.setItem('lastHost', typed); } catch (e) {}
+      tell('join', typed);
+      return;
+    }
+    if (what === 'host') { say('Starting the table…'); btn.disabled = true; }
+    tell(what);
+  });
+
+  // A table already running is the first thing to offer.
+  if (new URLSearchParams(location.search).get('table') === '1') {
+    document.getElementById('open').hidden = false;
+  }
+</script>
+</body>
+</html>
