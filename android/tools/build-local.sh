@@ -9,6 +9,9 @@
 #   android/tools/build-local.sh              # debug APK
 #   android/tools/build-local.sh assembleRelease
 #
+# The APK carries a version in its name. Without one it says 'dev':
+#   APP_VERSION=v0.2.0 android/tools/build-local.sh
+#
 # The APK lands in android/app/build/outputs/apk/.
 set -euo pipefail
 

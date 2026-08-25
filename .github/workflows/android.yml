@@ -52,9 +52,11 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
+      # The tag is the version. A run started by hand has no tag, so the build
+      # calls itself 'dev'.
       - name: Build the debug APK
         working-directory: android
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon -PappVersion="${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}" assembleDebug
 
       # A release build needs a keystore in the repository secrets. Without one
       # the debug APK is the one to install: it is a normal APK, only signed
@@ -63,19 +65,21 @@ jobs:
         if: env.HAS_KEYSTORE == 'true'
         working-directory: android
         env:
+          APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
-          ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/keystore.jks" gradle --no-daemon assembleRelease
+          ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/keystore.jks" \
+            gradle --no-daemon -PappVersion="$APP_VERSION" assembleRelease
           rm -f "$RUNNER_TEMP/keystore.jks"
 
       # Always keep the APK on the run itself, so a manual build is downloadable.
       - uses: actions/upload-artifact@v4
         with:
-          name: table-server-apk
+          name: up-down-the-river-apk
           path: android/app/build/outputs/apk/*/*.apk
           if-no-files-found: error
 

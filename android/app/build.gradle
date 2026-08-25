@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+/* The version comes from the tag that built it. 'v1.2.3' and '1.2.3' are the
+   same version, and a release candidate keeps its own name: v1.2.3-rc.1.
+
+   versionCode is one number that must never go down, so the three parts of the
+   version make it: 1.2.3 -> 10203. A build with no version given is 'dev' and
+   code 1, which is fine for a debug APK and never released. */
+def rawVersion = (project.findProperty('appVersion') ?: System.getenv('APP_VERSION') ?: 'dev').toString().trim()
+def appVersion = rawVersion.replaceFirst(/^v/, '') ?: 'dev'
+def appVersionCode = 1
+def numbers = (appVersion =~ /^(\d+)\.(\d+)\.(\d+)/)
+if (numbers.find()) {
+  appVersionCode = numbers.group(1).toInteger() * 10000 +
+                   numbers.group(2).toInteger() * 100 +
+                   numbers.group(3).toInteger()
+}
+
 android {
   namespace 'com.chrisjtwomey.rivertable'
   compileSdk 35
@@ -10,8 +26,11 @@ android {
     applicationId 'com.chrisjtwomey.rivertable'
     minSdk 24
     targetSdk 35
-    versionCode 1
-    versionName '1.0'
+    // The tag is the version: the workflow passes -PappVersion=v1.2.3, and a
+    // build without one is 'dev'. versionCode must never go down, or Android
+    // refuses the update, so it is worked out from the numbers in the tag.
+    versionCode appVersionCode
+    versionName appVersion
     // Only the ABIs the shared library ships, and only what a modern phone
     // uses. Each libnode.so is about 60 MB, so every extra ABI is 60 MB of APK.
     ndk { abiFilters 'arm64-v8a' }
@@ -62,9 +81,12 @@ android {
 
 // The APK says what it is: table-server-debug.apk, not app-debug.apk. The
 // debug one is the APK to install unless a keystore is set.
+// The APK says what it is and which version it is: up-down-the-river-1.2.3.apk.
+// A debug build says so too, because it cannot install over a release one.
 android.applicationVariants.all { variant ->
   variant.outputs.all { output ->
-    output.outputFileName = "table-server-${variant.name}.apk"
+    def tail = variant.name == 'release' ? '' : "-${variant.name}"
+    output.outputFileName = "up-down-the-river-${appVersion}${tail}.apk"
   }
 }
 

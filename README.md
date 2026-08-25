@@ -209,7 +209,10 @@ laptop.
 `server.js` unchanged, with the pages served from the app's own files.
 
 **Get the APK.** Every tag and every release builds one and attaches it: take
-`table-server-debug.apk` from the [latest release](https://github.com/chrisjtwomey/river-card-score/releases).
+`up-down-the-river-<version>.apk` from the
+[latest release](https://github.com/chrisjtwomey/river-card-score/releases).
+That one is signed with the project's own key, so the next release installs
+over it. The `-debug.apk` beside it is for working on the app.
 Android asks whether to allow the install, because it did not come from a store.
 Say yes, open the app, and allow the local network when it asks.
 
@@ -239,11 +242,12 @@ then assembles the node project and builds. The first run downloads about 2 GB
 and takes a few minutes; after that a build is under a minute, which beats
 waiting on a runner.
 
-The APK lands in `android/app/build/outputs/apk/debug/table-server-debug.apk`.
-Install it over USB:
+The APK lands in `android/app/build/outputs/apk/debug/` as
+`up-down-the-river-dev-debug.apk`, or with the version you name:
+`APP_VERSION=v0.2.0 android/tools/build-local.sh`. Install it over USB:
 
 ```sh
-adb install -r android/app/build/outputs/apk/debug/table-server-debug.apk
+adb install -r android/app/build/outputs/apk/debug/up-down-the-river-*-debug.apk
 adb logcat -s RiverTable-node RiverTable        # the server's own output
 ```
 
