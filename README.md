@@ -210,7 +210,7 @@ laptop.
 
 **Get the APK.** Every tag and every release builds one and attaches it: take
 `up-down-the-river-<version>.apk` from the
-[latest release](https://github.com/chrisjtwomey/river-card-score/releases).
+[latest release](https://github.com/chrisjtwomey/up-and-down-the-river/releases).
 That one is signed with the project's own key, so the next release installs
 over it. The `-debug.apk` beside it is for working on the app.
 Android asks whether to allow the install, because it did not come from a store.
