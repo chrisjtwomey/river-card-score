@@ -75,7 +75,7 @@ jobs:
       # Always keep the APK on the run itself, so a manual build is downloadable.
       - uses: actions/upload-artifact@v4
         with:
-          name: river-table-apk
+          name: table-server-apk
           path: android/app/build/outputs/apk/*/*.apk
           if-no-files-found: error
 

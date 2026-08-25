@@ -57,6 +57,14 @@ android {
   }
 }
 
+// The APK says what it is: table-server-debug.apk, not app-debug.apk. The
+// debug one is the APK to install unless a keystore is set.
+android.applicationVariants.all { variant ->
+  variant.outputs.all { output ->
+    output.outputFileName = "table-server-${variant.name}.apk"
+  }
+}
+
 // No dependencies at all. The app is two screens and a service, so the
 // framework classes are enough, and nothing can drag in a second copy of the
 // Kotlin standard library.

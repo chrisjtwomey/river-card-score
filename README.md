@@ -202,7 +202,7 @@ laptop.
 `server.js` unchanged, with the pages served from the app's own files.
 
 **Get the APK.** Every tag and every release builds one and attaches it: take
-`app-debug.apk` from the [latest release](https://github.com/chrisjtwomey/river-card-score/releases).
+`table-server-debug.apk` from the [latest release](https://github.com/chrisjtwomey/river-card-score/releases).
 Android asks whether to allow the install, because it did not come from a store.
 Say yes, open the app, and allow the local network when it asks.
 
