@@ -1,8 +1,11 @@
 package com.chrisjtwomey.rivertable;
 
 import android.annotation.SuppressLint;
+import android.graphics.Insets;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -32,9 +35,24 @@ public class TableActivity extends Activity {
     web.setWebViewClient(new WebViewClient());
     web.setWebChromeClient(new WebChromeClient());
     setContentView(web);
+    padBelowTheStatusBar(web);
 
     String url = getIntent().getStringExtra(EXTRA_URL);
     web.loadUrl(url == null ? "http://127.0.0.1:" + NodeService.PORT + "/" : url);
+  }
+
+  /**
+   * From Android 15 a window is drawn edge to edge, under the status bar and
+   * the gesture bar. A page that begins with a heading then sits under the
+   * clock. The insets are handed to the view as padding instead.
+   */
+  static void padBelowTheStatusBar(View view) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return;
+    view.setOnApplyWindowInsetsListener((v, insets) -> {
+      Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+      v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+      return insets;
+    });
   }
 
   @Override

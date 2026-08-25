@@ -244,6 +244,11 @@ Worth knowing:
 - iPhones cannot host. Node.js for Mobile builds for iOS, but publishing to a
   phone needs a Mac and a paid developer account. An iPhone joins as a player
   like any other browser.
+- `libnode.so` is built for 4 KB memory pages. Android warns about that on a
+  debuggable build, and a phone running 16 KB pages could not load it at all.
+  No phone ships that way by default today, and the app targets an API where it
+  is not required. It becomes a real limit at target API 36, and the answer is
+  a rebuilt Node.js for Mobile.
 
 ## Run it with Docker
 

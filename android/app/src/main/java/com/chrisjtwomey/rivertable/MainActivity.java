@@ -62,6 +62,7 @@ public class MainActivity extends Activity {
     root.addView(status);
 
     setContentView(root);
+    TableActivity.padBelowTheStatusBar(root);
     askForPermissions();
   }
 
