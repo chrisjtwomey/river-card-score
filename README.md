@@ -216,10 +216,14 @@ over it. The `-debug.apk` beside it is for working on the app.
 Android asks whether to allow the install, because it did not come from a store.
 Say yes, open the app, and allow the local network when it asks.
 
-**In the app.** *Host a table and play* starts the server and opens the landing
-page, where **Start a table and play** takes seat 1 as usual. The others scan
-the QR code with a camera, or type the address. *Join a table* is the same thing
-in the app instead of a browser, for anyone who prefers it.
+**In the app.** *Host on this phone* starts the server and opens the landing
+page, where **Start a table and play** takes seat 1 as usual. That page leads
+with Start when it is read on the phone that runs the server, and with Join
+everywhere else -- the host wants a table, a player wants a seat. Join is still
+there for the host: a table made from a host screen on a TV needs a seat taken
+in it. The others scan the QR code with a camera, or type the address. The
+app's own *Join a table* opens somebody else's address in the app instead of a
+browser, for anyone who prefers it.
 
 While a table is open the app shows a notification, so Android leaves the server
 running with the screen off. **Stop** on that notification closes the table.

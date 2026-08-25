@@ -6,6 +6,15 @@ const $ = (s) => document.querySelector(s);
 document.addEventListener('DOMContentLoaded', () => {
   UI.wireFullscreen('#btn-full');
   UI.wireTheme('#btn-theme');
+  /* The phone that runs the server reads this page from 127.0.0.1. That phone
+     already chose to host, so it wants a table of its own first. Every other
+     browser came to join one that exists. Same page, two orders. */
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname)) {
+    const mine = $('#new-panel');
+    mine.parentNode.insertBefore(mine, $('#join-panel'));
+    $('.brand .sub').textContent = 'Your table';
+  }
+
   const code = new URLSearchParams(location.search).get('code');
   if (code) $('#in-code').value = code.toUpperCase().slice(0, 4);
 
