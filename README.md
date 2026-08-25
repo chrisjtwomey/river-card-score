@@ -201,9 +201,10 @@ laptop.
 [Node.js for Mobile](https://github.com/nodejs-mobile/nodejs-mobile) and runs
 `server.js` unchanged, with the pages served from the app's own files.
 
-**Get the APK.** Every tag and release builds one: see the *Android APK*
-workflow, or the release's own files. Download the `arm64-v8a` APK, allow the
-install, and open it.
+**Get the APK.** Every tag and every release builds one and attaches it: take
+`app-debug.apk` from the [latest release](https://github.com/chrisjtwomey/river-card-score/releases).
+Android asks whether to allow the install, because it did not come from a store.
+Say yes, open the app, and allow the local network when it asks.
 
 **In the app.** *Host a table and play* starts the server and opens the landing
 page, where **Start a table and play** takes seat 1 as usual. The others scan
