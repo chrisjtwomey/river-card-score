@@ -176,13 +176,73 @@ Worth knowing:
 - No laptop? An Android phone can be the server: Node runs in Termux, so the
   hotspot phone itself can run `node server.js`. An iPhone cannot run the
   server.
-- On Android the server cannot see its own addresses (the OS hides them from
-  apps), so the console lists none and the QR code has nothing to carry. Find
-  the address on any phone that has joined the hotspot: in that Wi-Fi network's
-  details, the "router" or "gateway" address is the Android phone. Players join
-  at `http://<that address>:8787/`, and starting the server with
-  `PUBLIC_URL=http://<that address>:8787 node server.js` puts it in the QR
-  code. If phones still cannot connect, add `HOST=0.0.0.0`.
+- On Android the server cannot read the interface list (the OS hides it from
+  apps), so it asks the routing table instead: a UDP socket is connected to an
+  address that is never routed, and the local address the kernel picks is the
+  phone's own. That address goes in the banner and in the QR code, the same as
+  on a laptop. If it still shows none, `PUBLIC_URL=http://<address>:8787` names
+  it by hand, and `HOST=0.0.0.0` pins the listening address.
+- **Termux from Google Play cannot serve the other phones.** That build targets
+  Android 17 and declares no local network permission, so Android blocks it in
+  both directions: it reaches the internet, and nothing on the Wi-Fi. The
+  handshake even completes and then no byte passes, which reads like a broken
+  server. Install Termux from [F-Droid](https://f-droid.org/en/packages/com.termux/)
+  or [GitHub](https://github.com/termux/termux-app/releases) instead; those
+  builds target an older API and keep local network access. Or use the Android
+  app below, which asks for the permission properly.
+
+## Run it as an Android app
+
+The phone can be the whole table: the app carries the server inside it, so one
+phone hosts and plays, and everybody else joins with a browser. No Termux, no
+laptop.
+
+`android/` is an Android Studio project. It embeds
+[Node.js for Mobile](https://github.com/nodejs-mobile/nodejs-mobile) and runs
+`server.js` unchanged, with the pages served from the app's own files.
+
+**Get the APK.** Every tag and release builds one: see the *Android APK*
+workflow, or the release's own files. Download the `arm64-v8a` APK, allow the
+install, and open it.
+
+**In the app.** *Host a table and play* starts the server and opens the landing
+page, where **Start a table and play** takes seat 1 as usual. The others scan
+the QR code with a camera, or type the address. *Join a table* is the same thing
+in the app instead of a browser, for anyone who prefers it.
+
+While a table is open the app shows a notification, so Android leaves the server
+running with the screen off. **Stop** on that notification closes the table.
+
+**Android asks for the local network permission on first run. Say yes.** Without
+it Android 16 and later cut the app off from the Wi-Fi, and no other phone can
+reach the table.
+
+### Build it yourself
+
+```sh
+npm install                  # the server's two dependencies
+android/tools/prepare.sh     # copies the server in, fetches libnode.so (60 MB)
+cd android && gradle assembleDebug
+```
+
+The APK lands in `android/app/build/outputs/apk/debug/`. `prepare.sh` must run
+again after any change to `server.js`, `game.js` or `public/`: the app carries a
+copy, and the copy is not in git.
+
+The debug APK is a normal APK, only signed with a throwaway key. For a signed
+release, put `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` in the repository secrets, and
+the workflow signs the release build too.
+
+Worth knowing:
+
+- Only `arm64-v8a` is built, which is every phone from about 2017. The APK is
+  about 70 MB, nearly all of it the Node runtime.
+- The runtime is Node 18. The server needs nothing newer, and `npm test` runs on
+  Node 18 in CI to keep it that way.
+- iPhones cannot host. Node.js for Mobile builds for iOS, but publishing to a
+  phone needs a Mac and a paid developer account. An iPhone joins as a player
+  like any other browser.
 
 ## Run it with Docker
 
@@ -372,6 +432,9 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
 - `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, and live previews of every screen.
 - `Dockerfile`, `compose.yaml` — container build and run.
+- `android/` — the Android app: a WebView on the table, and `server.js` running
+  inside it on Node.js for Mobile. `android/tools/prepare.sh` assembles it.
+- `.github/workflows/android.yml` — builds the APK on a tag or a release.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player phone: your bid pad, the trick pad when you deal, standings, and the scorecard.
