@@ -27,10 +27,13 @@ android {
   signingConfigs {
     release {
       // Filled from the environment in CI. Without them the release build is
-      // unsigned and the debug build is the one to install.
+      // unsigned and the debug build is the one to install. One key across
+      // every build is what lets a new APK install over the last one: Android
+      // refuses an update that another key signed.
       def store = System.getenv('ANDROID_KEYSTORE_FILE')
       if (store) {
         storeFile file(store)
+        storeType 'PKCS12'
         storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
         keyAlias System.getenv('ANDROID_KEY_ALIAS')
         keyPassword System.getenv('ANDROID_KEY_PASSWORD')

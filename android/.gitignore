@@ -8,3 +8,4 @@ app/src/main/assets/nodejs-project/
 build/
 app/build/
 local.properties
+release.keystore

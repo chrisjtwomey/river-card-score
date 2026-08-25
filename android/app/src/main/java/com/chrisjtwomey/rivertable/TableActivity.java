@@ -53,6 +53,9 @@ public class TableActivity extends Activity {
       v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
       return insets;
     });
+    // The window has already handed its insets out by now, so ask for them
+    // again. Without this the listener is set and never called.
+    view.requestApplyInsets();
   }
 
   @Override
