@@ -1,0 +1,89 @@
+name: Android APK
+
+# The laptop needs no Android SDK: the runner has one. A new tag or a new
+# release builds the APK and attaches it to the release. Run it by hand from
+# the Actions tab to get a test build off any branch.
+on:
+  push:
+    tags: ['v*']
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # The last step writes the APK to the release.
+    permissions:
+      contents: write
+    # A step's own `if` cannot read secrets, so the answer to "is there a
+    # keystore?" is carried here.
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 18   # what Node.js for Mobile runs on the phone
+          cache: npm
+
+      - name: Install the server's dependencies
+        run: npm ci
+
+      - name: Check the server still passes its own tests
+        run: npm test
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache the Node.js for Mobile library
+        uses: actions/cache@v4
+        with:
+          path: android/.cache
+          key: nodejs-mobile-18.20.4
+
+      - name: Assemble the node project and libnode.so
+        run: android/tools/prepare.sh
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build the debug APK
+        working-directory: android
+        run: gradle --no-daemon assembleDebug
+
+      # A release build needs a keystore in the repository secrets. Without one
+      # the debug APK is the one to install: it is a normal APK, only signed
+      # with a throwaway key.
+      - name: Build the signed release APK
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
+          ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/keystore.jks" gradle --no-daemon assembleRelease
+          rm -f "$RUNNER_TEMP/keystore.jks"
+
+      # Always keep the APK on the run itself, so a manual build is downloadable.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: river-table-apk
+          path: android/app/build/outputs/apk/*/*.apk
+          if-no-files-found: error
+
+      - name: Attach the APKs to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/*/*.apk
+          fail_on_unmatched_files: false
+          # v1.2.3-rc.1 and the like are marked as what they are.
+          prerelease: ${{ contains(github.ref_name, '-') }}

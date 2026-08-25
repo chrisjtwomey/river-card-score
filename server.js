@@ -7,6 +7,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const dgram = require('dgram');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const qrcode = require('qrcode-generator');
@@ -45,6 +46,37 @@ const MIME = {
 // detected addresses, it does not add to them: behind a proxy or in a
 // container the detected ones are private and no phone can reach them.
 let hiddenNets = false;                    // the OS would not say what they are
+let probed = '';                           // the address the routing table gave
+
+// Android hides the interface list from every app, so os.networkInterfaces()
+// is empty or throws there. The kernel still answers one question: "which of
+// my addresses would you use to reach that host?" A UDP socket is connected
+// -- which sends nothing -- and its local address is the answer. It costs
+// nothing, needs no permission, and is right on any machine.
+function probeLanAddress() {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (addr) => { if (!done) { done = true; try { sock.close(); } catch (e) {} resolve(addr); } };
+    let sock;
+    try { sock = dgram.createSocket('udp4'); } catch (e) { resolve(''); return; }
+    sock.on('error', () => finish(''));
+    setTimeout(() => finish(''), 1000).unref();
+    try {
+      sock.connect(9, '203.0.113.1', () => {           // TEST-NET-3, never routed
+        let a = '';
+        try { a = sock.address().address; } catch (e) {}
+        finish(a && a !== '0.0.0.0' ? a : '');
+      });
+    } catch (e) { finish(''); }
+  });
+}
+
+// Keep it fresh: the address changes when the phone joins another network.
+async function refreshLanAddress() {
+  const a = await probeLanAddress();
+  if (a) probed = a;
+}
+
 function lanUrls() {
   const named = (process.env.PUBLIC_URL || '').split(',')
     .map((u) => u.trim().replace(/\/$/, '')).filter(Boolean);
@@ -59,6 +91,7 @@ function lanUrls() {
   Object.values(nets).forEach((list) => (list || []).forEach((ni) => {
     if (ni.family === 'IPv4' && !ni.internal) out.push(`${SCHEME}://${ni.address}:${PORT}`);
   }));
+  if (probed) out.push(`${SCHEME}://${probed}:${PORT}`);
   return Array.from(new Set(out));
 }
 
@@ -1108,7 +1141,9 @@ setInterval(() => {                       // drop idle rooms after 6 hours
 // HOST pins the listening address. Unset, Node takes every address, IPv6 and
 // IPv4 both; HOST=0.0.0.0 is the IPv4-only fallback for a device that will
 // not do the dual-stack bind.
-server.listen({ port: PORT, host: process.env.HOST || undefined }, () => {
+server.listen({ port: PORT, host: process.env.HOST || undefined }, async () => {
+  await refreshLanAddress();               // the banner should carry it too
+  setInterval(refreshLanAddress, 60000).unref();
   console.log(`Up the River, Down the River — table server (${SCHEME})`);
   console.log(`  host screen:  ${SCHEME}://localhost:${PORT}/host.html`);
   console.log(`  players join: ${SCHEME}://localhost:${PORT}/`);

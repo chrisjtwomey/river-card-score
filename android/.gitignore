@@ -1,0 +1,10 @@
+# Both are put here by tools/prepare.sh: the shared library is 60 MB, and the
+# node project is a copy of files that live at the repository root.
+app/libnode/bin/
+app/libnode/include/
+app/src/main/assets/nodejs-project/
+.cache/
+.gradle/
+build/
+app/build/
+local.properties
