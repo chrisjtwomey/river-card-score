@@ -37,7 +37,12 @@
     <activity android:name=".TableActivity" android:exported="false"
         android:configChanges="orientation|screenSize|keyboardHidden" />
 
+    <!-- The node runtime cannot be stopped and started again inside one
+         process, so stopping the table means ending the process it runs in.
+         It gets a process of its own: the table stops, the app stays up, and
+         the next table starts a fresh runtime. -->
     <service android:name=".NodeService" android:exported="false"
+        android:process=":node"
         android:foregroundServiceType="specialUse">
       <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
           android:value="Runs the card table server the other players connect to" />

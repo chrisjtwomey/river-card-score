@@ -66,6 +66,9 @@
     el.classList.toggle('bad', !!bad);
   };
   window.appSay = say;                       // the app calls this while starting
+  // The app knocks on the server's door and says what it found. The server is
+  // in another process, so this is the only honest answer.
+  window.appTableOpen = (open) => { document.getElementById('open').hidden = !open; };
 
   const addr = document.getElementById('addr');
   try { addr.value = localStorage.getItem('lastHost') || ''; } catch (e) {}
@@ -85,10 +88,6 @@
     tell(what);
   });
 
-  // A table already running is the first thing to offer.
-  if (new URLSearchParams(location.search).get('table') === '1') {
-    document.getElementById('open').hidden = false;
-  }
 </script>
 </body>
 </html>

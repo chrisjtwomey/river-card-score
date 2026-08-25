@@ -245,6 +245,26 @@ assembleDebug` do the same thing in two steps. `prepare.sh` must run again
 after any change to `server.js`, `game.js` or `public/`: the app carries a copy,
 and the copy is not in git.
 
+### Working on it, without building an APK each time
+
+Three loops, from slowest to fastest. Reach for the last one that fits.
+
+1. **Native code changed** -- Java, the manifest, `chooser.html`:
+   `android/tools/build-local.sh && adb install -r <the apk>`. Under a minute.
+2. **The server or the pages changed:** `android/tools/push-dev.sh`. It writes
+   the node project straight into the app and takes about two seconds. A change
+   under `public/` needs nothing else -- a debug build runs node with `DEV=1`,
+   so it watches its own files and **every open screen reloads itself**. A
+   change to `server.js`, `game.js` or a dependency restarts the runtime and
+   brings the table back up, which the script notices and does for you.
+3. **Pages only, and no phone in the loop at all:** `npm run dev` on the laptop,
+   then *Join a table* in the app with the laptop's address. Same live reload,
+   no push. This exercises the laptop's server rather than the phone's, so it
+   suits screen work and not much else.
+
+`push-dev.sh` works on a debug build only: it writes into the app's own folder
+with `run-as`, which Android allows for a debuggable app and nobody else.
+
 A debug APK is signed with a key made on the machine that built it, and Android
 refuses an update signed by a different key. So a CI build cannot install over a
 local one, or over an older CI build: uninstall first, or set the release

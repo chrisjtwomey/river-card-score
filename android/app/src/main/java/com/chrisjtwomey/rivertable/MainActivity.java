@@ -49,17 +49,52 @@ public class MainActivity extends Activity {
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         return handle(request.getUrl());
       }
+
+      @Override
+      public void onPageFinished(WebView view, String url) {
+        // Only now does the page have the function to answer to.
+        askTheTable();
+      }
     });
     setContentView(web);
     TableActivity.padBelowTheStatusBar(web);
 
     showChooser();
     askForPermissions();
+    // adb shell am start -n .../.MainActivity --ez host true
+    // Hosts without a tap, which is what tools/push-dev.sh restarts with.
+    if (getIntent().getBooleanExtra("host", false)) host();
   }
 
-  /** Reloads the page, telling it whether a table of ours is already running. */
   private void showChooser() {
-    web.loadUrl(PAGE + (NodeService.isRunning() ? "?table=1" : ""));
+    web.loadUrl(PAGE);        // the load tells the page what it found, when it lands
+  }
+
+  /**
+   * Is a table of ours already up? The server runs in its own process, so this
+   * one cannot simply look at a field: it knocks on the door instead. The
+   * answer tells the page whether to offer going back to the table.
+   */
+  private void askTheTable() {
+    new Thread(() -> {
+      boolean up = answers();
+      new Handler(Looper.getMainLooper()).post(() -> {
+        if (web != null) web.evaluateJavascript("window.appTableOpen && appTableOpen(" + up + ")", null);
+      });
+    }).start();
+  }
+
+  private static boolean answers() {
+    try {
+      HttpURLConnection c = (HttpURLConnection) new URL(LOCAL + "net.json").openConnection();
+      c.setConnectTimeout(500);
+      c.setReadTimeout(500);
+      boolean ok = c.getResponseCode() == 200;
+      c.disconnect();
+      return ok;
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   @Override
@@ -90,15 +125,7 @@ public class MainActivity extends Activity {
 
   private void waitForServer(int triesLeft) {
     new Thread(() -> {
-      boolean up = false;
-      try {
-        HttpURLConnection c = (HttpURLConnection) new URL(LOCAL + "net.json").openConnection();
-        c.setConnectTimeout(500);
-        c.setReadTimeout(500);
-        up = c.getResponseCode() == 200;
-        c.disconnect();
-      } catch (Exception ignored) { }
-      boolean ready = up;
+      boolean ready = answers();
       new Handler(Looper.getMainLooper()).post(() -> {
         if (ready) {
           say("", false);
@@ -120,8 +147,16 @@ public class MainActivity extends Activity {
     open(url.endsWith("/") ? url : url + "/");
   }
 
+  /**
+   * Ends the table. The server's process goes with it -- that is the only way
+   * to stop the node runtime -- but this process, the app you are looking at,
+   * stays where it is.
+   */
   private void stopTable() {
     startService(new Intent(this, NodeService.class).setAction(NodeService.ACTION_STOP));
+    // The process takes a moment to go. Ask again once it has, so the page
+    // stops offering a table that is no longer there.
+    new Handler(Looper.getMainLooper()).postDelayed(this::askTheTable, 900);
   }
 
   private void open(String url) {

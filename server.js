@@ -128,8 +128,18 @@ if (DEV) {
       liveClients.forEach((res) => res.write(`event: reload\ndata: ${JSON.stringify(what)}\n\n`));
     }, 150);                                 // editors write more than once
   };
+  // A tree can only be watched on some platforms: Linux before Node 20 -- the
+  // runtime inside the Android app -- refuses. public/ is flat, so watching it
+  // plainly sees every page anyway.
+  const watchPages = () => {
+    try {
+      return fs.watch(PUB, { recursive: true }, (e, f) => { if (f) bump(String(f)); });
+    } catch (e) {
+      return fs.watch(PUB, (e2, f) => { if (f) bump(String(f)); });
+    }
+  };
   try {
-    fs.watch(PUB, { recursive: true }, (e, f) => { if (f) bump(String(f)); });
+    watchPages();
     fs.watch(path.join(ROOT, 'game.js'), () => bump('game.js'));
   } catch (e) {
     console.warn('[dev] cannot watch the files:', e.message);

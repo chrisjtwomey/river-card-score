@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -40,10 +41,6 @@ public class NodeService extends Service {
 
   private static boolean nodeStarted = false;
   private PowerManager.WakeLock wakeLock;
-
-  /** True once the server is up in this process. The chooser asks before it
-      offers to start another one: node cannot be started twice here. */
-  public static boolean isRunning() { return nodeStarted; }
 
   static {
     System.loadLibrary("node");
@@ -90,6 +87,14 @@ public class NodeService extends Service {
     setEnv("DATA_DIR", data.getAbsolutePath());
     setEnv("NO_TLS", "1");                 // no certificate on a phone
     setEnv("HOME", getFilesDir().getAbsolutePath());
+    // A debug build watches its own files and serves /live, so a page pushed
+    // with tools/push-dev.sh reloads every open screen by itself. A release
+    // build must not: the watch costs battery and the dev table would be open
+    // to anybody on the network.
+    if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+      setEnv("DEV", "1");
+      Log.i(TAG, "debug build: live reload is on");
+    }
 
     Log.i(TAG, "starting node in " + nodeDir);
     int code = startNode(new String[]{ "node", new File(nodeDir, "server.js").getAbsolutePath() });
