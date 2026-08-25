@@ -409,7 +409,7 @@ Open `public/local.html` in a browser. It needs no server and keeps its state in
 
 ### Motion
 
-The deal animation and the finish live in `public/deal.js`, shared by the host screen, the phones and the offline tracker.
+The deal animation lives in `public/deal.js` and the finish in `public/finale.js`, on the shared overlay in `public/stage.js`. All three are used by the host screen, the phones and the offline tracker.
 
 The screens also move in smaller ways. When a round is scored the standings slide to their new order, each score runs up or down to its new value, and what the round paid floats up out of it in green or red. When a bid lands that player's pill springs, and a ring spreads out of the seat that has to bid next.
 
@@ -486,9 +486,16 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 
 ## Files
 
-- `server.js` — HTTP static files, the QR and address endpoints, plus the WebSocket game server. Rooms live in memory.
+- `server.js` — the rooms, the sockets, and the wiring. Rooms live in memory.
+- `lib/messages.js` — every message a seated socket may send, as a table: who may send it, when, and what it does.
+- `lib/http.js` — everything a browser asks for over plain HTTP: the pages, the QR code, the addresses, a finished game, a picture.
+- `lib/deck.js` — the dealer for a virtual table: the hands, and the rules of a trick.
+- `lib/games.js` — a finished game on disk.
+- `lib/dev.js` — the dev portal, which a real game never touches.
 - `public/ui.js` — shared page bits, such as the full-screen button.
-- `public/deal.js` — the deal animation and the game-over finish, used by every screen.
+- `public/stage.js` — the overlay both scenes are played on, and the slot that says which one is open.
+- `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
+- `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a host screen and a phone.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
 - `test.js` — end-to-end test.

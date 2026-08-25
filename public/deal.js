@@ -1,90 +1,14 @@
 'use strict';
 /* The deal flourish: a card flies to each seat, then a card turns over.
-   Used by the offline tracker and by the host screen. */
+   Used by the offline tracker, the host screen and the player phones.
+
+   The overlay, the card, the fade and the motion setting are the Stage's, and
+   so is the slot for whichever scene is open. The finish is in finale.js.
+*/
 const Deal = (function () {
-  const KEY_MOTION = 'river-card-score:motion:v1';
-  let live = null;        // the scene on screen, while it is held open
+  const { S, mode, faceOf, cardEl, tf, fade, overlayEl, close } = Stage;
   let last = null;        // the last status shown, to restore it on re-open
-  const FACES = [{ g: '♠', red: false }, { g: '♥', red: true }, { g: '♦', red: true }, { g: '♣', red: false }];
 
-  // 'full' | 'reduced' | 'off'.  ?motion=full in the URL wins and is remembered.
-  function mode() {
-    let saved = null;
-    try { saved = localStorage.getItem(KEY_MOTION); } catch (e) {}
-    const q = new URLSearchParams(window.location.search).get('motion');
-    if (q === 'full' || q === 'reduced' || q === 'off') {
-      saved = q;
-      try { localStorage.setItem(KEY_MOTION, q); } catch (e) {}
-    }
-    if (saved) return saved;
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return reduce ? 'reduced' : 'full';
-  }
-
-  // A card from the server, 'TH' or '9S', turned into a face this scene can
-  // draw. Deal.js stands alone -- the offline tracker has no game.js -- so it
-  // reads the card itself.
-  const SUIT_OF = { S: FACES[0], H: FACES[1], D: FACES[2], C: FACES[3] };
-  const SUIT_NAME = { S: 'Spades', H: 'Hearts', D: 'Diamonds', C: 'Clubs' };
-  function faceOf(card) {
-    const c = String(card || '');
-    const s = SUIT_OF[c.slice(-1)];
-    if (!s) return null;
-    const r = c.slice(0, -1);
-    return { r: r === 'T' ? '10' : r, s };
-  }
-
-  // Every card on this stage is placed the same way, so a move only has to say
-  // what changed: where it sits, how it lies, which way up, how big.
-  const tf = (x, y, tilt, face, sc) =>
-    `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(${face}deg) scale(${sc})`;
-
-  /* `av` is a player's picture. It goes on the back, which carries its own
-     rotateY(180deg) and so faces the room the right way up when the card is
-     lying face down. Nothing else about the card changes. */
-  function cardEl(face, cls, av) {
-    const el = document.createElement('div');
-    el.className = 'dcard' + (cls ? ' ' + cls : '');
-    const front = document.createElement('div');
-    front.className = 'face front' + (face && face.s.red ? ' red' : '');
-    if (face) {
-      front.innerHTML = '<span class="r"></span><span class="big"></span>';
-      front.querySelector('.r').textContent = face.r;
-      front.querySelector('.big').textContent = face.s.g;
-    }
-    const back = document.createElement('div');
-    back.className = 'face back' + (av ? ' av' : '');
-    if (av) back.style.backgroundImage = `url("${av}")`;
-    el.append(front, back);
-    return el;
-  }
-
-  /* Fading a card is not free: an animated opacity makes the browser give up
-     `transform-style: preserve-3d`, and a card lying face down then paints a
-     blank front instead of its back. So a card only ever moves, and the two
-     faces do the fading. */
-  function fade(card, frames, opts, into) {
-    const made = [];
-    Array.prototype.forEach.call(card.querySelectorAll('.face'), (f) => {
-      const a = f.animate(frames, opts);
-      if (into) into.push(a);
-      made.push(a);
-    });
-    return made;
-  }
-
-  function overlayEl() {
-    let el = document.getElementById('deal');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'deal';
-    el.className = 'deal';
-    el.hidden = true;
-    el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = '<div class="deal-stage" id="deal-stage"></div><div class="deal-skip">tap to skip</div>';
-    document.body.appendChild(el);
-    return el;
-  }
 
   /* opts: { names, dealer, cards, round, hold, linger, deck, mine, hand,
      upcard, trump, waitTrump, avatars }.
@@ -198,7 +122,7 @@ const Deal = (function () {
       /* One riffle. `into` collects what it starts: the loop that runs while a
          real dealer shuffles calls this over and over, and it has to be able to
          call off the round before it. Left to pile up, a card ends up carrying
-         dozens of live transforms at once, and Chrome gives up keeping the card
+         dozens of S.live transforms at once, and Chrome gives up keeping the card
          in three dimensions -- the back stops facing the room and the blank
          front is painted instead. */
       const riffle = (at, into) => {
@@ -477,7 +401,7 @@ const Deal = (function () {
       function finish() {
         if (ended) return;
         ended = true;
-        if (live && live.finish === finish) live = null;
+        if (S.live && S.live.finish === finish) S.live = null;
         timers.forEach(clearTimeout);
         dropLoop();
         overlay.removeEventListener('pointerdown', skip);
@@ -486,7 +410,7 @@ const Deal = (function () {
         // A scene that opens while this one fades out owns the overlay now, so
         // do not pull the stage out from under it.
         out.onfinish = () => {
-          if (!live) { overlay.hidden = true; stage.innerHTML = ''; }
+          if (!S.live) { overlay.hidden = true; stage.innerHTML = ''; }
           resolve();
         };
       }
@@ -515,7 +439,7 @@ const Deal = (function () {
         if (hold || waitTap) {
           timers.push(setTimeout(() => {
             settled = true;
-            if (live) { live.settled = true; applyTurn(); }   // now the cards have landed
+            if (S.live) { S.live.settled = true; applyTurn(); }   // now the cards have landed
           }, landedAtEnd));
         } else {
           timers.push(setTimeout(finish, naturalEnd));
@@ -553,14 +477,14 @@ const Deal = (function () {
       }
 
       if (hold || waiting || waitTap) {
-        live = {
+        S.live = {
           kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
           key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
           bids: null,                       // what was on the table at the last update
           release: waiting ? release : null,
           trumpSet,                         // repaints the suit if the host corrects it
         };
-        if (hold && last && last.key === live.key) update(last);   // re-opened: catch up
+        if (hold && last && last.key === S.live.key) update(last);   // re-opened: catch up
       }
       if (waiting) loopRiffle();
       else arm();
@@ -569,23 +493,21 @@ const Deal = (function () {
 
   // Closes a held scene, if one is open. With a kind, 'deal' or 'finale', it
   // closes only that one and leaves the other alone.
-  function close(kind) { if (live && (!kind || live.kind === kind)) live.finish(); }
-  const isOpen = (kind) => !!live && (!kind || live.kind === kind);
 
   // The card of the player to act breathes, so the table can see whose turn it
   // is from across the room. The landing used the Web Animations API, and that
   // owns the transform, so this has to be an animation too, not a CSS class.
   function applyTurn() {
-    if (!live || live.kind !== 'deal' || !live.settled) return;
-    if (live.turnAnim) { try { live.turnAnim.cancel(); } catch (e) {} live.turnAnim = null; }
-    const p = live.turn;
-    const card = (p === null || p === undefined) ? null : live.cards[p];
-    if (!card || live.calm) return;                 // reduced motion: the label is enough
+    if (!S.live || S.live.kind !== 'deal' || !S.live.settled) return;
+    if (S.live.turnAnim) { try { S.live.turnAnim.cancel(); } catch (e) {} S.live.turnAnim = null; }
+    const p = S.live.turn;
+    const card = (p === null || p === undefined) ? null : S.live.cards[p];
+    if (!card || S.live.calm) return;                 // reduced motion: the label is enough
     // The card tips up on its edge, shivers while it is up, settles, then
     // waits. Written in milliseconds, because that is how it is judged.
     const UP = 182, SHIVER_IN = 280, SHIVER_OUT = 784, SIDE = 84, DOWN_AT = 868, FLAT = 1050;
     const D = 3000;                                 // one peek every three seconds
-    const at = live.landedAt[p];
+    const at = S.live.landedAt[p];
     const o = (ms) => Number((ms / D).toFixed(4));
     const rest = 'drop-shadow(0 5px 9px rgba(0,0,0,.45)) drop-shadow(0 0 5px rgba(255,255,255,.22))';
     const up = 'drop-shadow(0 16px 18px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(255,255,255,.4))';
@@ -618,7 +540,7 @@ const Deal = (function () {
     const opt = { duration: D, iterations: Infinity };
     const set = [card.animate(frames, opt)];
     card.querySelectorAll('.face').forEach((f) => set.push(f.animate(glow, opt)));
-    live.turnAnim = { cancel: () => set.forEach((a) => a.cancel()) };
+    S.live.turnAnim = { cancel: () => set.forEach((a) => a.cancel()) };
   }
 
   /* The finish, in three moves:
@@ -629,360 +551,13 @@ const Deal = (function () {
      opts: { names, totals, bonus, awards, points, linger }. `totals` are the
      final scores, with what the accolades paid already in them.
      A tap lands it; the next one closes it. */
-  function finale(opts, force) {
-    close();
-    return new Promise((resolve) => {
-      const overlay = overlayEl();
-      // The page behind already names the winner, so this scene must not let
-      // anything through: the accolades come first.
-      overlay.classList.add('solid');
-      const stage = overlay.querySelector('.deal-stage');
-      const names = (opts && opts.names) || [];
-      const totals = (opts && opts.totals) || [];
-      const m = force || mode();
-
-      if (!names.length || !stage || !stage.animate) {
-        console.warn('[finale] skipped: no players, or no Web Animations API');
-        resolve(); return;
-      }
-      if (m === 'off') { console.info('[finale] skipped: motion is off'); resolve(); return; }
-      const calm = m === 'reduced';
-
-      const n = names.length;
-      const awards = (opts && opts.awards) || [];
-      const pay = Number(opts && opts.points) || 0;
-      const paidIn = (opts && opts.bonus) || [];
-      const final = names.map((nm, i) => Number(totals[i]) || 0);
-      const cur = final.map((v, i) => v - (Number(paidIn[i]) || 0));   // before the accolades
-      const best = Math.max.apply(null, final);
-      const champs = names.map((nm, i) => ({ nm, i })).filter((c) => final[c.i] === best);
-      const each = champs.length > 1 ? ' each' : '';
-      const tail = champs.some((c) => paidIn[c.i]) ? ', accolades in' : '';
-      const points = (v) => `${v} point${Math.abs(v) === 1 ? '' : 's'}${each}${tail}`;
-
-      stage.innerHTML = '';
-      overlay.hidden = false;
-
-      // The pacing is the same either way: the accolades are there to be read,
-      // and reduced motion takes the movement out, not the time.
-      // gap is how long each place is left alone on screen before the next one
-      // comes up, so the table can take them in one at a time.
-      const T = calm
-        ? { fade: 120, gap: 180, flip: 240, out: 220, acc: 8000, settle: 4000, hold: 2400 }
-        : { fade: 200, gap: 480, flip: 620, out: 320, acc: 8000, settle: 4000, hold: 4200 };
-      const anims = [], timers = [];
-      let ended = false, settled = false, raf = 0, bob = null;
-
-      const head = document.createElement('div');            // the line across the top
-      head.className = 'deal-head';
-      const cap = document.createElement('div');
-      cap.className = 'deal-cap';
-      cap.textContent = 'Game over';
-      head.appendChild(cap);
-      stage.appendChild(head);
-      anims.push(cap.animate(
-        [{ opacity: 0, transform: 'translateY(-12px)' }, { opacity: 1, transform: 'translateY(0)' }],
-        { duration: 300, delay: T.fade, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }));
-
-      const box = document.createElement('div');
-      box.className = 'fin';
-      stage.appendChild(box);
-
-      const card = cardEl(null, 'hero fin-card');            // face down until the end
-      card.querySelector('.front').innerHTML = '<div class="cup">🏆</div>';
-      card.style.transform = 'rotateY(180deg)';
-      box.appendChild(card);
-
-      const note = document.createElement('div');            // what the table is waiting for
-      note.className = 'fin-note';
-      note.textContent = awards.length
-        ? `${awards.length} accolade${awards.length === 1 ? '' : 's'} to come`
-        : 'Final scores';
-      box.appendChild(note);
-
-      const title = document.createElement('div');
-      title.className = 'fin-title';
-      title.textContent = champs.length > 1
-        ? `${champs.map((c) => c.nm).join(' & ')} tie`
-        : `${champs[0].nm} wins`;
-      const sub = document.createElement('div');
-      sub.className = 'fin-sub';
-      box.append(title, sub);
-
-      const run = document.createElement('div');             // where the accolades are read
-      run.className = 'fin-run';
-      box.appendChild(run);
-
-      const list = document.createElement('div');
-      list.className = 'fin-list';
-      box.appendChild(list);
-
-      // One row a seat, so a row can move when its score changes.
-      const rows = names.map((nm, i) => {
-        const el = document.createElement('div');
-        el.className = 'fin-row';
-        el.dataset.k = String(i);
-        const pl = document.createElement('span'); pl.className = 'pl';
-        const who = document.createElement('span'); who.className = 'nm'; who.textContent = nm;
-        const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = String(cur[i]);
-        el.append(pl, who, sc);
-        return { el, pl, sc, i };
-      });
-
-      // Put the rows in score order, number the places, and slide them there.
-      function relayout(move) {
-        const seats = names.map((nm, i) => i).sort((a, b) => cur[b] - cur[a]);
-        const top = Math.max.apply(null, cur);
-        const was = new Map();
-        if (move) rows.forEach((r) => was.set(r.i, r.el.getBoundingClientRect().top));
-        seats.forEach((i) => list.appendChild(rows[i].el));
-        seats.forEach((i) => {
-          rows[i].pl.textContent = String(seats.findIndex((x) => cur[x] === cur[i]) + 1);
-          rows[i].el.classList.toggle('first', cur[i] === top);
-        });
-        if (!move || calm) return;
-        rows.forEach((r) => {
-          const from = was.get(r.i);
-          if (from === undefined || !r.el.animate) return;
-          const dy = from - r.el.getBoundingClientRect().top;
-          if (Math.abs(dy) < 1) return;
-          anims.push(r.el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }],
-            { duration: 460, easing: 'cubic-bezier(.2,.85,.3,1)' }));
-        });
-      }
-      relayout(false);
-
-      anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
-
-      /* The trophy lies face down from the first frame, so the top of the scene
-         is not a hole while the table reads the scores. Only the faces fade: an
-         opacity on the card would flatten it, and the back would paint as a
-         blank front. It breathes until the winner turns it over. */
-      fade(card, [{ opacity: 0 }, { opacity: 1 }],
-        { duration: calm ? 200 : 420, delay: T.fade + 120, easing: 'ease-out', fill: 'both' }, anims);
-      if (!calm && card.animate) {
-        bob = card.animate(
-          [{ transform: 'rotateY(180deg) translateY(-5px) rotate(-1.4deg)' },
-           { transform: 'rotateY(180deg) translateY(5px) rotate(1.4deg)' }],
-          { duration: 3600, delay: T.fade, direction: 'alternate', iterations: Infinity,
-            easing: 'ease-in-out' });
-      }
-
-      /* ---- 1. the places, as they stood before the accolades ---- */
-      const order0 = names.map((nm, i) => i).sort((a, b) => cur[b] - cur[a]);
-      const start = T.fade + (calm ? 200 : 520);
-      order0.forEach((i, k) => {
-        anims.push(rows[i].el.animate(
-          calm ? [{ opacity: 0 }, { opacity: 1 }]
-               : [{ opacity: 0, transform: 'translateX(30px) scale(.94)' },
-                  { opacity: 1, transform: 'none' }],
-          { duration: calm ? 160 : 320, delay: start + (n - 1 - k) * T.gap,
-            easing: 'cubic-bezier(.2,.9,.3,1.3)', fill: 'both' }));
-      });
-      const runAt = start + n * T.gap + T.settle;
-
-      // The note holds the space under the card, then clears it just before the
-      // first accolade rises into the same place.
-      const noteMs = Math.max(700, runAt - 500);
-      const noteIn = Math.min(.4, 420 / noteMs);
-      const noteOut = Math.max(noteIn, 1 - Math.min(.4, 300 / noteMs));
-      anims.push(note.animate(
-        [{ opacity: 0, offset: 0 }, { opacity: 1, offset: noteIn },
-         { opacity: 1, offset: noteOut }, { opacity: 0, offset: 1 }],
-        { duration: noteMs, delay: T.fade + 200, easing: 'ease-out', fill: 'both' }));
-
-      /* ---- 2. the accolades, one at a time, paying as they land ---- */
-      // Where each beat falls inside one accolade: it rises, the points chip
-      // pops, the score runs up, then it leaves.
-      const o = (ms) => Math.max(0, Math.min(1, ms / T.acc));
-      const chipAt = Math.min(1200, Math.round(T.acc * 0.2));
-      const payAt = Math.min(3800, Math.round(T.acc * 0.5));
-      awards.forEach((a, k) => {
-        const at = runAt + k * T.acc;
-        const row = document.createElement('div');
-        row.className = 'fin-award';
-        const t = document.createElement('div');
-        t.className = 'fa-title';
-        t.textContent = a.title;
-        const w = document.createElement('div');
-        w.className = 'fa-who';
-        w.textContent = (a.who || []).map((i) => names[i]).join(' & ');
-        const note = document.createElement('div');
-        note.className = 'fa-note';
-        note.textContent = a.note;
-        row.append(t, w, note);
-        if (pay) {
-          const pts = document.createElement('div');
-          pts.className = 'fa-pts';
-          pts.textContent = `+${pay}`;
-          row.appendChild(pts);
-          anims.push(pts.animate(
-            calm ? [{ opacity: 0 }, { opacity: 1 }]
-                 : [{ opacity: 0, transform: 'scale(2.4) rotate(-9deg)' },
-                    { opacity: 1, transform: 'scale(1) rotate(0deg)' }],
-            { duration: calm ? 200 : 440, delay: at + chipAt,
-              easing: 'cubic-bezier(.2,.9,.3,1.5)', fill: 'both' }));
-        }
-        run.appendChild(row);
-        anims.push(row.animate(
-          calm
-            ? [{ opacity: 0, offset: 0 }, { opacity: 1, offset: o(400) },
-               { opacity: 1, offset: o(T.acc - 700) }, { opacity: 0, offset: 1 }]
-            : [{ opacity: 0, transform: 'translateY(18px) scale(.94)', offset: 0 },
-               { opacity: 1, transform: 'none', offset: o(400) },
-               { opacity: 1, transform: 'none', offset: o(T.acc - 700) },
-               { opacity: 0, transform: 'translateY(-20px) scale(.98)', offset: 1 }],
-          { duration: T.acc, delay: at, easing: 'ease-out', fill: 'both' }));
-
-        // and the points land in the standings behind it
-        if (pay) {
-          timers.push(setTimeout(() => {
-            if (ended) return;
-            (a.who || []).forEach((i) => {
-              const from = cur[i];
-              cur[i] = from + pay;
-              countTo(rows[i].sc, from, cur[i], calm ? 0 : 620);
-              if (!calm && rows[i].el.animate) {
-                anims.push(rows[i].el.animate(
-                  [{ transform: 'scale(1)' }, { transform: 'scale(1.08)', offset: .4 },
-                   { transform: 'scale(1)' }],
-                  { duration: 380, easing: 'cubic-bezier(.2,.9,.3,1.4)' }));
-              }
-            });
-            timers.push(setTimeout(() => { if (!ended) relayout(true); }, calm ? 0 : 640));
-          }, at + payAt));
-        }
-      });
-      const winAt = runAt + awards.length * T.acc + (calm ? 60 : 300);
-
-      /* The card steps out of the way while the accolades use that space, and
-         comes back for the flip. These fades hold forwards only: a backwards
-         fill would reach back over the fade that first brought the card up. */
-      if (awards.length) {
-        fade(card, [{ opacity: 1 }, { opacity: 0 }],
-          { duration: 320, delay: Math.max(0, runAt - 620), easing: 'ease-out', fill: 'forwards' },
-          anims);
-        fade(card, [{ opacity: 0 }, { opacity: 1 }],
-          { duration: calm ? 200 : 380, delay: Math.max(0, winAt - 620), easing: 'ease-out',
-            fill: 'forwards' }, anims);
-      }
-      // The breathing stops before the card leaves, so the flip starts square.
-      timers.push(setTimeout(() => { if (bob) { bob.cancel(); bob = null; } },
-        Math.max(0, (awards.length ? runAt : winAt) - 700)));
-
-      /* ---- 3. the winner, once every accolade is in ---- */
-      anims.push(card.animate(
-        calm ? [{ transform: 'rotateY(0deg) scale(1.16)' }]
-             : [{ transform: 'rotateY(180deg) scale(1)', offset: 0 },
-                { transform: 'rotateY(0deg) scale(1.3)', offset: .7, easing: 'cubic-bezier(.2,.9,.3,1.4)' },
-                { transform: 'rotateY(0deg) scale(1.16)', offset: 1 }],
-        { duration: calm ? 200 : T.flip, delay: winAt, easing: 'linear', fill: 'forwards' }));
-      champs.forEach((c, k) => {
-        anims.push(rows[c.i].el.animate(
-          calm ? [{ opacity: 1 }, { opacity: 1 }]
-               : [{ transform: 'scale(1)' }, { transform: 'scale(1.07)', offset: .5 },
-                  { transform: 'scale(1)' }],
-          { duration: calm ? 200 : 520, delay: winAt + (calm ? 40 : 160) + k * 90,
-            easing: 'cubic-bezier(.2,.9,.3,1.3)' }));
-      });
-      anims.push(title.animate(
-        calm ? [{ opacity: 0 }, { opacity: 1 }]
-             : [{ opacity: 0, transform: 'scale(.82)' }, { opacity: 1, transform: 'scale(1)' }],
-        { duration: calm ? 200 : 420, delay: winAt + (calm ? 60 : 240),
-          easing: 'cubic-bezier(.2,.9,.3,1.5)', fill: 'both' }));
-      anims.push(sub.animate([{ opacity: 0 }, { opacity: 1 }],
-        { duration: 260, delay: winAt + (calm ? 120 : 420), easing: 'ease-out', fill: 'both' }));
-
-      if (calm || awards.length) sub.textContent = points(best);
-      else countTo(sub, 0, best, 700, winAt + 420, points);
-      burst(winAt + 200);
-
-      // A number that runs to its new value. `el` may be a score in the list,
-      // or the winner's line, which needs its own wording.
-      function countTo(el, from, to, ms, delay, fmt) {
-        const say = fmt || String;
-        if (!ms || !el || typeof requestAnimationFrame !== 'function') {
-          el.textContent = say(to);
-          return;
-        }
-        const at = (window.performance ? performance.now() : Date.now()) + (delay || 0);
-        const tick = (now) => {
-          if (ended) return;
-          if (settled) { el.textContent = say(to); return; }
-          const k = Math.max(0, Math.min(1, (now - at) / ms));
-          if (k <= 0) { raf = requestAnimationFrame(tick); return; }
-          el.textContent = say(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
-          if (k < 1) raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-      }
-
-      // Paper on the table.
-      function burst(delay) {
-        if (calm) return;
-        const colours = ['#e8c169', '#f3efe2', '#2f8f5b', '#c0271d', '#f0c878'];
-        const fall = overlay.clientHeight + 80;
-        for (let i = 0; i < 26; i++) {
-          const bit = document.createElement('div');
-          bit.className = 'fin-bit';
-          bit.style.background = colours[i % colours.length];
-          bit.style.left = `${6 + Math.random() * 88}%`;
-          stage.appendChild(bit);
-          anims.push(bit.animate(
-            [{ transform: 'translate3d(0,0,0) rotate(0deg)', opacity: 1 },
-             { transform: `translate3d(${(Math.random() * 2 - 1) * 90}px,${fall}px,0) ` +
-                          `rotate(${(Math.random() * 2 - 1) * 900}deg)`, opacity: .15 }],
-            { duration: 1500 + Math.random() * 1400, delay: delay + Math.random() * 500,
-              easing: 'cubic-bezier(.25,.6,.5,1)', fill: 'both' }));
-        }
-      }
-
-      function finish() {
-        if (ended) return;
-        ended = true;
-        if (live && live.finish === finish) live = null;
-        timers.forEach(clearTimeout);
-        if (raf) cancelAnimationFrame(raf);
-        if (bob) { bob.cancel(); bob = null; }
-        overlay.removeEventListener('pointerdown', skip);
-        window.removeEventListener('keydown', skip);
-        const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
-        // A scene that opens while this one fades out owns the overlay now, so
-        // do not pull the stage out from under it.
-        out.onfinish = () => {
-          if (!live) { overlay.hidden = true; stage.innerHTML = ''; }
-          resolve();
-        };
-      }
-      // A tap lands the whole thing: every accolade is paid at once.
-      function settle() {
-        settled = true;
-        timers.forEach(clearTimeout);
-        timers.length = 0;
-        names.forEach((nm, i) => { cur[i] = final[i]; rows[i].sc.textContent = String(final[i]); });
-        relayout(false);
-        if (bob) { bob.cancel(); bob = null; }
-        anims.forEach((a) => { try { a.finish(); } catch (e) {} });
-        sub.textContent = points(best);
-      }
-      function skip() { if (!settled) { settle(); return; } finish(); }
-
-      overlay.addEventListener('pointerdown', skip);
-      window.addEventListener('keydown', skip);
-      live = { kind: 'finale', finish };
-      const linger = Math.max(0, Number(opts && opts.linger) || 0);
-      const shown = winAt + T.flip + 400;
-      timers.push(setTimeout(() => { settled = true; }, shown));   // now a tap clears it
-      timers.push(setTimeout(finish, shown + T.hold + linger));
-    });
-  }
 
   // A bid lands: the number slams down onto that player's card, holds, then
   // lifts away. The name below the card keeps it from then on.
   function stamp(p, value) {
-    if (!live || live.calm || !live.settled) return;
-    const card = live.cards[p], at = live.landedAt[p];
-    if (!card || !at || !live.stage.animate) return;
+    if (!S.live || S.live.calm || !S.live.settled) return;
+    const card = S.live.cards[p], at = S.live.landedAt[p];
+    if (!card || !at || !S.live.stage.animate) return;
     // The pile lies face down, and a stamp that inherits its rotateY(180)
     // prints the number in a mirror. The stamp lies flat; the card stays as
     // it is.
@@ -991,7 +566,7 @@ const Deal = (function () {
     const el = document.createElement('div');
     el.className = 'dstamp';
     el.textContent = String(value);
-    live.stage.appendChild(el);
+    S.live.stage.appendChild(el);
     const a = el.animate(
       [{ transform: `${flat} scale(2.7) rotate(-15deg)`, opacity: 0, offset: 0,
          easing: 'cubic-bezier(.2,.9,.3,1.5)' },
@@ -1007,7 +582,7 @@ const Deal = (function () {
       [{ transform: at }, { transform: `${at} scale(1.13)`, offset: .3 },
        { transform: `${at} scale(.98)`, offset: .55 }, { transform: at }],
       { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
-    const name = live.labels[p];
+    const name = S.live.labels[p];
     if (name) {
       name.animate(
         [{ transform: 'translate(-50%,0) scale(1)' },
@@ -1020,34 +595,37 @@ const Deal = (function () {
   // While the scene is held, show the bids as they arrive.
   function update(o) {
     if (o) last = o;
-    if (!live || live.kind !== 'deal') return;
+    if (!S.live || S.live.kind !== 'deal') return;
     if (o && o.trump) {
-      if (live.trumpSet) live.trumpSet(o.trump);
-      if (live.release) { live.release(); live.release = null; }
+      if (S.live.trumpSet) S.live.trumpSet(o.trump);
+      if (S.live.release) { S.live.release(); S.live.release = null; }
     }
     const bids = (o && o.bids) || [];
     // Anything new since the last push gets stamped on its card. A scene that
     // has just opened has nothing to compare with, so it stamps nothing.
-    if (live.bids) {
+    if (S.live.bids) {
       bids.forEach((b, p) => {
-        const had = live.bids[p];
+        const had = S.live.bids[p];
         if (b === null || b === undefined) return;
         if (had !== null && had !== undefined) return;
         stamp(p, b);
       });
     }
-    live.bids = bids.slice();
-    live.labels.forEach((el, p) => {
+    S.live.bids = bids.slice();
+    S.live.labels.forEach((el, p) => {
       if (!el) return;
       const b = bids[p];
-      el.textContent = live.names[p] + (b === null || b === undefined ? '' : ` · ${b}`);
+      el.textContent = S.live.names[p] + (b === null || b === undefined ? '' : ` · ${b}`);
       el.classList.toggle('turn', o && o.turn === p);
       el.classList.toggle('bidin', b !== null && b !== undefined);
     });
-    if (live.status) live.status.textContent = (o && o.text) || '';
+    if (S.live.status) S.live.status.textContent = (o && o.text) || '';
     const next = (o && typeof o.turn === 'number') ? o.turn : null;
-    if (next !== live.turn) { live.turn = next; applyTurn(); }
+    if (next !== S.live.turn) { S.live.turn = next; applyTurn(); }
   }
 
-  return { play, finale, close, update, isOpen, mode };
+  /* The same six names as before the split, so no page changed: the finish
+     comes from finale.js and the stage answers for close and isOpen. */
+  return { play, finale: (opts, force) => Finale.play(opts, force),
+           close: Stage.close, update, isOpen: Stage.isOpen, mode };
 })();
