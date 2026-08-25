@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- From Android 15 a window is drawn edge to edge, behind the status bar
+       and the gesture bar, and a page that begins with a heading lands under
+       the clock. This is the platform's own way to say "lay my window out
+       below the bars, as before". Older phones ignore the attribute and behave
+       that way anyway.
+
+       Android 16 stops honouring the opt-out for an app that targets it, so
+       the inset padding in TableActivity stays as the answer for that day. -->
+  <style name="TableTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+    <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+  </style>
+</resources>

@@ -221,14 +221,34 @@ reach the table.
 ### Build it yourself
 
 ```sh
-npm install                  # the server's two dependencies
-android/tools/prepare.sh     # copies the server in, fetches libnode.so (60 MB)
-cd android && gradle assembleDebug
+android/tools/build-local.sh              # debug APK
+android/tools/build-local.sh assembleRelease
 ```
 
-The APK lands in `android/app/build/outputs/apk/debug/`. `prepare.sh` must run
-again after any change to `server.js`, `game.js` or `public/`: the app carries a
-copy, and the copy is not in git.
+One command, and it needs nothing installed first: no Android Studio, no
+`JAVA_HOME`. It fetches what is missing -- a JDK through Homebrew, and the
+Android command line tools, SDK, CMake and NDK into `~/Library/Android/sdk` --
+then assembles the node project and builds. The first run downloads about 2 GB
+and takes a few minutes; after that a build is under a minute, which beats
+waiting on a runner.
+
+The APK lands in `android/app/build/outputs/apk/debug/table-server-debug.apk`.
+Install it over USB:
+
+```sh
+adb install -r android/app/build/outputs/apk/debug/table-server-debug.apk
+adb logcat -s RiverTable-node RiverTable        # the server's own output
+```
+
+With the SDK already in place, `android/tools/prepare.sh` and `gradle
+assembleDebug` do the same thing in two steps. `prepare.sh` must run again
+after any change to `server.js`, `game.js` or `public/`: the app carries a copy,
+and the copy is not in git.
+
+A debug APK is signed with a key made on the machine that built it, and Android
+refuses an update signed by a different key. So a CI build cannot install over a
+local one, or over an older CI build: uninstall first, or set the release
+signing secrets below and install release APKs, which all carry one key.
 
 The debug APK is a normal APK, only signed with a throwaway key. For a signed
 release, put `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,

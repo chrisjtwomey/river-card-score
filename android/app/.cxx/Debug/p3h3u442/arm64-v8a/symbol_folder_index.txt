@@ -1,0 +1,1 @@
+/Users/chris/git-repos/chrisjtwomey/river-card-score/android/app/build/intermediates/cxx/Debug/p3h3u442/obj/arm64-v8a
