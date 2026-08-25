@@ -9,10 +9,10 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import androidx.appcompat.app.AppCompatActivity;
+import android.app.Activity;
 
 /** The table itself, in a WebView: the same pages a browser gets. */
-public class TableActivity extends AppCompatActivity {
+public class TableActivity extends Activity {
   public static final String EXTRA_URL = "url";
   private WebView web;
 

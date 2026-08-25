@@ -57,7 +57,7 @@ android {
   }
 }
 
-dependencies {
-  implementation 'androidx.appcompat:appcompat:1.7.0'
-  implementation 'androidx.core:core:1.13.1'
-}
+// No dependencies at all. The app is two screens and a service, so the
+// framework classes are enough, and nothing can drag in a second copy of the
+// Kotlin standard library.
+dependencies { }

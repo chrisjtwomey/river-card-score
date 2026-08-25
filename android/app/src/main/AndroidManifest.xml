@@ -25,7 +25,7 @@
       android:allowBackup="false"
       android:supportsRtl="true"
       android:usesCleartextTraffic="true"
-      android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+      android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
     <activity android:name=".MainActivity" android:exported="true">
       <intent-filter>

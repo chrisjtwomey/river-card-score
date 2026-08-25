@@ -1,27 +1,22 @@
 package com.chrisjtwomey.rivertable;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
 import android.view.Gravity;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -33,7 +28,7 @@ import java.util.List;
  * Every other phone only needs a browser, so "Join" is a convenience: it opens
  * the host's address in this app instead.
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
   private static final String LOCAL = "http://127.0.0.1:" + NodeService.PORT + "/";
   private TextView status;
 
@@ -91,18 +86,16 @@ public class MainActivity extends AppCompatActivity {
     if (Build.VERSION.SDK_INT >= 36) want.add("android.permission.ACCESS_LOCAL_NETWORK");
     List<String> missing = new ArrayList<>();
     for (String p : want) {
-      if (checkSelfPermission(p) != android.content.pm.PackageManager.PERMISSION_GRANTED) missing.add(p);
+      if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) missing.add(p);
     }
-    if (!missing.isEmpty()) {
-      ActivityCompat.requestPermissions(this, missing.toArray(new String[0]), 1);
-    }
+    if (!missing.isEmpty()) requestPermissions(missing.toArray(new String[0]), 1);
   }
 
   @Override
-  public void onRequestPermissionsResult(int code, @NonNull String[] names, @NonNull int[] results) {
+  public void onRequestPermissionsResult(int code, String[] names, int[] results) {
     super.onRequestPermissionsResult(code, names, results);
     for (int i = 0; i < names.length; i++) {
-      boolean granted = results[i] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+      boolean granted = results[i] == PackageManager.PERMISSION_GRANTED;
       if (!granted && names[i].endsWith("LOCAL_NETWORK")) {
         status.setText("Without the local network permission the other phones cannot reach this table. "
             + "Settings > Apps > River Table > Permissions.");
