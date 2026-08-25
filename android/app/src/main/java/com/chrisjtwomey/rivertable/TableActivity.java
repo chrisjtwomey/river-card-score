@@ -48,7 +48,7 @@ public class TableActivity extends Activity {
       @Override
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         // The back arrow on the page asks for this, and nothing else does.
-        if ("rivertable".equals(request.getUrl().getScheme())) { finish(); return true; }
+        if ("uptheriver".equals(request.getUrl().getScheme())) { finish(); return true; }
         return false;
       }
     });
@@ -120,7 +120,7 @@ public class TableActivity extends Activity {
         // narrower than the two beside it.
         + "b.style.cssText='padding-left:9px;padding-right:9px;font-size:20px;line-height:1';"
         + "b.setAttribute('aria-label','Back to the app');"
-        + "b.onclick=function(){location.href='rivertable://home'};"
+        + "b.onclick=function(){location.href='uptheriver://home'};"
         + "bar.insertBefore(b,bar.firstChild);"
         // The long title fits on one line beside two buttons, not three.
         + "var h=document.querySelector('.brand h1');if(h)h.style.fontSize='15px';"

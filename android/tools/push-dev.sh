@@ -58,7 +58,7 @@ if [ "$restart" = 1 ]; then
   echo "==> restarting the runtime (server.js, game.js or a dependency changed)"
   adb shell am force-stop "$pkg"
   adb shell am start -n "$pkg/.MainActivity" --ez host true >/dev/null
-  echo "    the table is coming back up. adb logcat -s RiverTable-node RiverTable"
+  echo "    the table is coming back up. adb logcat -s UpTheRiver-node UpTheRiver"
 else
   echo "==> pages only: every open screen reloads itself"
 fi

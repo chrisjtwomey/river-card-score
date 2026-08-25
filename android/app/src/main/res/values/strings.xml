@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The whole name, as Settings and the app info screen show it. -->
+  <string name="app_name">Up the River, Down the River</string>
+  <!-- A launcher icon has room for about twelve characters, so the icon says
+       the half of the name that a player would say first. -->
+  <string name="launcher_name">Up the River</string>
+</resources>

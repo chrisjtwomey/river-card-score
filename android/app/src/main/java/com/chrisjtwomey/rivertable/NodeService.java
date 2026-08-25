@@ -33,7 +33,7 @@ import java.io.OutputStream;
  * Stop action kills it.
  */
 public class NodeService extends Service {
-  public static final String TAG = "RiverTable";
+  public static final String TAG = "UpTheRiver";
   public static final int PORT = 8787;
   private static final String CHANNEL = "table";
   private static final int NOTE_ID = 1;
@@ -64,7 +64,7 @@ public class NodeService extends Service {
     if (!nodeStarted) {
       nodeStarted = true;
       PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-      wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RiverTable:node");
+      wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "UpTheRiver:node");
       wakeLock.acquire();
       new Thread(this::runNode, "node-main").start();
     }

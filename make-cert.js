@@ -23,7 +23,7 @@ console.log('addresses in the certificate:', san);
 execFileSync('openssl', [
   'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
   '-keyout', key, '-out', cert, '-days', '825',
-  '-subj', '/CN=river-card-score',
+  '-subj', '/CN=up-down-the-river',
   '-addext', `subjectAltName=${san}`,
 ], { stdio: ['ignore', 'inherit', 'inherit'] });
 

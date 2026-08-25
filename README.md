@@ -248,7 +248,7 @@ The APK lands in `android/app/build/outputs/apk/debug/` as
 
 ```sh
 adb install -r android/app/build/outputs/apk/debug/up-down-the-river-*-debug.apk
-adb logcat -s RiverTable-node RiverTable        # the server's own output
+adb logcat -s UpTheRiver-node UpTheRiver        # the server's own output
 ```
 
 With the SDK already in place, `android/tools/prepare.sh` and `gradle

@@ -59,7 +59,7 @@
 <script>
   // The app is told what to do through a link it recognises. Nothing else on
   // this page talks to Android.
-  const tell = (what, arg) => { location.href = 'rivertable://' + what + (arg ? '?addr=' + encodeURIComponent(arg) : ''); };
+  const tell = (what, arg) => { location.href = 'uptheriver://' + what + (arg ? '?addr=' + encodeURIComponent(arg) : ''); };
   const say = (text, bad) => {
     const el = document.getElementById('say');
     el.textContent = text || '';

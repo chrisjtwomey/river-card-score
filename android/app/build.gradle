@@ -79,8 +79,6 @@ android {
   }
 }
 
-// The APK says what it is: table-server-debug.apk, not app-debug.apk. The
-// debug one is the APK to install unless a keystore is set.
 // The APK says what it is and which version it is: up-down-the-river-1.2.3.apk.
 // A debug build says so too, because it cannot install over a release one.
 android.applicationVariants.all { variant ->

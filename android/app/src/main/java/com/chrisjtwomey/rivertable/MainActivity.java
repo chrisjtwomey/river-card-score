@@ -27,7 +27,7 @@ import java.util.List;
  *
  * The page is chooser.html in the assets, and it wears the game's own
  * stylesheet, so the app looks like the table it opens. It asks for things by
- * following a rivertable: link, which never leaves the WebView.
+ * following an uptheriver: link, which never leaves the WebView.
  */
 public class MainActivity extends Activity {
   private static final String LOCAL = "http://127.0.0.1:" + NodeService.PORT + "/";
@@ -121,7 +121,7 @@ public class MainActivity extends Activity {
   }
 
   private boolean handle(Uri link) {
-    if (!"rivertable".equals(link.getScheme())) return false;
+    if (!"uptheriver".equals(link.getScheme())) return false;
     switch (link.getHost() == null ? "" : link.getHost()) {
       case "host":   host();                                    return true;
       case "resume": open(LOCAL);                               return true;
@@ -148,7 +148,7 @@ public class MainActivity extends Activity {
         } else if (triesLeft > 0) {
           new Handler(Looper.getMainLooper()).postDelayed(() -> waitForServer(triesLeft - 1), 500);
         } else {
-          say("The table server did not start. adb logcat -s RiverTable-node says why.", true);
+          say("The table server did not start. adb logcat -s UpTheRiver-node says why.", true);
         }
       });
     }).start();
@@ -212,7 +212,7 @@ public class MainActivity extends Activity {
       boolean granted = results[i] == PackageManager.PERMISSION_GRANTED;
       if (!granted && (names[i].endsWith("LOCAL_NETWORK") || names[i].endsWith("NEARBY_WIFI_DEVICES"))) {
         say("Without the local network permission the other phones cannot reach this table. "
-            + "Settings > Apps > River Table > Permissions.", true);
+            + "Settings > Apps > Up the River > Permissions.", true);
       }
     }
   }

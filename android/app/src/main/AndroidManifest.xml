@@ -23,14 +23,17 @@
   <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
   <application
-      android:label="River Table"
+      android:label="@string/app_name"
       android:icon="@android:drawable/ic_menu_myplaces"
       android:allowBackup="false"
       android:supportsRtl="true"
       android:usesCleartextTraffic="true"
       android:theme="@style/TableTheme">
 
-    <activity android:name=".MainActivity" android:exported="true">
+    <!-- A launcher icon has room for about twelve characters, so the icon
+         carries the short name and everything else the whole one. -->
+    <activity android:name=".MainActivity" android:exported="true"
+        android:label="@string/launcher_name">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
@@ -48,7 +51,7 @@
         android:process=":node"
         android:foregroundServiceType="specialUse">
       <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-          android:value="Runs the card table server the other players connect to" />
+          android:value="Runs the table the other players connect to" />
     </service>
   </application>
 </manifest>
