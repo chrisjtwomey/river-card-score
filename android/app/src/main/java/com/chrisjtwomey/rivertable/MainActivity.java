@@ -61,9 +61,24 @@ public class MainActivity extends Activity {
 
     showChooser();
     askForPermissions();
-    // adb shell am start -n .../.MainActivity --ez host true
-    // Hosts without a tap, which is what tools/push-dev.sh restarts with.
-    if (getIntent().getBooleanExtra("host", false)) host();
+    hostIfAsked(getIntent());
+  }
+
+  /**
+   * adb shell am start -n .../.MainActivity --ez host true
+   * Hosts without a tap, which is what tools/push-dev.sh restarts with. It
+   * arrives here on a cold start and at onNewIntent on a warm one, because a
+   * running activity is handed the intent instead of being made again.
+   */
+  private void hostIfAsked(Intent from) {
+    if (from != null && from.getBooleanExtra("host", false)) host();
+  }
+
+  @Override
+  protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    setIntent(intent);
+    hostIfAsked(intent);
   }
 
   private void showChooser() {
