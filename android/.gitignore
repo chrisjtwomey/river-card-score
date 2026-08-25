@@ -9,3 +9,4 @@ build/
 app/build/
 local.properties
 release.keystore
+app/.cxx/

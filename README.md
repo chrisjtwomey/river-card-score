@@ -250,10 +250,21 @@ refuses an update signed by a different key. So a CI build cannot install over a
 local one, or over an older CI build: uninstall first, or set the release
 signing secrets below and install release APKs, which all carry one key.
 
-The debug APK is a normal APK, only signed with a throwaway key. For a signed
-release, put `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
-`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` in the repository secrets, and
-the workflow signs the release build too.
+One key of your own ends that. Make it once, keep it safe -- without it no
+later build can update an installed app -- and give it to the workflow:
+
+```sh
+keytool -genkeypair -v -keystore release.keystore -alias rivertable \
+  -keyalg RSA -keysize 2048 -validity 10950
+base64 -i release.keystore | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set ANDROID_KEYSTORE_PASSWORD   # what keytool asked for
+gh secret set ANDROID_KEY_ALIAS -b rivertable
+gh secret set ANDROID_KEY_PASSWORD
+```
+
+Every release then carries `table-server-release.apk` as well, and each one
+installs over the last. A store made with `openssl` instead of `keytool` is
+PKCS12, which is the type the signing config names.
 
 Worth knowing:
 
@@ -461,6 +472,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `android/` — the Android app: a WebView on the table, and `server.js` running
   inside it on Node.js for Mobile. `android/tools/prepare.sh` assembles it.
 - `.github/workflows/android.yml` — builds the APK on a tag or a release.
+- `android/tools/build-local.sh` — the same build on this machine, no runner.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player phone: your bid pad, the trick pad when you deal, standings, and the scorecard.
