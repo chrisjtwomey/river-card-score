@@ -15,7 +15,7 @@
        NEARBY_WIFI_DEVICES is the Android 16 name, ACCESS_LOCAL_NETWORK the
        Android 17 one; both are declared so one APK serves both. -->
   <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
-      android:usesPermissionFlags="neverLocation"
+      android:usesPermissionFlags="neverForLocation"
       tools:targetApi="tiramisu" />
   <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
