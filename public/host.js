@@ -54,23 +54,8 @@ function renderJoin() {
 
 /* ---------- connection ---------- */
 
-// A link like play.html#c=CODE&t=TOKEN drops that seat into this browser.
-// It is how dev-seed.js hands out seats, and how you move a seat to another
-// device: the token is the seat.
-function claimFromHash() {
-  const h = location.hash || '';
-  const q = new URLSearchParams(h.replace(/^#/, ''));
-  const code = (q.get('c') || '').toUpperCase();
-  const token = q.get('t') || '';
-  if (!code || !token) return;
-  const framed = window.top !== window.self;
-  Net.setSession({ code, token, role: 'host', seatId: null }, framed);
-  // A frame keeps its link, so it still knows the table if it reloads.
-  if (!framed) history.replaceState(null, '', location.pathname + location.search);
-}
-
 function boot() {
-  claimFromHash();
+  Net.claimFromHash('host');
   Net.connect({
     onOpen: () => {
       const s = Net.session();
@@ -151,7 +136,7 @@ function playFinaleNow(mode) {
 }
 
 function finaleWatch() {
-  if (ST.phase === 'done' && lastPhase && lastPhase !== 'done') playFinaleNow();
+  if (Table.justFinished(ST, lastPhase)) playFinaleNow();
   lastPhase = ST.phase;
 }
 
@@ -307,7 +292,7 @@ function renderGame() {
   finaleWatch();
   renderTrump(r);
   renderTurn(r, n);
-  renderVote(r, n);
+  renderVote(r);
   $('#btn-bum').hidden = !r;
   renderTable(r);
   renderStandings();
@@ -315,15 +300,11 @@ function renderGame() {
   renderWinner(done);
 }
 
-function renderVote(r, n) {
+function renderVote(r) {
   const box = $('#votebox');
-  const v = ST.vote;
-  if (!v || !r) { box.hidden = true; return; }
+  if (!ST.vote || !r) { box.hidden = true; return; }
   box.hidden = false;
-  const yes = v.yes.map((i) => ST.seats[i].name).join(', ');
-  $('#vote-text').textContent =
-    `${ST.seats[v.by].name} says it is a bum deal. ${v.yes.length} of ${n} agree` +
-    (yes ? ` (${yes}).` : '.');
+  $('#vote-text').textContent = Table.voteText(ST, -1);
 }
 
 function renderTrump(r) {
@@ -509,29 +490,7 @@ function renderTable(r) {
 }
 
 function renderStandings() {
-  const box = $('#standings');
-  const t = ST.totals;
-  const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
-  const hi = Math.max(...t), lo = Math.min(0, ...t), span = hi - lo;
-  const before = UI.fx.barsBefore(box);
-
-  UI.fx.flip(box, () => {
-    box.innerHTML = '';
-    order.forEach((o, rank) => {
-      const row = document.createElement('div');
-      row.className = 'stand-row' + (o.v === hi && hi !== lo ? ' lead' : '');
-      row.dataset.k = ST.seats[o.i].id;
-      const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
-      row.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
-        `<span class="pts">${o.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
-      row.querySelector('.name').textContent = ST.seats[o.i].name;
-      box.appendChild(row);
-    });
-  });
-
-  const now = {};
-  ST.seats.forEach((seat, i) => { now[seat.id] = t[i]; });
-  lastTotals = UI.fx.scores(box, now, lastTotals, before);
+  lastTotals = Table.standings($('#standings'), ST, { lastTotals });
 }
 
 function renderScorecard() {
@@ -545,13 +504,9 @@ function renderWinner(done) {
   panel.hidden = !done;
   if (!done) return;
   Accolades.render($('#accolades'), ST.awards || [], ST.seats.map((s) => s.name), ST.cfg.accoladePay);
-  const t = ST.totals;
-  const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
-  const top = order[0].v;
-  const champs = order.filter((o) => o.v === top).map((o) => ST.seats[o.i].name);
-  $('#winner-title').textContent = champs.length > 1
-    ? `Tie: ${champs.join(' and ')} — ${top} points`
-    : `${champs[0]} wins with ${top} points`;
+  const { title, order, top } = Table.winner(ST);
+  $('#winner-title').textContent = title;
+  // The host screen is the only one with room for the whole list.
   const list = $('#winner-list');
   list.innerHTML = '';
   order.forEach((o, i) => {

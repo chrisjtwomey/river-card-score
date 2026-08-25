@@ -103,5 +103,29 @@ const Net = (function () {
     else queue.push(o);
   }
 
-  return { connect, send, session, setSession };
+  /* A link like play.html#c=CODE&t=TOKEN drops a seat into this browser, and
+     #w=TOKEN opens the same screen to watch only. It is how the dev page hands
+     out seats and how a seat moves to another device: the token is the seat.
+
+     `role` is what a t= token means on this page -- 'player' on a phone,
+     'host' on the host screen. A w= token is always watching.
+
+     Inside a frame, and for any watcher, the session is kept in memory only:
+     a wall of dev previews must not evict the seat you are playing. */
+  function claimFromHash(role) {
+    const q = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+    const code = (q.get('c') || '').toUpperCase();
+    const token = q.get('t') || '';
+    const eye = q.get('w') || '';
+    if (!code || (!token && !eye)) return false;
+    const framed = window.top !== window.self;
+    setSession({ code, token: eye || token, role: eye ? 'watch' : (role || 'player'), seatId: null },
+      !!eye || framed);
+    // The link stays in the address bar for anything held in memory, so the
+    // page still knows its seat if it reloads. A seat claimed for keeps drops it.
+    if (!eye && !framed) history.replaceState(null, '', location.pathname + location.search);
+    return true;
+  }
+
+  return { connect, send, session, setSession, claimFromHash };
 })();

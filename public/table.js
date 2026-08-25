@@ -218,6 +218,71 @@ const Table = (function () {
     });
   }
 
+  /* ---------- the standings, the winner, the vote ----------
+     The host screen and a player's phone drew these apart, and they drifted:
+     the same list, one with "(you)" on it, written twice. They are drawn here
+     once, and each page says what is different about its own. */
+
+  /* The running order, tallest bar first. `me` marks one row, or -1 for none.
+     Returns what the scores are now, which the caller keeps to see the next
+     round's change. */
+  function standings(box, ST, opts) {
+    const o = opts || {};
+    const me = o.me === undefined ? -1 : o.me;
+    const t = ST.totals;
+    const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
+    const hi = Math.max(...t), lo = Math.min(0, ...t), span = hi - lo;
+    const before = UI.fx.barsBefore(box);
+
+    UI.fx.flip(box, () => {
+      box.innerHTML = '';
+      order.forEach((row, rank) => {
+        const el = document.createElement('div');
+        el.className = 'stand-row' + (row.v === hi && hi !== lo ? ' lead' : '')
+          + (row.i === me ? ' me' : '');
+        el.dataset.k = ST.seats[row.i].id;
+        const w = span > 0 ? Math.round(((row.v - lo) / span) * 100) : 0;
+        el.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
+          `<span class="pts">${row.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
+        el.querySelector('.name').textContent = ST.seats[row.i].name + (row.i === me ? ' (you)' : '');
+        box.appendChild(el);
+      });
+    });
+
+    const now = {};
+    ST.seats.forEach((seat, i) => { now[seat.id] = t[i]; });
+    return UI.fx.scores(box, now, o.lastTotals, before);
+  }
+
+  /* Who won, and by how much. The places come back with it, because the host
+     screen lists them and a phone does not. */
+  function winner(ST) {
+    const t = ST.totals;
+    const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
+    const top = order.length ? order[0].v : 0;
+    const champs = order.filter((x) => x.v === top).map((x) => ST.seats[x.i].name);
+    const title = champs.length > 1
+      ? `Tie: ${champs.join(' and ')} — ${top} points`
+      : `${champs[0]} wins with ${top} points`;
+    return { title, order, top, champs };
+  }
+
+  // The bum-deal sentence. `me` is this phone's seat, or -1 on a host screen.
+  function voteText(ST, me) {
+    const v = ST.vote;
+    if (!v) return '';
+    const n = ST.seats.length;
+    if (v.by === me) return `You called a bum deal. ${v.yes.length} of ${n} agree.`;
+    const named = v.yes.map((i) => ST.seats[i].name).join(', ');
+    return `${ST.seats[v.by].name} says it is a bum deal. ${v.yes.length} of ${n} agree`
+      + (named && me < 0 ? ` (${named}).` : '.');
+  }
+
+  // True on the one state where the game has just ended, not on every state
+  // after it: the finish plays once.
+  const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
+
   return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, cardEl, trickEl,
-           sweepTrick, sweepOut, trickIn };
+           sweepTrick, sweepOut, trickIn,
+           standings, winner, voteText, justFinished };
 })();

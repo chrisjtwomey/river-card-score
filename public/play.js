@@ -19,30 +19,8 @@ let joinAddr = null;           // the address the others should open
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
 
-// A link like play.html#c=CODE&t=TOKEN drops that seat into this browser.
-// It is how the dev page hands out seats, and how you move a seat to another
-// device: the token is the seat.
-// With w= instead of t= the page only watches: it shows that seat's screen,
-// off the same state, but it cannot touch the game.
-function claimFromHash() {
-  const h = location.hash || '';
-  const q = new URLSearchParams(h.replace(/^#/, ''));
-  const code = (q.get('c') || '').toUpperCase();
-  const token = q.get('t') || '';
-  const eye = q.get('w') || '';
-  if (!code || (!token && !eye)) return;
-  // Inside the dev previews, keep it in this frame only. A watching window
-  // never saves itself at all, so it cannot evict your own seat.
-  const framed = window.top !== window.self;
-  Net.setSession({ code, token: eye || token, role: eye ? 'watch' : 'player', seatId: null },
-    !!eye || framed);
-  // The link stays in the address bar for anything held in memory, so the page
-  // still knows its seat if it reloads. A seat claimed for keeps drops it.
-  if (!eye && !framed) history.replaceState(null, '', location.pathname + location.search);
-}
-
 function boot() {
-  claimFromHash();
+  Net.claimFromHash('player');
   const s = Net.session();
   if (!s || !s.code || (s.role !== 'player' && s.role !== 'watch')) { location.href = 'index.html'; return; }
   WATCH = s.role === 'watch';
@@ -113,11 +91,7 @@ function renderWinner() {
   if (done) Games.keep(ST, mySeat());
   panel.hidden = !done;
   if (!done) return;
-  const t = ST.totals, top = Math.max.apply(null, t);
-  const champs = ST.seats.filter((s, i) => t[i] === top).map((s) => s.name);
-  $('#winner-title').textContent = champs.length > 1
-    ? `${champs.join(' & ')} tie on ${top}`
-    : `${champs[0]} wins with ${top}`;
+  $('#winner-title').textContent = Table.winner(ST).title;
   Accolades.render($('#accolades'), ST.awards || [], ST.seats.map((s) => s.name), ST.cfg.accoladePay);
 }
 
@@ -234,7 +208,6 @@ function renderVote(r, me) {
   const box = $('#votebox');
   const acts = $('#vote-actions');
   const bumRow = $('#bum-row');
-  const n = ST.seats.length;
   const live = r && (ST.phase === 'bid' || ST.phase === 'tricks');
   const v = ST.vote;
 
@@ -245,11 +218,10 @@ function renderVote(r, me) {
 
   if (!v || !live) { box.hidden = true; return; }
   box.hidden = false;
-  const mine = v.yes.includes(me) || v.no.includes(me);
-  $('#vote-text').textContent = v.by === me
-    ? `You called a bum deal. ${v.yes.length} of ${n} agree.`
-    : `${ST.seats[v.by].name} says it is a bum deal. ${v.yes.length} of ${n} agree.`;
+  $('#vote-text').textContent = Table.voteText(ST, me);
 
+  // Only a phone answers a vote, so the buttons live here.
+  const mine = v.yes.includes(me) || v.no.includes(me);
   acts.innerHTML = '';
   if (!mine) {
     const yes = document.createElement('button');
@@ -270,7 +242,7 @@ function renderVote(r, me) {
 // The finish plays once, when the last round is scored. A phone that opens on
 // a game already over does not replay it.
 function finaleWatch() {
-  if (ST.phase === 'done' && lastPhase && lastPhase !== 'done') {
+  if (Table.justFinished(ST, lastPhase)) {
     Deal.finale({
       names: ST.seats.map((s) => s.name),
       totals: ST.totals,                     // the accolades are already in these
@@ -626,30 +598,12 @@ function renderBidStrip(r) {
 // The rows slide to their new places, the scores run to their new values, and
 // what the round paid floats up out of them.
 function renderStandings(me) {
-  const box = $('#standings');
   const t = ST.totals;
+  // A phone shows its own score in big figures above the list, and counts up
+  // to it, so the change is readable without hunting for your row.
   const mine = lastTotals ? lastTotals[ST.seats[me].id] : undefined;
   UI.fx.count($('#my-score'), mine === undefined ? t[me] : mine, t[me], { fmt: (v) => `You: ${v}` });
-  const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
-  const hi = Math.max(...t), lo = Math.min(0, ...t), span = hi - lo;
-  const before = UI.fx.barsBefore(box);
-
-  UI.fx.flip(box, () => {
-    box.innerHTML = '';
-    order.forEach((o, rank) => {
-      const row = document.createElement('div');
-      row.className = 'stand-row' + (o.v === hi && hi !== lo ? ' lead' : '') + (o.i === me ? ' me' : '');
-      row.dataset.k = ST.seats[o.i].id;
-      const w = span > 0 ? Math.round(((o.v - lo) / span) * 100) : 0;
-      row.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
-        `<span class="pts">${o.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
-      row.querySelector('.name').textContent = ST.seats[o.i].name + (o.i === me ? ' (you)' : '');
-      box.appendChild(row);
-    });
-  });
-  const now = {};
-  ST.seats.forEach((seat, i) => { now[seat.id] = t[i]; });
-  lastTotals = UI.fx.scores(box, now, lastTotals, before);
+  lastTotals = Table.standings($('#standings'), ST, { me, lastTotals });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
