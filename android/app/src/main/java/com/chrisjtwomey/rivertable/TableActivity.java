@@ -3,6 +3,7 @@ package com.chrisjtwomey.rivertable;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Insets;
 import android.os.Build;
@@ -79,7 +80,21 @@ public class TableActivity extends Activity {
     setContentView(web);
     padBelowTheStatusBar(web);
 
-    String url = getIntent().getStringExtra(EXTRA_URL);
+    open(getIntent());
+  }
+
+  /* This activity is a single instance, so a second "open this address" is
+     handed to the one already on screen. Without this it would sit on the page
+     it already had. */
+  @Override
+  protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    setIntent(intent);
+    open(intent);
+  }
+
+  private void open(Intent from) {
+    String url = from == null ? null : from.getStringExtra(EXTRA_URL);
     startUrl = url == null ? "http://127.0.0.1:" + NodeService.PORT + "/" : url;
     web.loadUrl(startUrl);
   }
