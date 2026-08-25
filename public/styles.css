@@ -269,6 +269,26 @@ tfoot td{font-weight:800;border-top:2px solid var(--line);border-bottom:none;pad
 .winner-list .w{display:flex;justify-content:space-between;font-size:15px;padding:6px 0;border-bottom:1px solid var(--line)}
 .winner-list .w.first{font-weight:800;color:var(--gold);font-size:18px}
 
+/* ---------- reading a code with the camera ---------- */
+.scan{
+  position:fixed;inset:0;z-index:60;background:#000;
+  display:flex;align-items:center;justify-content:center;
+}
+.scan-view{width:100%;height:100%;object-fit:cover}
+/* The frame says where to hold the code. It is drawn over the picture and
+   takes no taps. */
+.scan-frame{
+  position:absolute;width:min(72vw,300px);aspect-ratio:1;pointer-events:none;
+  border:3px solid rgba(255,255,255,.9);border-radius:16px;
+  box-shadow:0 0 0 100vmax rgba(0,0,0,.45);
+}
+.scan-hint{
+  position:absolute;left:0;right:0;top:calc(50% + min(36vw,150px) + 22px);
+  margin:0;text-align:center;color:#fff;font-size:15px;font-weight:600;
+  text-shadow:0 1px 3px rgba(0,0,0,.8);padding:0 24px;
+}
+.scan-close{position:absolute;bottom:calc(26px + env(safe-area-inset-bottom));min-width:140px}
+
 /* ---------- dialog ---------- */
 dialog{
   border:1px solid var(--line);border-radius:var(--r);background:var(--bg2);color:var(--ink);

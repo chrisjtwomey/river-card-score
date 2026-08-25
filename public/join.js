@@ -24,6 +24,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* The camera reads the QR code the table shows. The button is here only if
+     this browser has both a camera and a reader for the code. */
+  if (Scan.can()) {
+    const scan = $('#btn-scan');
+    scan.hidden = false;
+    scan.addEventListener('click', () => {
+      err('');
+      Scan.read().then((text) => {
+        if (text === null) return;                 // closed without a read
+        const found = Scan.readAddress(text);
+        if (!found) return err('That code is not a table.');
+        // A table on another machine: go to it, with the code already filled.
+        if (found.url) { location.href = found.url; return; }
+        $('#in-code').value = found.code;
+        $('#in-name').focus();
+      });
+    });
+  }
+
   $('#in-code').addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
   });

@@ -19,6 +19,13 @@ The console prints the addresses. On the host machine:
 
 The players' phones must be on the same network as the server. Scan the QR code on the host screen, or type the `http://<your-ip>:8787/` address that the console prints. Set `PORT` to use a different port.
 
+The join panel also has **Scan the code**, which opens the camera and reads the
+table's QR code without leaving the page. The decoding is the browser's own, so
+nothing is downloaded and no picture leaves the phone. A camera needs a secure
+page, so the button is there over `https` (`npm run cert`) and in the Android
+app, and it hides itself where the browser offers no camera -- plain `http` to
+another machine, or Safari, which cannot read a code.
+
 Every page has a full-screen button (⛶) next to the theme toggle. The button hides itself on browsers with no full-screen support, such as Safari on iPhone.
 
 The server builds the QR code itself, so nothing is sent to an outside service. It is always black on white, whatever the page theme is, because a camera cannot read an inverted code.

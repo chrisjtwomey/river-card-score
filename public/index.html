@@ -38,6 +38,8 @@
       <span>Table code</span>
       <input type="text" id="in-code" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="4F2K" class="code-input">
     </label>
+    <!-- Hidden until the browser is asked: no camera, no button. -->
+    <button class="btn" id="btn-scan" type="button" hidden>📷 Scan the code</button>
     <label class="field">
       <span>Your name</span>
       <input type="text" id="in-name" maxlength="16" autocomplete="nickname" placeholder="Chris">
@@ -75,6 +77,7 @@
 <script src="net.js"></script>
 <script src="ui.js"></script>
 <script src="avatar.js"></script>
+<script src="scan.js"></script>
 <script src="join.js"></script>
 </body>
 </html>

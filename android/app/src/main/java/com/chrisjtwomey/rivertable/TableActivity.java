@@ -1,13 +1,16 @@
 package com.chrisjtwomey.rivertable;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.graphics.Insets;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -17,8 +20,10 @@ import android.webkit.WebViewClient;
 /** The table itself, in a WebView: the same pages a browser gets. */
 public class TableActivity extends Activity {
   public static final String EXTRA_URL = "url";
+  private static final int ASK_CAMERA = 7;
   private WebView web;
   private String startUrl;
+  private PermissionRequest waitingOnCamera;
 
   @SuppressLint("SetJavaScriptEnabled")
   @Override
@@ -46,7 +51,31 @@ public class TableActivity extends Activity {
         return false;
       }
     });
-    web.setWebChromeClient(new WebChromeClient());
+    // A page asking for the camera -- the join page reading a QR code -- is
+    // refused by default. Hand it on to Android, which asks the reader.
+    web.setWebChromeClient(new WebChromeClient() {
+      @Override
+      public void onPermissionRequest(PermissionRequest request) {
+        runOnUiThread(() -> {
+          boolean wantsCamera = false;
+          for (String r : request.getResources()) {
+            if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) wantsCamera = true;
+          }
+          if (!wantsCamera) { request.deny(); return; }
+          if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            request.grant(new String[]{ PermissionRequest.RESOURCE_VIDEO_CAPTURE });
+          } else {
+            waitingOnCamera = request;
+            requestPermissions(new String[]{ Manifest.permission.CAMERA }, ASK_CAMERA);
+          }
+        });
+      }
+
+      @Override
+      public void onPermissionRequestCanceled(PermissionRequest request) {
+        if (request.equals(waitingOnCamera)) waitingOnCamera = null;
+      }
+    });
     setContentView(web);
     padBelowTheStatusBar(web);
 
@@ -100,6 +129,17 @@ public class TableActivity extends Activity {
     // The window has already handed its insets out by now, so ask for them
     // again. Without this the listener is set and never called.
     view.requestApplyInsets();
+  }
+
+  @Override
+  public void onRequestPermissionsResult(int code, String[] names, int[] results) {
+    if (code != ASK_CAMERA) return;
+    PermissionRequest req = waitingOnCamera;
+    waitingOnCamera = null;
+    if (req == null) return;
+    boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+    if (granted) req.grant(new String[]{ PermissionRequest.RESOURCE_VIDEO_CAPTURE });
+    else req.deny();
   }
 
   @Override
