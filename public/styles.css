@@ -506,6 +506,49 @@ body.host .toast .note{font-size:19px}
    it can be. */
 .deal.table{cursor:auto}
 .deal.table .deal-skip{display:none}
+/* Where a card belongs is a style, and this is what carries it there. Nothing
+   on the table is animated with the Web Animations API: a round lasts minutes,
+   and a card that collects animations loses its third dimension. */
+.deal.table{touch-action:none}
+.deal.table .dcard{transition:transform .14s cubic-bezier(.25,.85,.3,1)}
+.deal.table .dcard.slow{transition-duration:.34s}
+.deal.table .dcard.drag{transition:none}
+.deal.table.still .dcard{transition:none}
+@media (prefers-reduced-motion: reduce){
+  .deal.table .dcard{transition-duration:.01ms}
+}
+/* a card up out of the fan, being read */
+.deal.table .dcard.up .face{box-shadow:0 16px 30px rgba(0,0,0,.6), 0 0 14px rgba(255,255,255,.28)}
+/* a card that cannot be played: yours to see, and plainly not yours to play */
+.deal.table .dcard.dud .front{filter:grayscale(.6) brightness(.66)}
+/* and what it does when you try. The shake rides on the face, never on the
+   card: the card's own transform is where it belongs on the table, and a
+   keyframe cannot know that. */
+.deal.table .dcard.no .front{animation:cardno .42s ease-out;border-color:#c0271d}
+@keyframes cardno{
+  0%,100%{transform:translateX(0)}
+  18%{transform:translateX(-7px)}
+  46%{transform:translateX(7px)}
+  74%{transform:translateX(-4px)}
+}
+@media (prefers-reduced-motion: reduce){
+  .deal.table .dcard.no .front{animation:none}
+}
+/* the card that took the trick */
+.deal.table .dcard.took .front{
+  border-color:var(--gold);
+  box-shadow:0 0 0 2px rgba(184,134,43,.6), 0 10px 24px rgba(0,0,0,.5);
+}
+/* the line a card has to clear to be played */
+.felt-line{
+  position:absolute;z-index:1;left:8%;right:8%;height:0;opacity:0;
+  border-top:2px dashed rgba(246,212,136,.45);
+  transition:opacity .16s ease-out;pointer-events:none;
+}
+.deal.dragging .felt-line{opacity:1}
+.deal.dragging.armed .felt-line{border-top-color:rgba(246,212,136,.95)}
+.deal.dragging.armed .dcard.hero .front{box-shadow:0 0 0 6px rgba(246,212,136,.35), 0 12px 40px rgba(0,0,0,.55)}
+
 /* the way out to the round bar, the bids and the scorecard */
 .felt-out{
   position:absolute;z-index:3;

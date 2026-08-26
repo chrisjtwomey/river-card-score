@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "DEV=1 node server.js",
     "cert": "node make-cert.js",
-    "test": "NO_TLS=1 node test.js"
+    "test": "NO_TLS=1 node test.js && node test-felt.js",
+    "test:felt": "node test-felt.js"
   },
   "dependencies": {
     "qrcode-generator": "^2.0.4",

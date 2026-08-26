@@ -456,6 +456,10 @@ const Deal = (function () {
         if (handed || !keep) return;
         handed = true;
         deckEls.forEach((d) => { d.style.zIndex = ''; });
+        // Every tap from here on belongs to the table: a card being picked up,
+        // not a scene being landed.
+        overlay.removeEventListener('pointerdown', skip);
+        window.removeEventListener('keydown', skip);
         if (opts.onTable) {
           opts.onTable({ stage, overlay, cards: cardEls, piles, landedAt, labels,
                          hero, deckEls, names, dealer, anchor, W, H, calm, ring: R, fan: F });
