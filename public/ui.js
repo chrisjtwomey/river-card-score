@@ -192,14 +192,101 @@ const UI = (function () {
     if (!urls.includes(location.origin)) urls.push(location.origin);
     let saved = null;
     try { saved = localStorage.getItem(ADDR_KEY); } catch (e) {}
+    // An address somebody typed is one the server did not know it had -- that
+    // is why it was typed -- so it belongs in the list, and it is the choice.
+    if (saved && !urls.includes(saved)) urls.push(saved);
     const best = (saved && urls.includes(saved)) ? saved
       : (!isLocalUrl(location.origin) && urls.includes(location.origin)) ? location.origin
       : (urls.find((u) => !isLocalUrl(u)) || urls[0]);
-    return { urls, best, ok };
+    return { urls, best, ok, onlyLocal: !urls.some((u) => !isLocalUrl(u)) };
   }
 
   function rememberAddress(u) {
     try { localStorage.setItem(ADDR_KEY, u); } catch (e) {}
+  }
+
+  // '192.168.1.5' -> 'http://192.168.1.5:8787'. What a person reads off a
+  // phone's Wi-Fi details is an address, not a URL.
+  function fullAddress(typed) {
+    let u = String(typed || '').trim().replace(/\/+$/, '');
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) u = location.protocol + '//' + u;
+    if (!/:\d+$/.test(u.replace(/^https?:\/\//i, ''))) u += ':' + (location.port || '80');
+    return u;
+  }
+
+  /* The address that goes in the QR code, and the ways to put it right.
+
+     A table normally knows where it is. A phone that is sharing its own hotspot
+     -- on a plane, with no mobile data -- may not: Android hides the interface
+     list, and there is nowhere off the link to ask the routing table about. Then
+     the only address the page can offer is its own, which is no use to anybody
+     else, and somebody has to be told, and given a way to type the right one.
+
+     mount: the element to build in. onPick: called with the address, now and on
+     every change. */
+  function addressPicker(mount, onPick) {
+    const el = typeof mount === 'string' ? document.querySelector(mount) : mount;
+    if (!el) return;
+    el.innerHTML =
+      '<p class="err addr-warn" hidden></p>' +
+      '<label class="field addr-field" hidden><span>Address in the QR code</span>' +
+      '<select class="addr-pick"></select></label>' +
+      '<label class="field addr-other" hidden><span>The address of this phone</span>' +
+      '<input class="addr-typed" type="text" inputmode="url" autocapitalize="off"' +
+      ' autocomplete="off" spellcheck="false" placeholder="192.168.1.5"></label>';
+    const warn = el.querySelector('.addr-warn');
+    const field = el.querySelector('.addr-field');
+    const pick = el.querySelector('.addr-pick');
+    const other = el.querySelector('.addr-other');
+    const typed = el.querySelector('.addr-typed');
+    const OTHER = '\u0000other';
+
+    serverAddresses().then((found) => {
+      pick.innerHTML = '';
+      found.urls.forEach((u) => {
+        const o = document.createElement('option');
+        o.value = u;
+        o.textContent = u.replace(/^https?:\/\//, '') + (isLocalUrl(u) ? '  (this machine only)' : '');
+        pick.appendChild(o);
+      });
+      const o = document.createElement('option');
+      o.value = OTHER; o.textContent = 'Another address…';
+      pick.appendChild(o);
+      pick.value = found.best;
+      // One address and nothing to say: no picker at all.
+      field.hidden = found.urls.length < 2 && !found.onlyLocal;
+      if (found.onlyLocal) {
+        warn.hidden = false;
+        warn.textContent = 'This phone cannot see its own address, so the code below only works '
+          + 'here. Ask somebody who has joined for the address their phone shows, or read it '
+          + 'from this phone\u2019s hotspot settings, and type it in.';
+        other.hidden = false;
+        field.hidden = false;
+      }
+      onPick(found.best);
+
+      pick.addEventListener('change', () => {
+        if (pick.value === OTHER) { other.hidden = false; typed.focus(); return; }
+        rememberAddress(pick.value);
+        onPick(pick.value);
+      });
+      const takeTyped = () => {
+        const u = fullAddress(typed.value);
+        if (!u) return;
+        rememberAddress(u);
+        if (!Array.prototype.some.call(pick.options, (op) => op.value === u)) {
+          const add = document.createElement('option');
+          add.value = u; add.textContent = u.replace(/^https?:\/\//, '') + '  (typed)';
+          pick.insertBefore(add, pick.lastChild);
+        }
+        pick.value = u;
+        warn.hidden = true;
+        onPick(u);
+      };
+      typed.addEventListener('change', takeTyped);
+      typed.addEventListener('keydown', (e) => { if (e.key === 'Enter') takeTyped(); });
+    });
   }
 
   /* ---------- live reload, when the server runs with DEV=1 ---------- */
@@ -435,6 +522,7 @@ const UI = (function () {
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
   return { wireFullscreen, isFull, keepAwake, wireZoom, measureTopbar,
-           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl, fx, ask,
+           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl,
+           addressPicker, fullAddress, fx, ask,
            wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
 })();

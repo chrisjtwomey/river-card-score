@@ -11,34 +11,14 @@ let dealtKey = null;    // the round already dealt on screen
 let lastPhase = null;   // to catch the moment the game ends
 let lastTotals = null;  // seat id -> score, to show what a round paid
 let lastBids = null;    // { key, bids, turn }, to catch a bid landing
-let addrs = [];         // addresses this server answers on
-let addr = null;        // the one shown in the QR code
+let addr = null;        // the address shown in the QR code
 
 /* ---------- join address and QR ---------- */
 
-const isLocal = (u) => UI.isLocalUrl(u);
-
-async function loadAddresses() {
-  const found = await UI.serverAddresses();
-  addrs = found.urls;
-  addr = found.best;
-  if (!found.ok) $('#qr-err').hidden = false;   // an old server has no /net.json
-
-  const pick = $('#addr-pick');
-  pick.innerHTML = '';
-  addrs.forEach((u) => {
-    const o = document.createElement('option');
-    o.value = u; o.textContent = u.replace(/^https?:\/\//, '') + (isLocal(u) ? '  (this machine only)' : '');
-    pick.appendChild(o);
-  });
-  pick.value = addr;
-  $('#addr-field').hidden = addrs.length < 2;
-  pick.addEventListener('change', () => {
-    addr = pick.value;
-    UI.rememberAddress(addr);
-    renderJoin();
-  });
-  renderJoin();
+function loadAddresses() {
+  // The control, the choice and the warning when this machine cannot see its
+  // own address are all the same on the player's phone, so they live in UI.
+  UI.addressPicker($('#addr-mount'), (u) => { addr = u; renderJoin(); });
 }
 
 function renderJoin() {

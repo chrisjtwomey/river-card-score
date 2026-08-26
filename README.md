@@ -241,6 +241,46 @@ screen so it does not jump as one hands over to the next: the phone's own splash
 (`assets/chooser.html`). The shape itself lives in `res/drawable/river_mark.xml`
 and again, in SVG, in the chooser: change one and change the other.
 
+### With no internet at all
+
+Nothing here needs the internet. Every page, script, picture and QR code comes
+from the table's own server, and the game itself is only a few phones talking to
+each other. A plane, a boat, a field: it makes no difference, so long as the
+phones are on **one network**.
+
+Getting them on one network is the part that needs care.
+
+- **Plane Wi-Fi usually will not do it.** Most of them wall the passengers off
+  from each other, so a phone can reach the internet -- or the paywall -- and
+  nothing else on board. Nothing in this app can undo that.
+- **One phone shares its hotspot instead**, and that same phone hosts the
+  table. Aeroplane mode with Wi-Fi on is enough; no mobile data is needed. The
+  others join the hotspot, then open the address it shows.
+- **The joining phones can find the address themselves**, if the QR code is out
+  of reach: it is the "router" or "gateway" in their own Wi-Fi details.
+- **Scan the code with the phone's own camera app**, not the button on the join
+  page. A browser only hands the camera to a page over https, and a table on a
+  hotspot is plain http, so the in-page scanner hides itself there.
+
+The host phone has to know its own address to put in the QR code, and on a
+hotspot with no route off it that is harder than it sounds. Four things answer
+it, so one failing costs nothing:
+
+1. Its own interface list, which is right whenever the platform will give it.
+   Termux will not, and Android has taken quieter ways of asking away before.
+2. The app therefore reads its interfaces in Java as well -- tethering included
+   -- and leaves them in `lan-addrs.txt` for the server, refreshed every half
+   minute. `LAN_ADDRS=192.168.1.5,...` does the same on any other machine.
+3. The server asks the routing table, first about somewhere off this network and
+   then about the local link, which needs no route off it.
+4. Every player who arrives brings the address they used, and the table keeps it
+   -- a private address on its own port, and nothing else, because that header
+   is written by the player's browser.
+
+If all four come up empty the host screen says so plainly and takes the address
+typed in. On a laptop `PUBLIC_URL=http://192.168.1.5:8787` still overrides the
+lot.
+
 ### Build it yourself
 
 ```sh

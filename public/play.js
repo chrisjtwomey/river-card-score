@@ -330,8 +330,8 @@ function renderCaptain(lobby) {
 function renderJoinBox() {
   $('#code-badge').textContent = ST.code;
   if (joinAddr === null) {
-    joinAddr = '';                                    // ask once
-    UI.serverAddresses().then((found) => { joinAddr = found.best; renderJoinBox(); });
+    joinAddr = '';                                    // built once, then it tells us
+    UI.addressPicker($('#addr-mount'), (u) => { joinAddr = u; renderJoinBox(); });
     return;
   }
   if (!joinAddr) return;

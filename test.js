@@ -766,6 +766,50 @@ function client(name, url) {
     srv2.kill();
   }
 
+  /* ---- the addresses a phone cannot find for itself ----
+     Android hides the interface list, so the app reads it in Java and hands the
+     answer over, and a player who arrives brings one more. Both have to reach
+     /net.json, or the host's QR code carries an address nobody can use. */
+  {
+    const port5 = PORT + 4;
+    const listed = 'http://127.0.0.1:' + port5;
+    const srv5 = spawn('node', [path + '/server.js'], {
+      env: { ...process.env, PORT: port5, NO_TLS: '1', LAN_ADDRS: '192.168.99.9,not-an-address', DATA_DIR },
+      stdio: 'ignore',
+    });
+    await wait(700);
+    const urls = async () => (await fetch(`${listed}/net.json`).then((r) => r.json())).urls;
+
+    let now = await urls();
+    ok(now.includes(`http://192.168.99.9:${port5}`), 'an address handed over in LAN_ADDRS is offered');
+    ok(!now.some((u) => u.includes('not-an-address')), 'and anything that is not an address is dropped');
+
+    // fetch() will not send a Host of our choosing -- it is the browser's to
+    // write -- so the arriving player is played by a plain request.
+    const knock = (host) => new Promise((done) => {
+      const req = require('http').request(
+        { host: '127.0.0.1', port: port5, path: '/net.json', headers: { host } },
+        (res) => { res.resume(); res.on('end', done); });
+      req.on('error', done);
+      req.end();
+    });
+
+    // a player arrives on an address this machine never knew it had
+    await knock(`192.168.77.7:${port5}`);
+    ok((await urls()).includes(`http://192.168.77.7:${port5}`),
+       'the address a player arrived on is remembered');
+
+    // and the ones a player must not be able to plant
+    await knock('table.example.com');
+    await knock('8.8.8.8:' + port5);
+    await knock(`192.168.55.5:${port5 + 1}`);
+    now = await urls();
+    ok(!now.some((u) => u.includes('example.com')), 'a name in the Host header is ignored');
+    ok(!now.some((u) => u.includes('8.8.8.8')), 'a public address in the Host header is ignored');
+    ok(!now.some((u) => u.includes('192.168.55.5')), 'and a private one on the wrong port is ignored');
+    srv5.kill();
+  }
+
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch (e) {}
   console.log(fails ? `\n${fails} FAILURES` : '\nall integration checks passed');
   srv.kill(); process.exit(fails ? 1 : 0);

@@ -13,7 +13,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 
@@ -22,6 +24,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Runs the table server. It is a foreground service, so the table survives the
@@ -41,6 +50,17 @@ public class NodeService extends Service {
 
   private static boolean nodeStarted = false;
   private PowerManager.WakeLock wakeLock;
+  private final Handler tick = new Handler(Looper.getMainLooper());
+  private String lastAddrs = null;
+  /* Android will not tell node what this phone's addresses are, so this does it
+     every half minute. A phone joins a network, or starts sharing one of its
+     own, long after the table is open. */
+  private final Runnable keepAddrsFresh = new Runnable() {
+    @Override public void run() {
+      writeLanAddrs();
+      tick.postDelayed(this, 30000);
+    }
+  };
 
   static {
     System.loadLibrary("node");
@@ -60,6 +80,9 @@ public class NodeService extends Service {
     }
 
     startForeground(NOTE_ID, notification());
+
+    tick.removeCallbacks(keepAddrsFresh);
+    tick.post(keepAddrsFresh);
 
     if (!nodeStarted) {
       nodeStarted = true;
@@ -85,6 +108,10 @@ public class NodeService extends Service {
 
     setEnv("PORT", String.valueOf(PORT));
     setEnv("DATA_DIR", data.getAbsolutePath());
+    // Where this phone leaves its own addresses for the server to read. It is
+    // written before node starts, and again whenever it changes.
+    writeLanAddrs();
+    setEnv("LAN_ADDRS_FILE", lanAddrsFile().getAbsolutePath());
     setEnv("NO_TLS", "1");                 // no certificate on a phone
     setEnv("HOME", getFilesDir().getAbsolutePath());
     // A debug build watches its own files and serves /live, so a page pushed
@@ -130,8 +157,64 @@ public class NodeService extends Service {
 
   @Override
   public void onDestroy() {
+    tick.removeCallbacks(keepAddrsFresh);
     if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
     super.onDestroy();
+  }
+
+  /* ---- the addresses, which only Java may ask for ---- */
+
+  private File lanAddrsFile() {
+    return new File(getFilesDir(), "lan-addrs.txt");
+  }
+
+  /**
+   * Every address other phones could reach this one at, one per line.
+   *
+   * A second opinion, not the only one: node's own interface list works on the
+   * Android tested, and the server also asks the routing table. But neither is
+   * guaranteed -- Termux cannot read the interface list at all, a phone sharing
+   * its own hotspot with no mobile data has nowhere off the link to ask about,
+   * and a later Android may take getifaddrs away as it took /proc/net. Java is
+   * allowed to ask, tethering included, so it asks, and the server merges
+   * whatever it finds with what it knew.
+   *
+   * A link-local address (169.254.x.x) is what a phone gives itself when
+   * nothing else worked, so it goes last: real addresses first.
+   */
+  private void writeLanAddrs() {
+    List<String> real = new ArrayList<>(), lastResort = new ArrayList<>();
+    try {
+      for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+        if (ni.isLoopback() || !ni.isUp()) continue;
+        for (InetAddress a : Collections.list(ni.getInetAddresses())) {
+          if (!(a instanceof Inet4Address) || a.isLoopbackAddress()) continue;
+          (a.isLinkLocalAddress() ? lastResort : real).add(a.getHostAddress());
+        }
+      }
+    } catch (Exception e) {
+      // Keep whatever was written last: an old address beats none at all.
+      Log.w(TAG, "cannot read this phone's own addresses", e);
+      return;
+    }
+    real.addAll(lastResort);
+    StringBuilder text = new StringBuilder();
+    for (String a : real) text.append(a).append('\n');
+    // Nothing has moved and the file is where it was: leave it alone.
+    if (text.toString().equals(lastAddrs) && lanAddrsFile().exists()) return;
+
+    // Written beside the real file and moved onto it, so the server never reads
+    // a half-written list.
+    File tmp = new File(getFilesDir(), "lan-addrs.tmp");
+    try (OutputStream out = new FileOutputStream(tmp)) {
+      out.write(text.toString().getBytes(StandardCharsets.UTF_8));
+    } catch (IOException e) {
+      Log.w(TAG, "cannot write the address list", e);
+      return;
+    }
+    if (!tmp.renameTo(lanAddrsFile())) { tmp.delete(); return; }
+    lastAddrs = text.toString();
+    Log.i(TAG, "this phone answers at: " + (real.isEmpty() ? "(nothing yet)" : real));
   }
 
   /* ---- the node project is copied out of the APK, which node cannot read ---- */
