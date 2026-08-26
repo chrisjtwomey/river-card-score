@@ -21,6 +21,9 @@ const Deal = (function () {
      linger adds milliseconds to the pause before it clears itself.
      With hold, the scene stays on screen after the deal, until close() is
      called, so the table can see the hand while the bids come in.
+     With keep, the scene never closes itself at all: once the cards are down
+     it hands the stage over to onTable() and the table plays on it for the
+     rest of the round. A tap still lands the deal, and only that.
      A tap, a click, or a key ends the deal early; a second one closes it. */
   /* A scene that throws half-built is worse than no scene at all. The overlay
      is already up, and the tap that closes it is bound at the end of the
@@ -85,12 +88,19 @@ const Deal = (function () {
         ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
         : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280 };
       const anims = [], timers = [];
-      const labels = [], cardEls = [], landedAt = [];
+      const labels = [], cardEls = [], landedAt = [], piles = [];
       const hold = !!(opts && opts.hold);
+      // The felt keeps the stage: the deal is the first move of the round, not
+      // a scene of its own, so it must not close itself or be closed by a tap.
+      const keep = !!(opts && opts.keep);
+      // A round is dealt every hand, and thirteen full shuffles is a lot of
+      // waiting. The first deal of a game gets the whole performance; after
+      // that the deck is riffled once and gets on with it.
+      const brief = !!(opts && opts.brief);
       // The turned card is the last thing the scene says, so a player reads
       // it in their own time and taps it away. The host screen holds through
       // the bidding anyway, so it needs none of this.
-      const waitTap = !hold;
+      const waitTap = !hold && !keep;
       const skipEl = overlay.querySelector('.deal-skip');
       if (skipEl) skipEl.textContent = waitTap ? 'tap to continue' : 'tap to skip';
       let ended = false, settled = false;
@@ -105,6 +115,9 @@ const Deal = (function () {
       // The deck is a real stack: it is shuffled, cut, and dealt from, so it
       // needs enough cards in it to read as one.
       const stackN = 9;
+      // The deck lands card by card. A round that has been dealt before does
+      // not need that told slowly.
+      const popStep = brief ? 16 : 40;
       const deckEls = [];
       const deckRest = (i) => tf(0, -i * 0.9, (i - (stackN - 1) / 2) * 2.2, 180, 1);
       for (let i = 0; i < stackN; i++) {
@@ -113,7 +126,7 @@ const Deal = (function () {
         d.style.transform = rest;
         stage.appendChild(d);
         deckEls.push(d);
-        const pop = { duration: T.deckPop, delay: i * 40, fill: 'both',
+        const pop = { duration: T.deckPop, delay: i * popStep, fill: 'both',
                       easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.4)' };
         if (!calm) anims.push(d.animate([{ transform: rest + ' scale(.5)' }, { transform: rest + ' scale(1)' }], pop));
         fade(d, [{ opacity: 0 }, { opacity: 1 }], pop, anims);
@@ -172,12 +185,12 @@ const Deal = (function () {
             { duration: squareMs, delay: at + riffleMs, easing: 'ease-in-out' }));
         });
       };
-      const deckReady = T.deckPop + (stackN - 1) * 40;
+      const deckReady = T.deckPop + (stackN - 1) * popStep;
       let shuffleEnd = deckReady;
       if (!calm && !waiting) {
         let at = deckReady + 60;
-        riffle(at); at += roundMs + 80;
         riffle(at); at += roundMs;
+        if (!brief) { at += 80; riffle(at); at += roundMs; }
         shuffleEnd = at;
       } else if (waiting) {
         // Everything past the shuffle is timed from the release, not from
@@ -196,7 +209,10 @@ const Deal = (function () {
       // A virtual deck lingers a moment after its shuffle, so the table has
       // time to take it in. A real table has been watching its dealer
       // shuffle all along, so it deals as soon as it is released.
-      const dealAt = shuffleEnd + (virtual && !calm ? 3500 : T.start);
+      // A screen that only watches can take its time over the shuffle. A screen
+      // the round is about to be played on cannot: the cards are wanted.
+      const dealAt = shuffleEnd
+        + (virtual && !calm ? (brief ? 600 : (keep ? 1400 : 3500)) : T.start);
       // Where your own hand lies is the Stage's answer too: a fan below the
       // ring, tightening as the hand grows. The table that carries on after
       // this scene asks the same question and gets the same fan.
@@ -231,6 +247,7 @@ const Deal = (function () {
           stage.appendChild(card);
           const landed = tf(gx, gy, tilt, up ? 0 : 180, 1);
           cardEls[p] = card;                          // the top of that seat's pile
+          (piles[p] || (piles[p] = [])).push(card);    // and all of it, bottom first
           landedAt[p] = landed;
           if (own) myCards.push({ el: card, gx, gy, tilt });
           const flight = { duration: T.fly, delay, fill: 'both',
@@ -294,7 +311,7 @@ const Deal = (function () {
 
       // The deck goes quiet once it has given everything out.
       deckEls.forEach((d, i) => fade(d,
-        [{ opacity: 1 }, { opacity: i === stackN - 1 ? .5 : .18 }],
+        [{ opacity: 1 }, { opacity: keep ? 0 : (i === stackN - 1 ? .5 : .18) }],
         { duration: 320, delay: dealEnd - 200, easing: 'ease-out', fill: 'both' }, anims)
         .forEach(gate));
 
@@ -429,8 +446,25 @@ const Deal = (function () {
         dropLoop();
         anims.forEach((a) => { try { a.finish(); } catch (e) {} });
         deckEls.forEach((d) => { d.style.zIndex = ''; });
+        handover();
+      }
+      /* The stage, and everything the deal left standing on it, given to
+         whoever asked to keep it. Once only: a tap can land the deal before
+         the cards were due down, and then the timer comes round as well. */
+      let handed = false;
+      function handover() {
+        if (handed || !keep) return;
+        handed = true;
+        deckEls.forEach((d) => { d.style.zIndex = ''; });
+        if (opts.onTable) {
+          opts.onTable({ stage, overlay, cards: cardEls, piles, landedAt, labels,
+                         hero, deckEls, names, dealer, anchor, W, H, calm, ring: R, fan: F });
+        }
       }
       function skip() {
+        // A table only ever lands the deal: it is the round's own screen, and
+        // the next tap on it is a card being picked up, not a scene being shut.
+        if (keep) { if (!settled) settle(); return; }
         // The first tap lands the deal; the next one closes it. A scene that
         // is only waiting to be tapped away is already landed, so one does.
         if ((hold || waitTap) && !settled) { settle(); return; }
@@ -446,10 +480,11 @@ const Deal = (function () {
       const naturalEnd = heroAt + T.flip + trumpHold;
       const landedAtEnd = heroAt + T.flip;               // the cards are all down
       function arm() {
-        if (hold || waitTap) {
+        if (hold || waitTap || keep) {
           timers.push(setTimeout(() => {
             settled = true;
             if (S.live) { S.live.settled = true; applyTurn(); }   // now the cards have landed
+            handover();
           }, landedAtEnd));
         } else {
           timers.push(setTimeout(finish, naturalEnd));
@@ -486,7 +521,7 @@ const Deal = (function () {
         }, Math.max(0, roundEndsAt - Date.now())));
       }
 
-      if (hold || waiting || waitTap) {
+      if (hold || waiting || waitTap || keep) {
         S.live = {
           kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
           key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,

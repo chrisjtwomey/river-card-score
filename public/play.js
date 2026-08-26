@@ -66,7 +66,7 @@ function render() {
   if (lobby) { lastTotals = lastBids = null; return renderLobby(me); }
 
   const r = ST.rounds[ST.idx] || null;
-  dealWatch(r);
+  tableWatch(r);
   // A deal waiting on the real dealer is released by the trump being picked.
   if (r && ST.cfg.deck !== 'virtual' && Deal.isOpen('deal')) Deal.update({ trump: r.trump || null });
   finaleWatch();
@@ -254,6 +254,31 @@ function finaleWatch() {
     });
   }
   lastPhase = ST.phase;
+}
+
+/* With a virtual deck the felt is the game: the deal lands on it and the round
+   is played there, with this page one tap away behind it. With real cards there
+   is nothing to touch, so the deal stays what it always was -- a flourish that
+   plays and goes. */
+function tableWatch(r) {
+  if (ST.cfg.deck === 'virtual') {
+    dealtKey = null;                       // the felt owns the deal on this table
+    Felt.sync(ST, mySeat(), {
+      send: (m) => Net.send(m),
+      watch: WATCH,
+      onView: feltView,
+    });
+    return;
+  }
+  dealWatch(r);
+}
+
+// The felt covers the page, so the page says how to get back to it.
+function feltView(on) {
+  const bar = $('#felt-bar');
+  if (!bar) return;
+  const live = ST && ST.cfg.deck === 'virtual' && (ST.phase === 'bid' || ST.phase === 'tricks');
+  bar.hidden = !!on || !live;
 }
 
 // The deal plays at the start of each round. It does not hold on a phone: the
@@ -612,6 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // A watching window reads the talk and does not join it, the same as every
   // other control on it.
   Chat.wire('#btn-chat', WATCH ? null : (text) => Net.send({ t: 'chat', text }));
+  $('#btn-back-felt').addEventListener('click', () => Felt.show());
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
   // The dealer and the table host deal again on the spot, so they are asked
   // first. Anybody else is asking the table, which can still be taken back.

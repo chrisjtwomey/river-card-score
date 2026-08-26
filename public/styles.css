@@ -501,6 +501,37 @@ body.host .toast .note{font-size:19px}
   letter-spacing:.01em;
   text-shadow:0 0 16px rgba(255,255,255,.55), 0 2px 10px rgba(0,0,0,.85);
 }
+/* ---------- the felt, when it is the game and not a scene ---------- */
+/* A table is not tapped away, so it loses the cursor and the line that says
+   it can be. */
+.deal.table{cursor:auto}
+.deal.table .deal-skip{display:none}
+/* the way out to the round bar, the bids and the scorecard */
+.felt-out{
+  position:absolute;z-index:3;
+  top:calc(10px + env(safe-area-inset-top));
+  right:calc(10px + env(safe-area-inset-right));
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 11px;border-radius:999px;
+  background:rgba(9,14,10,.5);border:1px solid rgba(255,255,255,.22);
+  color:rgba(255,255,255,.9);font:inherit;font-size:12px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+}
+.felt-out svg{width:15px;height:15px;flex:none}
+.felt-out:hover{background:rgba(9,14,10,.72);color:#fff}
+/* what you may do about it, along the bottom where a thumb is not */
+.felt-hint{
+  position:absolute;z-index:2;left:14px;right:14px;
+  bottom:calc(16px + env(safe-area-inset-bottom));
+  margin:0;text-align:center;pointer-events:none;
+  font-size:14px;font-weight:700;color:rgba(255,255,255,.82);
+  text-shadow:0 2px 12px rgba(0,0,0,.9);
+}
+/* and the page's way back to the table */
+.feltbar{display:flex;justify-content:center;margin-bottom:2px}
+.feltbar .btn{width:100%}
+
 /* ---------- the finish ---------- */
 .fin{
   position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
