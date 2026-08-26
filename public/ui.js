@@ -274,9 +274,15 @@ const UI = (function () {
     btn.setAttribute('aria-haspopup', 'true');
     btn.setAttribute('aria-expanded', 'false');
     btn.addEventListener('click', (e) => { e.stopPropagation(); if (open) shut(); else show(); });
-    // A tap anywhere else is the way out that needs no button.
+    /* A tap anywhere else is the way out that needs no button.
+
+       `contains`, not `===`: the button holds a drawn icon, so a tap on it
+       lands on the svg inside and not on the button itself. Read as a tap
+       outside, this shut the menu on the way down and the button's own click
+       opened it again on the way up -- so the button that opened the menu could
+       not close it. */
     document.addEventListener('pointerdown', (e) => {
-      if (open && !menu.contains(e.target) && e.target !== btn) shut();
+      if (open && !menu.contains(e.target) && !btn.contains(e.target)) shut();
     });
     document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') shut(); });
     return { refresh: () => { if (open) draw(); } };

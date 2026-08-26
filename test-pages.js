@@ -1,13 +1,14 @@
 'use strict';
-/* The felt, checked without a browser.
+/* The pages, checked without a browser.
 
-   The table is geometry and gestures: where a card lies, which card the thumb
-   is on, what a push up out of the fan does, and what a card that may not be
-   played does instead. None of that needs a server, and none of it can be seen
-   from the integration tests -- so it is checked here, against a page just big
-   enough for the felt to draw into.
+   Most of what a page does needs neither: the felt is geometry and gestures --
+   where a card lies, which card the thumb is on, what a push up out of the fan
+   does, and what a card that may not be played does instead -- and the menus are
+   a handful of listeners. None of that can be seen from the integration tests,
+   which never open a page, so it is checked here against a document just big
+   enough to draw into.
 
-   Run it with `node test-felt.js`, or with `npm test`, which runs both.
+   Run it with `node test-pages.js`, or with `npm test`, which runs both.
 */
 const fs = require('fs');
 const path = require('path');
@@ -19,7 +20,8 @@ function makeDom(W, H) {
     constructor(tag) {
       this.tagName = String(tag).toUpperCase();
       this.children = []; this.parentNode = null;
-      this.style = {}; this._cls = new Set(); this._text = '';
+      this.style = { setProperty() {}, removeProperty() {} };
+      this._cls = new Set(); this._text = '';
       this.hidden = false; this.dataset = {};
       this.offsetTop = 0;
       const self = this;
@@ -52,7 +54,9 @@ function makeDom(W, H) {
     setPointerCapture() {}
     releasePointerCapture() {}
     setAttribute(k, v) { if (k === 'id') this.id = v; this['attr_' + k] = v; }
-    getAttribute(k) { return this['attr_' + k]; }
+    getAttribute(k) { return this['attr_' + k] === undefined ? null : this['attr_' + k]; }
+    removeAttribute(k) { delete this['attr_' + k]; }
+    contains(el) { let e = el; while (e) { if (e === this) return true; e = e.parentNode; } return false; }
     getBoundingClientRect() { return { top: 0, left: 0, width: 0, height: 20, right: 0, bottom: 20 }; }
     get clientWidth() { return W; }
     get clientHeight() { return H; }
@@ -72,8 +76,11 @@ function makeDom(W, H) {
     querySelectorAll(sel) { const r = this.all().filter((e) => e.matches(sel)); r.forEach = Array.prototype.forEach.bind(r); return r; }
   }
   const body = new El('body');
+  const root = new El('html');
+  const docOn = {};
   const document = {
     body,
+    documentElement: root,
     createElement: (t) => new El(t),
     getElementById: (id) => body.all().find((e) => e.id === id) || null,
     querySelector: (sel) => {
@@ -82,7 +89,10 @@ function makeDom(W, H) {
       return body.querySelector(sel);
     },
     querySelectorAll: (sel) => body.querySelectorAll(sel),
-    addEventListener: () => {},
+    addEventListener: (t, f) => { (docOn[t] || (docOn[t] = [])).push(f); },
+    // A tap on the page itself, which is how a menu is closed from outside it.
+    fire: (t, evt) => (docOn[t] || []).slice().forEach((f) =>
+      f(Object.assign({ type: t, preventDefault() {}, stopPropagation() {} }, evt))),
   };
   const window = {
     innerWidth: W, innerHeight: H,
@@ -818,6 +828,54 @@ function scored(motion) {
   const b = L.dom.document.getElementById('deal').querySelector('.felt-beat');
   ok(b.classList.contains('hit'), 'a bid made is marked as made');
   ok(/made it/.test(b.querySelectorAll('b')[0].textContent), 'and said out loud');
+}
+
+part('the settings menu');
+
+/* The ⚙ menu, and the one thing about it that is easy to get wrong: the button
+   that opens it holds a drawn icon, so a tap on it lands on the icon and not on
+   the button. */
+{
+  const dom = makeDom(412, 860);
+  dom.localStorage.setItem('river-card-score:motion:v1', 'off');
+  const src = fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8');
+  const UI = new Function('window', 'document', 'localStorage', 'console',
+    src + '\n; return UI;')(dom.window, dom.document, dom.localStorage,
+    { log() {}, info() {}, warn() {}, error() {} });
+
+  const bar = dom.document.createElement('div');
+  dom.document.body.appendChild(bar);
+  const btn = dom.document.createElement('button');
+  const icon = dom.document.createElement('span');     // stands for the drawn icon
+  btn.appendChild(icon);
+  bar.appendChild(btn);
+
+  let ran = 0;
+  const menu = UI.settingsMenu(btn, [
+    { kind: 'action', label: 'Do the thing', run: () => { ran += 1; } },
+  ]);
+  const box = () => bar.querySelector('.menu');
+  ok(!!box() && box().hidden, 'the menu starts shut');
+
+  btn.fire('click');
+  ok(!box().hidden, 'the button opens it');
+  ok(btn.getAttribute('aria-expanded') === 'true', 'and says so');
+
+  // the tap that opens it lands on the icon, and the page hears it too
+  dom.document.fire('pointerdown', { target: icon });
+  btn.fire('click');
+  ok(box().hidden, 'and the same button closes it, tapped on its icon');
+  ok(btn.getAttribute('aria-expanded') === 'false', 'and says that too');
+
+  btn.fire('click');
+  ok(!box().hidden, 'it opens again');
+  dom.document.fire('pointerdown', { target: dom.document.body });
+  ok(box().hidden, 'a tap anywhere else closes it');
+
+  btn.fire('click');
+  box().querySelector('.menu-row').fire('click');
+  ok(ran === 1 && box().hidden, 'and a row does its thing and closes it');
+  ok(typeof menu.refresh === 'function', 'the page can ask it to redraw');
 }
 
 function done() {

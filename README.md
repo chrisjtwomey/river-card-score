@@ -630,12 +630,12 @@ with bots at it playing itself. It also checks the static routes and compares
 the QR image with the encoder, module by module. It uses ports 8899 to 8903, so
 stop anything of your own on those first.
 
-`test-felt.js` needs no server. It draws the felt into a page just big enough to
-hold one and drives real pointer events at it: where every card lies at five
-screen sizes and every legal hand size, the thumb along the fan, the push that
-plays a card and the one that does not, the card that refuses, the pile read out,
-the bid numbers, and the round held up at the end. Run it alone with
-`npm run test:felt`.
+`test-pages.js` needs no server and no browser. It draws into a document just
+big enough to hold a page and drives real events at it: where every card on the
+felt lies at five screen sizes and every legal hand size, the thumb along the
+fan, the push that plays a card and the one that does not, the card that
+refuses, the pile read out, the bid numbers, the round held up at the end, and
+the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 
 ## Files
 
@@ -655,7 +655,7 @@ the bid numbers, and the round held up at the end. Run it alone with
 - `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
-- `test.js` — end-to-end test. `test-felt.js` — the felt, checked without a browser.
+- `test.js` — end-to-end test. `test-pages.js` — the pages, checked without a browser.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
 - `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, and live previews of every screen.
