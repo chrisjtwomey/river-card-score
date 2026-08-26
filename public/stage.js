@@ -52,6 +52,74 @@ const Stage = (function () {
   const tf = (x, y, tilt, face, sc) =>
     `translate3d(${x}px,${y}px,0) rotate(${tilt}deg) rotateY(${face}deg) scale(${sc})`;
 
+  const rad = (deg) => deg * Math.PI / 180;
+
+  /* ---------- where things sit ----------
+
+     The deal places the seats and the fan, and then the table lives on in the
+     same places for the rest of the round. Two answers to the same question
+     would drift, and the handover from one to the other would jump, so the
+     question is asked here.
+  */
+
+  /* The seats, round an ellipse. `anchor` sits at the bottom, nearest the
+     player watching, and the rest follow round from there. */
+  function ring(n, anchor, W, H) {
+    const rx = Math.min(W * 0.33, 250);
+    // A wider screen gives the ring more room, so the piles stand clear of the
+    // round line above and the turned card in the middle. A phone has none to
+    // spare, so it keeps the tighter ring.
+    const ry = Math.min(H * 0.27, W < 560 ? 160 : 192);
+    const at = (p) => {
+      const a = (Math.PI / 2) + ((((p - anchor) % n) + n) % n) * 2 * Math.PI / n;
+      return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
+    };
+    return { rx, ry, at };
+  }
+
+  /* A hand is a fan, not a row. Each card steps a fixed distance along from the
+     one before -- far enough to read the corner, near enough to still overlap --
+     and turns a fixed amount further round. A step worked out by dividing a
+     width between the cards does the opposite of a fan: the fewer the cards, the
+     farther apart they land, and two cards end up at opposite edges of the
+     screen.
+
+     The fan tightens instead as the hand grows, and never grows past the room it
+     is given. `at(i)` answers in offsets from the middle of the fan, so a caller
+     can hang it off a seat.  */
+  function fan(count, W, H) {
+    const cardW = W <= 420 ? 52 : 64;             // .dcard, and its narrow rule
+    // The hand sits below the ring, not in it: at a full table the seats either
+    // side reach down far enough to clip a fan left at seat height.
+    const y = Math.min(H * 0.34, 240);
+    const room = Math.min(W * 0.86, 340);
+    const step = count > 1 ? Math.min(cardW * 0.62, (room - cardW) / (count - 1)) : 0;
+    // The whole fan turns through 34 degrees at most, however many cards are in
+    // it, or the end cards of a long hand lie on their sides.
+    const tilt = count > 1 ? Math.min(6.5, 34 / (count - 1)) : 0;
+    // Turning about a point below the fan is what gives it its dome: the farther
+    // a card is from the middle, the lower it sits. This is the point that fits
+    // that step to that turn.
+    const pivot = tilt ? step / Math.sin(rad(tilt)) : 0;
+    const off = (i) => (count > 1 ? i - (count - 1) / 2 : 0);
+    const at = (i) => {
+      const o = off(i);
+      return { x: o * step, y: y + pivot * (1 - Math.cos(rad(o * tilt))), tilt: o * tilt };
+    };
+    return { count, cardW, y, room, step, tilt, pivot, off, at };
+  }
+
+  /* A card keeps its resting place as an inline transform, and never more than
+     one live animation. Stacking them makes Chrome give up preserve-3d, and a
+     card lying face down then paints a blank front instead of its back. The deal
+     lasts seconds and gets away with a few; the table lasts a whole round and
+     does not. */
+  function settle(anim) {
+    if (!anim) return;
+    try { anim.commitStyles(); } catch (e) {}
+    try { anim.cancel(); } catch (e) {}
+  }
+
   /* `av` is a player's picture. It goes on the back, which carries its own
      rotateY(180deg) and so faces the room the right way up when the card is
      lying face down. Nothing else about the card changes. */
@@ -106,5 +174,6 @@ const Stage = (function () {
   // SUIT_OF and SUIT_NAME go out with the rest: with real cards the deal
   // knows only the suit the dealer turned, and has to draw and name it
   // without a card to read it off.
-  return { S, mode, setMode, faceOf, cardEl, tf, fade, overlayEl, close, isOpen, SUIT_OF, SUIT_NAME };
+  return { S, mode, setMode, faceOf, cardEl, tf, rad, fade, overlayEl, close, isOpen,
+           ring, fan, settle, SUIT_OF, SUIT_NAME };
 })();

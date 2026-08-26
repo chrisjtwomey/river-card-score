@@ -73,18 +73,13 @@ const Deal = (function () {
       overlay.hidden = false;
 
       const W = overlay.clientWidth, H = overlay.clientHeight;
-      const rx = Math.min(W * 0.33, 250);
-      // A wider screen gives the ring more room, so the piles stand clear of
-      // the round line above and the turned card in the middle. A phone has
-      // none to spare, so it keeps the tighter ring.
-      const ry = Math.min(H * 0.27, W < 560 ? 160 : 192);
       // The seat watching sits at the bottom, so the cards come to them. On a
       // screen that belongs to nobody that is seat 0, as before.
       const anchor = mine >= 0 ? mine : 0;
-      const seat = (p) => {
-        const a = (Math.PI / 2) + ((((p - anchor) % n) + n) % n) * 2 * Math.PI / n;
-        return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
-      };
+      // Where the seats sit is the Stage's answer, so the table that carries
+      // on after this scene stands in the same places.
+      const R = Stage.ring(n, anchor, W, H);
+      const rx = R.rx, ry = R.ry, seat = R.at;
 
       const T = calm
         ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
@@ -202,31 +197,11 @@ const Deal = (function () {
       // time to take it in. A real table has been watching its dealer
       // shuffle all along, so it deals as soon as it is released.
       const dealAt = shuffleEnd + (virtual && !calm ? 3500 : T.start);
-      // Your own hand sits below the ring, not in it: at a full table the
-      // seats either side of you reach down far enough to clip a fan left at
-      // seat height.
-      const fanY = Math.min(H * 0.34, 240);
-      /* A hand is a fan, not a row. Each card steps a fixed distance along from
-         the one before -- far enough to read the corner, near enough to still
-         overlap -- and turns a fixed amount further round. A step worked out by
-         dividing a width between the cards does the opposite of a fan: the
-         fewer the cards, the farther apart they land, and two cards end up at
-         opposite edges of the screen.
-
-         The fan tightens instead as the hand grows, and never grows past the
-         room it is given. */
-      const cardW = W <= 420 ? 52 : 64;               // .dcard, and its narrow rule
-      const fanRoom = Math.min(W * 0.86, 340);
-      const fanStep = passes > 1
-        ? Math.min(cardW * 0.62, (fanRoom - cardW) / (passes - 1)) : 0;
-      // The whole fan turns through 34 degrees at most, however many cards are
-      // in it, or the end cards of a long hand lie on their sides.
-      const fanTilt = passes > 1 ? Math.min(6.5, 34 / (passes - 1)) : 0;
-      // Turning about a point below the fan is what gives it its dome: the
-      // farther a card is from the middle, the lower it sits. This is the point
-      // that fits that step to that turn.
-      const rad = (deg) => deg * Math.PI / 180;
-      const fanPivot = fanTilt ? fanStep / Math.sin(rad(fanTilt)) : 0;
+      // Where your own hand lies is the Stage's answer too: a fan below the
+      // ring, tightening as the hand grows. The table that carries on after
+      // this scene asks the same question and gets the same fan.
+      const F = Stage.fan(passes, W, H);
+      const fanY = F.y;
       const lastAt = [], myCards = [];
       let given = 0;
 
@@ -239,13 +214,11 @@ const Deal = (function () {
           const own = virtual && p === mine;
           // Your own cards spread into a fan you can read. Everybody else gets
           // a neat pile.
-          const off = passes > 1 ? k - (passes - 1) / 2 : 0;
-          const step2 = own ? fanStep : 4.5;
-          const gx = x + off * step2;
-          const gy = own
-            ? fanY + fanPivot * (1 - Math.cos(rad(off * fanTilt)))
-            : y - k * 1.6;
-          const tilt = (x / (rx || 1)) * 9 + off * (own ? fanTilt : 2.2);
+          const off = F.off(k);
+          const spot = F.at(k);
+          const gx = x + (own ? spot.x : off * 4.5);
+          const gy = own ? spot.y : y - k * 1.6;
+          const tilt = (x / (rx || 1)) * 9 + (own ? spot.tilt : off * 2.2);
           const delay = dealAt + given * perCard;
           given += 1;
           lastAt[p] = delay;
