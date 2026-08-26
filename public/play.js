@@ -453,7 +453,7 @@ function renderBots(boss) {
   const cards = ST.cfg.deck === 'virtual';
   const btn = $('#btn-addbot');
   btn.disabled = full;
-  btn.textContent = bots ? 'Add another bot' : 'Add a bot';
+  btn.textContent = bots ? '+ Add another bot' : '+ Add a bot';
   $('#bot-hint').textContent = full ? 'The table is full.'
     : bots ? `${bots} of the ${ST.seats.length} seats play themselves.`
     : cards ? 'It plays its own hand. Remove it with ×.'

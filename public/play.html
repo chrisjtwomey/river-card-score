@@ -32,6 +32,11 @@
     <h2 id="lobby-title">Waiting for the table host</h2>
     <p class="hint" id="lobby-hint">The table host starts the game when everybody is seated.</p>
     <div class="seatlist" id="lobby-seats"></div>
+    <!-- the next seat, for a player the table provides -->
+    <div class="botrow" id="bot-row" hidden>
+      <button class="btn addbot" id="btn-addbot" type="button">+ Add a bot</button>
+      <small class="hint" id="bot-hint"></small>
+    </div>
     <h2 class="avtitle">Your photo</h2>
     <div id="lobby-av"></div>
   </section>
@@ -54,10 +59,6 @@
       </div>
       <p class="hint">Show this to the others, or read out the code.</p>
       <p class="hint">Tap ★ to hand the table over, 🂠 to say who deals first, ↑ ↓ to reorder, × to remove.</p>
-      <div class="row-actions botrow" id="bot-row">
-        <button class="btn ghost" id="btn-addbot" type="button">Add a bot</button>
-        <small class="hint" id="bot-hint"></small>
-      </div>
       <details class="capset">
         <summary>Rules</summary>
         <div class="grid2">
