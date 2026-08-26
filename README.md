@@ -102,7 +102,9 @@ The table can play without real cards. In the lobby set **Cards** to *Deal on th
 1. It shuffles a 52-card deck and deals the hand to each phone. A hand is a secret: the server sends each socket the table and **its own cards only**, and the host screen is dealt none.
 2. It turns the next card for trump, before the bidding, so everybody bids knowing it. With nothing left in the deck — four players at thirteen cards — the hand is played at no trumps.
 3. Bidding runs as it always does, in order, with screw the dealer if it is on.
-4. The player left of the dealer leads. Tap a card to play it. Cards you may not play lie flat and cannot be tapped: you must follow the suit led if you hold it.
+4. The player left of the dealer leads. On a phone the round is played on the
+   felt -- see **The table** below. Cards you may not play are dimmed: you must
+   follow the suit led if you hold it.
 5. The highest trump takes the trick, or the highest card of the suit led. The trick stays on the table for a second and a half so everybody sees it, then the winner leads.
 6. When the last trick is played the round scores itself. Nobody types anything in.
 
@@ -111,7 +113,66 @@ The rules are held on the server, so a phone cannot renege, play out of turn, or
 - The dealer's trick pad is gone, and typing the tricks in is refused.
 - Nobody picks the trump. The deck turns it.
 - **Go back** deals that hand again, because those cards are gone.
+- The empty seats can be played by the table itself: see **Players the table
+  provides**.
 - A phone that goes quiet would stop the table, so whoever runs the table gets **Play a card for them**. The server picks, and only from the cards the rules allow, so nobody chooses another player's card.
+
+### Players the table provides
+
+A hand short of people, the table can play the empty seats itself. In the lobby,
+whoever runs the table taps **Add a bot**. A bot takes a seat like anybody else:
+it has a name, it is dealt a hand, and it bids and plays it. Remove it with the
+same **×** that removes a person.
+
+- A bot needs cards of its own to hold, so adding one sets **Cards** to *Deal on
+  the phones*. At a table with real cards there is nothing for a bot to hold and
+  nothing it could do. The switch back is refused while any are seated.
+- A bot is never handed the table: somebody has to be able to start the game.
+- It bids what its hand looks worth -- top trumps, aces and kings, and a void
+  when there are trumps to ruff with -- and it will not call the number screw
+  the dealer forbids.
+- It plays to make its bid and no more. Wanting a trick it takes it with the
+  cheapest card that will; having made its bid it ducks, because an overtrick
+  pays less than an exact one.
+- It plays through the same rules as everybody else, so it cannot renege, play
+  out of turn, or play a card it does not hold.
+- It has no opinion about a bum deal, so it agrees to one.
+
+`BOT_DELAY` sets how long a bot waits before it acts, in milliseconds. The
+default is 850: long enough that it does not answer before the table has read
+the last card, short enough that three of them are not a wait.
+
+### The table
+
+With a virtual deck, a phone plays the round on the felt the deal lands on. It
+is the screen, not a flourish: the hand you were dealt is the fan in front of
+you, the card the deck turned stays in the middle, and the cards played go on
+top of it.
+
+- **Touch a card** and it lifts out of the fan and enlarges. **Run a thumb along
+  the fan** and each card lifts in turn -- the overlap does not have to be aimed
+  at, because the card nearest the thumb is the one meant.
+- **Push a card up** out of the fan to play it. A dashed line appears; released
+  above it the card flies to the middle, released below it drops back. A card
+  already lifted is played by tapping it again, so nothing needs a drag.
+- A card you may not play is dimmed, and says why if you try: it shakes, keeps
+  its place, and the line at the bottom gives the reason.
+- **Tap the middle** and the pile separates into a row, every card under the
+  name of whoever played it, the one taking the trick in gold, and the turned
+  card first because it is the bottom of that pile. Tap again to stack it.
+- A finished trick is gathered by whoever took it, and one card of it stays on a
+  little stack beside their seat. The stacks count the tricks won.
+- **Bidding** happens on the felt too: the numbers arc between the turned card
+  and your fan and are picked up the same way -- touch to lift, tap again to
+  call. Your own bid stays lit and can be changed until the next player bids.
+  The number screw the dealer forbids is struck through.
+- The corner buttons are the way off the table: **Scorecard** drops the felt to
+  the page underneath -- the round bar, the bids, the standings, the scorecard,
+  the bum-deal button -- and **Back to the table** brings it back. The other
+  corner opens table talk.
+- With **Animations** set to *Off* in the ⚙ menu the felt is drawn without the
+  deal and without any movement. Everything is still reachable, and the page
+  underneath keeps the plain card buttons for a keyboard.
 
 ### Bum deal
 
@@ -560,7 +621,21 @@ Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, sa
 npm test
 ```
 
-It starts the server on port 8899 and plays a whole game over WebSockets: joining, the bid order, the screw-the-dealer block, dealer-only trick entry, scoring, undo, reconnect, and late joins. It also checks the static routes and compares the QR image with the encoder, module by module.
+Two suites, and `npm test` runs both.
+
+`test.js` starts the server on port 8899 and plays whole games over WebSockets:
+joining, the bid order, the screw-the-dealer block, dealer-only trick entry,
+scoring, undo, reconnect, late joins, table talk, the addresses, and a table
+with bots at it playing itself. It also checks the static routes and compares
+the QR image with the encoder, module by module. It uses ports 8899 to 8903, so
+stop anything of your own on those first.
+
+`test-felt.js` needs no server. It draws the felt into a page just big enough to
+hold one and drives real pointer events at it: where every card lies at five
+screen sizes and every legal hand size, the thumb along the fan, the push that
+plays a card and the one that does not, the card that refuses, the pile read out,
+the bid numbers, and the round held up at the end. Run it alone with
+`npm run test:felt`.
 
 ## Files
 
@@ -568,17 +643,19 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `lib/messages.js` — every message a seated socket may send, as a table: who may send it, when, and what it does.
 - `lib/http.js` — everything a browser asks for over plain HTTP: the pages, the QR code, the addresses, a finished game, a picture.
 - `lib/deck.js` — the dealer for a virtual table: the hands, and the rules of a trick.
+- `lib/bots.js` — the players the table provides: what a hand is worth, which card to play, and the driver that takes their turn.
 - `lib/games.js` — a finished game on disk.
 - `lib/dev.js` — the dev portal, which a real game never touches.
 - `public/ui.js` — shared page bits, such as the full-screen button.
 - `public/stage.js` — the overlay both scenes are played on, and the slot that says which one is open.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
+- `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
 - `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a host screen and a phone.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
 - `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
-- `test.js` — end-to-end test.
+- `test.js` — end-to-end test. `test-felt.js` — the felt, checked without a browser.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
 - `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, and live previews of every screen.

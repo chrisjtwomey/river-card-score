@@ -187,6 +187,7 @@ function renderLobby() {
   const n = ST.seats.length;
   $('#seat-count').textContent = `${n} player${n === 1 ? '' : 's'}`;
   $('#lobby-wait').hidden = n >= 2;
+  renderBots();
   const fd = ST.seats.find((s) => s.id === ST.firstDealerId) || ST.seats[0];
   const capSeat = ST.seats.find((s) => s.id === ST.captainId);
   $('#first-dealer-hint').textContent = fd
@@ -247,6 +248,22 @@ function renderLobby() {
   $('#rounds-hint').textContent = `${cards.length} rounds: ${cards.join(' ')}`;
   const ex = (w) => Game.roundScore(2, w, c);
   $('#miss-hint').textContent = `Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`;
+}
+
+/* Players the table provides, for a hand short of people. They hold cards, so
+   they belong to a table that deals them. */
+function renderBots() {
+  const btn = $('#btn-addbot');
+  if (!btn) return;
+  const bots = ST.seats.filter((s) => s.bot).length;
+  const full = ST.seats.length >= 8;
+  const cards = ST.cfg.deck === 'virtual';
+  btn.disabled = full;
+  btn.textContent = bots ? 'Add another bot' : 'Add a bot';
+  $('#bot-hint').textContent = full ? 'The table is full.'
+    : bots ? `${bots} of the ${ST.seats.length} seats play themselves.`
+    : cards ? 'It plays its own hand. Remove it with ×.'
+    : 'It plays its own hand, so the cards move to the phones.';
 }
 
 function renderGame() {
@@ -554,6 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // playFinale() in the console replays the result.
   window.playFinale = (mode) => playFinaleNow(mode || 'full');
 
+  $('#btn-addbot').addEventListener('click', () => Net.send({ t: 'addbot' }));
   $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));

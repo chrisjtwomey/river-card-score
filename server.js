@@ -67,8 +67,9 @@ function pictureOf(code, seatId) {
 
 // The two smallest verbs on a socket, and everything uses them: they are
 // declared before anything that could ask.
-function send(ws, obj) { if (ws.readyState === 1) ws.send(JSON.stringify(obj)); }
-function fail(ws, msg) { send(ws, { t: 'error', msg }); }
+function send(ws, obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+// A bot plays through the same door as a phone and has no socket to be told on.
+function fail(ws, msg) { if (ws) send(ws, { t: 'error', msg }); }
 
 /* ---------------- rooms ---------------- */
 
@@ -139,7 +140,12 @@ function syncCfg(room) {
   room.cfg.max = Math.min(room.cfg.max, G.maxCardsFor(n));
   if (!room.onesLocked) room.cfg.ones = n;
   if (room.firstDealerId && seatIndex(room, room.firstDealerId) < 0) room.firstDealerId = null;
-  if (seatIndex(room, room.captainId) < 0) room.captainId = room.seats.length ? room.seats[0].id : null;
+  if (seatIndex(room, room.captainId) < 0) {
+    // Somebody has to run the table, and a bot cannot: it would leave a game
+    // with nobody able to start it.
+    const who = room.seats.find((s) => !s.bot) || room.seats[0];
+    room.captainId = who ? who.id : null;
+  }
 }
 
 function publicState(room) {
@@ -152,7 +158,7 @@ function publicState(room) {
     phase: room.phase,
     cfg: room.cfg,
     seats: room.seats.map((s) => ({ id: s.id, name: s.name, online: s.online,
-                                    av: s.av ? s.av.ver : null })),
+                                    bot: !!s.bot, av: s.av ? s.av.ver : null })),
     firstDealerId: room.firstDealerId,
     captainId: room.captainId,
     rounds: room.rounds,
@@ -183,13 +189,36 @@ function broadcast(room) {
     ws.send(JSON.stringify(base));
   });
   delete base.hand;
+  // Whoever is on play now, this is where a bot finds out it is them.
+  Bots.nudge(room);
 }
 
 function markPresence(room) {
   room.seats.forEach((s) => {
-    s.online = Array.from(room.sockets).some(
+    // A bot never goes anywhere, so it is never away.
+    s.online = s.bot || Array.from(room.sockets).some(
       (w) => w.ctx && w.ctx.seatId === s.id && w.ctx.role !== 'watch');
   });
+}
+
+/* One bid, however it arrived: from a phone, or from a bot. The last bid closes
+   the bidding and the cards go out, so this is the one place that decides it. */
+function seatBid(room, p, v) {
+  const r = curRound(room), n = room.seats.length;
+  if (!r || !r.bids) return;
+  r.bids[p] = v;
+  if (G.turnSeat(r, n) === null) {
+    room.phase = 'tricks';
+    if (virtual(room)) startPlay(room);
+  }
+}
+
+// A player the table provides. It takes a seat like anybody else -- it has a
+// name and a hand -- and the server plays it.
+function addBot(room) {
+  room.seats.push({ id: token().slice(0, 8), name: Bots.botName(room),
+                    token: token(), watch: token(), online: true, bot: true });
+  syncCfg(room);
 }
 
 // A bum deal: the cards were dealt wrong, so throw the hand in and deal it
@@ -249,6 +278,12 @@ const { TRICK_HOLD, virtual, dealHands, startPlay, playPublic, playCard } = Deck
   G, curRound, broadcast, fail, scoreRound,
 });
 
+// The players the table provides. They hold cards like everybody else and go
+// through the same rules; all the server does is take their turn for them.
+const Bots = require('./lib/bots.js')({
+  G, curRound, broadcast, virtual, seatBid, playCard, bumDeal,
+});
+
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
@@ -259,7 +294,7 @@ const { handleDev, devHello } = Dev({
 
 // Every message a seated socket may send, and who may send it, as a table.
 const { handleTable } = Messages({
-  DEV, CHAT_KEEP, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish,
+  DEV, CHAT_KEEP, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish, addBot, seatBid,
   virtual, dealHands, startPlay, playCard, scoreRound, bumDeal,
 });
 
@@ -393,7 +428,7 @@ setInterval(() => {
 setInterval(() => {                       // drop idle rooms after 6 hours
   const cutoff = Date.now() - 6 * 3600e3;
   rooms.forEach((room, code) => {
-    if (room.sockets.size === 0 && room.lastSeen < cutoff) rooms.delete(code);
+    if (room.sockets.size === 0 && room.lastSeen < cutoff) { Bots.stop(room); rooms.delete(code); }
   });
 }, 600000);
 

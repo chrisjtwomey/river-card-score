@@ -409,12 +409,14 @@ function renderLobby(me) {
     const isFirst = ST.firstDealerId ? ST.firstDealerId === s.id : i === 0;
     const row = document.createElement('div');
     row.className = 'seat-item' + (i === me ? ' me' : '') + (s.online ? '' : ' off') +
-      (isFirst ? ' first-dealer' : '');
+      (isFirst ? ' first-dealer' : '') + (s.bot ? ' bot' : '');
     row.innerHTML = `<span class="seat">${i + 1}</span><span class="nm"></span>` +
       (isCap ? '<span class="badge">host</span>' : '') +
+      (s.bot ? '<span class="badge soft">bot</span>' : '') +
       (isFirst ? '<span class="badge soft">deals first</span>' : '') +
       '<span class="dotstat"></span>' +
-      (boss ? `<button class="mini" data-a="cap" title="Make this player the table host" aria-pressed="${isCap}">★</button>` +
+      // A bot cannot run the table, so it is never offered the star.
+      (boss ? (s.bot ? '' : `<button class="mini" data-a="cap" title="Make this player the table host" aria-pressed="${isCap}">★</button>`) +
               `<button class="mini d" data-a="deal" title="Deals the first round" aria-pressed="${isFirst}">🂠</button>` +
               '<button class="mini" data-a="up" title="Move up">↑</button>' +
               '<button class="mini" data-a="down" title="Move down">↓</button>' +
@@ -430,11 +432,32 @@ function renderLobby(me) {
     box.appendChild(row);
   });
 
+  renderBots(boss);
+
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
   $('#lobby-title').textContent = boss ? 'Set the table' : 'Waiting for the table host';
   $('#lobby-hint').textContent = ST.seats.length < 2
     ? 'Waiting for more players…'
     : (boss ? 'Start the game when everybody is seated.' : `${capName} starts the game when everybody is seated.`);
+}
+
+/* Players the table provides, for a hand short of people. They hold cards, so
+   they belong to a table that deals them. */
+function renderBots(boss) {
+  const row = $('#bot-row');
+  if (!row) return;
+  row.hidden = !boss;
+  if (!boss) return;
+  const bots = ST.seats.filter((s) => s.bot).length;
+  const full = ST.seats.length >= 8;
+  const cards = ST.cfg.deck === 'virtual';
+  const btn = $('#btn-addbot');
+  btn.disabled = full;
+  btn.textContent = bots ? 'Add another bot' : 'Add a bot';
+  $('#bot-hint').textContent = full ? 'The table is full.'
+    : bots ? `${bots} of the ${ST.seats.length} seats play themselves.`
+    : cards ? 'It plays its own hand. Remove it with ×.'
+    : 'It plays its own hand, so the cards move to the phones.';
 }
 
 function renderRound(r, me) {
@@ -663,6 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-accolade-pay').addEventListener('change', (e) => patch({ accoladePay: e.target.value }));
   $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
+  $('#btn-addbot').addEventListener('click', () => Net.send({ t: 'addbot' }));
   $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
   $('#btn-reset').addEventListener('click', () => {

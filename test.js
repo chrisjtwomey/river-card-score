@@ -802,6 +802,135 @@ function client(name, url) {
     h.ws.close(); ann.ws.close(); ben.ws.close();
   }
 
+  /* ---- players the table provides ----
+     A bot is a seat with nobody behind it. It has to bid its own hand and play
+     its own cards, through the same rules as everybody else, with nobody
+     playing for it. */
+  {
+    const G = require(path + '/game.js');
+    const Bots = require(path + '/lib/bots.js')({
+      G, curRound: () => null, broadcast: () => {}, virtual: () => true,
+      seatBid: () => {}, playCard: () => {}, bumDeal: () => {},
+    });
+
+    // what a hand is worth, asked directly
+    ok(Bots.bidFor(['AH'], 1, 'H', null) === 1, 'the ace of trumps is a trick');
+    ok(Bots.bidFor(['2S'], 1, 'H', null) === 0, 'a low card in a side suit is not');
+    ok(Bots.bidFor(['AH', 'KH', 'QH', '2S', '3S'], 5, 'H', null) >= 2,
+       'three top trumps are worth two or more');
+    ok(Bots.bidFor(['2S', '3S', '4S', '5D', '6D'], 5, 'H', null) === 0,
+       'a hand of nothing bids nothing');
+    ok(Bots.bidFor(['AH'], 1, 'H', 1) === 0, 'and the bid screw-the-dealer forbids is not made');
+    ok(Bots.bidFor(['2S'], 1, 'H', 0) === 1, 'either way round');
+    for (let i = 0; i < 40; i++) {
+      const hand = G.sortHand(G.shuffle(G.deck()).slice(0, 5));
+      const b = Bots.bidFor(hand, 5, 'S', null);
+      ok(b >= 0 && b <= 5, 'a bid is always one it is allowed to make  got ' + b);
+    }
+
+    // and which card to play
+    const won = (trick, card, trump) =>
+      G.trickWinner(trick.concat([{ p: -1, card }]), trump) === -1;
+    ok(Bots.cardFor(['AS', '2S'], [], 'H', 1) === 'AS', 'wanting tricks, it leads its best');
+    ok(Bots.cardFor(['AS', '2S'], [], 'H', 0) === '2S', 'wanting none, it leads its worst');
+    ok(Bots.cardFor(['KS', 'QS', '2S'], [{ p: 0, card: 'JS' }], 'H', 1) === 'QS',
+       'it wins a trick with the cheapest card that will');
+    ok(Bots.cardFor(['KS', 'QS', '2S'], [{ p: 0, card: 'JS' }], 'H', 0) === '2S',
+       'and ducks one it does not want');
+    ok(Bots.cardFor(['QH', '9D', '2D'], [{ p: 0, card: 'AS' }, { p: 1, card: 'KS' }], 'H', 0) === '9D',
+       'ducking, it throws its best side card and keeps its trump');
+    ok(Bots.cardFor(['2H', 'AS', 'KS'], [], 'H', 2) === 'AS',
+       'and it leads its ace, not the two of trumps');
+    ok(Bots.cardFor(['AH', 'AS', '2S'], [], 'H', 2) === 'AH',
+       'the ace of trumps ahead of the other ace');
+    ok(Bots.cardFor(['2H', '3S'], [{ p: 0, card: 'AS' }], 'H', 1) === '3S',
+       'holding the suit led, it follows it');
+    {
+      const c = Bots.cardFor(['2H', '4D', 'KD'], [{ p: 0, card: 'AS' }], 'H', 1);
+      ok(c === '2H' && won([{ p: 0, card: 'AS' }], c, 'H'),
+         'with none of it, it trumps when it wants the trick  got ' + c);
+    }
+    for (let i = 0; i < 60; i++) {
+      const d = G.shuffle(G.deck());
+      const hand = G.sortHand(d.slice(0, 4));
+      const trick = [{ p: 0, card: d[10] }, { p: 1, card: d[11] }];
+      const c = Bots.cardFor(hand, trick, 'S', i % 3);
+      ok(G.legalPlays(hand, G.suitOf(trick[0].card)).indexOf(c) >= 0,
+         'and it never picks a card the rules forbid');
+    }
+
+    // a table with a bot in it plays itself
+    const h = client('bothost'); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.state.code;
+    const you = client('botmate'); await you.ready;
+    you.send({ t: 'join', code, name: 'You' }); await wait(150);
+
+    h.send({ t: 'addbot' }); await wait(150);
+    ok(h.state.seats.length === 2 && h.state.seats[1] && h.state.seats[1].bot === true,
+       'the host can add a bot  got ' + JSON.stringify(h.state.seats.map((x) => x.name + (x.bot ? '(bot)' : ''))));
+    ok(h.state.cfg.deck === 'virtual', 'and asking for one asks for cards on the phones');
+    ok(h.state.seats[1].online === true, 'and it is always at the table');
+    ok(h.state.captainId === h.state.seats[0].id, 'the table is not handed to it');
+    ok(/^[A-Z][a-z]+$/.test(h.state.seats[1].name), 'it has a name  got ' + h.state.seats[1].name);
+    h.send({ t: 'addbot' }); await wait(150);
+    ok(h.state.seats[2] && h.state.seats[2].name !== h.state.seats[1].name,
+       'and the next one is not called the same thing');
+
+    h.errors.length = 0;
+    h.send({ t: 'config', patch: { deck: 'physical' } }); await wait(150);
+    ok(h.errors.some((e) => /take the bots off/.test(e)),
+       'a table with bots at it cannot switch to real cards');
+    ok(h.state.cfg.deck === 'virtual', 'and the setting does not change');
+
+    you.errors.length = 0;
+    you.send({ t: 'addbot' }); await wait(120);
+    ok(you.errors.length === 0, 'the table host may add one from their phone too');
+
+    h.send({ t: 'kick', id: h.state.seats[3].id }); await wait(150);
+    ok(h.state.seats.length === 3, 'a bot is removed like any other seat');
+
+    h.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 1 } }); await wait(150);
+    h.send({ t: 'start' }); await wait(400);
+    const mine = you.state.seats.findIndex((x) => x.id === you.seatId);
+    ok(you.state.phase === 'bid', 'the game starts');
+    // the bots bid on their own, and stop when it is the person's turn
+    await wait(1200 + 900 * 3);
+    const r0 = you.state.rounds[0];
+    ok(you.state.seats.every((x, i) => x.bot === false || r0.bids[i] !== null),
+       'every bot has bid without being asked  got ' + JSON.stringify(r0.bids));
+    ok(you.state.turn === mine, 'and the table waits for the person  got turn ' + you.state.turn);
+
+    you.send({ t: 'bid', v: 0 }); await wait(400);
+    ok(you.state.phase === 'tricks', 'the last bid puts the cards in play');
+
+    // and then the round plays itself, apart from the person's own cards
+    for (let step = 0; step < 30 && you.state.phase === 'tricks'; step++) {
+      await wait(400);
+      const p = you.state.play;
+      if (!p || p.turn !== mine) continue;
+      const led = p.trick.length ? G.suitOf(p.trick[0].card) : null;
+      you.send({ t: 'play', card: G.legalPlays(you.state.hand, led)[0] });
+    }
+    ok(you.state.idx === 1 || you.state.phase === 'done',
+       'the round is played out and scored  got idx ' + you.state.idx + ' ' + you.state.phase);
+    const done0 = you.state.rounds[0];
+    ok(Array.isArray(done0.tricks) && done0.tricks.reduce((a, b) => a + b, 0) === done0.cards,
+       'with every trick accounted for  got ' + JSON.stringify(done0.tricks));
+    ok(you.errors.length === 0, 'and nobody had to play for anybody  got ' + JSON.stringify(you.errors));
+
+    // a bot has no opinion about a bum deal, so it agrees
+    await wait(1200);
+    if (you.state.phase === 'bid' || you.state.phase === 'tricks') {
+      const at = you.state.idx;
+      you.send({ t: 'bumdeal' }); await wait(1400);
+      ok(you.state.idx === at, 'a bum deal called against bots stays in the same round');
+      ok(!you.state.vote, 'and the bots agreed to it, so the vote is over');
+    }
+
+    h.ws.close(); you.ws.close();
+  }
+
   // ---- PUBLIC_URL replaces the detected addresses ----
   {
     const port2 = PORT + 1;
