@@ -96,5 +96,8 @@ const Stage = (function () {
   function close(kind) { if (S.live && (!kind || S.live.kind === kind)) S.live.finish(); }
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
-  return { S, mode, faceOf, cardEl, tf, fade, overlayEl, close, isOpen };
+  // SUIT_OF and SUIT_NAME go out with the rest: with real cards the deal
+  // knows only the suit the dealer turned, and has to draw and name it
+  // without a card to read it off.
+  return { S, mode, faceOf, cardEl, tf, fade, overlayEl, close, isOpen, SUIT_OF, SUIT_NAME };
 })();

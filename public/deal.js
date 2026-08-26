@@ -6,7 +6,7 @@
    so is the slot for whichever scene is open. The finish is in finale.js.
 */
 const Deal = (function () {
-  const { S, mode, faceOf, cardEl, tf, fade, overlayEl, close } = Stage;
+  const { S, mode, faceOf, cardEl, tf, fade, overlayEl, close, SUIT_OF, SUIT_NAME } = Stage;
   let last = null;        // the last status shown, to restore it on re-open
 
 
@@ -22,7 +22,22 @@ const Deal = (function () {
      With hold, the scene stays on screen after the deal, until close() is
      called, so the table can see the hand while the bids come in.
      A tap, a click, or a key ends the deal early; a second one closes it. */
+  /* A scene that throws half-built is worse than no scene at all. The overlay
+     is already up, and the tap that closes it is bound at the end of the
+     build, so a throw leaves a screen the player cannot get past. Whatever
+     goes wrong, the stage comes down. */
   function play(opts, force) {
+    return build(opts, force).catch((e) => {
+      console.error('[deal] the scene failed to build:', e);
+      const overlay = overlayEl();
+      const stage = overlay.querySelector('.deal-stage');
+      S.live = null;
+      overlay.hidden = true;
+      if (stage) stage.innerHTML = '';
+    });
+  }
+
+  function build(opts, force) {
     close();
     return new Promise((resolve) => {
       const overlay = overlayEl();
