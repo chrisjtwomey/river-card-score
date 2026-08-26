@@ -187,11 +187,31 @@ const Deal = (function () {
       // time to take it in. A real table has been watching its dealer
       // shuffle all along, so it deals as soon as it is released.
       const dealAt = shuffleEnd + (virtual && !calm ? 3500 : T.start);
-      const fanW = Math.min(W * 0.72, 300);
       // Your own hand sits below the ring, not in it: at a full table the
       // seats either side of you reach down far enough to clip a fan left at
       // seat height.
       const fanY = Math.min(H * 0.34, 240);
+      /* A hand is a fan, not a row. Each card steps a fixed distance along from
+         the one before -- far enough to read the corner, near enough to still
+         overlap -- and turns a fixed amount further round. A step worked out by
+         dividing a width between the cards does the opposite of a fan: the
+         fewer the cards, the farther apart they land, and two cards end up at
+         opposite edges of the screen.
+
+         The fan tightens instead as the hand grows, and never grows past the
+         room it is given. */
+      const cardW = W <= 420 ? 52 : 64;               // .dcard, and its narrow rule
+      const fanRoom = Math.min(W * 0.86, 340);
+      const fanStep = passes > 1
+        ? Math.min(cardW * 0.62, (fanRoom - cardW) / (passes - 1)) : 0;
+      // The whole fan turns through 34 degrees at most, however many cards are
+      // in it, or the end cards of a long hand lie on their sides.
+      const fanTilt = passes > 1 ? Math.min(6.5, 34 / (passes - 1)) : 0;
+      // Turning about a point below the fan is what gives it its dome: the
+      // farther a card is from the middle, the lower it sits. This is the point
+      // that fits that step to that turn.
+      const rad = (deg) => deg * Math.PI / 180;
+      const fanPivot = fanTilt ? fanStep / Math.sin(rad(fanTilt)) : 0;
       const lastAt = [], myCards = [];
       let given = 0;
 
@@ -205,10 +225,12 @@ const Deal = (function () {
           // Your own cards spread into a fan you can read. Everybody else gets
           // a neat pile.
           const off = passes > 1 ? k - (passes - 1) / 2 : 0;
-          const step2 = own ? fanW / Math.max(1, passes - 1) : 4.5;
+          const step2 = own ? fanStep : 4.5;
           const gx = x + off * step2;
-          const gy = own ? fanY + Math.abs(off) * 2.6 : y - k * 1.6;
-          const tilt = (x / (rx || 1)) * 9 + off * (own ? 3.4 : 2.2);
+          const gy = own
+            ? fanY + fanPivot * (1 - Math.cos(rad(off * fanTilt)))
+            : y - k * 1.6;
+          const tilt = (x / (rx || 1)) * 9 + off * (own ? fanTilt : 2.2);
           const delay = dealAt + given * perCard;
           given += 1;
           lastAt[p] = delay;
