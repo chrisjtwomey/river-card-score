@@ -46,6 +46,9 @@ const Felt = (function () {
   let onView = null;               // the page, told when the felt comes and goes
   let held = -1;                   // the card in the reader's fingers, or none
   let drag = null;                 // the gesture in progress
+  let spread = false;              // the pile in the middle, laid out to be read
+  let heldBid = -1;                // the number under the thumb, or none
+  let bidSlots = [];               // where each number sits, to aim a thumb at
   let sent = null;                 // a card played, until the table says so
 
   const virtual = () => !!(ST && ST.cfg && ST.cfg.deck === 'virtual');
@@ -70,6 +73,10 @@ const Felt = (function () {
   // browser must not take the gestures for scrolling.
   function mount() {
     const overlay = overlayEl();
+    // The stage is made hidden, and the deal is what usually shows it. A table
+    // built without one -- a phone that arrived in the middle of a round, or a
+    // reader with animations off -- has to show it itself.
+    if (want) overlay.hidden = false;
     overlay.classList.add('table');
     overlay.classList.toggle('still', still());
     if (!overlay.querySelector('.felt-out')) {
@@ -89,6 +96,12 @@ const Felt = (function () {
       hint.className = 'felt-hint';
       overlay.appendChild(hint);
     }
+    if (!overlay.querySelector('.felt-bids')) {
+      const rail = document.createElement('div');
+      rail.className = 'felt-bids';
+      rail.hidden = true;
+      overlay.appendChild(rail);
+    }
     if (!overlay.querySelector('.felt-line')) {
       const line = document.createElement('div');
       line.className = 'felt-line';
@@ -102,7 +115,7 @@ const Felt = (function () {
     const overlay = document.getElementById('deal');
     if (!overlay) return;
     overlay.classList.remove('table', 'still', 'dragging');
-    ['.felt-out', '.felt-hint', '.felt-line'].forEach((s) => {
+    ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids'].forEach((s) => {
       const el = overlay.querySelector(s);
       if (el) el.remove();
     });
@@ -153,6 +166,33 @@ const Felt = (function () {
               (s.x / (g.R.rx || 1)) * 12, 0, 1);
   }
 
+  /* The tricks a seat has won, in a little stack beside its own cards. A real
+     table keeps them there, and they say at a glance who is doing well.
+
+     The stack grows upward, not sideways: a seat that wins seven tricks must
+     take up no more room than one that wins none, and the middle of the table
+     and the fan below it are both already spoken for. */
+  function wonAt(g, p, k) {
+    const s = g.R.at(p);
+    const side = (s.x + g.cw * 1.6 > g.W / 2) ? -1 : 1;   // in, if out would fall off
+    return tf(s.x + side * g.cw * 0.95 + k * 0.8, s.y - 4 - k * 1.6,
+              -4 + k * 1.2, 180, 0.42);
+  }
+
+  /* The pile, laid out to be read: side by side in the order they were played,
+     each under the name of whoever played it. The card the deck turned is the
+     bottom of that pile, so it is the first in the row and comes down to the
+     size of the rest -- it would cover the card beside it otherwise. */
+  function spreadX(g, i, of) {
+    // Not past the seats on either side: a row that reached the piles would be
+    // read as part of them. A big table's row overlaps instead, and overlaps
+    // leftward, so every card still shows the corner it is named in.
+    const room = Math.min(g.W * 0.9, 380, 2 * (g.R.rx - g.cw * 0.6));
+    const step = of > 1 ? Math.min(g.cw * 1.14, (room - g.cw) / (of - 1)) : 0;
+    return (i - (of - 1) / 2) * step;
+  }
+  const spreadAt = (g, i, of) => tf(spreadX(g, i, of), -10, 0, 0, 1);
+
   function nameAt(el, g, p, own) {
     const s = g.R.at(p);
     el.style.left = `calc(50% + ${own ? 0 : s.x}px)`;
@@ -199,8 +239,9 @@ const Felt = (function () {
     const { stage } = mount();
     stage.innerHTML = '';
     const p = ST.play;
-    T = { stage, piles: [], labels: [], hero: null, hand: new Map(), table: new Map(), slots: [] };
-    held = -1; drag = null;
+    T = { stage, piles: [], labels: [], hero: null, hand: new Map(), table: new Map(),
+          slots: [], won: [], heldWinner: null, shown: '' };
+    held = -1; drag = null; spread = false;
 
     const g0 = geom();
     for (let q = 0; q < g0.n; q++) {
@@ -243,8 +284,9 @@ const Felt = (function () {
   // What the deal left standing, taken over as it stands.
   function adopt(ctx, r) {
     T = { stage: ctx.stage, piles: (ctx.piles || []).map((a) => (a || []).slice()),
-          labels: ctx.labels || [], hero: ctx.hero, hand: new Map(), table: new Map(), slots: [] };
-    held = -1; drag = null;
+          labels: ctx.labels || [], hero: ctx.hero, hand: new Map(), table: new Map(),
+          slots: [], won: [], heldWinner: null, shown: '' };
+    held = -1; drag = null; spread = false;
     const mineCards = T.piles[me] || [];
     (ST.hand || []).forEach((c, i) => { if (mineCards[i]) T.hand.set(c, mineCards[i]); });
     T.piles[me] = [];                      // your cards are a hand now, not a pile
@@ -309,8 +351,22 @@ const Felt = (function () {
     const onTable = new Set(shown.map((x) => x.card));
     const inHand = new Set(hand);
 
-    // Cards that have gone from both: last trick's, gathered by its winner.
-    T.table.forEach((el, c) => { if (!onTable.has(c)) { el.remove(); T.table.delete(c); } });
+    // A new card on the table stacks the pile again: whoever was reading it has
+    // read it.
+    const sig = shown.map((x) => x.p + x.card).join(',');
+    if (sig !== T.shown) { spread = false; T.shown = sig; }
+
+    /* A finished trick leaves the middle, and it does not vanish: it goes to
+       whoever took it, face down, and joins the little stack of tricks they
+       have won. One card stands for each trick -- a whole trick a side would be
+       a stack too wide for a phone -- so the first card of the trick makes the
+       journey and the rest go with it. */
+    const gathered = [];
+    T.table.forEach((el, c) => {
+      if (onTable.has(c)) return;
+      gathered.push(el);
+      T.table.delete(c);
+    });
     T.hand.forEach((el, c) => {
       if (inHand.has(c)) return;
       if (onTable.has(c)) { T.table.set(c, el); T.hand.delete(c); return; }
@@ -338,6 +394,29 @@ const Felt = (function () {
       T.stage.appendChild(el);
       T.hand.set(c, el);
     });
+
+    /* The stacks of won tricks, against what the server counted. A trick that
+       is still on the table has been counted but not yet gathered, so it is not
+       on the stack yet either -- that is what makes the gather something the
+       table can see. A phone that arrived in the middle of a round has no cards
+       to gather, so plain backs stand in for the tricks it missed. */
+    const wonBy = (p && p.won) || [];
+    const holding = !!(p && p.last && !p.trick.length);
+    const heir = T.heldWinner;
+    for (let q = 0; q < ST.seats.length; q++) {
+      T.won[q] = T.won[q] || [];
+      const target = Math.max(0, (wonBy[q] || 0) - (holding && p.last.winner === q ? 1 : 0));
+      while (T.won[q].length > target) { const el = T.won[q].pop(); if (el) el.remove(); }
+      while (T.won[q].length < target) {
+        let el = (heir === q && gathered.length) ? gathered.shift() : null;
+        if (!el) { el = cardEl(null, ''); T.stage.appendChild(el); }
+        el.classList.remove('mine', 'took', 'up', 'dud', 'drag', 'no');
+        el.classList.add('slow', 'gone');
+        T.won[q].push(el);
+      }
+    }
+    gathered.forEach((el) => el.remove());     // nobody's: a round thrown in
+    T.heldWinner = p && p.last && !p.trick.length ? p.last.winner : null;
 
     // The other seats' piles thin as they play. The server says how many each
     // still holds, so a pile is trimmed from the top -- the last card dealt is
@@ -375,19 +454,44 @@ const Felt = (function () {
 
     const shown = p && p.trick.length ? p.trick : (p && p.last ? p.last.trick : []);
     const winner = p && p.last && !p.trick.length ? p.last.winner : null;
+    T.stage.querySelectorAll('.tname').forEach((el) => el.remove());
+    // Read out, the turned card takes the first place in the row.
+    const row = spread ? shown.length + 1 : 0;
+    const label = (i, text, gold) => {
+      const nm = document.createElement('div');
+      nm.className = 'tname' + (gold ? ' took' : '');
+      nm.textContent = text;
+      nm.style.left = `calc(50% + ${Math.round(spreadX(g, i, row))}px)`;
+      nm.style.top = `calc(50% + ${Math.round(-10 + g.ch / 2 + 12)}px)`;
+      T.stage.appendChild(nm);
+    };
     shown.forEach((x, i) => {
       const el = T.table.get(x.card);
       if (!el) return;
-      el.style.zIndex = String(6 + i);
+      el.style.zIndex = String(7 + i);
       el.classList.toggle('took', winner !== null && x.p === winner);
-      at(el, trickAt(g, x.p));
+      el.classList.toggle('slow', spread);
+      at(el, spread ? spreadAt(g, i + 1, row) : trickAt(g, x.p));
+      if (spread) label(i + 1, x.p === me ? 'You' : ST.seats[x.p].name, x.p === winner);
     });
+    if (spread) label(0, 'Trump', false);
+
+    (T.won || []).forEach((stack, q) => (stack || []).forEach((el, k) => {
+      el.style.zIndex = String(2);
+      at(el, wonAt(g, q, k));
+    }));
 
     T.piles.forEach((pile, q) => (pile || []).forEach((el, k) => {
       el.style.zIndex = String(k);
       at(el, pileAt(g, q, k, r.cards));
     }));
-    if (T.hero) at(T.hero, tf(0, -10, 0, 0, 1.15));
+    if (T.hero) {
+      T.hero.classList.toggle('slow', spread);
+      T.hero.style.zIndex = spread ? '6' : '';
+      at(T.hero, spread
+        ? tf(spreadX(g, 0, row), -10, 0, 0, g.cw / 86)
+        : tf(0, -10, 0, 0, 1.15));
+    }
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
   }
 
@@ -418,7 +522,120 @@ const Felt = (function () {
     T.hand.forEach((el, c) => el.classList.toggle('dud', !!can && can.indexOf(c) < 0));
 
     head(r);
+    bidRail(r);
     hint(r);
+  }
+
+  /* The bid, made while you are holding your cards -- which is when a bid is
+     really made. The numbers arc across the empty band between the card the
+     deck turned and the top of your fan, and they echo the fan's own curve.
+
+     Every rule they obey belongs to the shared rules and to the server: the
+     range is the hand, the seat that may bid is turnSeat, the seat that may
+     still change its mind is changeableSeat, and the one number the dealer may
+     not call is forbiddenBid. */
+  function bidRail(r) {
+    const rail = document.querySelector('#deal .felt-bids');
+    if (!rail) return;
+    const n = ST.seats.length;
+    const mine = ST.turn === me;
+    const amend = Game.changeableSeat(r, n) === me;
+    const on = ST.phase === 'bid' && !watch && !!send && (mine || amend);
+    rail.hidden = !on;
+    if (!on) { rail.innerHTML = ''; rail.dataset.k = ''; bidSlots = []; heldBid = -1; return; }
+
+    const forbidden = Game.forbiddenBid(r, me, ST.cfg, n);
+    const k = `${ST.idx}:${r.redeals || 0}:${r.cards}:${r.bids[me]}:${forbidden}:${amend}`;
+    if (rail.dataset.k === k) { placeBids(); return; }   // nothing about it changed
+    rail.dataset.k = k;
+    rail.innerHTML = '';
+    heldBid = -1;
+
+    const g = geom();
+    /* Anchored by its foot, not its head: the heading above the fan has to stay
+       readable, and a long hand's numbers must grow upward into the empty
+       middle of the table and never down over the cards. */
+    rail.style.bottom = `calc(50% - ${Math.round(g.F.at(0).y - 88)}px)`;
+
+    const count = r.cards + 1;
+    const size = g.W <= 420 ? 40 : 44;
+    const room = Math.min(g.W - 20, 400);
+    // Numbers step along at a fixed distance like the cards do, and like the
+    // cards they overlap when there are a lot of them -- which is no trouble,
+    // because a thumb passing over them lifts each in turn.
+    const step = count > 1 ? Math.min(size + 6, (room - size) / (count - 1)) : 0;
+    const arc = Stage.fan(count, g.W, g.H);
+    bidSlots = [];
+    for (let v = 0; v <= r.cards; v++) {
+      const b = document.createElement('button');
+      b.className = 'bidchip';
+      b.type = 'button';
+      b.textContent = String(v);
+      b.style.width = `${size}px`;
+      b.style.height = `${size}px`;
+      const off = arc.off(v);
+      const x = off * step;
+      const dy = (arc.at(v).y - arc.y) * 0.45;
+      const tilt = off * arc.tilt * 0.5;
+      b.style.left = `calc(50% + ${Math.round(x)}px)`;
+      b.style.zIndex = String(10 + v);
+      if (r.bids[me] === v) b.setAttribute('aria-pressed', 'true');
+      if (v === forbidden) {
+        b.classList.add('nope');
+        b.disabled = true;
+        b.title = `Screw the dealer: the bids must not total ${r.cards}`;
+      }
+      // A keyboard needs no thumb: the key that presses the button bids it.
+      b.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.preventDefault) e.preventDefault();
+        bidIt(v);
+      });
+      rail.appendChild(b);
+      bidSlots.push({ v, el: b, x, dy, tilt });
+    }
+    placeBids();
+  }
+
+  // A number lifts and enlarges under the thumb, the same as a card does.
+  function placeBids() {
+    bidSlots.forEach((s) => {
+      const up = s.v === heldBid;
+      s.el.classList.toggle('up', up);
+      s.el.style.zIndex = String(up ? 40 : 10 + s.v);
+      s.el.style.transform = `translate(-50%,${Math.round(s.dy) - (up ? 13 : 0)}px) `
+        + `rotate(${s.tilt.toFixed(2)}deg) scale(${up ? 1.34 : 1})`;
+    });
+  }
+
+  // Which number the thumb is on, by the same reckoning the fan uses.
+  function bidUnder(px, py) {
+    if (!bidSlots.length) return -1;
+    const g = geom();
+    const rail = document.querySelector('#deal .felt-bids');
+    if (!rail || rail.hidden) return -1;
+    const foot = g.H / 2 + g.F.at(0).y - 88;          // the rail's own foot
+    const size = g.W <= 420 ? 40 : 44;
+    if (py > foot + 14 || py < foot - size - 24) return -1;
+    const cx = px - g.W / 2;
+    const lo = Math.min(...bidSlots.map((s) => s.x)) - size / 2 - 12;
+    const hi = Math.max(...bidSlots.map((s) => s.x)) + size / 2 + 12;
+    if (cx < lo || cx > hi) return -1;
+    let best = -1, near = Infinity;
+    bidSlots.forEach((s) => {
+      const d = Math.abs(cx - s.x);
+      if (d < near) { near = d; best = s.v; }
+    });
+    return best;
+  }
+
+  function bidIt(v) {
+    const s = bidSlots.find((x) => x.v === v);
+    if (!s || s.el.disabled || !send) return;
+    bidSlots.forEach((x) => { x.el.disabled = true; });
+    heldBid = -1;
+    placeBids();
+    send({ t: 'bid', v });
   }
 
   function say(text) {
@@ -429,12 +646,23 @@ const Felt = (function () {
   function hint(r) {
     const p = ST.play;
     const bidding = ST.phase === 'bid';
+    if (spread) return say('Tap again to stack them.');
     if (watch) return say('You are watching this table.');
     if (bidding) {
-      // The bid pad is still on the page behind the felt, so the felt says
-      // where to find it.
-      return say(ST.turn === me
-        ? 'Your bid — tap Scorecard to make it.'
+      const n = ST.seats.length;
+      if (ST.turn === me) {
+        const forbidden = Game.forbiddenBid(r, me, ST.cfg, n);
+        return say(forbidden === null
+          ? `How many of the ${r.cards} tricks will you win?`
+          : `You deal, so you bid last. ${forbidden} is not allowed: `
+            + `the bids must not total ${r.cards}.`);
+      }
+      if (Game.changeableSeat(r, n) === me) {
+        return say(`You bid ${r.bids[me]}. You can change it until `
+          + `${ST.seats[ST.turn] ? ST.seats[ST.turn].name : 'the next player'} bids.`);
+      }
+      return say(ST.turn === null
+        ? 'All bids are in.'
         : `Waiting for ${ST.seats[ST.turn] ? ST.seats[ST.turn].name : 'the table'} to bid.`);
     }
     if (!p) return say('Dealing…');
@@ -475,6 +703,16 @@ const Felt = (function () {
       if (d < near) { near = d; best = s.i; }
     });
     return best;
+  }
+
+  // The pile in the middle: a generous box round the card the deck turned, so
+  // a thumb aimed at it hits it.
+  function onPile(px, py) {
+    if (!T || !T.table.size) return false;
+    const g = geom();
+    const cx = px - g.W / 2, cy = py - g.H / 2 + 10;
+    if (spread) return Math.abs(cy) < g.ch * 0.9 && Math.abs(cx) < g.W * 0.48;
+    return Math.abs(cx) < g.cw * 1.15 && Math.abs(cy) < g.ch * 1.1;
   }
 
   function lift(i) {
@@ -536,7 +774,7 @@ const Felt = (function () {
     T.hand.delete(s.card);
     T.table.set(s.card, el);
     sent = s.card;
-    held = -1; drag = null;
+    held = -1; drag = null; spread = false;
     send({ t: 'play', card: s.card });
     layout();
     say('…');
@@ -570,8 +808,37 @@ const Felt = (function () {
 
   function onDown(e) {
     if (!T || !want || (e.button !== undefined && e.button > 0)) return;
+    // The scorecard button answers for itself.
+    if (e.target && e.target.closest && e.target.closest('.felt-out')) return;
+
+    // The numbers are picked up the way the cards are: a touch lifts one, a
+    // thumb along them lifts each in turn, and a tap on the one already up
+    // calls it.
+    const v = bidUnder(e.clientX, e.clientY);
+    if (v >= 0) {
+      const was = heldBid === v;
+      drag = { id: e.pointerId, kind: 'bid', v, x0: e.clientX, y0: e.clientY,
+               x: e.clientX, y: e.clientY, moved: false, was };
+      heldBid = v;
+      placeBids();
+      if (e.preventDefault) e.preventDefault();
+      return;
+    }
+
     const i = cardUnder(e.clientX, e.clientY);
-    if (i < 0) { drop(); return; }
+    if (i < 0) {
+      // A tap on the pile separates it, so the cards played can be read; the
+      // next one stacks it again.
+      if (onPile(e.clientX, e.clientY)) {
+        spread = !spread;
+        drop();
+        layout();
+        hint(round());
+        return;
+      }
+      drop();
+      return;
+    }
     drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
              i, moved: false, out: false, was: held === i, told: false };
     lift(i);
@@ -587,6 +854,16 @@ const Felt = (function () {
     drag.x = e.clientX; drag.y = e.clientY;
     const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
     if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+
+    if (drag.kind === 'bid') {
+      const v = bidUnder(e.clientX, e.clientY);
+      if (v >= 0 && v !== drag.v) {
+        drag.v = v; drag.was = false;
+        heldBid = v;
+        placeBids();
+      }
+      return;
+    }
 
     const g = geom();
     if (drag.out) {
@@ -623,6 +900,11 @@ const Felt = (function () {
     if (!T || !drag || (e && e.pointerId !== drag.id)) return;
     const d = drag;
     drag = null;
+    if (d.kind === 'bid') {
+      // A number already up, tapped again, is the bid.
+      if (!d.moved && d.was) bidIt(d.v);
+      return;
+    }
     const g = geom();
     const overlay = document.getElementById('deal');
     if (overlay) overlay.classList.remove('armed');
@@ -723,6 +1005,9 @@ const Felt = (function () {
     // how to take a bid landing mid-deal -- the number is stamped on the pile
     // it belongs to -- so it is told, and the table waits its turn.
     if (dealing) {
+      // The deal has its own captions, and last round's line has nothing to say
+      // over them.
+      say('');
       Deal.update({ bids: (r.bids || []).slice(), turn: ST.turn, text: '' });
       return;
     }
@@ -746,7 +1031,7 @@ const Felt = (function () {
 
   function hide() {
     want = false;
-    drag = null; held = -1;
+    drag = null; held = -1; spread = false;
     const overlay = document.getElementById('deal');
     if (overlay) { overlay.hidden = true; overlay.classList.remove('dragging', 'armed'); }
     if (onView) onView(false);

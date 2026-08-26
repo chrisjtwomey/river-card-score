@@ -509,7 +509,14 @@ body.host .toast .note{font-size:19px}
 /* Where a card belongs is a style, and this is what carries it there. Nothing
    on the table is animated with the Web Animations API: a round lasts minutes,
    and a card that collects animations loses its third dimension. */
-.deal.table{touch-action:none}
+/* The table is the screen, not a veil over one: the page behind it must not
+   read through. The dim version stays for the deal at a real-cards table, which
+   is still a scene that comes and goes. */
+.deal.table{
+  touch-action:none;
+  background:radial-gradient(ellipse at 50% 45%, rgba(22,92,63,.99), rgba(7,11,8,1) 70%);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
 .deal.table .dcard{transition:transform .14s cubic-bezier(.25,.85,.3,1)}
 .deal.table .dcard.slow{transition-duration:.34s}
 .deal.table .dcard.drag{transition:none}
@@ -539,6 +546,47 @@ body.host .toast .note{font-size:19px}
   border-color:var(--gold);
   box-shadow:0 0 0 2px rgba(184,134,43,.6), 0 10px 24px rgba(0,0,0,.5);
 }
+/* The bid, made while you hold your cards. The numbers arc across the empty
+   band between the turned card and the top of the fan, and lift at the ends the
+   way the cards below them do. */
+.felt-bids{position:absolute;z-index:4;left:0;right:0;height:0}
+/* Placed one by one, like the cards, so they can overlap when a hand is long
+   and still be picked out one at a time by a thumb passing over them. */
+.bidchip{
+  position:absolute;bottom:0;
+  font:inherit;font-weight:800;font-variant-numeric:tabular-nums;
+  padding:0;cursor:pointer;display:grid;place-items:center;
+  border-radius:12px;border:1px solid rgba(255,255,255,.28);
+  background:rgba(9,14,10,.72);color:#f3efe2;font-size:19px;
+  box-shadow:0 4px 14px rgba(0,0,0,.45);
+  transition:transform .13s cubic-bezier(.25,.85,.3,1);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+}
+.deal.table.still .bidchip{transition:none}
+.bidchip.up{
+  background:rgba(14,22,15,.92);border-color:rgba(255,255,255,.5);
+  box-shadow:0 12px 24px rgba(0,0,0,.6), 0 0 12px rgba(255,255,255,.22);
+}
+.bidchip[aria-pressed="true"]{
+  background:var(--gold);border-color:var(--gold);color:#17130a;
+  box-shadow:0 0 0 3px rgba(246,212,136,.28), 0 4px 14px rgba(0,0,0,.45);
+}
+.bidchip:disabled{cursor:not-allowed;opacity:.45}
+.bidchip.nope{text-decoration:line-through;opacity:.4}
+@media (max-width:420px){.bidchip{font-size:17px;border-radius:11px}}
+@media (prefers-reduced-motion: reduce){.bidchip{transition:none}}
+
+/* the tricks a seat has won, in a little stack by its name */
+.deal.table .dcard.gone .face{box-shadow:0 3px 9px rgba(0,0,0,.45)}
+/* read out, every card in the pile is named for whoever played it */
+.tname{
+  position:absolute;transform:translate(-50%,0);z-index:7;
+  font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:rgba(255,255,255,.86);text-shadow:0 2px 8px rgba(0,0,0,.85);
+  white-space:nowrap;pointer-events:none;
+}
+.tname.took{color:var(--gold)}
+
 /* the line a card has to clear to be played */
 .felt-line{
   position:absolute;z-index:1;left:8%;right:8%;height:0;opacity:0;

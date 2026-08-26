@@ -67,6 +67,7 @@ function makeDom(W, H) {
         return this.tagName === tag.toUpperCase() && cls.every((c) => this._cls.has(c));
       });
     }
+    closest(sel) { let e = this; while (e) { if (e.matches && e.matches(sel)) return e; e = e.parentNode; } return null; }
     querySelector(sel) { return this.all().find((e) => e.matches(sel)) || null; }
     querySelectorAll(sel) { const r = this.all().filter((e) => e.matches(sel)); r.forEach = Array.prototype.forEach.bind(r); return r; }
   }
@@ -162,6 +163,7 @@ for (const [W, H] of [[360, 640], [412, 860], [412, 740], [500, 860], [760, 1000
       const others = stage.querySelectorAll('.dcard').filter((e) =>
         !e.classList.contains('mine') && !e.classList.contains('hero'));
       const tag = `${W}x${H} n=${n} c=${cards}`;
+      ok(!L.dom.document.getElementById('deal').hidden, `${tag}: the table is on screen`);
       ok(mine.length === cards, `${tag}: hand drawn (${mine.length} of ${cards})`);
       ok(hero.length === 1, `${tag}: one turned card`);
       ok(others.length === (n - 1) * cards, `${tag}: piles ${others.length} of ${(n - 1) * cards}`);
@@ -223,6 +225,20 @@ part('a hand being played');
 }
 
 part('coming and going');
+
+/* A phone that joins after the bidding has started gets no deal -- there is
+   nothing to replay -- so the table has to stand itself up, and show itself. */
+{
+  const n = 4, cards = 5, me = 3;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: me, bids: [null, 1, 1, null] });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  ok(!overlay.hidden, 'a phone joining part way through sees the table');
+  ok(overlay.querySelector('.deal-stage').querySelectorAll('.dcard.mine').length === cards,
+    'with its hand on it');
+  ok(overlay.querySelectorAll('.bidchip').length === cards + 1, 'and its bid to make');
+}
 
 // the felt goes when the round does
 {
@@ -449,6 +465,278 @@ function table(o) {
   L.Felt.sync(st4, me, {});
   ok(stage.querySelectorAll('.dcard.took').length === 0, 'and gone when the next lead comes');
   ok(stage.querySelectorAll('.dcard').length === before - 2, 'with the trick off the table');
+}
+
+part('the pile in the middle');
+
+/* One round, played out card by card against the server's own shape of state:
+   a card lands, the trick fills, it is held up, it is gathered, the next lead
+   comes. The felt has to keep the same cards all the way through. */
+{
+  const n = 4, cards = 5, me = 1, W = 412, H = 860;
+  const base = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: 0, bids: Array(n).fill(1) });
+  const L = load(W, H, 'off');
+  const upcard = base.ST.play.upcard;
+  const hand = base.ST.hand;
+  const count = () => stage.querySelectorAll('.dcard').length;
+  const step = (o) => {
+    const st = stateFor(n, cards, me, Object.assign({ phase: 'tricks', bids: Array(n).fill(1) }, o)).ST;
+    st.hand = o.hand || hand;
+    st.play.upcard = upcard;
+    st.play.trick = o.trick || [];
+    st.play.last = o.last || null;
+    st.play.won = o.won || Array(n).fill(0);
+    st.play.counts = o.counts || base.hands.map((h) => h.length);
+    L.Felt.sync(st, me, { send: () => {} });
+    return st;
+  };
+  L.Felt.sync(base.ST, me, { send: () => {} });
+  const stage = L.dom.document.querySelector('.deal-stage');
+  const overlay = L.dom.document.getElementById('deal');
+  const all = count();
+  ok(all === n * cards + 1, `the table starts with every card and the turned one (${all})`);
+
+  const trick = [{ p: 0, card: base.hands[0][0] }, { p: 1, card: hand[0] },
+                 { p: 2, card: base.hands[2][0] }, { p: 3, card: base.hands[3][0] }];
+  const played = base.hands.map((h) => h.length - 1);
+  step({ turn: null, pturn: 1, trick: trick.slice(0, 1), counts: [played[0], cards, cards, cards],
+         hand });
+  ok(count() === all, 'a card played keeps the count');
+  ok(stage.querySelectorAll('.dcard.mine').length === cards + 1, 'and lands face up in the middle');
+
+  // the trick fills, then is held up, won by seat 2
+  const won = [0, 0, 1, 0];
+  step({ turn: null, pturn: null, last: { trick, winner: 2 }, won,
+         counts: played, hand: hand.slice(1) });
+  ok(stage.querySelectorAll('.dcard.took').length === 1, 'the card that took the trick is ringed');
+  ok(count() === all, 'and the trick is still all there while it is held');
+  ok(!stage.querySelectorAll('.dcard.gone').length, 'nothing is on a won stack yet');
+
+  // tap the middle: the cards separate, each under a name
+  const mid = { clientX: W / 2, clientY: H / 2 - 10, pointerId: 1, button: 0 };
+  overlay.fire('pointerdown', mid);
+  const names = stage.querySelectorAll('.tname');
+  ok(names.length === n + 1, `tapping the pile separates it and names every card (${names.length})`);
+  ok(names[names.length - 1].textContent === 'Trump', 'the turned card takes the first place in the row');
+  ok(names.filter((e) => e.classList.contains('took')).length === 1, 'and marks the one that took it');
+  const row = stage.querySelectorAll('.dcard').filter((e) => {
+    const sp = spotOf(e);
+    return sp && Math.round(sp.y) === -10;
+  }).map((e) => Math.round(spotOf(e).x));
+  ok(row.length === n + 1, `every card of the pile is in the row, turned card included (${row.length})`);
+  ok(new Set(row).size === row.length, 'with no two on the same spot');
+  const heroSpot = spotOf(stage.querySelector('.dcard.hero'));
+  ok(heroSpot.scale < 1.1, 'and the turned card comes down to the size of the rest');
+  ok(/stack them/.test((overlay.querySelector('.felt-hint') || {}).textContent || ''), 'and says how to close it');
+  overlay.fire('pointerdown', mid);
+  ok(stage.querySelectorAll('.tname').length === 0, 'and tapping again stacks it back up');
+
+  // the winner leads: the trick is gathered onto their own stack
+  step({ turn: null, pturn: 2, trick: [{ p: 2, card: base.hands[2][1] }], won,
+         counts: [played[0], played[1], played[2] - 1, played[3]], hand: hand.slice(1) });
+  const stacks = stage.querySelectorAll('.dcard.gone');
+  ok(stacks.length === 1, `a trick gathered leaves one card on the winner's stack (${stacks.length})`);
+  ok(spotOf(stacks[0]).scale < 0.6, 'drawn small, out of the way');
+  ok(spotOf(stacks[0]).face === 180, 'and face down');
+  ok(count() === all - 3, 'and the other three cards of it are off the table');
+}
+
+/* The stacks of won tricks have to stay on the screen, off the fan, and out of
+   the middle -- at every table size, with every trick won. */
+{
+  for (const [W, H] of [[360, 640], [412, 860], [500, 860], [760, 1000]]) {
+    for (const n of [2, 4, 6, 8]) {
+      const cards = 7, me = 1;
+      if (cards > Game.maxCardsFor(n)) continue;
+      const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: Array(n).fill(1) });
+      // every trick so far to one seat, which is the worst case for its stack
+      made.ST.play.won = made.ST.seats.map((_, i) => (i === 0 ? cards - 1 : 0));
+      made.ST.play.counts = made.hands.map(() => 1);
+      made.ST.hand = made.ST.hand.slice(0, 1);
+      const L = load(W, H, 'off');
+      L.Felt.sync(made.ST, me, { send: () => {} });
+      const stage = L.dom.document.querySelector('.deal-stage');
+      const stack = stage.querySelectorAll('.dcard.gone').map(spotOf);
+      ok(stack.length === cards - 1, `${W}x${H} n=${n}: the stack is as tall as the tricks won`);
+      const cw = (W <= 420 ? 52 : 64), ch = (W <= 420 ? 74 : 90);
+      stack.forEach((sp) => {
+        const hw = cw * sp.scale / 2, hh = ch * sp.scale / 2;
+        ok(Math.abs(sp.x) + hw <= W / 2 && Math.abs(sp.y) + hh <= H / 2,
+          `${W}x${H} n=${n}: a won card stays on the screen`);
+        // clear of the turned card in the middle
+        ok(Math.abs(sp.x) - hw > cw * 1.15 / 2 || Math.abs(sp.y) - hh > ch * 1.15 / 2,
+          `${W}x${H} n=${n}: and out of the middle`);
+      });
+    }
+  }
+}
+
+/* A phone that arrives in the middle of a round has no cards to gather, so the
+   stacks are stood up from the count alone. */
+{
+  const n = 4, cards = 5, me = 1, W = 412, H = 860;
+  const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: Array(n).fill(1) });
+  made.ST.play.won = [2, 1, 0, 0];
+  made.ST.play.counts = made.hands.map((h) => h.length - 3);
+  made.ST.hand = made.ST.hand.slice(3);
+  const L = load(W, H, 'off');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const stage = L.dom.document.querySelector('.deal-stage');
+  ok(stage.querySelectorAll('.dcard.gone').length === 3, 'the tricks already won are stood up from the count');
+}
+
+part('bidding, while you hold your cards');
+
+function bidding(o) {
+  const n = 4, cards = 5, me = 1, W = 412, H = 860;
+  const made = stateFor(n, cards, me, Object.assign({ phase: 'bid' }, o || {}));
+  const L = load(W, H, 'off');
+  const sends = [];
+  L.Felt.sync(made.ST, me, Object.assign({ send: (m) => sends.push(m) }, o && o.hooks));
+  const overlay = L.dom.document.getElementById('deal');
+  const F = L.Stage.fan(cards, W, H);
+  const size = W <= 420 ? 40 : 44;
+  const count = cards + 1;
+  const room = Math.min(W - 20, 400);
+  const step = count > 1 ? Math.min(size + 6, (room - size) / (count - 1)) : 0;
+  const arc = L.Stage.fan(count, W, H);
+  return { L, made, overlay, sends, n, cards, me, W, H,
+           rail: () => overlay.querySelector('.felt-bids'),
+           chips: () => overlay.querySelectorAll('.bidchip'),
+           // where a thumb has to land to be on that number
+           spot: (v) => ({ pointerId: 1, button: 0,
+                           clientX: W / 2 + arc.off(v) * step,
+                           clientY: H / 2 + F.at(0).y - 88 - size / 2 }),
+           hint: () => (overlay.querySelector('.felt-hint') || {}).textContent || '' };
+}
+
+// your turn: one number for every tricks you could win, and none for the rest
+{
+  const t = bidding({ turn: 1 });
+  ok(!t.rail().hidden, 'the numbers are there when it is your turn');
+  ok(t.chips().length === t.cards + 1, `one for every possible bid (${t.chips().length})`);
+  ok(t.chips().map((c) => c.textContent).join(',') === '0,1,2,3,4,5', 'nought to the hand size');
+  ok(/How many of the 5 tricks/.test(t.hint()), 'and it asks: ' + JSON.stringify(t.hint()));
+  // the numbers are picked up like the cards: a touch lifts one, a tap on the
+  // one already up calls it
+  const at3 = t.spot(3);
+  t.overlay.fire('pointerdown', at3);
+  ok(t.chips()[3].classList.contains('up'), 'touching a number lifts it');
+  ok(t.sends.length === 0, 'and does not bid it');
+  t.overlay.fire('pointerup', { pointerId: 1 });
+  ok(t.chips()[3].classList.contains('up'), 'it stays up when the thumb comes off');
+  t.overlay.fire('pointerdown', t.spot(1));
+  ok(t.chips()[1].classList.contains('up') && !t.chips()[3].classList.contains('up'),
+    'and a thumb along them lifts each in turn');
+  t.overlay.fire('pointerup', { pointerId: 1 });
+  t.overlay.fire('pointerdown', t.spot(1));
+  t.overlay.fire('pointerup', { pointerId: 1 });
+  ok(t.sends.length === 1 && t.sends[0].t === 'bid' && t.sends[0].v === 1,
+    'a second tap bids it (' + JSON.stringify(t.sends) + ')');
+  ok(t.chips().every((c) => c.disabled), 'and the numbers go dead until the table answers');
+  // a keyboard needs no thumb
+  const t2 = bidding({ turn: 1 });
+  t2.chips()[2].fire('keydown', { key: 'Enter' });
+  ok(t2.sends.length === 1 && t2.sends[0].v === 2, 'and Enter on a number bids it');
+}
+
+// somebody else's turn: nothing to tap
+{
+  const t = bidding({ turn: 2 });
+  ok(t.rail().hidden && t.chips().length === 0, 'no numbers when it is not your turn');
+  ok(/Waiting for/.test(t.hint()), 'and it says who is bidding: ' + JSON.stringify(t.hint()));
+}
+
+// the last bidder may still change, until the player after them bids
+{
+  const bids = [null, 2, null, null];
+  const t = bidding({ turn: 2, bids });
+  ok(!t.rail().hidden, 'the numbers come back while your bid can still be changed');
+  ok(t.chips()[2].getAttribute('aria-pressed') === 'true', 'with the one you called lit');
+  ok(/change it until/.test(t.hint()), 'and it says so: ' + JSON.stringify(t.hint()));
+}
+
+// screw the dealer: the number that would make the bids total the hand is out
+{
+  const n = 4, cards = 5, me = 1, W = 412, H = 860;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: me, bids: [1, null, 1, 1] });
+  made.ST.rounds[0].dealer = me;                  // you deal, so you bid last
+  made.ST.cfg.screw = true;
+  const L = load(W, H, 'off');
+  const sends = [];
+  L.Felt.sync(made.ST, me, { send: (m) => sends.push(m) });
+  const overlay = L.dom.document.getElementById('deal');
+  const chips = overlay.querySelectorAll('.bidchip');
+  const out = chips.filter((c) => c.classList.contains('nope'));
+  ok(out.length === 1 && out[0].textContent === '2',
+    `the forbidden bid is struck out (${out.map((c) => c.textContent).join(',')})`);
+  ok(out[0].disabled, 'and cannot be tapped');
+  ok(/must not total 5/.test((overlay.querySelector('.felt-hint') || {}).textContent || ''),
+    'and the reason is given');
+  // and the same number the shared rules forbid
+  ok(Game.forbiddenBid(made.ST.rounds[0], me, made.ST.cfg, n) === 2,
+    'which is the number the rules forbid');
+}
+
+// the numbers must not sit on the heading above the fan
+{
+  for (const [W, H] of [[360, 640], [412, 860], [500, 860], [760, 1000]]) {
+    for (const cards of [1, 5, 7, 13]) {
+      const n = 4, me = 1;
+      if (cards > Game.maxCardsFor(n)) continue;
+      const made = stateFor(n, cards, me, { phase: 'bid', turn: me });
+      const L = load(W, H, 'off');
+      L.Felt.sync(made.ST, me, { send: () => {} });
+      const overlay = L.dom.document.getElementById('deal');
+      const F = L.Stage.fan(cards, W, H);
+      const size = W <= 420 ? 40 : 44;
+      const foot = F.at(0).y - 88;                 // the rail sits on this line
+      const label = F.at(0).y - 76;                // and the heading starts here
+      ok(foot + 4 < label, `${W}x${H} c=${cards}: the numbers clear "Your hand"`);
+      const top = foot - size * 1.34;
+      const heroFoot = -10 + (H <= 0 ? 0 : (W <= 420 ? 74 : 90) * 1.15) / 2;
+      ok(top > heroFoot, `${W}x${H} c=${cards}: and clear the turned card (${Math.round(top)} > ${Math.round(heroFoot)})`);
+      const chips = overlay.querySelectorAll('.bidchip');
+      const xs = chips.map((c) => Number(/([-\d]+)px/.exec(c.style.left)[1]));
+      ok(Math.min(...xs) - size / 2 >= -W / 2, `${W}x${H} c=${cards}: and stay on the screen`);
+      ok(Math.max(...xs) + size / 2 <= W / 2, `${W}x${H} c=${cards}: on the other side too`);
+    }
+  }
+}
+
+// the pile read out must not spill onto the seats either side of it
+{
+  for (const [W, H] of [[360, 640], [412, 860], [500, 860], [760, 1000]]) {
+    for (const n of [2, 4, 6, 8]) {
+      const cards = 3, me = 1;
+      const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: null, bids: Array(n).fill(1) });
+      const trick = made.hands.map((h, p) => ({ p, card: h[0] }));
+      made.ST.play.trick = trick;
+      made.ST.hand = made.ST.hand.slice(1);
+      made.ST.play.counts = made.hands.map((h) => h.length - 1);
+      const L = load(W, H, 'off');
+      L.Felt.sync(made.ST, me, { send: () => {} });
+      const overlay = L.dom.document.getElementById('deal');
+      const stage = overlay.querySelector('.deal-stage');
+      overlay.fire('pointerdown', { clientX: W / 2, clientY: H / 2 - 10, pointerId: 1, button: 0 });
+      const row = stage.querySelectorAll('.dcard').filter((e) => {
+        const sp = spotOf(e);
+        return sp && Math.round(sp.y) === -10;
+      }).map((e) => spotOf(e).x);
+      ok(row.length === n + 1, `${W}x${H} n=${n}: the whole pile is read out (${row.length})`);
+      const rx = L.Stage.ring(n, me, W, H).rx;
+      const cw = W <= 420 ? 52 : 64;
+      const edge = Math.max(...row.map(Math.abs)) + cw / 2;
+      ok(edge <= rx + 1, `${W}x${H} n=${n}: and stays inside the seats (${Math.round(edge)} <= ${Math.round(rx)})`);
+      ok(stage.querySelectorAll('.tname').length === n + 1, `${W}x${H} n=${n}: every card named`);
+    }
+  }
+}
+
+// a watching window has no numbers
+{
+  const t = bidding({ turn: 1, hooks: { watch: true } });
+  ok(t.rail().hidden && t.chips().length === 0, 'a watching window is offered no bid');
 }
 
 console.log(`\n${pass} checks passed, ${fail} failed`);
