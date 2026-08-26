@@ -461,6 +461,31 @@ The compose file mounts `./certs` read only. Run `npm run cert` on the host firs
 
 The same variable works outside Docker, and it accepts a list: `PUBLIC_URL=http://192.168.1.5:8787,https://table.example.com`. Each address appears in the picker on the host screen.
 
+### The built image
+
+GitHub Actions builds the container on every push to `main` and on every `v*`
+tag, and publishes it to this repository's own registry. A machine that runs the
+table then needs neither the source nor Node:
+
+```sh
+docker run -p 8787:8787 -e PUBLIC_URL=http://192.168.1.5:8787   ghcr.io/chrisjtwomey/up-and-down-the-river:latest
+```
+
+- `main` is published as `:main`, and a tag `v1.2.3` as `:1.2.3`, `:1.2`, `:1`
+  and `:latest`.
+- Built for `linux/amd64` and `linux/arm64`, so a Raspberry Pi or a small ARM
+  server runs the same image.
+- Every build runs the test suites first, then starts the image it just built
+  and asks it for a table: `/net.json`, the join page, the rules, the felt. A
+  container that cannot serve a game is not published.
+- A pull request is built and smoke tested but never published. Nothing from a
+  fork can write to the registry.
+- The first published image is private. Make it public once, by hand, under
+  **Packages** on the repository — GitHub does not do it for you.
+
+To use Docker Hub instead, change `IMAGE` at the top of
+`.github/workflows/docker.yml` and swap the login step's registry and secrets.
+
 ## Behind a reverse proxy
 
 The game runs on one WebSocket at **`/ws`**. A proxy that does not pass the upgrade will serve the page and then fail with `can't establish a connection to the server at wss://.../ws`. Firefox fails silently here, because it never asks about a WebSocket.
@@ -663,6 +688,7 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `android/` — the Android app: a WebView on the table, and `server.js` running
   inside it on Node.js for Mobile. `android/tools/prepare.sh` assembles it.
 - `.github/workflows/android.yml` — builds the APK on a tag or a release.
+- `.github/workflows/docker.yml` — builds the container, smoke tests it, and publishes it to the repository's registry.
 - `android/tools/build-local.sh` — the same build on this machine, no runner.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.

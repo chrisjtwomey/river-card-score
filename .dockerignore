@@ -3,6 +3,7 @@ certs
 .git
 .gitignore
 test.js
+test-pages.js
 README.md
 Dockerfile
 compose.yaml
