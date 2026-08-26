@@ -4,8 +4,7 @@ const $ = (s) => document.querySelector(s);
 
 /* theme, shared with the offline app */
 document.addEventListener('DOMContentLoaded', () => {
-  UI.wireFullscreen('#btn-full');
-  UI.wireTheme('#btn-theme');
+  UI.settingsMenu('#btn-settings', UI.commonSettings());
   /* The phone that runs the server reads this page from 127.0.0.1. That phone
      already chose to host, so it wants a table of its own first. Every other
      browser came to join one that exists. Same page, two orders. */

@@ -162,14 +162,156 @@ const UI = (function () {
     if (label) label.textContent = Math.round(z * 100) + '%';
   }
 
-  function wireZoom(outSel, inSel) {
-    let z = 1;
-    try { z = clamp(Number(localStorage.getItem(ZKEY)) || 1); } catch (e) {}
-    applyZoom(z);
-    const step = (d) => { z = clamp(z + d); applyZoom(z); };
-    const out = document.querySelector(outSel), inn = document.querySelector(inSel);
-    if (out) out.addEventListener('click', () => step(-0.1));
-    if (inn) inn.addEventListener('click', () => step(0.1));
+  let zoom = 1;
+  try { zoom = clamp(Number(localStorage.getItem(ZKEY)) || 1); } catch (e) {}
+
+  // Puts the remembered size on the page. Call it once, as the page starts.
+  function startZoom() { applyZoom(zoom); }
+  function zoomNow() { return zoom; }
+  function setZoom(z) { zoom = clamp(Number(z) || 1); applyZoom(zoom); }
+
+  /* ---------- the settings menu ---------- */
+
+  /* One button in the top bar, and everything that is a setting behind it. The
+     bar had a button for each, which on a phone left no room for anything else
+     and told a first-time player nothing: a glyph is not a label.
+
+     items: what the menu holds, in order. Each is one of
+
+       { kind: 'choice', label, options: [{ v, label }], get(), set(v) }
+       { kind: 'toggle', label, get(), set() }        -- a tick, or nothing
+       { kind: 'action', label, run(), danger }       -- does it and shuts
+       { kind: 'link',   label, href }
+       { kind: 'group',  label }                      -- a line and a heading
+
+     Any item may carry hidden() to leave itself out. A choice stays open, so
+     two of them can be compared; everything else shuts the menu.
+
+     Returns { refresh } for a page whose items change as the game moves on. */
+  function settingsMenu(button, items) {
+    const btn = typeof button === 'string' ? document.querySelector(button) : button;
+    if (!btn) return { refresh() {} };
+    const menu = document.createElement('div');
+    menu.className = 'menu';
+    menu.hidden = true;
+    menu.setAttribute('role', 'menu');
+    (btn.parentNode || document.body).appendChild(menu);
+
+    const shown = () => items.filter((it) => !(it.hidden && it.hidden()));
+    // A label may be a function, for a row whose name changes with the game.
+    const words = (it) => (typeof it.label === 'function' ? it.label() : it.label);
+
+    function draw() {
+      menu.innerHTML = '';
+      shown().forEach((it) => {
+        if (it.kind === 'group') {
+          if (menu.children.length) menu.appendChild(document.createElement('hr'));
+          const h = document.createElement('p');
+          h.className = 'menu-group';
+          h.textContent = words(it);
+          menu.appendChild(h);
+          return;
+        }
+        if (it.kind === 'choice') {
+          const row = document.createElement('div');
+          row.className = 'menu-row';
+          const name = document.createElement('span');
+          name.className = 'menu-label';
+          name.textContent = words(it);
+          const seg = document.createElement('span');
+          seg.className = 'seg';
+          const now = String(it.get());
+          it.options.forEach((o) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = o.label;
+            b.className = String(o.v) === now ? 'on' : '';
+            b.addEventListener('click', () => { it.set(o.v); draw(); });
+            seg.appendChild(b);
+          });
+          row.append(name, seg);
+          menu.appendChild(row);
+          return;
+        }
+        if (it.kind === 'link') {
+          const a = document.createElement('a');
+          a.className = 'menu-row menu-tap';
+          a.href = it.href;
+          if (it.blank) { a.target = '_blank'; a.rel = 'noopener'; }
+          a.textContent = words(it);
+          a.addEventListener('click', shut);
+          menu.appendChild(a);
+          return;
+        }
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'menu-row menu-tap' + (it.danger ? ' danger' : '');
+        const name = document.createElement('span');
+        name.className = 'menu-label';
+        name.textContent = words(it);
+        b.appendChild(name);
+        if (it.kind === 'toggle') {
+          b.setAttribute('role', 'menuitemcheckbox');
+          const on = !!it.get();
+          b.setAttribute('aria-checked', String(on));
+          const tick = document.createElement('span');
+          tick.className = 'menu-tick';
+          tick.textContent = on ? '✓' : '';
+          b.appendChild(tick);
+        }
+        b.addEventListener('click', () => {
+          if (it.kind === 'toggle') it.set(!it.get()); else it.run();
+          shut();
+        });
+        menu.appendChild(b);
+      });
+    }
+
+    let open = false;
+    function show() { open = true; draw(); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
+    function shut() { open = false; menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+
+    btn.setAttribute('aria-haspopup', 'true');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.addEventListener('click', (e) => { e.stopPropagation(); if (open) shut(); else show(); });
+    // A tap anywhere else is the way out that needs no button.
+    document.addEventListener('pointerdown', (e) => {
+      if (open && !menu.contains(e.target) && e.target !== btn) shut();
+    });
+    document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') shut(); });
+    return { refresh: () => { if (open) draw(); } };
+  }
+
+  /* The settings every screen has. A page adds its own to the end.
+     opts: { motion: true } for a page that plays the deal, { zoom: true } for
+     one read from across a room. */
+  function commonSettings(opts) {
+    const o = opts || {};
+    const list = [
+      { kind: 'choice',
+        label: 'Theme',
+        options: [{ v: '', label: 'System' }, { v: 'light', label: 'Light' }, { v: 'dark', label: 'Dark' }],
+        get: () => themeSaved() || '',
+        set: (v) => setTheme(v || null) },
+    ];
+    if (o.zoom) {
+      list.push({ kind: 'choice',
+        label: 'Text size',
+        options: [{ v: 1, label: '100%' }, { v: 1.3, label: '130%' }, { v: 1.6, label: '160%' }, { v: 2, label: '200%' }],
+        get: zoomNow,
+        set: setZoom });
+    }
+    if (o.motion && typeof Stage !== 'undefined') {
+      list.push({ kind: 'choice',
+        label: 'Animations',
+        options: [{ v: 'full', label: 'Full' }, { v: 'reduced', label: 'Short' }, { v: 'off', label: 'Off' }],
+        get: Stage.mode,
+        set: Stage.setMode });
+    }
+    // Safari on an iPhone has no full screen at all, so the row is not offered.
+    list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
+                get: isFull, set: () => { try { toggleFullscreen(); } catch (e) {} } });
+    return list;
   }
 
   /* ---------- where phones should connect ---------- */
@@ -521,8 +663,13 @@ const UI = (function () {
   startTheme();                       // before the first paint, so there is no flash
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
-  return { wireFullscreen, isFull, keepAwake, wireZoom, measureTopbar,
+  // Every page wants the saved theme, and none of them should have to ask: this
+  // runs as the file loads, which is as early as any of them could.
+  startTheme();
+
+  return { wireFullscreen, isFull, canFull, toggleFullscreen, keepAwake, measureTopbar,
            measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask,
+           settingsMenu, commonSettings, startZoom, zoomNow, setZoom,
            wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
 })();

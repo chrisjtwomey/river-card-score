@@ -26,7 +26,11 @@ page, so the button is there over `https` (`npm run cert`) and in the Android
 app, and it hides itself where the browser offers no camera -- plain `http` to
 another machine, or Safari, which cannot read a code.
 
-Every page has a full-screen button (⛶) next to the theme toggle. The button hides itself on browsers with no full-screen support, such as Safari on iPhone.
+Every page carries one **⚙** button in the top bar, and every setting is behind
+it: the theme (system, light or dark), the animations (full, short or off), full
+screen, and on the host screen the text size. Rows that a browser cannot honour
+leave themselves out -- full screen is not offered on Safari on an iPhone. A
+table's screens have one other button, 💬 for the talk, and nothing else.
 
 The server builds the QR code itself, so nothing is sent to an outside service. It is always black on white, whatever the page theme is, because a camera cannot read an inverted code.
 
@@ -120,9 +124,12 @@ If the table host leaves the table, the badge moves to the first seat.
 
 ### Host screen
 
-- **A−** and **A+** in the top bar change the page size, from 80% to 200%, so the table can read it from across the room. The size is remembered in that browser.
-- The 🂠 button replays the deal animation for the round on screen at any time. Once the game is over it becomes 🏆 and replays the result.
-- The 🛠 button opens the dev page on this table, to put a game in play right. See [Fixing a real game](#fixing-a-real-game).
+- **Text size** under ⚙ scales the page from 100% to 200%, so the table can read
+  it from across the room. The size is remembered in that browser.
+- **Play the deal again** under ⚙ replays the deal animation for the round on
+  screen at any time. Once the game is over it replays the result instead.
+- **Fix this game** under ⚙ opens the dev page on this table, to put a game in
+  play right. See [Fixing a real game](#fixing-a-real-game).
 - The host screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
 
 ### Keeping phone screens on
@@ -140,7 +147,7 @@ npm start        # the console now says (https)
 
 Both screens play the deal animation at the start of every round: a card flies to each seat in dealing order, with the player names.
 
-- On the **host screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it, and 🂠 brings it back with the bids so far.
+- On the **host screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it, and **Play the deal again** under ⚙ brings it back with the bids so far.
 - On a **phone** it plays and then clears, so the bid pad is never blocked. A tap skips it. It does not replay when a phone reloads part way through a game.
 
 When somebody bids, every other screen says so: a line slides in under the top bar — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. Your own bid is not announced, because your own pad already shows it. On the host screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.
@@ -529,7 +536,7 @@ The filled bids keep the screw-the-dealer rule, the filled tricks always total t
 
 #### Fixing a real game
 
-The host screen always carries a 🛠 button in its top bar, on any server. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
+The host screen always offers **Fix this game** under ⚙, on any server. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
 
 A real table gets the state editor and nothing else. **Force**, **Round** and **State** work. Everything that invents data — new table, jump to, fill scorecard, randomise — is hidden, and the server refuses it even with `DEV=1`. The top bar turns red, and the page says the game is real.
 
@@ -545,7 +552,7 @@ The server decides this, not the page:
 
 On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
-Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, says so, and points at the 🛠 button on the host screen, which is the way in to a real table.
+Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, says so, and points at **Fix this game** under ⚙ on the host screen, which is the way in to a real table.
 
 ## Test
 
@@ -568,6 +575,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
 - `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a host screen and a phone.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
+- `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
 - `test.js` — end-to-end test.

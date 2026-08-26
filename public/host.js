@@ -13,6 +13,19 @@ let lastTotals = null;  // seat id -> score, to show what a round paid
 let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addr = null;        // the address shown in the QR code
 
+let menu = null;         // the settings menu, once the page is wired
+
+// The dev page, opened on this table so a game in play can be put right.
+function devLink() {
+  const sess = Net.session();
+  return (sess && sess.code && sess.token) ? `dev.html#c=${sess.code}&t=${sess.token}` : 'dev.html';
+}
+
+function newGame() {
+  UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.',
+    'New game').then((yes) => { if (yes) Net.send({ t: 'reset' }); });
+}
+
 /* ---------- join address and QR ---------- */
 
 function loadAddresses() {
@@ -154,20 +167,12 @@ function render() {
   });
   const over = ST.phase === 'done';
   if (over) Games.keep(ST, -1);
-  $('#btn-deal').hidden = lobby;
-  $('#btn-deal').textContent = over ? '🏆' : '🂠';
-  $('#btn-deal').title = over ? 'Play the result again' : 'Play the deal animation';
-  // The dev page, opened on this table so a game in play can be put right.
-  // Not inside a dev preview, where it would only open the page it sits in.
-  const devBtn = $('#btn-dev');
-  const sess = Net.session();
-  devBtn.hidden = window.top !== window;
-  devBtn.title = ST.dev ? 'Dev controls' : 'Fix this game';
-  if (sess && sess.code && sess.token) devBtn.href = `dev.html#c=${sess.code}&t=${sess.token}`;
+  // The settings menu holds the screen's own rows, and they read the state
+  // themselves. An open menu is redrawn so it keeps up with the game.
+  if (menu) menu.refresh();
 
   $('#lobby').hidden = !lobby;
   $('#game').hidden = lobby;
-  $('#btn-reset').hidden = lobby;
   $('#code-badge').textContent = ST.code;
   $('#code-small').textContent = ST.code;
   renderJoin();
@@ -503,7 +508,6 @@ function renderWinner(done) {
 /* ---------- wiring ---------- */
 
 document.addEventListener('DOMContentLoaded', () => {
-  UI.wireTheme('#btn-theme');
   // The host screen has no seat, so it speaks as the table itself.
   Chat.wire('#btn-chat', (text) => Net.send({ t: 'chat', text }));
 
@@ -520,11 +524,25 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
 
-  UI.wireFullscreen('#btn-full');
   loadAddresses();
-  UI.wireZoom('#zoom-out', '#zoom-in');
-  $('#btn-deal').addEventListener('click', () =>
-    (ST && ST.phase === 'done' ? playFinaleNow() : playDealNow()));
+  UI.startZoom();
+  /* A host screen is read from across the room, so text size belongs here, and
+     so do the screen's own three: play the flourish again, the dev page for a
+     game that needs putting right, and a new game. */
+  menu = UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true, zoom: true }).concat([
+    { kind: 'group', label: 'This screen' },
+    { kind: 'action',
+      label: () => (ST && ST.phase === 'done' ? 'Play the result again' : 'Play the deal again'),
+      hidden: () => !ST || ST.phase === 'lobby',
+      run: () => (ST && ST.phase === 'done' ? playFinaleNow() : playDealNow()) },
+    // Not inside a dev preview, where it would only open the page it sits in.
+    { kind: 'link', label: () => (ST && ST.dev ? 'Dev controls' : 'Fix this game'), blank: true,
+      hidden: () => window.top !== window,
+      href: devLink() },
+    { kind: 'action', label: 'New game', danger: true,
+      hidden: () => !ST || ST.phase === 'lobby',
+      run: newGame },
+  ]));
   $('#btn-bum').addEventListener('click', () => {
     UI.ask('Bum deal?', 'The hand is thrown in. The same dealer deals it again, and the bids so far are lost.',
       'Deal again').then((yes) => { if (yes) Net.send({ t: 'bumdeal' }); });
@@ -539,10 +557,5 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
-  $('#btn-reset').addEventListener('click', () => {
-    UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.',
-      'New game').then((yes) => { if (yes) Net.send({ t: 'reset' }); });
-  });
-
   boot();
 });

@@ -55,7 +55,6 @@ function loadSeats() {
 
 /* ---------- theme ---------- */
 
-function initTheme() { UI.wireTheme('#btn-theme'); }
 
 /* ---------- rules helpers ---------- */
 
@@ -247,7 +246,6 @@ function finaleWatch() {
 function showSetup() {
   $('#setup').hidden = false;
   $('#game').hidden = true;
-  $('#btn-new').hidden = true;
   $('#subtitle').textContent = 'Score tracker';
   renderPlayers();
   syncSetupHints();
@@ -256,7 +254,6 @@ function showSetup() {
 function showGame() {
   $('#setup').hidden = true;
   $('#game').hidden = false;
-  $('#btn-new').hidden = false;
   render();
 }
 
@@ -618,8 +615,12 @@ function confirmAsk(title, body) {
 /* ---------- wiring ---------- */
 
 function init() {
-  UI.wireFullscreen('#btn-full');
-  initTheme();
+  // The two rows that are this page's own sit under the settings, not in the bar.
+  UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true }).concat([
+    { kind: 'group', label: 'This game' },
+    { kind: 'action', label: 'Rules of the game', run: () => $('#rules-dlg').showModal() },
+    { kind: 'action', label: 'New game', danger: true, hidden: () => !S, run: newGame },
+  ]));
 
   const seats = loadSeats();
   if (seats) names = seats;
@@ -639,16 +640,14 @@ function init() {
   $('#btn-commit').addEventListener('click', commit);
   $('#btn-back').addEventListener('click', back);
 
-  $('#btn-rules').addEventListener('click', () => $('#rules-dlg').showModal());
-
-  $('#btn-new').addEventListener('click', async () => {
+  async function newGame() {
     const ok = await confirmAsk('Start a new game?', 'This deletes the current scorecard.');
     if (!ok) return;
     names = S.cfg.names.slice();
     S = null; save(); saveSeats();
     showSetup();
     window.scrollTo({ top: 0 });
-  });
+  }
 
   $('#btn-rematch').addEventListener('click', () => {
     S = newGame(S.cfg);

@@ -130,8 +130,7 @@ function findOnTable() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  UI.wireFullscreen('#btn-full');
-  UI.wireTheme('#btn-theme');
+  UI.settingsMenu('#btn-settings', UI.commonSettings());
 
   show(Games.all());
 

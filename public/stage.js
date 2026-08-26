@@ -13,6 +13,13 @@ const Stage = (function () {
   const KEY_MOTION = 'river-card-score:motion:v1';
   const FACES = [{ g: '♠', red: false }, { g: '♥', red: true }, { g: '♦', red: true }, { g: '♣', red: false }];
 
+  // The reader's choice, from the settings menu. 'off' still shows the result of
+  // a deal: it is the flourish that goes, never the game.
+  function setMode(m) {
+    if (m !== 'full' && m !== 'reduced' && m !== 'off') return;
+    try { localStorage.setItem(KEY_MOTION, m); } catch (e) {}
+  }
+
   // 'full' | 'reduced' | 'off'.  ?motion=full in the URL wins and is remembered.
   function mode() {
     let saved = null;
@@ -99,5 +106,5 @@ const Stage = (function () {
   // SUIT_OF and SUIT_NAME go out with the rest: with real cards the deal
   // knows only the suit the dealer turned, and has to draw and name it
   // without a card to read it off.
-  return { S, mode, faceOf, cardEl, tf, fade, overlayEl, close, isOpen, SUIT_OF, SUIT_NAME };
+  return { S, mode, setMode, faceOf, cardEl, tf, fade, overlayEl, close, isOpen, SUIT_OF, SUIT_NAME };
 })();
