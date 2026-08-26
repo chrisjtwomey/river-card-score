@@ -13,9 +13,52 @@
   .lead{font-size:15px;line-height:1.5}
   .say{min-height:20px;font-size:13px;color:var(--ink-dim);text-align:center}
   .say.bad{color:var(--red)}
+
+  /* The splash the phone drew is still on screen behind this page. The page
+     carries the same felt and the same mark on, adds the name, then fades away
+     to the chooser. Nothing is waited for: the fade starts as soon as the page
+     is up. */
+  #splash{
+    /* The same number as the window behind it, in both themes: --felt is
+       lighter in the dark one and the two would not meet. */
+    position:fixed;inset:0;z-index:100;background:#14603f;
+    display:flex;align-items:center;justify-content:center;
+    transition:opacity .38s ease;
+  }
+  /* As wide as the mark the phone drew, and nudged up by the same amount
+     the page sits below the status bar, so the two land on each other. */
+  #splash svg{width:290px;height:290px;transform:translateY(-10px)}
+  #splash p{
+    position:absolute;left:0;right:0;top:calc(50% + 64px);
+    text-align:center;color:#f4f1ea;
+    font-size:19px;font-weight:650;letter-spacing:-.01em;
+  }
+  #splash.gone{opacity:0}
 </style>
 </head>
 <body>
+
+<!-- Held back until the app asks for it with ?splash=1, so coming back from a
+     table shows the chooser and nothing else. -->
+<div id="splash" hidden>
+  <svg viewBox="0 0 108 108" aria-hidden="true"><rect x="26.75" y="61.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/><rect x="38.25" y="61.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/><rect x="38.25" y="48.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/><rect x="49.75" y="61.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/><rect x="49.75" y="48.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/><rect x="49.75" y="35.25" width="8.5" height="11.5" rx="1.7" fill="#b8862b"/><rect x="61.25" y="61.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/><rect x="61.25" y="48.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/><rect x="72.75" y="61.25" width="8.5" height="11.5" rx="1.7" fill="#f4f1ea"/></svg>
+  <p>Up the River, Down the River</p>
+</div>
+<script>
+  // Before the first paint, or the splash would flash in and out.
+  if (location.search.indexOf('splash=1') >= 0) {
+    document.getElementById('splash').hidden = false;
+    addEventListener('load', () => {
+      const el = document.getElementById('splash');
+      setTimeout(() => {
+        el.classList.add('gone');
+        el.addEventListener('transitionend', () => el.remove(), { once: true });
+      }, 420);
+    });
+  } else {
+    document.getElementById('splash').remove();
+  }
+</script>
 
 <header class="topbar">
   <div class="brand">

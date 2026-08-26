@@ -39,6 +39,11 @@ public class TableActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
+    // A WebView with nothing painted yet is a black rectangle. Clear it, and
+    // what shows until the page paints is the window behind: the felt and the
+    // mark, the same picture the phone put up when the icon was tapped. The
+    // pages paint their own background over it.
+    web.setBackgroundColor(0x00000000);
     web.setWebViewClient(new WebViewClient() {
       @Override
       public void onPageFinished(WebView view, String url) {

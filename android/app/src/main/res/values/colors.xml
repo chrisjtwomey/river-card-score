@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The game's own colours, the same numbers as public/styles.css. The app
+     keeps the felt in both light and dark: a card table is green in any light. -->
+<resources>
+  <color name="felt">#14603F</color>
+  <color name="cream">#F4F1EA</color>
+  <color name="gold">#B8862B</color>
+</resources>

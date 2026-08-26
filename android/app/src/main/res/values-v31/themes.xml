@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- From Android 12 the phone draws the splash itself and will not be talked
+       out of it: windowBackground is ignored for the first frame. These items
+       are how you say what it should draw, so the platform's splash carries the
+       same felt and the same mark. The icon is cut to a circle, which the mark
+       is drawn to fit.
+
+       Everything in the values/ theme is restated: a style of the same name
+       here replaces that one, it does not add to it. -->
+  <style name="TableTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+    <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    <item name="android:windowBackground">@drawable/splash_window</item>
+    <item name="android:windowSplashScreenBackground">@color/felt</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@drawable/river_mark</item>
+  </style>
+</resources>

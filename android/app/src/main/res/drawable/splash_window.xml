@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the phone draws the instant the icon is tapped, before a line of our
+     code runs. Android 12 and later draw their own splash instead, from the
+     windowSplashScreen items in values-v31.
+
+     The mark is set on the item itself, not wrapped in a <bitmap>: that tag
+     wants a real picture and throws on a vector. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:drawable="@color/felt" />
+  <item android:drawable="@drawable/river_mark" android:gravity="center"
+      android:width="282dp" android:height="282dp" />
+</layer-list>

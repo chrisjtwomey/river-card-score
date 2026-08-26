@@ -33,6 +33,8 @@ public class MainActivity extends Activity {
   private static final String LOCAL = "http://127.0.0.1:" + NodeService.PORT + "/";
   private static final String PAGE = "file:///android_asset/chooser.html";
   private WebView web;
+  private boolean firstShow = true;    // only the first load plays the splash
+  private boolean wasAway = false;     // this screen has been left and come back to
 
   @SuppressLint("SetJavaScriptEnabled")
   @Override
@@ -44,6 +46,11 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setAllowFileAccess(true);              // the stylesheet sits beside the page
+    // A WebView with nothing painted yet is a black rectangle. Clear it, and
+    // what shows until the page paints is the window behind: the felt and the
+    // mark, the same picture the phone put up when the icon was tapped. The
+    // pages paint their own background over it.
+    web.setBackgroundColor(0x00000000);
     web.setWebViewClient(new WebViewClient() {
       @Override
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -81,8 +88,11 @@ public class MainActivity extends Activity {
     hostIfAsked(intent);
   }
 
+  /* The splash plays once, on the way in. Coming back from the table loads the
+     page again, and a splash on the way back would only be in the way. */
   private void showChooser() {
-    web.loadUrl(PAGE);        // the load tells the page what it found, when it lands
+    web.loadUrl(firstShow ? PAGE + "?splash=1" : PAGE);
+    firstShow = false;
   }
 
   /**
@@ -113,10 +123,20 @@ public class MainActivity extends Activity {
   }
 
   @Override
+  protected void onPause() {
+    super.onPause();
+    wasAway = true;
+  }
+
+  @Override
   protected void onResume() {
     super.onResume();
-    // Coming back from the table, or from the notification, the page must say
-    // what is true now: a table may have been started or stopped since.
+    // onCreate has only just loaded the page, and onResume follows it at once:
+    // loading again here would throw away the splash before it is seen. Every
+    // later resume is a return from the table or the notification, and then the
+    // page must say what is true now: a table may have started or stopped since.
+    if (!wasAway) return;
+    wasAway = false;
     if (web != null) showChooser();
   }
 

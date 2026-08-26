@@ -10,5 +10,9 @@
        the inset padding in TableActivity stays as the answer for that day. -->
   <style name="TableTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
     <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    <!-- The felt is behind every window, so no screen begins white while its
+         page loads. On a cold start this is the splash: felt and the mark,
+         drawn by the phone before the app has run at all. -->
+    <item name="android:windowBackground">@drawable/splash_window</item>
   </style>
 </resources>

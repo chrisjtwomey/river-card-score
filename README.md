@@ -232,6 +232,15 @@ running with the screen off. **Stop** on that notification closes the table.
 it Android 16 and later cut the app off from the Wi-Fi, and no other phone can
 reach the table.
 
+**The mark.** The icon and the splash are the game drawn: five stacks of cards,
+1-2-3-2-1, the hand growing to the top of the river and shrinking back down,
+with the card at the peak in gold. One shape, three places, all the same size on
+screen so it does not jump as one hands over to the next: the phone's own splash
+(`res/values-v31/themes.xml`), the window behind the pages
+(`res/drawable/splash_window.xml`), and the page the app opens on
+(`assets/chooser.html`). The shape itself lives in `res/drawable/river_mark.xml`
+and again, in SVG, in the chooser: change one and change the other.
+
 ### Build it yourself
 
 ```sh

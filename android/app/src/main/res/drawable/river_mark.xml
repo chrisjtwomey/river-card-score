@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The game itself, drawn: the hand grows one card at a time to the top of
+     the river, then shrinks the same way back down. Five stacks, 1-2-3-2-1,
+     and the card at the peak is gold.
+
+     108 x 108 with the drawing kept inside a circle of radius 36 about the
+     middle, because the launcher and the Android 12 splash both cut the rest
+     away. The same shape is drawn again, in SVG, on the splash in
+     assets/chooser.html: change one and change the other. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+  <path android:fillColor="#F4F1EA" android:pathData="M28.45,61.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#F4F1EA" android:pathData="M39.95,61.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#F4F1EA" android:pathData="M39.95,48.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#F4F1EA" android:pathData="M51.45,61.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#F4F1EA" android:pathData="M51.45,48.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#B8862B" android:pathData="M51.45,35.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#F4F1EA" android:pathData="M62.95,61.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#F4F1EA" android:pathData="M62.95,48.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+  <path android:fillColor="#F4F1EA" android:pathData="M74.45,61.25 h5.1 a1.7,1.7 0 0 1 1.7,1.7 v8.1 a1.7,1.7 0 0 1 -1.7,1.7 h-5.1 a1.7,1.7 0 0 1 -1.7,-1.7 v-8.1 a1.7,1.7 0 0 1 1.7,-1.7 z" />
+</vector>
