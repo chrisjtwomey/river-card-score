@@ -47,6 +47,20 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 9. The round scores, the next round opens, and the deal moves on one seat.
 10. The table host, or the host screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
 
+### Table talk
+
+Every table has a chat room of its own. 💬 in the top bar opens a sheet over the
+game, with a count on it of what has not been read; a line arriving while the
+sheet is shut says itself in a toast instead, the same way a bid does. Players
+talk, the host screen talks as **Table**, and a watch-only window reads and says
+nothing.
+
+The talk belongs to the table, not to the game on it: it carries over into the
+next game and lasts as long as the table does. The last hundred lines are kept,
+in memory, and never written to disk -- not into a saved game, not into a phone's
+history. It travels the same socket as the bids, so like the rest of the game it
+needs no internet at all.
+
 ### Accolades
 
 When the last round is scored, some of the accolades the table earned are drawn at random. **Three** by default, and the rules take anything from none to five. Each one pays its holder **10 points** by default, or 20, 5, or nothing.
@@ -553,6 +567,7 @@ It starts the server on port 8899 and plays a whole game over WebSockets: joinin
 - `public/stage.js` — the overlay both scenes are played on, and the slot that says which one is open.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
 - `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a host screen and a phone.
+- `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
 - `test.js` — end-to-end test.

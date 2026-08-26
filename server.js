@@ -26,6 +26,9 @@ const PUB = path.join(ROOT, 'public');
 // https. Drop a key and certificate in certs/ (npm run cert) to serve https.
 const DATA = process.env.DATA_DIR || path.join(__dirname, 'data');
 const KEEP_GAMES = Math.max(1, Number(process.env.KEEP_GAMES) || 200);
+// How many lines of table talk a table keeps. Long enough to scroll back
+// through a game, short enough that every state carries it without a thought.
+const CHAT_KEEP = Math.max(1, Number(process.env.CHAT_KEEP) || 100);
 const TLS_KEY = process.env.TLS_KEY || path.join(__dirname, 'certs', 'key.pem');
 const TLS_CERT = process.env.TLS_CERT || path.join(__dirname, 'certs', 'cert.pem');
 let tls = null;
@@ -120,6 +123,8 @@ function createRoom() {
     awards: null,               // the accolades drawn at the end of the game
     bonus: null,                // and what they paid each seat
     sockets: new Set(),
+    chat: [],                   // table talk, the last CHAT_KEEP lines
+    chatSeq: 0,                 // every line numbered, so a page knows what is new
     lastSeen: Date.now(),
   };
   rooms.set(room.code, room);
@@ -159,6 +164,7 @@ function publicState(room) {
     awards: room.awards || null,    // the three drawn at the end
     gameId: room.phase === 'done' ? (room.gameId || null) : null,
     play: playPublic(room),         // the cards on the table, never the hands
+    chat: room.chat,                // what has been said at this table
     dev: DEV,                       // the host screen offers the dev page when it is on
   };
 }
@@ -253,7 +259,7 @@ const { handleDev, devHello } = Dev({
 
 // Every message a seated socket may send, and who may send it, as a table.
 const { handleTable } = Messages({
-  DEV, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish,
+  DEV, CHAT_KEEP, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish,
   virtual, dealHands, startPlay, playCard, scoreRound, bumDeal,
 });
 

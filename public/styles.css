@@ -839,3 +839,45 @@ body.host .scorecard-panel .table-wrap{
 .gamecard > .panel{margin-inline:0}
 .game-head .game-win{margin:2px 0 4px;font-size:clamp(22px,5vw,34px);line-height:1.1}
 .game-head .game-when{margin:0}
+
+/* ---------- table talk ---------- */
+/* A sheet over the game: the hand keeps its place while the talk is read. */
+.sheet{
+  position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(9,13,10,.55);
+}
+.sheet-card{
+  width:min(560px,100%);max-height:min(70vh,560px);
+  display:flex;flex-direction:column;gap:10px;
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  background:var(--bg2);border:1px solid var(--line);
+  border-radius:var(--r) var(--r) 0 0;box-shadow:var(--shadow);
+}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sheet-head h2{font-size:13px}
+.chat-list{
+  flex:1 1 auto;min-height:80px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:6px;
+}
+.chat-line{
+  font-size:15px;line-height:1.35;padding:6px 10px;border-radius:10px;
+  background:var(--chip);align-self:flex-start;max-width:88%;
+  overflow-wrap:anywhere;
+}
+.chat-line b{color:var(--ink-dim);font-weight:700;margin-right:4px}
+/* your own words sit on the other side, as they do in every other chat */
+.chat-line.mine{align-self:flex-end;background:var(--felt);color:#fff}
+.chat-line.mine b{color:rgba(255,255,255,.72)}
+.chat-line.fromtable b{color:var(--gold)}
+.chat-say{display:flex;gap:8px}
+.chat-say .chat-text{
+  flex:1 1 auto;min-width:0;padding:10px 12px;font:inherit;
+  color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;
+}
+/* the count of what has not been read, on the button in the top bar */
+.topbar-actions .btn{position:relative}
+.chat-badge{
+  position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;
+  border-radius:999px;background:var(--red);color:#fff;
+  font-size:11px;font-weight:800;line-height:17px;text-align:center;
+}

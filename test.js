@@ -7,7 +7,7 @@ const fs = require('fs');
 const os = require('os');
 // The finished games are written to a folder of their own, thrown away after.
 const DATA_DIR = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-games-'));
-const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120', DATA_DIR, KEEP_GAMES: '3' }, stdio: ['ignore', 'pipe', 'pipe'] });
+const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120', DATA_DIR, KEEP_GAMES: '3', CHAT_KEEP: '5' }, stdio: ['ignore', 'pipe', 'pipe'] });
 srv.stderr.on('data', d => process.stderr.write('[srv] ' + d));
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -492,8 +492,10 @@ function client(name, url) {
     eye.errors.length = 0;
     eye.send({ t: 'bid', v: 1 }); await wait(140);
     eye.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
-    ok(eye.errors.filter((e) => /only watching/.test(e)).length === 2, 'and it can do nothing at all');
+    eye.send({ t: 'chat', text: 'hello from the sofa' }); await wait(140);
+    ok(eye.errors.filter((e) => /only watching/.test(e)).length === 3, 'and it can do nothing at all');
     ok(h.state.phase === 'bid', 'so the game is untouched');
+    ok(!(h.state.chat || []).length, 'and it has said nothing');
 
     const fake = client('faker'); await fake.ready;
     fake.send({ t: 'resume', code, token: bobWatch }); await wait(150);
@@ -750,6 +752,54 @@ function client(name, url) {
     ok((await fetch(`http://127.0.0.1:${port4}/game/${id}`)).status === 404,
        'and the oldest is gone');
     d.ws.close(); srv4.kill();
+  }
+
+  /* ---- table talk ----
+     It rides in the state, so a line said by anybody is a line everybody has.
+     This server keeps five (CHAT_KEEP above), so the cap can be watched. */
+  {
+    const h = client('talk'); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.hello.code;
+    const ann = client('Ann'); await ann.ready;
+    ann.send({ t: 'join', code, name: 'Ann' }); await wait(130);
+    const ben = client('Ben'); await ben.ready;
+    ben.send({ t: 'join', code, name: 'Ben' }); await wait(130);
+
+    ann.send({ t: 'chat', text: '  who   dealt\n  that?  ' }); await wait(150);
+    ok(h.state.chat.length === 1, 'a line a player says reaches the table');
+    ok(h.state.chat[0].text === 'who dealt that?', 'as one line, however it was typed');
+    ok(h.state.chat[0].name === 'Ann' && h.state.chat[0].who === ann.seatId,
+       'and it says which seat said it');
+    ok(ben.state.chat.length === 1, 'every other player has it too');
+
+    h.send({ t: 'chat', text: 'no talking at the table' }); await wait(150);
+    ok(h.state.chat[1].who === 'host' && h.state.chat[1].name === 'Table',
+       'the host screen speaks as the table');
+
+    ann.errors.length = 0;
+    ann.send({ t: 'chat', text: 'and again' }); await wait(150);
+    ok(ann.errors.some((e) => /one line at a time/.test(e)), 'one socket cannot flood the table');
+    ok(h.state.chat.length === 2, 'so the flooded line never lands');
+
+    await wait(520);
+    ann.send({ t: 'chat', text: '   ' }); await wait(150);
+    ok(h.state.chat.length === 2, 'a blank line is not a line');
+    ann.send({ t: 'chat', text: 'x'.repeat(400) }); await wait(150);
+    ok(h.state.chat[2].text.length === 200, 'a long line is cut, not refused');
+
+    // six more, round-robin so no socket is rate-limited, to run past the cap
+    for (const c of [ben, h, ann, ben, h, ann]) { c.send({ t: 'chat', text: 'line' }); await wait(210); }
+    ok(h.state.chat.length === 5, 'the table keeps only the last few  got ' + h.state.chat.length);
+    ok(!h.state.chat.some((l) => /dealt/.test(l.text)), 'and the oldest have gone');
+
+    // the talk belongs to the table, not to the game on it
+    await wait(520);
+    ann.send({ t: 'start' }); await wait(200);
+    ok(h.state.phase === 'bid', 'a game starts on that table');
+    ok(h.state.chat.length === 5, 'and the talk carries over into it');
+
+    h.ws.close(); ann.ws.close(); ben.ws.close();
   }
 
   // ---- PUBLIC_URL replaces the detected addresses ----

@@ -147,6 +147,7 @@ function dealWatch() {
 }
 
 function render() {
+  Chat.update(ST, null);
   const lobby = ST.phase === 'lobby';
   UI.keepAwake(!lobby).then((s) => {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
@@ -503,6 +504,8 @@ function renderWinner(done) {
 
 document.addEventListener('DOMContentLoaded', () => {
   UI.wireTheme('#btn-theme');
+  // The host screen has no seat, so it speaks as the table itself.
+  Chat.wire('#btn-chat', (text) => Net.send({ t: 'chat', text }));
 
   const patch = (p) => Net.send({ t: 'config', patch: p });
   $('#cfg-max').addEventListener('change', (e) => patch({ max: e.target.value }));

@@ -50,6 +50,7 @@ function render() {
     if (!ME) return;                   // the hello has not arrived yet
     Net.setSession(null); location.href = 'index.html'; return;
   }
+  Chat.update(ST, ME);
   $('#my-name').textContent = ST.seats[me].name;
   $('#subtitle').textContent = `Table ${ST.code} · seat ${me + 1} of ${ST.seats.length}`;
   // With a photo set, the pip in the corner is you.
@@ -609,6 +610,9 @@ function renderStandings(me) {
 document.addEventListener('DOMContentLoaded', () => {
   UI.wireTheme('#btn-theme');
   UI.wireFullscreen('#btn-full');
+  // A watching window reads the talk and does not join it, the same as every
+  // other control on it.
+  Chat.wire('#btn-chat', WATCH ? null : (text) => Net.send({ t: 'chat', text }));
   $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
   // The dealer and the table host deal again on the spot, so they are asked
   // first. Anybody else is asking the table, which can still be taken back.
