@@ -13,7 +13,9 @@ const Chat = (function () {
   // the middle of a game does not mark the whole game unread.
   const SEEN_KEY = 'rcs:chatseen:v1';
 
-  let btn = null, badge = null, sheet = null, list = null, input = null, form = null;
+  // The page's top bar has one of these, and the felt -- which covers the top
+  // bar -- has another. Both open the same sheet and both carry the same count.
+  let btns = [], badges = [], sheet = null, list = null, input = null, form = null;
   let sendLine = null;                  // null for a window that may only read
   let code = '', mine = null;           // this table, and my seat in it
   let lines = [], seen = 0, open = false, started = false;
@@ -32,12 +34,22 @@ const Chat = (function () {
   /* button: the one already in the page's top bar.
      send:   what to do with a line, or nothing for a watching window. */
   function wire(button, send) {
-    btn = typeof button === 'string' ? document.querySelector(button) : button;
-    if (!btn) return;
     sendLine = send || null;
-    badge = btn.querySelector('.chat-badge');
-    btn.addEventListener('click', () => (open ? shut() : show()));
+    if (!also(button)) return;
     document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') shut(); });
+  }
+
+  /* Another button for the same sheet -- the one on the felt, which covers the
+     page's own. It carries the same unread count. */
+  function also(button) {
+    const el = typeof button === 'string' ? document.querySelector(button) : button;
+    if (!el || btns.indexOf(el) >= 0) return null;
+    btns.push(el);
+    const b = el.querySelector('.chat-badge');
+    if (b) badges.push(b);
+    el.addEventListener('click', (e) => { e.stopPropagation(); if (open) shut(); else show(); });
+    countUnread();
+    return el;
   }
 
   function build() {
@@ -103,10 +115,11 @@ const Chat = (function () {
   }
 
   function countUnread() {
-    if (!badge) return;
     const n = lines.filter((l) => l.n > seen).length;
-    badge.textContent = n > 9 ? '9+' : String(n);
-    badge.hidden = n === 0;
+    badges.forEach((b) => {
+      b.textContent = n > 9 ? '9+' : String(n);
+      b.hidden = n === 0;
+    });
   }
 
   function draw() {
@@ -138,7 +151,7 @@ const Chat = (function () {
      turn up -- as a badge on the button, or a toast if the reader is deep in a
      hand and would otherwise miss them. */
   function update(ST, mySeatId) {
-    if (!ST || !btn) return;
+    if (!ST || !btns.length) return;
     const fresh = Array.isArray(ST.chat) ? ST.chat : [];
     mine = mySeatId || null;
 
@@ -166,5 +179,5 @@ const Chat = (function () {
     if (open) { draw(); markRead(); } else countUnread();
   }
 
-  return { wire, update, show, shut, isOpen: () => open };
+  return { wire, also, update, show, shut, isOpen: () => open };
 })();

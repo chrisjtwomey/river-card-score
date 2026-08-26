@@ -106,9 +106,11 @@ function load(W, H, motion) {
     .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
   const Avatar = { url: () => null };
   const Finale = { play: () => Promise.resolve() };
-  const fn = new Function('window', 'document', 'localStorage', 'Game', 'Avatar', 'Finale', 'console',
+  const talk = [];
+  const Chat = { also: (el) => { talk.push(el); return el; }, wire() {}, update() {} };
+  const fn = new Function('window', 'document', 'localStorage', 'Game', 'Avatar', 'Finale', 'Chat', 'console',
     src + '\n; return { Stage, Deal, Felt };');
-  return Object.assign({ dom }, fn(dom.window, dom.document, dom.localStorage, Game, Avatar, Finale,
+  return Object.assign({ dom, talk }, fn(dom.window, dom.document, dom.localStorage, Game, Avatar, Finale, Chat,
     { log() {}, info() {}, warn() {}, error(...a) { throw new Error('console.error: ' + a.join(' ')); } }));
 }
 
@@ -739,5 +741,86 @@ function bidding(o) {
   ok(t.rail().hidden && t.chips().length === 0, 'a watching window is offered no bid');
 }
 
-console.log(`\n${pass} checks passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+part('off the table, and on to the next round');
+
+// the talk stays reachable: the table covers the page's own button
+{
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: me });
+  const L = load(412, 860, 'off');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  ok(!!overlay.querySelector('.felt-talk'), 'the table carries a talk button of its own');
+  ok(L.talk.length === 1, 'wired to the same sheet as the page\'s');
+  ok(!!overlay.querySelector('.felt-talk').querySelector('.chat-badge'), 'with the same unread count');
+  ok(!!overlay.querySelector('.felt-out'), 'and the way out to the scorecard');
+}
+
+/* A round is scored and the next dealt in the same breath, so what the round
+   paid is held up over the trick that ended it. */
+function scored(motion) {
+  const n = 4, cards = 5, me = 1;
+  const first = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: [1, 2, 1, 1] });
+  const L = load(412, 860, motion);
+  L.Felt.sync(first.ST, me, { send: () => {} });
+  const next = stateFor(n, 4, me, { phase: 'bid', turn: 2 }).ST;
+  next.idx = 1;
+  next.rounds = [{ cards, dealer: 0, trump: 'H', bids: [1, 2, 1, 1], tricks: [1, 0, 2, 2] },
+                 next.rounds[0]];
+  L.Felt.sync(next, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  return { L, overlay, beat: () => overlay.querySelector('.felt-beat') };
+}
+{
+  const t = scored('off');
+  ok(!t.beat() || t.beat().hidden, 'with animations off the round is not held up');
+}
+{
+  const t = scored('full');
+  const b = t.beat();
+  ok(b && !b.hidden, 'the round just scored is held up');
+  ok(!b.classList.contains('hit'), 'and says you went down when you did');
+  ok(/bid 2/.test(b.querySelectorAll('span')[0].textContent), 'with what you bid');
+  ok(/won 0/.test(b.querySelectorAll('span')[0].textContent), 'and what you won');
+  const pts = Game.roundScore(2, 0, { bonus: 10, miss: 'atleast' });
+  ok(b.querySelectorAll('i')[0].textContent === `${pts >= 0 ? '+' : ''}${pts} points`,
+    'and what it paid, by the same rule the scorecard uses');
+  // the table waits: a state arriving now must not sweep it away
+  const stage = t.overlay.querySelector('.deal-stage');
+  const cards0 = stage.querySelectorAll('.dcard').length;
+  const again = stateFor(4, 4, 1, { phase: 'bid', turn: 2 }).ST;
+  again.idx = 1;
+  again.rounds = [{ cards: 5, dealer: 0, trump: 'H', bids: [1, 2, 1, 1], tricks: [1, 0, 2, 2] },
+                  again.rounds[0]];
+  t.L.Felt.sync(again, 1, {});
+  ok(!t.beat().hidden && stage.querySelectorAll('.dcard').length === cards0,
+    'and the table it was played on stays until the moment is over');
+  // and it comes to an end
+  setTimeout(() => {
+    ok(t.beat().hidden, 'then the moment passes');
+    ok(t.overlay.querySelector('.deal-stage').querySelectorAll('.dcard.mine').length === 4,
+      'and the next hand is on the table');
+    done();
+  }, 2400);
+}
+
+// a made bid says so
+{
+  const n = 4, cards = 5, me = 1;
+  const first = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: [1, 2, 1, 1] });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(first.ST, me, { send: () => {} });
+  const next = stateFor(n, 4, me, { phase: 'bid', turn: 2 }).ST;
+  next.idx = 1;
+  next.rounds = [{ cards, dealer: 0, trump: 'H', bids: [1, 2, 1, 1], tricks: [1, 2, 1, 1] },
+                 next.rounds[0]];
+  L.Felt.sync(next, me, { send: () => {} });
+  const b = L.dom.document.getElementById('deal').querySelector('.felt-beat');
+  ok(b.classList.contains('hit'), 'a bid made is marked as made');
+  ok(/made it/.test(b.querySelectorAll('b')[0].textContent), 'and said out loud');
+}
+
+function done() {
+  console.log(`\n${pass} checks passed, ${fail} failed`);
+  process.exit(fail ? 1 : 0);
+}

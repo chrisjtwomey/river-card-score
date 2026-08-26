@@ -597,11 +597,11 @@ body.host .toast .note{font-size:19px}
 .deal.dragging.armed .felt-line{border-top-color:rgba(246,212,136,.95)}
 .deal.dragging.armed .dcard.hero .front{box-shadow:0 0 0 6px rgba(246,212,136,.35), 0 12px 40px rgba(0,0,0,.55)}
 
-/* the way out to the round bar, the bids and the scorecard */
-.felt-out{
+/* The two ways off the table: the talk on one side, the scorecard on the other.
+   The table covers the page's own top bar, so both live here. */
+.felt-out,.felt-talk{
   position:absolute;z-index:3;
   top:calc(10px + env(safe-area-inset-top));
-  right:calc(10px + env(safe-area-inset-right));
   display:inline-flex;align-items:center;gap:6px;
   padding:7px 11px;border-radius:999px;
   background:rgba(9,14,10,.5);border:1px solid rgba(255,255,255,.22);
@@ -609,8 +609,34 @@ body.host .toast .note{font-size:19px}
   letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
   backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
 }
-.felt-out svg{width:15px;height:15px;flex:none}
-.felt-out:hover{background:rgba(9,14,10,.72);color:#fff}
+.felt-out{right:calc(10px + env(safe-area-inset-right))}
+.felt-talk{left:calc(10px + env(safe-area-inset-left));padding:7px 9px}
+.felt-out svg,.felt-talk svg{width:15px;height:15px;flex:none;fill:currentColor}
+.felt-out:hover,.felt-talk:hover{background:rgba(9,14,10,.72);color:#fff}
+/* the unread count, ringed in the felt so it reads as its own mark */
+.felt-talk{position:absolute}
+.felt-talk .chat-badge{box-shadow:0 0 0 2px #0d1a12}
+/* The round line steps down clear of those two buttons, and comes down in size:
+   on a table it is a caption, not the whole point of the screen. */
+.deal.table .deal-head{top:clamp(48px, 8vh, 78px)}
+.deal.table .deal-cap{font-size:clamp(18px, 4.2vw, 34px)}
+
+/* what the round just gone paid, held up before the next is dealt */
+.felt-beat{
+  position:absolute;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:16px 26px;border-radius:16px;text-align:center;pointer-events:none;
+  background:rgba(7,12,8,.9);border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 18px 50px rgba(0,0,0,.6);
+  animation:beatin .26s cubic-bezier(.2,.9,.3,1.3);
+}
+.felt-beat.hit{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,43,.25), 0 18px 50px rgba(0,0,0,.6)}
+.felt-beat b{font-size:20px;font-weight:800;letter-spacing:.02em;color:#fff}
+.felt-beat.hit b{color:var(--gold)}
+.felt-beat span{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.62)}
+.felt-beat i{font-size:26px;font-weight:900;font-style:normal;color:#fff;font-variant-numeric:tabular-nums}
+@keyframes beatin{from{opacity:0;transform:translate(-50%,-50%) scale(.86)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@media (prefers-reduced-motion: reduce){.felt-beat{animation:none}}
 /* what you may do about it, along the bottom where a thumb is not */
 .felt-hint{
   position:absolute;z-index:2;left:14px;right:14px;

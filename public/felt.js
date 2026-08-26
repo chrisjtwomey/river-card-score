@@ -40,6 +40,7 @@ const Felt = (function () {
   let ST = null, me = -1, send = null, watch = false;
   let key = null;                  // the round on the table: `idx:redeals`
   let dealing = false;             // a deal is in the air; the table is its own
+  let pausing = false;             // the round just scored is being held up
   let dealtOnce = false;           // the first deal of a game is the long one
   let want = true;                 // the reader wants the felt, not the page
   let T = null;                    // the table: every element standing on it
@@ -91,6 +92,19 @@ const Felt = (function () {
       out.addEventListener('click', (e) => { e.stopPropagation(); hide(); });
       overlay.appendChild(out);
     }
+    // The table covers the page's top bar, and the talk has to stay reachable.
+    if (typeof Chat !== 'undefined' && Chat.also && !overlay.querySelector('.felt-talk')) {
+      const talk = document.createElement('button');
+      talk.className = 'felt-talk';
+      talk.type = 'button';
+      talk.title = 'Table talk';
+      talk.setAttribute('aria-label', 'Table talk');
+      talk.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.6 3h10.8A2.6 2.6 0'
+        + ' 0 1 18 5.6v6.3a2.6 2.6 0 0 1-2.6 2.6H9.1l-3.5 3.1a.7.7 0 0 1-1.2-.52v-2.58H4.6A2.6 2.6 0'
+        + ' 0 1 2 11.9V5.6A2.6 2.6 0 0 1 4.6 3z"/></svg><span class="chat-badge" hidden></span>';
+      overlay.appendChild(talk);
+      Chat.also(talk);
+    }
     if (!overlay.querySelector('.felt-hint')) {
       const hint = document.createElement('p');
       hint.className = 'felt-hint';
@@ -115,7 +129,7 @@ const Felt = (function () {
     const overlay = document.getElementById('deal');
     if (!overlay) return;
     overlay.classList.remove('table', 'still', 'dragging');
-    ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids'].forEach((s) => {
+    ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids', '.felt-beat'].forEach((s) => {
       const el = overlay.querySelector(s);
       if (el) el.remove();
     });
@@ -809,7 +823,7 @@ const Felt = (function () {
   function onDown(e) {
     if (!T || !want || (e.button !== undefined && e.button > 0)) return;
     // The scorecard button answers for itself.
-    if (e.target && e.target.closest && e.target.closest('.felt-out')) return;
+    if (e.target && e.target.closest && e.target.closest('.felt-out,.felt-talk')) return;
 
     // The numbers are picked up the way the cards are: a touch lifts one, a
     // thumb along them lifts each in turn, and a tap on the one already up
@@ -966,8 +980,42 @@ const Felt = (function () {
     });
   }
 
+  /* What the round paid, held for a moment before the next one is dealt. The
+     server scores a round and deals the next in the same breath, so without
+     this the result of a hand you have just played goes by unremarked. */
+  function beat(prev) {
+    const overlay = overlayEl();
+    let el = overlay.querySelector('.felt-beat');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'felt-beat';
+      overlay.appendChild(el);
+    }
+    const bid = prev.bids[me], won = prev.tricks[me];
+    const pts = Game.roundScore(bid, won, ST.cfg);
+    el.className = 'felt-beat' + (bid === won ? ' hit' : '');
+    const line = (tag, text) => {
+      const x = document.createElement(tag);
+      x.textContent = text;
+      return x;
+    };
+    el.textContent = '';
+    el.append(line('b', bid === won ? 'You made it' : 'You went down'),
+              line('span', `bid ${bid} · won ${won}`),
+              line('i', `${pts >= 0 ? '+' : ''}${pts} point${Math.abs(pts) === 1 ? '' : 's'}`));
+    el.hidden = false;
+    return el;
+  }
+
+  function endBeat() {
+    const el = document.querySelector('#deal .felt-beat');
+    if (el) el.hidden = true;
+  }
+
   function leave() {
     key = null;
+    pausing = false;
+    endBeat();
     if (T || dealing) { Stage.close('deal'); T = null; dealing = false; }
     unmount();
     if (onView) onView(false);
@@ -993,14 +1041,32 @@ const Felt = (function () {
 
     const k = `${ST.idx}:${r.redeals || 0}`;
     if (k !== key) {
+      const was = key;
       key = k;
       T = null;
       dealing = false;
       sent = null;
-      if (want) start(r);
+      spread = false;
+      if (!want) return;
+      // A round has been played and scored on this table: its result is held up
+      // for a moment, over the trick that ended it, before the next deal.
+      const prev = ST.idx > 0 ? ST.rounds[ST.idx - 1] : null;
+      if (was && prev && Game.roundDone(prev) && !still()) {
+        pausing = true;
+        beat(prev);
+        setTimeout(() => {
+          if (!pausing) return;
+          pausing = false;
+          endBeat();
+          if (key === k && want && round()) start(round());
+        }, 1900);
+        return;
+      }
+      start(r);
       return;
     }
     if (!want) return;
+    if (pausing) return;                 // the round just gone is still up
     // While the cards are still in the air the deal owns the stage. It knows
     // how to take a bid landing mid-deal -- the number is stamped on the pile
     // it belongs to -- so it is told, and the table waits its turn.
@@ -1032,6 +1098,7 @@ const Felt = (function () {
   function hide() {
     want = false;
     drag = null; held = -1; spread = false;
+    if (pausing) { pausing = false; endBeat(); }
     const overlay = document.getElementById('deal');
     if (overlay) { overlay.hidden = true; overlay.classList.remove('dragging', 'armed'); }
     if (onView) onView(false);
