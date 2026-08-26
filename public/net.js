@@ -1,7 +1,9 @@
 'use strict';
 /* Tiny WebSocket client: one connection, auto-reconnect, saved session. */
 const Net = (function () {
-  const KEY = 'rcs:session:v1';
+  const KEY = 'rcs:session:v1';       // the seat this browser used last
+  const LIST = 'rcs:tables:v1';       // every table this browser holds a seat at
+  const CAP = 8;
   let ws = null, handlers = {}, backoff = 700, queue = [];
   let mem = null, ephemeral = false;   // a preview keeps its seat in memory only
   let everOpen = false, fails = 0, probing = false;
@@ -53,16 +55,69 @@ const Net = (function () {
     banner(`<b>The page loads, but ${url} will not connect.</b><ul><li>` + tips.join('</li><li>') + '</li></ul>');
   }
 
-  function session() {
-    if (ephemeral) return mem;
+  /* A browser can hold a seat at more than one table -- a game that ran on,
+     a table on the television, a second table started while the first was
+     still going. They used to share one slot, so whichever page reconnected
+     last wrote its own table over the others and the rest were lost with no
+     way back. They are a list now, newest first, and every page names the
+     table it belongs to. */
+  function tables() {
+    if (ephemeral) return mem ? [mem] : [];
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem(LIST) || '[]'); } catch (e) { list = []; }
+    if (!Array.isArray(list)) list = [];
+    list = list.filter((x) => x && x.code);
+    if (!list.length) {                       // a browser that knew only the one
+      const one = current();
+      if (one && one.code) list = [one];
+    }
+    return list;
+  }
+
+  function current() {
     try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; }
   }
+
+  function writeList(list) {
+    try { localStorage.setItem(LIST, JSON.stringify(list.slice(0, CAP))); } catch (e) {}
+  }
+
+  // The seat at one named table, or the one this browser used last.
+  function session(code) {
+    if (ephemeral) return mem;
+    if (code) {
+      const want = String(code).toUpperCase();
+      return tables().find((x) => x.code === want) || null;
+    }
+    return current();
+  }
+
   // memoryOnly keeps the seat in this page only. Several previews of the same
   // table can then run side by side without overwriting each other.
   function setSession(s, memoryOnly) {
     if (memoryOnly) ephemeral = true;
     if (ephemeral) { mem = s; return; }
-    try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch (e) {}
+    if (!s) { const was = current(); if (was && was.code) forget(was.code); return; }
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+    const rest = tables().filter((x) => x.code !== s.code);
+    writeList([Object.assign({ at: Date.now() }, s)].concat(rest));
+  }
+
+  // This browser is done with that table.
+  function forget(code) {
+    if (ephemeral) { mem = null; return; }
+    const want = String(code || '').toUpperCase();
+    writeList(tables().filter((x) => x.code !== want));
+    const one = current();
+    if (one && one.code === want) { try { localStorage.removeItem(KEY); } catch (e) {} }
+  }
+
+  /* The address says which table this page is at, so a second page at a second
+     table cannot answer for it. It survives a reload; the shared list does not
+     have to be asked. */
+  function pin(code) {
+    if (ephemeral || !code) return;
+    try { history.replaceState(null, '', location.pathname + '?c=' + encodeURIComponent(code)); } catch (e) {}
   }
 
   function connect(h) {
@@ -85,7 +140,10 @@ const Net = (function () {
         handlers.onHello && handlers.onHello(m);
       } else if (m.t === 'state') { handlers.onState && handlers.onState(m); }
       else if (m.t === 'error') { handlers.onError && handlers.onError(m.msg); }
-      else if (m.t === 'kicked') { setSession(null); handlers.onKicked && handlers.onKicked(); }
+      // Left on purpose. The seat is still this browser's to come back to, so
+      // the table is remembered; the page just walks away from it.
+      else if (m.t === 'left') { handlers.onLeft && handlers.onLeft(m); }
+      else if (m.t === 'kicked') { forget(m.code || (current() || {}).code); handlers.onKicked && handlers.onKicked(); }
     };
 
     ws.onclose = () => {
@@ -127,5 +185,5 @@ const Net = (function () {
     return true;
   }
 
-  return { connect, send, session, setSession, claimFromHash };
+  return { connect, send, session, tables, setSession, forget, pin, claimFromHash };
 })();

@@ -140,10 +140,12 @@ function syncCfg(room) {
   room.cfg.max = Math.min(room.cfg.max, G.maxCardsFor(n));
   if (!room.onesLocked) room.cfg.ones = n;
   if (room.firstDealerId && seatIndex(room, room.firstDealerId) < 0) room.firstDealerId = null;
-  if (seatIndex(room, room.captainId) < 0) {
-    // Somebody has to run the table, and a bot cannot: it would leave a game
-    // with nobody able to start it.
-    const who = room.seats.find((s) => !s.bot) || room.seats[0];
+  const boss = room.seats.find((s) => s.id === room.captainId);
+  if (!boss || boss.left) {
+    // Somebody has to run the table, and neither a bot nor a player who has
+    // left can: it would leave a game with nobody able to move it on.
+    const who = room.seats.find((s) => !s.bot && !s.left)
+             || room.seats.find((s) => !s.bot) || room.seats[0];
     room.captainId = who ? who.id : null;
   }
 }
@@ -158,7 +160,8 @@ function publicState(room) {
     phase: room.phase,
     cfg: room.cfg,
     seats: room.seats.map((s) => ({ id: s.id, name: s.name, online: s.online,
-                                    bot: !!s.bot, av: s.av ? s.av.ver : null })),
+                                    bot: !!s.bot, left: !!s.left,
+                                    av: s.av ? s.av.ver : null })),
     firstDealerId: room.firstDealerId,
     captainId: room.captainId,
     rounds: room.rounds,
@@ -196,9 +199,24 @@ function broadcast(room) {
 function markPresence(room) {
   room.seats.forEach((s) => {
     // A bot never goes anywhere, so it is never away.
-    s.online = s.bot || Array.from(room.sockets).some(
-      (w) => w.ctx && w.ctx.seatId === s.id && w.ctx.role !== 'watch');
+    s.online = s.bot || (!s.left && Array.from(room.sockets).some(
+      (w) => w.ctx && w.ctx.seatId === s.id && w.ctx.role !== 'watch'));
   });
+}
+
+/* Is the table stopped, waiting on this one seat? Nobody may bid or play out
+   of turn, so a seat that is on turn holds up everybody else. It is the one
+   moment where a player who has lost their seat can be let back in on nothing
+   but their name: the table has gone nowhere without them, and everybody at it
+   can see who is missing. */
+function waitingOn(room, p) {
+  const r = curRound(room);
+  if (p < 0 || !r) return false;
+  if (room.phase === 'bid') return G.turnSeat(r, room.seats.length) === p;
+  if (room.phase === 'tricks') {
+    return virtual(room) ? !!room.play && room.play.turn === p : r.dealer === p;
+  }
+  return false;
 }
 
 /* One bid, however it arrived: from a phone, or from a bot. The last bid closes
@@ -295,7 +313,8 @@ const { handleDev, devHello } = Dev({
 // Every message a seated socket may send, and who may send it, as a table.
 const { handleTable } = Messages({
   DEV, CHAT_KEEP, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish, addBot, seatBid,
-  virtual, dealHands, startPlay, playCard, scoreRound, bumDeal,
+  virtual, dealHands, startPlay, playCard, scoreRound, bumDeal, bidValue: Bots.bidFor,
+  markPresence,
 });
 
 /* ---------------- socket protocol ---------------- */
@@ -356,10 +375,29 @@ function handle(ws, m) {
   if (m.t === 'join') {
     const room = rooms.get(String(m.code || '').toUpperCase().trim());
     if (!room) return fail(ws, 'no table with that code');
-    if (room.phase !== 'lobby') return fail(ws, 'that game has already started');
-    if (room.seats.length >= 8) return fail(ws, 'the table is full');
     const name = String(m.name || '').trim().slice(0, 16) || `Player ${room.seats.length + 1}`;
-    if (room.seats.some((s) => s.name.toLowerCase() === name.toLowerCase())) return fail(ws, 'that name is taken');
+    const held = room.seats.find((s) => s.name.toLowerCase() === name.toLowerCase());
+
+    /* The game has started, so there is no new seat to be had. There is one
+       way in: back into your own. A phone that lost its seat -- a flat
+       battery, a browser that forgot, a second table on the same phone -- has
+       nothing but the code and the name it played under, and that is enough.
+       A seat somebody is sitting in is never handed over. */
+    if (room.phase !== 'lobby') {
+      if (!held) return fail(ws, 'that game has already started. To come back to your seat, type the name you played under');
+      if (held.bot) return fail(ws, `${held.name} is a player the table provides`);
+      if (held.online) return fail(ws, `${held.name} is already at the table`);
+      if (held.left) return fail(ws, `${held.name} left the game, so the table is playing that hand`);
+      if (!waitingOn(room, seatIndex(room, held.id))) {
+        return fail(ws, `the game has gone on without ${held.name}. Only the phone that holds that seat can come back to it`);
+      }
+      attach(ws, room, { role: 'player', seatId: held.id });
+      send(ws, { t: 'hello', role: 'player', code: room.code, token: held.token, seatId: held.id });
+      return broadcast(room);
+    }
+
+    if (room.seats.length >= 8) return fail(ws, 'the table is full');
+    if (held) return fail(ws, 'that name is taken');
     const seat = { id: token().slice(0, 8), name, token: token(), watch: token(), online: true };
     room.seats.push(seat);
     if (!room.captainId) room.captainId = seat.id;      // first in, table host
@@ -379,8 +417,21 @@ function handle(ws, m) {
     }
     const seat = room.seats.find((s) => s.token === m.token);
     if (!seat) return fail(ws, 'that seat is gone');
+    seat.left = false;                       // whoever left has come back to it
     attach(ws, room, { role: 'player', seatId: seat.id });
     send(ws, { t: 'hello', role: 'player', code: room.code, token: seat.token, seatId: seat.id });
+    return broadcast(room);
+  }
+
+  /* A screen that shows a table: the scorecard, the deal, whose turn it is.
+     It holds no seat and no token, so it cannot touch the game and nobody at
+     the table becomes present because of it. A code is all it needs: the state
+     it is given is the state already on show. */
+  if (m.t === 'screen') {
+    const room = rooms.get(String(m.code || '').toUpperCase().trim());
+    if (!room) return fail(ws, 'no table with that code');
+    attach(ws, room, { role: 'screen' });
+    send(ws, { t: 'hello', role: 'screen', code: room.code, token: null });
     return broadcast(room);
   }
 
@@ -405,6 +456,7 @@ function handle(ws, m) {
   const n = room.seats.length;
   const isHost = ctx.role === 'host';
   if (ctx.role === 'watch' && m.t !== 'ping') return fail(ws, 'this window is only watching');
+  if (ctx.role === 'screen' && m.t !== 'ping') return fail(ws, 'this screen only shows the table');
   const mySeat = ctx.seatId ? seatIndex(room, ctx.seatId) : -1;
   // The table host is a player with the same powers as the host screen, so a
   // game can run with no host screen at all.

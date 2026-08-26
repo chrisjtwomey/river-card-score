@@ -51,6 +51,44 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 9. The round scores, the next round opens, and the deal moves on one seat.
 10. The table host, or the host screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
 
+### When a phone goes
+
+A game stops dead on an empty seat: nobody may bid or play out of turn, so one
+phone in a pocket holds up everybody. The table tells the two cases apart.
+
+**A phone that has gone quiet** — a flat battery, a lost network, a browser
+that was closed — is waited for. Every screen says so: the seat is marked away,
+a line slides in saying *"Ann dropped out"*, and the felt says the table is
+waiting on them. Three ways back:
+
+- **The same phone comes back.** It holds the seat's token, so it always gets
+  its seat, whatever the game has done in the meantime.
+- **A phone that lost the seat types the code and the same name.** This is
+  accepted only while the table is still waiting on that seat — bidding has not
+  moved past them, or it is their card to play. Once the game has gone on
+  without them, a name is not enough and the phone that holds the seat must
+  come back to it. A seat somebody is sitting in is never handed over.
+- **Whoever runs the table bids or plays for them.** *Bid for Ann* appears on
+  the table host's phone and on the host screen while the bidding waits on an
+  empty seat; the number is read off that seat's own hand, the same arithmetic
+  the bots use, or the host taps the number the player at the table asks for.
+  *Play a card for them* does the same once the cards are out.
+
+**A player who leaves on purpose** — **Leave the game** at the foot of the
+player page — is not waited for. Before the cards go out the seat simply goes.
+After that it cannot: the scorecard is a column for every seat and the rounds
+already played are that player's. So the seat stays, marked as gone, and the
+table plays its hand from there on. That phone can still come back to the seat
+from the front page, and it is a player's again.
+
+### A browser holds more than one table
+
+Every table a browser takes a seat at is remembered, newest first, up to eight.
+The front page lists them, each with its own **Rejoin** and a × to forget it,
+and every page pins its table to its own address (`play.html?c=CODE`). A second
+table therefore cannot lose the seat at the first — which it used to, because
+there was one slot for a seat and every page wrote it on every reconnect.
+
 ### Table talk
 
 Every table has a chat room of its own. 💬 in the top bar opens a sheet over the
@@ -184,6 +222,14 @@ If the cards were dealt wrong, throw the hand in and deal it again. The round ke
 If the table host leaves the table, the badge moves to the first seat.
 
 ### Host screen
+
+A host screen belongs to one table, and it asks which. **Start a new table**
+makes one. Or type a table code and **Show that table**: the screen shows a
+game that is already running, and changes nothing at it — the players keep
+their seats and their phones still run the game. That screen cannot touch the
+game, which is what lets it take a code alone: it is shown only what is already
+on show. Use it to put a game that started on a phone up on a television
+without moving anybody.
 
 - **Text size** under ⚙ scales the page from 100% to 200%, so the table can read
   it from across the room. The size is remembered in that browser.

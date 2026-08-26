@@ -14,10 +14,13 @@ let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addr = null;        // the address shown in the QR code
 
 let menu = null;         // the settings menu, once the page is wired
+let SHOW = false;        // this screen shows a table it does not run
+let CODE = null;         // the table this screen belongs to
+let seenWho = null;      // who was at the table on the state before
 
 // The dev page, opened on this table so a game in play can be put right.
 function devLink() {
-  const sess = Net.session();
+  const sess = Net.session(CODE);
   return (sess && sess.code && sess.token) ? `dev.html#c=${sess.code}&t=${sess.token}` : 'dev.html';
 }
 
@@ -47,18 +50,58 @@ function renderJoin() {
 
 /* ---------- connection ---------- */
 
+/* This screen belongs to one table. It used to make a new one whenever the
+   browser did not already hold a host token, which meant a television could
+   not be pointed at a game that was already going: everybody had to move to
+   the table the television had just invented. So it asks. */
 function boot() {
   Net.claimFromHash('host');
+  const pinned = new URLSearchParams(location.search).get('c');
+  const s = Net.session(pinned);
+  if (s && s.code && (s.role === 'host' || s.role === 'screen')) { enter(null, s.code); return; }
+  $('#pick-panel').hidden = false;
+}
+
+const pickErr = (msg) => {
+  const el = $('#pick-err');
+  el.textContent = msg || '';
+  el.hidden = !msg;
+};
+
+/* `mode` is what to do when this browser holds nothing for the table yet:
+   'new' makes one, 'show' asks to be shown the one named. On every reconnect
+   after that the table is already known, so neither happens twice. */
+function enter(mode, code) {
+  CODE = code || null;
   Net.connect({
     onOpen: () => {
-      const s = Net.session();
-      if (s && s.role === 'host' && s.code) Net.send({ t: 'resume', code: s.code, token: s.token });
+      const s = Net.session(CODE);
+      if (s && s.role === 'screen' && s.code) Net.send({ t: 'screen', code: s.code });
+      else if (s && s.role === 'host' && s.code) Net.send({ t: 'resume', code: s.code, token: s.token });
+      else if (mode === 'show') Net.send({ t: 'screen', code: CODE });
       else Net.send({ t: 'create' });
     },
-    onHello: (m) => { $('#code-badge').textContent = m.code; },
+    onHello: (m) => {
+      CODE = m.code;
+      SHOW = m.role === 'screen';
+      document.body.classList.toggle('showing', SHOW);
+      // A screen that only shows a table has nothing to say at it.
+      $('#btn-chat').hidden = SHOW;
+      Net.pin(m.code);
+      $('#code-badge').textContent = m.code;
+      $('#pick-panel').hidden = true;
+      pickErr('');
+    },
     onState: (m) => { ST = m; render(); },
     onError: (msg) => {
-      if (/table is gone|no table/i.test(msg)) { Net.setSession(null); Net.send({ t: 'create' }); return; }
+      if (!CODE) { pickErr(msg); return; }            // still choosing: say it there
+      if (/table is gone|no table/i.test(msg)) {
+        Net.forget(CODE);
+        if (SHOW) { location.href = 'host.html'; return; }   // ask again, do not invent one
+        CODE = null;
+        Net.send({ t: 'create' });
+        return;
+      }
       const el = $('#host-err'); el.textContent = msg; el.hidden = false;
       setTimeout(() => { el.hidden = true; }, 4000);
     },
@@ -161,6 +204,7 @@ function dealWatch() {
 
 function render() {
   Chat.update(ST, null);
+  seenWho = Table.sayPresence(ST, -1, seenWho);   // who came, who went
   const lobby = ST.phase === 'lobby';
   UI.keepAwake(!lobby).then((s) => {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
@@ -176,9 +220,9 @@ function render() {
   $('#code-badge').textContent = ST.code;
   $('#code-small').textContent = ST.code;
   renderJoin();
-  $('#subtitle').textContent = lobby
+  $('#subtitle').textContent = (SHOW ? 'Showing ' : '') + (lobby
     ? `Table ${ST.code} · waiting to start`
-    : `Table ${ST.code} · ${ST.seats.length} players`;
+    : `Table ${ST.code} · ${ST.seats.length} players`);
   if (lobby) { Deal.close(); dealtKey = null; lastTotals = lastBids = null; renderLobby(); }
   else renderGame();
 }
@@ -353,6 +397,7 @@ function renderTurn(r, n) {
   const strip = $('#bidstrip');
   strip.innerHTML = '';
   const pad = $('#host-tricks');
+  $('#bidfor-pad').hidden = true;
 
   if (!r) {
     $('#turn-title').textContent = 'Game over';
@@ -391,6 +436,7 @@ function renderTurn(r, n) {
       (ST.cfg.screw && ST.turn === r.dealer ? ` The dealer cannot make the bids total ${r.cards}.` : '') +
       (amender !== null ? ` ${ST.seats[amender].name} can still change their bid.` : '');
     pad.hidden = true;
+    renderBidFor(r, n);
     return;
   }
 
@@ -455,6 +501,38 @@ function renderTurn(r, n) {
 // what the round paid floats up out of them.
 // The table, when the deck is virtual: the trick in the middle, and what each
 // seat has left. No hands: this screen is the one everybody can see.
+/* Nobody may bid out of turn, so a phone that has gone quiet at the bidding
+   stops the whole table. The screen can bid for that seat -- off its own cards
+   where there are cards to read. */
+function renderBidFor(r, n) {
+  const pad = $('#bidfor-pad');
+  const p = ST.turn;
+  const on = !SHOW && p !== null && !ST.seats[p].online;
+  pad.hidden = !on;
+  if (!on) return;
+  const who = ST.seats[p];
+  const dealt = ST.cfg.deck === 'virtual';
+  const forbidden = Game.forbiddenBid(r, p, ST.cfg, n);
+  $('#bidfor-hint').textContent = dealt
+    ? `${who.name} is not at the table. Bid from their hand, or tap the number they want.`
+    : `${who.name} is not at the table. Tap the bid they want.`;
+  const btn = $('#btn-bidfor');
+  btn.hidden = !dealt;
+  btn.textContent = `Bid for ${who.name}`;
+  const chips = $('#bidfor-chips');
+  chips.innerHTML = '';
+  for (let v = 0; v <= r.cards; v++) {
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'chip'; c.textContent = v;
+    if (v === forbidden) { c.disabled = true; c.title = 'Screw the dealer: this bid is not allowed'; }
+    c.addEventListener('click', () => {
+      chips.querySelectorAll('.chip').forEach((x) => { x.disabled = true; });
+      Net.send({ t: 'bidfor', v });
+    });
+    chips.appendChild(c);
+  }
+}
+
 function renderTable(r) {
   const panel = $('#table-panel');
   const on = ST.cfg.deck === 'virtual' && ST.phase === 'tricks' && !!r && !!ST.play;
@@ -540,6 +618,21 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-accolade-pay').addEventListener('change', (e) => patch({ accoladePay: e.target.value }));
   $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
+  $('#btn-bidfor').addEventListener('click', () => Net.send({ t: 'bidfor' }));
+
+  // The two ways this screen can come to a table.
+  $('#btn-new-here').addEventListener('click', () => { pickErr(''); enter('new'); });
+  const show = () => {
+    const c = $('#in-show').value.trim().toUpperCase();
+    if (c.length !== 4) return pickErr('Type the 4-character table code.');
+    pickErr('');
+    enter('show', c);
+  };
+  $('#btn-show').addEventListener('click', show);
+  $('#in-show').addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+  });
+  $('#in-show').addEventListener('keydown', (e) => { if (e.key === 'Enter') show(); });
 
   loadAddresses();
   UI.startZoom();

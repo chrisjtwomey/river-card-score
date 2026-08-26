@@ -166,6 +166,14 @@
         <div class="chips big-chips" id="bid-chips"></div>
         <p class="hint" id="bid-hint"></p>
       </div>
+      <!-- a phone has gone quiet at the bidding, and the table cannot move -->
+      <div id="bidfor-pad" hidden>
+        <p class="hint" id="bidfor-hint"></p>
+        <div class="chips" id="bidfor-chips"></div>
+        <div class="row-actions">
+          <button class="btn ghost" id="btn-bidfor" type="button">Bid for them</button>
+        </div>
+      </div>
       <div class="votebox" id="votebox" hidden>
         <div class="vote-text" id="vote-text">…</div>
         <div class="row-actions" id="vote-actions"></div>
@@ -221,6 +229,10 @@
       <div class="table-wrap"><table id="scorecard"></table></div>
     </details>
   </section>
+
+  <div class="row-actions leaverow" id="leave-row" hidden>
+    <button class="btn ghost danger" id="btn-leave" type="button">Leave the game</button>
+  </div>
 </main>
 
 <script src="/game.js"></script>

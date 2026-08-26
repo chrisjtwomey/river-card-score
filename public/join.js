@@ -17,18 +17,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const code = new URLSearchParams(location.search).get('code');
   if (code) $('#in-code').value = code.toUpperCase().slice(0, 4);
 
-  const s = Net.session();
-  if (s && s.code) {
-    $('#rejoin-panel').hidden = false;
-    $('#rejoin-text').textContent = s.role === 'host'
-      ? `You are the host of table ${s.code}.`
-      : `You have a seat at table ${s.code}.`;
-    $('#btn-rejoin').addEventListener('click', () => {
-      location.href = s.role === 'host' ? 'host.html' : 'play.html';
-    });
-    $('#btn-forget').addEventListener('click', () => {
-      Net.setSession(null);
-      $('#rejoin-panel').hidden = true;
+  /* Every table this browser holds a seat at, newest first. There used to be
+     room for one, so a second table wrote over the first and the seat at it
+     was gone with no way back. */
+  const held = Net.tables();
+  const panel = $('#rejoin-panel');
+  if (held.length) {
+    panel.hidden = false;
+    $('#rejoin-title').textContent = held.length > 1 ? 'Tables you are at' : 'You are in a game';
+    const list = $('#rejoin-list');
+    held.forEach((t) => {
+      const screen = t.role === 'host' || t.role === 'screen';
+      const row = document.createElement('div');
+      row.className = 'seat-item';
+      const nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.textContent = `Table ${t.code}`;
+      const badge = document.createElement('span');
+      badge.className = 'badge soft';
+      badge.textContent = t.role === 'host' ? 'host screen' : t.role === 'screen' ? 'on show' : 'your seat';
+      const go = document.createElement('button');
+      go.className = 'btn primary';
+      go.type = 'button';
+      go.textContent = screen ? 'Show it' : 'Rejoin';
+      go.addEventListener('click', () => {
+        location.href = (screen ? 'host.html?c=' : 'play.html?c=') + encodeURIComponent(t.code);
+      });
+      const drop = document.createElement('button');
+      drop.className = 'mini x';
+      drop.type = 'button';
+      drop.title = `Forget table ${t.code}`;
+      drop.textContent = '×';
+      drop.addEventListener('click', () => {
+        Net.forget(t.code);
+        row.remove();
+        if (!list.children.length) panel.hidden = true;
+      });
+      row.append(nm, badge, go, drop);
+      list.appendChild(row);
     });
   }
 
@@ -80,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#btn-join').disabled = true;
     Net.connect({
       onOpen: () => Net.send({ t: 'join', code: c, name }),
-      onHello: () => { location.href = 'play.html'; },
+      onHello: (m) => { location.href = 'play.html?c=' + encodeURIComponent(m.code); },
       onError: (m) => { err(m); $('#btn-join').disabled = false; },
     });
   });
@@ -102,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
       onOpen: () => Net.send({ t: 'create' }),
       onHello: (m) => {
         if (stage === 'create') { stage = 'join'; Net.send({ t: 'join', code: m.code, name }); }
-        else location.href = 'play.html';
+        else location.href = 'play.html?c=' + encodeURIComponent(m.code);
       },
       onError: (msg) => {
         newErr(msg);

@@ -27,6 +27,23 @@
 
 <main>
 
+  <!-- ============ NO TABLE YET ============ -->
+  <section class="panel" id="pick-panel" hidden>
+    <h2>This screen</h2>
+    <p class="hint">Start a table of your own, or put a table that is already running up on this screen.</p>
+    <div class="row-actions">
+      <button class="btn primary big" id="btn-new-here" type="button">Start a new table</button>
+    </div>
+    <div class="row-actions">
+      <input type="text" id="in-show" maxlength="4" autocapitalize="characters" autocomplete="off"
+             placeholder="4F2K" class="code-input" aria-label="Table code">
+      <button class="btn ghost" id="btn-show" type="button">Show that table</button>
+    </div>
+    <p class="hint">Showing a table changes nothing at it: the players keep their seats and their phones
+      still run the game. This screen only shows it.</p>
+    <p class="err" id="pick-err" hidden></p>
+  </section>
+
   <!-- ============ LOBBY ============ -->
   <section id="lobby" hidden>
     <div class="panel join-panel">
@@ -174,6 +191,14 @@
       </div>
       <div class="bidstrip" id="bidstrip"></div>
       <p class="hint" id="turn-hint"></p>
+      <!-- a phone has gone quiet at the bidding, and the table cannot move -->
+      <div id="bidfor-pad" hidden>
+        <p class="hint" id="bidfor-hint"></p>
+        <div class="chips" id="bidfor-chips"></div>
+        <div class="row-actions">
+          <button class="btn ghost" id="btn-bidfor" type="button">Bid for them</button>
+        </div>
+      </div>
       <div id="host-tricks" hidden>
         <div class="entry-rows" id="trick-rows"></div>
         <div class="entry-actions">

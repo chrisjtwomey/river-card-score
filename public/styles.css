@@ -746,11 +746,21 @@ body.host .toast .note{font-size:19px}
 }
 /* A window that only shows a seat: nothing on it can be pressed. */
 .watchpill{background:rgba(184,134,43,.3);color:#f0c878}
+/* A window that only watches, and a screen that only shows a table: the game
+   is all there, and none of it can be touched from here. */
 body.watching button,
 body.watching input,
 body.watching select,
-body.watching summary{pointer-events:none}
-body.watching .topbar-actions button{pointer-events:auto}
+body.watching summary,
+body.showing button,
+body.showing input,
+body.showing select{pointer-events:none}
+body.watching .topbar-actions button,
+body.showing .topbar-actions button,
+body.showing summary{pointer-events:auto}
+
+/* Leaving the table, at the foot of the player page. */
+.leaverow{justify-content:center;margin:18px 0 8px}
 
 .code-input{font-size:28px;font-weight:800;letter-spacing:.32em;text-align:center;text-transform:uppercase}
 

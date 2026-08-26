@@ -15,13 +15,18 @@ let trickSig = null;           // what the trick box is currently showing
 let wonMine = false;           // whose way the last pile was leaning
 let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
+let seenWho = null;            // who was at the table on the state before
 
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
 
 function boot() {
   Net.claimFromHash('player');
-  const s = Net.session();
+  /* The address says which table this page belongs to. A browser can hold a
+     seat at more than one; without this, a page at one table would answer for
+     whichever table was joined last. */
+  const pinned = new URLSearchParams(location.search).get('c');
+  const s = Net.session(pinned);
   if (!s || !s.code || (s.role !== 'player' && s.role !== 'watch')) { location.href = 'index.html'; return; }
   WATCH = s.role === 'watch';
   document.body.classList.toggle('watching', WATCH);
@@ -31,7 +36,7 @@ function boot() {
     onOpen: () => Net.send(WATCH
       ? { t: 'watch', code: s.code, token: s.token }
       : { t: 'resume', code: s.code, token: s.token }),
-    onHello: (m) => { ME = m.seatId; },
+    onHello: (m) => { ME = m.seatId; Net.pin(m.code); },
     onState: (m) => { ST = m; render(); },
     onError: (msg) => {
       if (/seat is gone|table is gone/i.test(msg)) { Net.setSession(null); location.href = 'index.html'; return; }
@@ -39,6 +44,8 @@ function boot() {
       setTimeout(() => { el.hidden = true; }, 3500);
     },
     onKicked: () => { location.href = 'index.html'; },
+    // You left. The seat is still yours to come back to, so it is remembered.
+    onLeft: () => { location.href = 'index.html'; },
     onDown: () => { $('#netpill').hidden = false; },
     onUp: () => { $('#netpill').hidden = true; },
   });
@@ -51,6 +58,8 @@ function render() {
     Net.setSession(null); location.href = 'index.html'; return;
   }
   Chat.update(ST, ME);
+  seenWho = Table.sayPresence(ST, me, seenWho);   // who came, who went
+  renderLeave();
   $('#my-name').textContent = ST.seats[me].name;
   $('#subtitle').textContent = `Table ${ST.code} · seat ${me + 1} of ${ST.seats.length}`;
   // With a photo set, the pip in the corner is you.
@@ -83,6 +92,15 @@ function render() {
   UI.measureSticky();
   $('#scorecard').innerHTML = Table.scorecardHTML(ST, me);
   Table.followCurrent('#scorecard');
+}
+
+/* Leaving on purpose, which the table can tell from a phone going quiet: a
+   quiet phone is waited for, a player who has left is played out. */
+function renderLeave() {
+  const row = $('#leave-row');
+  const seated = !WATCH && mySeat() >= 0;
+  row.hidden = !seated;
+  if (seated) $('#btn-leave').textContent = ST.phase === 'lobby' ? 'Leave the table' : 'Leave the game';
 }
 
 // What each player is remembered for, once the last round is scored.
@@ -495,11 +513,43 @@ function renderRound(r, me) {
   });
 }
 
+// The one place a table can stop dead: nobody may bid out of turn, so a
+// phone that has gone quiet holds up everybody. Whoever runs the table can
+// bid for that seat -- off its own cards where there are cards to read.
+function renderBidFor(r, me) {
+  const pad = $('#bidfor-pad');
+  const p = ST.turn;
+  const on = !WATCH && amHost() && p !== null && p !== me && !ST.seats[p].online;
+  pad.hidden = !on;
+  if (!on) return;
+  const who = ST.seats[p];
+  const dealt = ST.cfg.deck === 'virtual';
+  const forbidden = Game.forbiddenBid(r, p, ST.cfg, ST.seats.length);
+  $('#bidfor-hint').textContent = dealt
+    ? `${who.name} is not at the table. Bid from their hand, or tap the number they want.`
+    : `${who.name} is not at the table. Tap the bid they want.`;
+  const btn = $('#btn-bidfor');
+  btn.hidden = !dealt;
+  btn.textContent = `Bid for ${who.name}`;
+  const chips = $('#bidfor-chips');
+  chips.innerHTML = '';
+  for (let v = 0; v <= r.cards; v++) {
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'chip'; c.textContent = v;
+    if (v === forbidden) { c.disabled = true; c.title = 'Screw the dealer: this bid is not allowed'; }
+    c.addEventListener('click', () => {
+      chips.querySelectorAll('.chip').forEach((x) => { x.disabled = true; });
+      Net.send({ t: 'bidfor', v });
+    });
+    chips.appendChild(c);
+  }
+}
+
 function renderTurn(r, me) {
   const panel = $('#turn-panel');
   const bidPad = $('#bid-pad');
   const trickPad = $('#trick-pad');
-  bidPad.hidden = true; trickPad.hidden = true;
+  bidPad.hidden = true; trickPad.hidden = true; $('#bidfor-pad').hidden = true;
   panel.classList.remove('mine', 'amend');
 
   if (!r) {
@@ -535,6 +585,8 @@ function renderTurn(r, me) {
       return forbidden;
     };
 
+    renderBidFor(r, me);
+
     if (ST.turn === me) {
       panel.classList.add('mine');
       $('#turn-text').textContent = 'Your bid';
@@ -548,8 +600,13 @@ function renderTurn(r, me) {
       $('#turn-text').textContent = `You bid ${r.bids[me]}`;
       showPad();
       $('#bid-hint').textContent = `Tap another number to change your bid. You can change it until ${ST.seats[ST.turn].name} bids.`;
+    } else if (ST.turn === null) {
+      $('#turn-text').textContent = 'All bids are in.';
     } else {
-      $('#turn-text').textContent = ST.turn === null ? 'All bids are in.' : `Waiting for ${ST.seats[ST.turn].name} to bid`;
+      const who = ST.seats[ST.turn];
+      $('#turn-text').textContent = who.online
+        ? `Waiting for ${who.name} to bid`
+        : `${who.name} is not at the table`;
     }
     return;
   }
@@ -686,6 +743,16 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-accolade-pay').addEventListener('change', (e) => patch({ accoladePay: e.target.value }));
   $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
+  $('#btn-bidfor').addEventListener('click', () => Net.send({ t: 'bidfor' }));
+  $('#btn-leave').addEventListener('click', () => {
+    const lobby = !ST || ST.phase === 'lobby';
+    UI.ask(lobby ? 'Leave the table?' : 'Leave the game?',
+      lobby
+        ? 'Your seat is given up. Join again with the table code while the game has not started.'
+        : 'Your seat stays on the scorecard and the table plays your hand from here. '
+          + 'This phone can come back to it from the front page.',
+      'Leave').then((yes) => { if (yes) Net.send({ t: 'leave' }); });
+  });
   $('#btn-addbot').addEventListener('click', () => Net.send({ t: 'addbot' }));
   $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));

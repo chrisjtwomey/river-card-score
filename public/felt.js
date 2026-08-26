@@ -675,9 +675,18 @@ const Felt = (function () {
         return say(`You bid ${r.bids[me]}. You can change it until `
           + `${ST.seats[ST.turn] ? ST.seats[ST.turn].name : 'the next player'} bids.`);
       }
-      return say(ST.turn === null
-        ? 'All bids are in.'
-        : `Waiting for ${ST.seats[ST.turn] ? ST.seats[ST.turn].name : 'the table'} to bid.`);
+      if (ST.turn === null) return say('All bids are in.');
+      const who = ST.seats[ST.turn];
+      if (!who) return say('Waiting for the table to bid.');
+      // A seat with nobody behind it stops the table, and the felt should not
+      // leave a player guessing why nothing is happening. The bid for it is
+      // made from the page under the felt, by whoever runs the table.
+      if (!who.online) {
+        return say(who.left
+          ? `${who.name} left the game. The table is playing that hand.`
+          : `${who.name} is not at the table. The table waits, or the host bids for them.`);
+      }
+      return say(`Waiting for ${who.name} to bid.`);
     }
     if (!p) return say('Dealing…');
     if (sent) return say('…');
@@ -693,7 +702,13 @@ const Felt = (function () {
         ? (p.last.winner === me ? 'You won it.' : `${ST.seats[p.last.winner].name} won that trick.`)
         : 'Waiting…');
     }
-    return say(`Waiting for ${ST.seats[p.turn].name}.`);
+    const on = ST.seats[p.turn];
+    if (on && !on.online) {
+      return say(on.left
+        ? `${on.name} left the game. The table is playing that hand.`
+        : `${on.name} is not at the table.`);
+    }
+    return say(`Waiting for ${on ? on.name : 'the table'}.`);
   }
 
   /* ---------------- the hand, in your fingers ---------------- */

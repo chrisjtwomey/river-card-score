@@ -22,6 +22,8 @@ function client(name, url) {
     if (m.t === 'state') c.state = m;
     else if (m.t === 'hello') { c.hello = m; c.seatId = m.seatId; }
     else if (m.t === 'error') c.errors.push(m.msg);
+    else if (m.t === 'kicked') c.kicked = true;
+    else if (m.t === 'left') c.left = true;
   });
   c.send = o => ws.send(JSON.stringify(o));
   c.ready = new Promise(r => ws.on('open', r));
@@ -929,6 +931,163 @@ function client(name, url) {
     }
 
     h.ws.close(); you.ws.close();
+  }
+
+  /* ---- a phone that goes, and a phone that comes back ----
+
+     A game was lost to this. A player's browser held one table, a second table
+     was started on the same browser, and the seat at the first was written
+     over. When the phone dropped out mid-bid there was no way back into it:
+     the token was gone, a name was not accepted once a game had started, and
+     nobody could bid for the empty seat, so the table could not move at all.
+
+     Each of those is answered here. */
+  {
+    console.log('\n-- a seat that goes away, and comes back --');
+    const h = client('goneho'); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.state.code;
+
+    const ann = client('ann'); await ann.ready;
+    ann.send({ t: 'join', code, name: 'Ann' }); await wait(120);
+    const ben = client('ben'); await ben.ready;
+    ben.send({ t: 'join', code, name: 'Ben' }); await wait(120);
+    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await wait(120);
+    h.send({ t: 'start' }); await wait(300);
+    ok(h.state.phase === 'bid', 'the game starts  got ' + h.state.phase);
+    const onTurn = h.state.turn;                       // whoever bids first
+    const away = h.state.seats[onTurn].name;
+    const other = h.state.seats[1 - onTurn].name;
+
+    // the seat the table is waiting on drops out
+    (away === 'Ann' ? ann : ben).ws.close(); await wait(250);
+    ok(h.state.seats[onTurn].online === false, 'the table sees the phone go  got ' + away);
+    ok(h.state.turn === onTurn, 'and it waits there, because nobody may bid out of turn');
+
+    // a name is not enough to sit in a seat somebody is in
+    const imp = client('imp'); await imp.ready;
+    imp.send({ t: 'join', code, name: other.toUpperCase() }); await wait(150);
+    ok(imp.errors.some((e) => /already at the table/.test(e)),
+       'a seat somebody is sitting in is never handed over  got ' + JSON.stringify(imp.errors));
+    ok(!imp.hello, 'and nothing is handed to them');
+    imp.ws.close();
+
+    // but the phone that lost its seat comes back to it with the name it used
+    const back = client('back'); await back.ready;
+    back.send({ t: 'join', code, name: away.toLowerCase() }); await wait(200);
+    ok(back.hello && back.hello.seatId === h.state.seats[onTurn].id,
+       'the phone that lost its seat comes back with the name it played under');
+    ok(h.state.seats[onTurn].online === true, 'and the table has it back');
+    ok(Array.isArray(back.state.hand) && back.state.hand.length === h.state.rounds[0].cards,
+       'with the hand it was dealt  got ' + JSON.stringify(back.state && back.state.hand));
+
+    // while it is there, nobody bids for it
+    h.errors.length = 0;
+    h.send({ t: 'bidfor' }); await wait(150);
+    ok(h.errors.some((e) => /can bid/.test(e)),
+       'nobody bids for a seat that is at the table  got ' + JSON.stringify(h.errors));
+
+    // it bids, the turn moves on, and now the table has gone on without it
+    back.send({ t: 'bid', v: 0 }); await wait(200);
+    back.ws.close(); await wait(250);
+    const late = client('late'); await late.ready;
+    late.send({ t: 'join', code, name: away }); await wait(200);
+    ok(late.errors.some((e) => /gone on without/.test(e)),
+       'once the table has moved on, a name is not enough  got ' + JSON.stringify(late.errors));
+    ok(!late.hello, 'and no seat is handed over');
+    late.ws.close();
+
+    // the last seat drops out too, and now the table cannot move at all
+    const last = (other === 'Ann' ? ann : ben);
+    last.ws.close(); await wait(250);
+    const stuck = h.state.turn;
+    ok(stuck !== null && h.state.seats[stuck].online === false,
+       'the table is stopped on an empty seat  got turn ' + stuck);
+    h.errors.length = 0;
+    h.send({ t: 'bidfor' }); await wait(250);
+    ok(h.errors.length === 0, 'the host bids for it  got ' + JSON.stringify(h.errors));
+    ok(h.state.rounds[0].bids[stuck] !== null,
+       'and the bid is in  got ' + JSON.stringify(h.state.rounds[0].bids));
+    ok(h.state.phase === 'tricks', 'so the hand goes into play  got ' + h.state.phase);
+    h.ws.close();
+  }
+
+  /* ---- a screen that only shows a table ---- */
+  {
+    console.log('\n-- a screen pointed at a table --');
+    const h = client('tvhost'); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.state.code;
+    const ann = client('tvann'); await ann.ready;
+    ann.send({ t: 'join', code, name: 'Ann' }); await wait(150);
+
+    const tv = client('tv'); await tv.ready;
+    tv.send({ t: 'screen', code: code.toLowerCase() }); await wait(150);
+    ok(tv.hello && tv.hello.role === 'screen', 'a screen can be pointed at a table that is running');
+    ok(tv.state && tv.state.code === code, 'and it is given the table  got ' + (tv.state || {}).code);
+    ok(tv.state.hand === undefined, 'with nobody\'s cards in it');
+    ok(tv.state.seats.length === 1 && tv.state.seats[0].online === true,
+       'and it changes nothing about who is at the table');
+    tv.errors.length = 0;
+    tv.send({ t: 'reset' }); await wait(150);
+    ok(tv.errors.some((e) => /only shows the table/.test(e)),
+       'it cannot touch the game  got ' + JSON.stringify(tv.errors));
+    ok(ann.state.phase === 'lobby', 'and the game is where it was');
+
+    const nowhere = client('nowhere'); await nowhere.ready;
+    nowhere.send({ t: 'screen', code: 'ZZZZ' }); await wait(150);
+    ok(nowhere.errors.some((e) => /no table with that code/.test(e)), 'a screen needs a table that exists');
+    nowhere.ws.close(); tv.ws.close(); ann.ws.close(); h.ws.close();
+  }
+
+  /* ---- leaving on purpose, which is not the same as dropping out ---- */
+  {
+    console.log('\n-- leaving the game --');
+    const h = client('leaveho'); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.state.code;
+    const ann = client('lann'); await ann.ready;
+    ann.send({ t: 'join', code, name: 'Ann' }); await wait(120);
+    const ben = client('lben'); await ben.ready;
+    ben.send({ t: 'join', code, name: 'Ben' }); await wait(120);
+    const cal = client('lcal'); await cal.ready;
+    cal.send({ t: 'join', code, name: 'Cal' }); await wait(120);
+
+    // before the cards go out, a seat simply goes
+    cal.send({ t: 'leave' }); await wait(150);
+    ok(h.state.seats.length === 2, 'in the lobby, leaving gives the seat up  got ' + h.state.seats.length);
+    ok(cal.left === true, 'and the phone that left is told  got ' + cal.left);
+    cal.ws.close();
+
+    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await wait(120);
+    h.send({ t: 'start' }); await wait(300);
+    const turn = h.state.turn;
+    const goer = h.state.seats[turn].name === 'Ann' ? ann : ben;
+    goer.errors.length = 0;
+    goer.send({ t: 'leave' }); await wait(200);
+    ok(h.state.seats[turn].left === true, 'in a game, the seat stays and is marked gone');
+    ok(h.state.seats[turn].online === false, 'and nobody is behind it');
+    ok(h.state.seats.length === 2, 'the scorecard keeps its column  got ' + h.state.seats.length);
+
+    // a seat that was given up is not handed to a name
+    const grab = client('grab'); await grab.ready;
+    grab.send({ t: 'join', code, name: h.state.seats[turn].name }); await wait(150);
+    ok(grab.errors.some((e) => /left the game/.test(e)),
+       'and a name does not take it back  got ' + JSON.stringify(grab.errors));
+    grab.ws.close();
+
+    // the table plays that hand rather than waiting for a phone that has gone
+    await wait(1600);
+    ok(h.state.rounds[0].bids[turn] !== null,
+       'the table bids the hand it was left  got ' + JSON.stringify(h.state.rounds[0].bids));
+
+    // and the phone that left can still come back to its own seat
+    const rejoin = client('rejoin'); await rejoin.ready;
+    rejoin.send({ t: 'resume', code, token: goer.hello.token }); await wait(200);
+    ok(rejoin.hello && rejoin.hello.seatId === h.state.seats[turn].id,
+       'the phone that left comes back with its own token');
+    ok(h.state.seats[turn].left === false, 'and the seat is a player\'s again');
+    rejoin.ws.close(); ann.ws.close(); ben.ws.close(); h.ws.close();
   }
 
   // ---- PUBLIC_URL replaces the detected addresses ----

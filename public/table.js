@@ -226,6 +226,34 @@ const Table = (function () {
   /* The running order, tallest bar first. `me` marks one row, or -1 for none.
      Returns what the scores are now, which the caller keeps to see the next
      round's change. */
+  /* Who is at the table, and who is not. A bid is announced the moment it
+     lands; a phone going quiet is just as much a part of the game, and it is
+     the thing that stops it, so it is said the same way.
+
+     `last` is what presence looked like on the state before. The first state a
+     page ever sees announces nothing: it is not news that somebody was already
+     away when you arrived. */
+  function sayPresence(ST, me, last) {
+    const now = {};
+    ST.seats.forEach((s, p) => { now[s.id] = s.left ? 'left' : (s.online ? 'here' : 'away'); });
+    if (!last) return now;
+    const waiting = (p) => (ST.phase === 'bid' && ST.turn === p)
+      || !!(ST.play && ST.play.turn === p);
+    ST.seats.forEach((s, p) => {
+      const was = last[s.id];
+      if (!was || was === now[s.id] || p === me) return;
+      if (now[s.id] === 'left') {
+        UI.fx.toast(`${s.name} left the game`, { note: 'the table plays that hand now' });
+      } else if (now[s.id] === 'away') {
+        UI.fx.toast(`${s.name} dropped out`,
+          { note: waiting(p) ? 'the table is waiting on them' : 'they can come back to their seat' });
+      } else if (was === 'away' || was === 'left') {
+        UI.fx.toast(`${s.name} is back`, { note: waiting(p) ? 'their turn' : null });
+      }
+    });
+    return now;
+  }
+
   function standings(box, ST, opts) {
     const o = opts || {};
     const me = o.me === undefined ? -1 : o.me;
@@ -244,7 +272,9 @@ const Table = (function () {
         const w = span > 0 ? Math.round(((row.v - lo) / span) * 100) : 0;
         el.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
           `<span class="pts">${row.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
-        el.querySelector('.name').textContent = ST.seats[row.i].name + (row.i === me ? ' (you)' : '');
+        const who = ST.seats[row.i];
+        el.querySelector('.name').textContent = who.name
+          + (row.i === me ? ' (you)' : (who.left ? ' (left)' : ''));
         box.appendChild(el);
       });
     });
@@ -282,7 +312,7 @@ const Table = (function () {
   // after it: the finish plays once.
   const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
 
-  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, cardEl, trickEl,
+  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, sayPresence, cardEl, trickEl,
            sweepTrick, sweepOut, trickIn,
            standings, winner, voteText, justFinished };
 })();

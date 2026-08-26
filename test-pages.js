@@ -102,7 +102,9 @@ function makeDom(W, H) {
     fire: (t) => listeners.filter((l) => l[0] === t).forEach((l) => l[1]()),
   };
   const store = {};
-  const localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } };
+  const localStorage = { getItem: (k) => (k in store ? store[k] : null),
+                        setItem: (k, v) => { store[k] = String(v); },
+                        removeItem: (k) => { delete store[k]; } };
   return { document, window, localStorage, El };
 }
 
@@ -881,4 +883,405 @@ part('the settings menu');
 function done() {
   console.log(`\n${pass} checks passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
+}
+
+/* ---- the tables this browser holds ----
+
+   The bug: there was one slot for a seat, written by every page on every
+   reconnect. A second table wrote over the first, and the seat at the first
+   was then unreachable -- the token was in the slot that had just been
+   overwritten, and a name is not accepted at a game that has started. */
+part('the tables this browser holds');
+{
+  const loadNet = (seed) => {
+    const dom = makeDom(412, 860);
+    Object.keys(seed || {}).forEach((k) => dom.localStorage.setItem(k, seed[k]));
+    const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8');
+    const location = { protocol: 'http:', host: 'table', pathname: '/play.html', search: '', hash: '' };
+    const seen = {};
+    const history = { replaceState: (a, b, u) => { seen.url = u; } };
+    const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
+      src + '\n; return Net;');
+    return { Net: fn(dom.window, dom.document, dom.localStorage, location, history, function () {}), seen, dom };
+  };
+
+  const A = { code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' };
+  const B = { code: 'BBBB', token: 'tb', role: 'player', seatId: 'sb' };
+
+  {
+    const { Net } = loadNet();
+    Net.setSession(A);
+    Net.setSession(B);
+    ok(Net.tables().length === 2, 'a second table does not evict the first  got ' + Net.tables().length);
+    ok(Net.tables()[0].code === 'BBBB', 'the newest is offered first');
+    ok(Net.session('AAAA').token === 'ta', 'and the seat at the older one is still there');
+
+    // this is the clobber: the page still open at the first table reconnects
+    Net.setSession(A);
+    ok(Net.session('BBBB') && Net.session('BBBB').token === 'tb',
+       'a page reconnecting at one table cannot lose the seat at another');
+    ok(Net.session().code === 'AAAA', 'the last page to speak is the one this browser used last');
+  }
+
+  {
+    const { Net } = loadNet();
+    Net.setSession(A);
+    Net.setSession(B);
+    Net.forget('AAAA');
+    ok(Net.tables().length === 1 && Net.tables()[0].code === 'BBBB', 'a table is forgotten one at a time');
+    ok(Net.session('AAAA') === null, 'and it is gone');
+    Net.forget('BBBB');
+    ok(Net.tables().length === 0 && Net.session() === null, 'and the last one with it');
+  }
+
+  {   // a browser that knew only the one, from before there was a list
+    const { Net } = loadNet({ 'rcs:session:v1': JSON.stringify(A) });
+    ok(Net.tables().length === 1 && Net.tables()[0].code === 'AAAA',
+       'a seat saved before there was a list is still offered');
+  }
+
+  {   // eight is enough to hold, and the oldest goes
+    const { Net } = loadNet();
+    for (let i = 0; i < 10; i++) Net.setSession({ code: 'T' + i, token: 't', role: 'player' });
+    ok(Net.tables().length === 8, 'no more than eight tables are kept  got ' + Net.tables().length);
+    ok(!Net.tables().some((t) => t.code === 'T0'), 'and the oldest is the one dropped');
+  }
+
+  {   // the address says which table a page belongs to
+    const { Net, seen } = loadNet();
+    Net.pin('BBBB');
+    ok(seen.url === '/play.html?c=BBBB', 'a page pins its own table to its address  got ' + seen.url);
+  }
+
+  {   // a preview keeps its seat to itself, and touches no list
+    const { Net } = loadNet();
+    Net.setSession(A);
+    Net.setSession(B, true);
+    ok(Net.session().code === 'BBBB', 'a seat held in memory answers this page');
+    ok(Net.tables().length === 1 && Net.tables()[0].code === 'BBBB',
+       'and it is not written into the list');
+  }
+}
+
+/* ---- who came, and who went ---- */
+part('who came, and who went');
+{
+  const said = [];
+  const UI = { fx: { toast: (t, o) => said.push(t + ((o && o.note) ? ' · ' + o.note : '')) } };
+  const src = fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8');
+  const Table = new Function('UI', 'Game', 'document', src + '\n; return Table;')(UI, Game, makeDom(412, 860).document);
+
+  const seats = (o) => [
+    { id: 's0', name: 'Ann', online: true },
+    { id: 's1', name: 'Ben', online: o.benOn !== false, left: !!o.benLeft },
+    { id: 's2', name: 'Cal', online: true },
+  ];
+  const st = (o) => ({ phase: 'bid', turn: 1, seats: seats(o), play: null });
+
+  const first = Table.sayPresence(st({}), 0, null);
+  ok(said.length === 0, 'the first state a page sees announces nothing');
+
+  const away = Table.sayPresence(st({ benOn: false }), 0, first);
+  ok(said.length === 1 && /^Ben dropped out/.test(said[0]), 'a phone going quiet is said  got ' + said[0]);
+  ok(/waiting on them/.test(said[0]), 'and it says the table is stopped  got ' + said[0]);
+
+  said.length = 0;
+  Table.sayPresence(st({ benOn: false }), 0, away);
+  ok(said.length === 0, 'and it is said once, not on every state after it');
+
+  said.length = 0;
+  const back = Table.sayPresence(st({}), 0, away);
+  ok(said.length === 1 && /^Ben is back/.test(said[0]), 'coming back is said too  got ' + said[0]);
+
+  said.length = 0;
+  Table.sayPresence(st({ benOn: false, benLeft: true }), 0, back);
+  ok(said.length === 1 && /^Ben left the game/.test(said[0]), 'leaving is a different line  got ' + said[0]);
+  ok(/plays that hand/.test(said[0]), 'and it says what the table does about it  got ' + said[0]);
+
+  said.length = 0;
+  Table.sayPresence(st({ benOn: false }), 1, first);
+  ok(said.length === 0, 'your own phone is not announced to you');
+
+  // a seat that is not on turn: nothing is held up
+  said.length = 0;
+  const other = { phase: 'bid', turn: 0, seats: seats({}), play: null };
+  const two = Table.sayPresence(other, 0, null);
+  Table.sayPresence({ phase: 'bid', turn: 0, seats: seats({ benOn: false }), play: null }, 0, two);
+  ok(/come back to their seat/.test(said[0]), 'and a seat nobody waits on says so  got ' + said[0]);
+}
+
+/* ---- the two pages that lost the game ----
+
+   The front page offered one table and one only; the host screen made a new
+   table whenever the browser did not already hold a host token, which is how a
+   television came to invent a table nobody was sitting at. Both are checked
+   here against a document that answers any selector, which is enough to see
+   what the page builds and what it puts on the wire. */
+part('the front page, and the screen');
+{
+  const anything = new Proxy(function () {}, {
+    get: (t, k) => (k === 'then' ? undefined : anything),
+    apply: () => anything,
+    construct: () => anything,
+  });
+
+  function loadPage(file, seed, search) {
+    const dom = makeDom(412, 860);
+    Object.keys(seed || {}).forEach((k) => dom.localStorage.setItem(k, seed[k]));
+    const els = {};
+    const pick = (sel) => (els[sel] || (els[sel] = new dom.El('div')));
+    dom.document.querySelector = pick;
+    dom.document.getElementById = (id) => pick('#' + id);
+    const gone = [];
+    const location = { protocol: 'http:', host: 'table', hostname: 'table', pathname: '/' + file,
+                       search: search || '', hash: '',
+                       get href() { return this._h; }, set href(v) { this._h = v; gone.push(v); } };
+    const history = { replaceState: (a, b, u) => { history.url = u; } };
+    const socks = [];
+    function WebSocket(url) { this.url = url; this.readyState = 1; this.sent = []; socks.push(this); }
+    WebSocket.prototype.send = function (raw) { this.sent.push(JSON.parse(raw)); };
+    WebSocket.prototype.close = function () { this.readyState = 3; };
+    const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8') + '\n;\n'
+              + fs.readFileSync(path.join(ROOT, 'public/' + file), 'utf8');
+    const names = ['UI', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt'];
+    const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
+      'Game', 'console', ...names, src + '\n; return { Net };');
+    const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
+      { log() {}, info() {}, warn() {}, error() {} }, ...names.map(() => anything));
+    return Object.assign(out, { dom, pick, gone, socks,
+      start: () => dom.document.fire('DOMContentLoaded') });
+  }
+
+  const two = JSON.stringify([
+    { code: 'BBBB', token: 'tb', role: 'player', seatId: 'sb' },
+    { code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' },
+  ]);
+
+  {   // the front page lists every table this browser is at
+    const P = loadPage('join.js', { 'rcs:tables:v1': two });
+    P.pick('#rejoin-panel').hidden = true;
+    P.start();
+    ok(P.pick('#rejoin-panel').hidden === false, 'the front page offers the tables it holds');
+    const rows = P.pick('#rejoin-list').children;
+    ok(rows.length === 2, 'both of them, not just the last one  got ' + rows.length);
+    ok(P.pick('#rejoin-title').textContent === 'Tables you are at', 'and says so');
+    ok(rows[0].children[0].textContent === 'Table BBBB', 'newest first  got ' + rows[0].children[0].textContent);
+
+    rows[1].children[2].fire('click');            // rejoin the older table
+    ok(P.gone[0] === 'play.html?c=AAAA', 'and each one goes to its own table  got ' + P.gone[0]);
+
+    rows[0].children[3].fire('click');            // forget the newer one
+    ok(P.pick('#rejoin-list').children.length === 1, 'a table can be forgotten on its own');
+    ok(P.Net.tables().length === 1 && P.Net.tables()[0].code === 'AAAA', 'and it is the one that goes');
+  }
+
+  {   // a browser at no table is offered nothing
+    const P = loadPage('join.js', {});
+    P.pick('#rejoin-panel').hidden = true;
+    P.start();
+    ok(P.pick('#rejoin-panel').hidden === true, 'a browser at no table is offered nothing');
+  }
+
+  {   // the host screen asks, instead of inventing a table
+    const P = loadPage('host.js', {});
+    P.pick('#pick-panel').hidden = true;
+    P.start();
+    ok(P.pick('#pick-panel').hidden === false, 'with no table of its own, the screen asks');
+    ok(P.socks.length === 0, 'and makes nothing until it is told to');
+
+    P.pick('#in-show').value = 'ab2k';
+    P.pick('#btn-show').fire('click');
+    ok(P.socks.length === 1, 'showing a table opens a socket');
+    P.socks[0].onopen();
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"screen","code":"AB2K"}',
+       'and asks to be shown that table, not to make one  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'hello', role: 'screen', code: 'AB2K', token: null }) });
+    ok(P.dom.document.body.classList.contains('showing'), 'the screen knows it is only showing');
+    ok(P.pick('#btn-chat').hidden === true, 'and it has nothing to say at the table');
+    ok(P.pick('#pick-panel').hidden === true, 'the question is over');
+    ok(P.Net.session('AB2K') && P.Net.session('AB2K').role === 'screen',
+       'and the table is remembered, so a reload comes back to it');
+  }
+
+  {   // a code that is not a table stays on the question
+    const P = loadPage('host.js', {});
+    P.start();
+    P.pick('#in-show').value = 'ZZ';
+    P.pick('#btn-show').fire('click');
+    ok(P.socks.length === 0, 'half a code asks for nothing');
+    ok(/4-character/.test(P.pick('#pick-err').textContent), 'and says what is wrong');
+  }
+
+  {   // a screen that has been here before goes straight back
+    const P = loadPage('host.js',
+      { 'rcs:tables:v1': JSON.stringify([{ code: 'AB2K', token: null, role: 'screen' }]) }, '?c=AB2K');
+    P.pick('#pick-panel').hidden = false;
+    P.start();
+    ok(P.socks.length === 1, 'a screen that has been here before does not ask again');
+    P.socks[0].onopen();
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"screen","code":"AB2K"}',
+       'it asks for the table it was showing  got ' + JSON.stringify(P.socks[0].sent[0]));
+  }
+
+  {   // a screen makes no new table when the one it held has gone
+    const P = loadPage('host.js',
+      { 'rcs:tables:v1': JSON.stringify([{ code: 'AB2K', token: null, role: 'screen' }]) }, '?c=AB2K');
+    P.start();
+    P.socks[0].onopen();
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'hello', role: 'screen', code: 'AB2K', token: null }) });
+    P.socks[0].sent.length = 0;
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'that table is gone' }) });
+    ok(!P.socks[0].sent.some((m) => m.t === 'create'), 'a screen whose table has gone invents nothing');
+    ok(P.gone[0] === 'host.html', 'it asks again  got ' + P.gone[0]);
+    ok(P.Net.tables().length === 0, 'and the table it was showing is forgotten');
+  }
+}
+
+/* ---- the pad that unsticks the table ----
+
+   Scenario 3 on the player page: a phone has gone quiet at the bidding, so
+   nobody may bid and the table stops. What the table host sees, and what the
+   tap actually puts on the wire. And scenario 5: leaving on purpose. */
+part('bidding for a seat that is not there, and leaving');
+{
+  const anything = new Proxy(function () {}, {
+    get: (t, k) => (k === 'then' ? undefined
+                  : k === Symbol.toPrimitive ? (() => '')
+                  : k === 'toString' ? (() => '') : anything),
+    apply: () => anything, construct: () => anything,
+  });
+  const said = [];
+  const fx = {
+    toast: (t, o) => said.push(t + ((o && o.note) ? ' · ' + o.note : '')),
+    pop() {}, ring() {}, rise() {}, count() {}, barsBefore: () => ({}), scores: () => ({}),
+    flip: (box, f) => { if (f) f(); }, on: () => false,
+  };
+  // ask() answers yes, and answers it now, so the tap can be followed
+  const uiReal = { fx, ask: () => ({ then: (f) => f(true) }), keepAwake: () => ({ then: () => {} }) };
+  const UI = new Proxy(uiReal, { get: (t, k) => (k in t ? t[k] : anything) });
+
+  function playPage(seed, search) {
+    const dom = makeDom(412, 860);
+    Object.keys(seed || {}).forEach((k) => dom.localStorage.setItem(k, seed[k]));
+    const els = {};
+    const pick = (sel) => (els[sel] || (els[sel] = new dom.El(sel === '#bid-chips' ? 'div' : 'div')));
+    dom.document.querySelector = pick;
+    dom.document.getElementById = (id) => pick('#' + id);
+    const gone = [];
+    const location = { protocol: 'http:', host: 'table', hostname: 'table', pathname: '/play.html',
+                       search: search || '', hash: '',
+                       get href() { return this._h; }, set href(v) { this._h = v; gone.push(v); } };
+    const history = { replaceState: (a, b, u) => { history.url = u; } };
+    const socks = [];
+    function WebSocket(url) { this.readyState = 1; this.sent = []; socks.push(this); }
+    WebSocket.prototype.send = function (raw) { this.sent.push(JSON.parse(raw)); };
+    WebSocket.prototype.close = function () { this.readyState = 3; };
+    const Table = new Function('UI', 'Game', 'document',
+      fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
+    const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8') + '\n;\n'
+              + fs.readFileSync(path.join(ROOT, 'public/play.js'), 'utf8');
+    const stubs = ['Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt'];
+    const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
+      'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
+    const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game, UI, Table,
+      { log() {}, info() {}, warn() {}, error() {} }, ...stubs.map(() => anything));
+    dom.document.fire('DOMContentLoaded');
+    if (socks[0]) {
+      socks[0].onopen();
+      socks[0].onmessage({ data: JSON.stringify({ t: 'hello', role: 'player', code: 'TEST', seatId: 's0' }) });
+    }
+    return Object.assign(out, { dom, pick, gone, socks, said,
+      feed: (st) => { try { socks[0].onmessage({ data: JSON.stringify(st) }); }
+                      catch (e) { console.log('  (the page threw: ' + e.message + ')'); throw e; } } });
+  }
+
+  const seed = { 'rcs:tables:v1': JSON.stringify([{ code: 'TEST', token: 't0', role: 'player', seatId: 's0' }]) };
+  // three seats, two cards each, bidding, and the third seat is on turn
+  const table = (o) => {
+    const { ST } = stateFor(3, 2, 0, { phase: 'bid', turn: 2 });
+    ST.t = 'state';                       // it arrives the way the server sends it
+    ST.captainId = o.boss === false ? 's1' : 's0';
+    ST.seats[2].online = o.away === false;
+    if (o.left) ST.seats[2].left = true;
+    ST.seats.forEach((x, i) => { x.name = ['Ann', 'Ben', 'Cal'][i]; });
+    if (o.phase) ST.phase = o.phase;
+    return ST;
+  };
+
+  {   // the table host sees the pad
+    const P = playPage(seed, '?c=TEST');
+    said.length = 0;
+    P.feed(table({}));
+    ok(P.pick('#bidfor-pad').hidden === false, 'the host is offered the bid for a seat that is away');
+    ok(P.pick('#btn-bidfor').textContent === 'Bid for Cal',
+       'named, so nobody bids for the wrong seat  got ' + P.pick('#btn-bidfor').textContent);
+    ok(P.pick('#bidfor-chips').children.length === 3,
+       'with a number for every trick in the hand  got ' + P.pick('#bidfor-chips').children.length);
+    ok(/not at the table/.test(P.pick('#bidfor-hint').textContent),
+       'and says why it is there  got ' + P.pick('#bidfor-hint').textContent);
+    ok(P.pick('#turn-text').textContent === 'Cal is not at the table',
+       'the turn line says it too  got ' + P.pick('#turn-text').textContent);
+
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-bidfor').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"bidfor"}',
+       'the button asks the table to read that hand  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    P.socks[0].sent.length = 0;
+    P.pick('#bidfor-chips').children[2].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"bidfor","v":2}',
+       'and a number sends that number  got ' + JSON.stringify(P.socks[0].sent[0]));
+  }
+
+  {   // and nobody else does
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ boss: false }));
+    ok(P.pick('#bidfor-pad').hidden === true, 'a player who does not run the table is not offered it');
+  }
+
+  {   // nor when the seat is there
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ away: false }));
+    ok(P.pick('#bidfor-pad').hidden === true, 'and not while that phone is at the table');
+    ok(P.pick('#turn-text').textContent === 'Waiting for Cal to bid',
+       'which is an ordinary wait  got ' + P.pick('#turn-text').textContent);
+  }
+
+  {   // the page says a phone has gone, once
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ away: false }));
+    said.length = 0;
+    P.feed(table({}));
+    ok(said.length === 1 && /^Cal dropped out/.test(said[0]), 'the page says a phone has gone  got ' + said[0]);
+    ok(/waiting on them/.test(said[0]), 'and that the table is stopped  got ' + said[0]);
+    said.length = 0;
+    P.feed(table({}));
+    ok(said.length === 0, 'and does not say it again on the next state');
+    said.length = 0;
+    P.feed(table({ away: false }));
+    ok(said.length === 1 && /^Cal is back/.test(said[0]), 'coming back is said  got ' + said[0]);
+  }
+
+  {   // leaving
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({}));
+    ok(P.pick('#leave-row').hidden === false, 'a seated player can leave');
+    ok(P.pick('#btn-leave').textContent === 'Leave the game',
+       'in a game  got ' + P.pick('#btn-leave').textContent);
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-leave').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"leave"}',
+       'and the tap says so, once it is confirmed  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    P.feed(table({ phase: 'lobby' }));
+    ok(P.pick('#btn-leave').textContent === 'Leave the table',
+       'before the game it is the table you leave  got ' + P.pick('#btn-leave').textContent);
+
+    // and the page walks away when the server says the seat was given up
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'left', code: 'TEST' }) });
+    ok(P.gone[P.gone.length - 1] === 'index.html', 'the page goes back to the front  got ' + P.gone.join());
+    ok(P.Net.tables().length === 1,
+       'and the table is still remembered, so the seat can be taken back');
+  }
 }
