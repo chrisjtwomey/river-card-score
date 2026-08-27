@@ -398,6 +398,7 @@ function renderTurn(r, n) {
   strip.innerHTML = '';
   const pad = $('#host-tricks');
   $('#bidfor-pad').hidden = true;
+  renderPlayout();
 
   if (!r) {
     $('#turn-title').textContent = 'Game over';
@@ -501,6 +502,24 @@ function renderTurn(r, n) {
 // what the round paid floats up out of them.
 // The table, when the deck is virtual: the trick in the middle, and what each
 // seat has left. No hands: this screen is the one everybody can see.
+/* The seat the table is stopped on, if there is nobody behind it. */
+function awaySeat() {
+  const p = ST.phase === 'bid' ? ST.turn : (ST.play ? ST.play.turn : null);
+  if (p === null || p === undefined) return -1;
+  const s = ST.seats[p];
+  return (s && !s.online && !s.left && !s.bot) ? p : -1;
+}
+
+/* A phone that is not coming back. This hands the seat to the table for the
+   rest of the game, rather than bidding and playing for it a turn at a time. */
+function renderPlayout() {
+  const row = $('#playout-row');
+  const p = awaySeat();
+  const on = !SHOW && p >= 0 && ST.cfg.deck === 'virtual';
+  row.hidden = !on;
+  if (on) $('#btn-playout').textContent = `Let the table play ${ST.seats[p].name}'s hand`;
+}
+
 /* Nobody may bid out of turn, so a phone that has gone quiet at the bidding
    stops the whole table. The screen can bid for that seat -- off its own cards
    where there are cards to read. */
@@ -619,6 +638,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
   $('#btn-bidfor').addEventListener('click', () => Net.send({ t: 'bidfor' }));
+  $('#btn-playout').addEventListener('click', () => {
+    const p = awaySeat();
+    const who = p >= 0 ? ST.seats[p].name : 'that seat';
+    UI.ask(`Let the table play ${who}'s hand?`,
+      `The seat keeps its name and its place on the scorecard, and the table plays it `
+      + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
+      'Hand it over').then((yes) => { if (yes) Net.send({ t: 'playout' }); });
+  });
 
   // The two ways this screen can come to a table.
   $('#btn-new-here').addEventListener('click', () => { pickErr(''); enter('new'); });

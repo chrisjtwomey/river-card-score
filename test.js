@@ -903,7 +903,9 @@ function client(name, url) {
        'every bot has bid without being asked  got ' + JSON.stringify(r0.bids));
     ok(you.state.turn === mine, 'and the table waits for the person  got turn ' + you.state.turn);
 
-    you.send({ t: 'bid', v: 0 }); await wait(400);
+    // the person bids last, so screw the dealer may rule one number out
+    const forbidden = G.forbiddenBid(you.state.rounds[0], mine, you.state.cfg, you.state.seats.length);
+    you.send({ t: 'bid', v: forbidden === 0 ? 1 : 0 }); await wait(400);
     ok(you.state.phase === 'tricks', 'the last bid puts the cards in play');
 
     // and then the round plays itself, apart from the person's own cards
@@ -1088,6 +1090,66 @@ function client(name, url) {
        'the phone that left comes back with its own token');
     ok(h.state.seats[turn].left === false, 'and the seat is a player\'s again');
     rejoin.ws.close(); ann.ws.close(); ben.ws.close(); h.ws.close();
+  }
+
+  /* ---- a phone that is not coming back at all ---- */
+  {
+    console.log('\n-- handing a seat to the table --');
+    const h = client('handho'); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.state.code;
+    const ann = client('hann'); await ann.ready;
+    ann.send({ t: 'join', code, name: 'Ann' }); await wait(120);
+    const ben = client('hben'); await ben.ready;
+    ben.send({ t: 'join', code, name: 'Ben' }); await wait(120);
+
+    // with real cards there is no hand for the table to play
+    h.send({ t: 'start' }); await wait(250);
+    h.errors.length = 0;
+    h.send({ t: 'playout' }); await wait(150);
+    ok(h.errors.some((e) => /no cards to play that hand with/.test(e)),
+       'a table with real cards cannot hand a seat over  got ' + JSON.stringify(h.errors));
+    h.send({ t: 'reset' }); await wait(150);
+
+    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await wait(120);
+    h.send({ t: 'start' }); await wait(350);
+    const p = h.state.turn;
+    const who = h.state.seats[p].name;
+    const gone = who === 'Ann' ? ann : ben;
+    const token = gone.hello.token;
+    const stay = who === 'Ann' ? ben : ann;
+
+    // not while that phone is there
+    h.errors.length = 0;
+    h.send({ t: 'playout' }); await wait(150);
+    ok(h.errors.some((e) => /is at the table/.test(e)),
+       'a seat somebody is at is not handed over  got ' + JSON.stringify(h.errors));
+
+    gone.ws.close(); await wait(300);
+    h.errors.length = 0;
+    h.send({ t: 'playout' }); await wait(250);
+    ok(h.errors.length === 0, 'an empty seat is handed to the table  ' + JSON.stringify(h.errors));
+    ok(h.state.seats[p].left === true, 'and it is marked gone');
+    ok(h.state.seats.length === 2, 'the scorecard keeps its column');
+    ok(stay.state.seats[p].left === true, 'and every phone is told');
+
+    await wait(1500);
+    ok(h.state.rounds[0].bids[p] !== null,
+       'the table bids that hand without being asked again  ' + JSON.stringify(h.state.rounds[0].bids));
+
+    h.errors.length = 0;
+    h.send({ t: 'playout' }); await wait(150);
+    // by now the turn has moved to the seat that is present, so either guard
+    // answers: the seat on play is at the table, or the hand is already played
+    ok(h.errors.some((e) => /already playing|is at the table/.test(e)),
+       'and it is not handed over twice  got ' + JSON.stringify(h.errors));
+
+    // the phone it belongs to takes it back
+    const back = client('hback'); await back.ready;
+    back.send({ t: 'resume', code, token }); await wait(250);
+    ok(back.hello && back.hello.seatId === h.state.seats[p].id, 'the phone that holds the seat takes it back');
+    ok(h.state.seats[p].left === false, 'and it is a player\'s again');
+    back.ws.close(); stay.ws.close(); h.ws.close();
   }
 
   // ---- PUBLIC_URL replaces the detected addresses ----

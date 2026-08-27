@@ -1263,6 +1263,26 @@ part('bidding for a seat that is not there, and leaving');
     ok(said.length === 1 && /^Cal is back/.test(said[0]), 'coming back is said  got ' + said[0]);
   }
 
+  {   // handing a seat to the table for good
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({}));
+    ok(P.pick('#playout-row').hidden === false, 'the host can hand the empty seat to the table');
+    ok(P.pick('#btn-playout').textContent === "Let the table play Cal's hand",
+       'named, like the bid  got ' + P.pick('#btn-playout').textContent);
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-playout').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"playout"}',
+       'and the tap says so, once it is confirmed  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    P.feed(table({ boss: false }));
+    ok(P.pick('#playout-row').hidden === true, 'only whoever runs the table is offered it');
+    P.feed(table({ away: false }));
+    ok(P.pick('#playout-row').hidden === true, 'and not while that phone is there');
+    const gone = table({}); gone.seats[2].left = true;
+    P.feed(gone);
+    ok(P.pick('#playout-row').hidden === true, 'nor for a hand the table already plays');
+  }
+
   {   // leaving
     const P = playPage(seed, '?c=TEST');
     P.feed(table({}));

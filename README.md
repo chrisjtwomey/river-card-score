@@ -74,6 +74,14 @@ waiting on them. Three ways back:
   the bots use, or the host taps the number the player at the table asks for.
   *Play a card for them* does the same once the cards are out.
 
+**A phone that is not coming back** can be handed to the table for good:
+**Let the table play their hand** appears beside the bid-for and play-for
+buttons whenever the table is stopped on an empty seat. The seat keeps its
+name and its column, the table plays it from there on, and the phone that
+holds the seat takes it back by coming to the table. Only the seat the table
+is waiting on can be handed over, and only on a table dealt on the phones —
+with real cards there is no hand for the table to play.
+
 **A player who leaves on purpose** — **Leave the game** at the foot of the
 player page — is not waited for. Before the cards go out the seat simply goes.
 After that it cannot: the scorecard is a column for every seat and the rounds

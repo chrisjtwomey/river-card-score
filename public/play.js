@@ -513,6 +513,27 @@ function renderRound(r, me) {
   });
 }
 
+/* The seat the table is stopped on, if there is nobody behind it. A bot is
+   never away, and a seat the table already plays is not waited for. */
+function awaySeat() {
+  const p = ST.phase === 'bid' ? ST.turn : (ST.play ? ST.play.turn : null);
+  if (p === null || p === undefined) return -1;
+  const s = ST.seats[p];
+  return (s && !s.online && !s.left && !s.bot) ? p : -1;
+}
+
+/* A phone that is not coming back. Bidding and playing for it a turn at a time
+   works, but somebody has to be there to do it; this hands the seat to the
+   table for the rest of the game. The seat keeps its name and its column, and
+   the phone it belongs to takes it back by coming to the table. */
+function renderPlayout() {
+  const row = $('#playout-row');
+  const p = awaySeat();
+  const on = !WATCH && amHost() && p >= 0 && ST.cfg.deck === 'virtual';
+  row.hidden = !on;
+  if (on) $('#btn-playout').textContent = `Let the table play ${ST.seats[p].name}'s hand`;
+}
+
 // The one place a table can stop dead: nobody may bid out of turn, so a
 // phone that has gone quiet holds up everybody. Whoever runs the table can
 // bid for that seat -- off its own cards where there are cards to read.
@@ -550,6 +571,7 @@ function renderTurn(r, me) {
   const bidPad = $('#bid-pad');
   const trickPad = $('#trick-pad');
   bidPad.hidden = true; trickPad.hidden = true; $('#bidfor-pad').hidden = true;
+  renderPlayout();
   panel.classList.remove('mine', 'amend');
 
   if (!r) {
@@ -744,6 +766,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
   $('#btn-bidfor').addEventListener('click', () => Net.send({ t: 'bidfor' }));
+  $('#btn-playout').addEventListener('click', () => {
+    const p = awaySeat();
+    const who = p >= 0 ? ST.seats[p].name : 'that seat';
+    UI.ask(`Let the table play ${who}'s hand?`,
+      `The seat keeps its name and its place on the scorecard, and the table plays it `
+      + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
+      'Hand it over').then((yes) => { if (yes) Net.send({ t: 'playout' }); });
+  });
   $('#btn-leave').addEventListener('click', () => {
     const lobby = !ST || ST.phase === 'lobby';
     UI.ask(lobby ? 'Leave the table?' : 'Leave the game?',
