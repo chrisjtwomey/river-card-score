@@ -415,7 +415,6 @@ const Deal = (function () {
         ended = true;
         if (S.live && S.live.finish === finish) S.live = null;
         timers.forEach(clearTimeout);
-        dropLoop();
         overlay.removeEventListener('pointerdown', skip);
         window.removeEventListener('keydown', skip);
         const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
@@ -428,7 +427,6 @@ const Deal = (function () {
       }
       function settle() {
         settled = true;
-        dropLoop();
         anims.forEach((a) => { try { a.finish(); } catch (e) {} });
         deckEls.forEach((d) => { d.style.zIndex = ''; });
         handover();

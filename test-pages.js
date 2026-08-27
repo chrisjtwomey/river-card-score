@@ -1351,3 +1351,61 @@ part('the deal, with motion on');
   const ends = asked.map((a) => (a.opts.delay || 0) + (a.opts.duration || 0));
   ok(Math.max(...ends) > 3000, 'the whole thing takes a few seconds  got ' + Math.round(Math.max(...ends)) + 'ms');
 }
+
+/* ---- tapping the deal away ----
+
+   The tap that lands a deal, and the tap that closes one, both ran through a
+   name that had been deleted with the shuffle loop; so did the timer that
+   closes a scene on its own. A tap did nothing, and a scene with real cards
+   never closed. Both taps are made here, with the animations recorded. */
+part('tapping the deal away');
+{
+  const record = (L) => {
+    const asked = [];
+    L.dom.El.prototype.animate = function (kf, opts) {
+      const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {}, play() {},
+                  finish() { this.finished_ = true; }, finished: Promise.resolve(), onfinish: null };
+      asked.push(a);
+      return a;
+    };
+    L.dom.El.prototype.getAnimations = () => [];
+    return asked;
+  };
+
+  {   // a table (keep): the first tap lands the cards and hands the stage over
+    const L = load(412, 860, 'full');
+    const asked = record(L);
+    const { ST } = stateFor(3, 5, 1, { phase: 'bid', turn: 2 });
+    L.Felt.sync(ST, 1, { send() {}, watch: false, onView() {} });
+    const overlay = L.dom.document.getElementById('deal');
+    const before = asked.length;
+    let threw = null;
+    try { overlay.fire('pointerdown', { target: overlay, clientX: 200, clientY: 700, pointerId: 1 }); }
+    catch (e) { threw = e; }
+    ok(!threw, 'a tap on the deal does not throw  ' + (threw ? threw.message : ''));
+    ok(asked.slice(0, before).every((a) => a.finished_), 'and it lands every card at once');
+    ok(overlay.querySelectorAll('.dcard.mine').length === 5, 'the hand is on the table');
+    ok(!overlay.hidden, 'and the table stays up: the deal is the round, not a scene');
+  }
+
+  {   // a scene of its own (a phone at a table with real cards): tap, tap, gone
+    const L = load(412, 860, 'full');
+    const asked = record(L);
+    const overlay = L.Stage.overlayEl();
+    const p = L.Deal.play({
+      names: ['Ann', 'Ben', 'Cal'], dealer: 0, cards: 3, round: 1,
+      deck: 'physical', mine: 1, hand: [], upcard: null, trump: null, linger: 1000,
+    });
+    let threw = null;
+    try {
+      overlay.fire('pointerdown', { target: overlay, clientX: 200, clientY: 400, pointerId: 1 });
+      overlay.fire('pointerdown', { target: overlay, clientX: 200, clientY: 400, pointerId: 1 });
+    } catch (e) { threw = e; }
+    ok(!threw, 'two taps close a scene without throwing  ' + (threw ? threw.message : ''));
+    const out = asked[asked.length - 1];
+    ok(out && out.el === overlay && out.kf[1] && out.kf[1].opacity === 0, 'the last thing asked for is the fade out');
+    if (out && out.onfinish) out.onfinish();
+    ok(overlay.hidden, 'and the overlay is gone after it');
+    p.then(() => ok(true, 'the scene\'s promise settles'));
+  }
+}
