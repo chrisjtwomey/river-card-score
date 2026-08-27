@@ -194,20 +194,20 @@
       <p class="hint" id="turn-hint"></p>
       <!-- a phone has gone quiet at the bidding, and the table cannot move -->
       <div id="bidfor-pad" hidden>
-        <p class="hint" id="bidfor-hint"></p>
-        <div class="chips" id="bidfor-chips"></div>
+        <p class="hint"></p>
+        <div class="chips"></div>
         <div class="row-actions">
-          <button class="btn ghost" id="btn-bidfor" type="button">Bid for them</button>
+          <button class="btn ghost" type="button">Bid for them</button>
         </div>
       </div>
       <!-- and a phone that is not coming back at all -->
       <div class="row-actions" id="playout-row" hidden>
-        <button class="btn ghost danger" id="btn-playout" type="button">Let the table play that hand</button>
+        <button class="btn ghost danger" type="button">Let the table play that hand</button>
       </div>
       <div id="host-tricks" hidden>
-        <div class="entry-rows" id="trick-rows"></div>
+        <div class="entry-rows"></div>
         <div class="entry-actions">
-          <button class="btn primary" id="btn-tricks" type="button" disabled>Score the round</button>
+          <button class="btn primary" type="button" disabled>Score the round</button>
         </div>
       </div>
       <div class="entry-actions">
@@ -239,7 +239,7 @@
       <div class="trick big" id="trick"></div>
       <div class="seatcounts" id="seatcounts"></div>
       <div class="row-actions" id="playfor-row" hidden>
-        <button class="btn ghost" id="btn-playfor" type="button">Play a card for them</button>
+        <button class="btn ghost" type="button">Play a card for them</button>
       </div>
     </div>
 
@@ -265,6 +265,7 @@
 <script src="games.js"></script>
 <script src="table.js"></script>
 <script src="lobby.js"></script>
+<script src="round.js"></script>
 <script src="accolades.js"></script>
 <script src="chat.js"></script>
 <script src="host.js"></script>

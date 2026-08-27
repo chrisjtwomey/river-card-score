@@ -7,7 +7,6 @@ let ST = null, ME = null;      // ME = my seat id
 let WATCH = false;             // this window only shows the seat, it cannot act
 let lastTotals = null;         // seat id -> score, to show what a round paid
 let lastBids = null;           // { key, bids, turn }, to catch a bid landing
-let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
 let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
@@ -78,7 +77,7 @@ function render() {
   UI.keepAwake(ST.phase !== 'lobby').then((s) => {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
-  renderRound(r, me);
+  renderRound(r);
   /* On a virtual table the felt is the game, so this page is the scorecard
      and nothing else: the round, the standings, the card. The bidding and
      the hand live on the felt, and the bids are read off the scorecard. What
@@ -105,21 +104,12 @@ function render() {
    phone: a vote to answer, or a seat with nobody behind it that the table is
    stopped on. renderVote has already said whether the vote box shows. */
 function renderAttention(r, me) {
-  renderBidFor(r, me);
-  renderPlayout();
-  renderPlayFor();
+  const v = view();
+  Round.bidFor($('#bidfor-pad'), ST, r, v);
+  Round.playout($('#playout-row'), ST, v);
+  Round.playFor($('#playfor-row'), ST, v);
   const rows = ['#votebox', '#bidfor-pad', '#playfor-row', '#playout-row'];
   $('#attn-panel').hidden = rows.every((sel) => $(sel).hidden);
-}
-
-// A phone that has gone quiet would stop the table: whoever runs it plays a
-// card for that seat. The server picks, and only from the legal cards.
-function renderPlayFor() {
-  const row = $('#playfor-row');
-  const p = ST.phase === 'tricks' ? Game.awaySeat(ST) : -1;
-  const on = !WATCH && amHost() && p >= 0;
-  row.hidden = !on;
-  if (on) $('#btn-playfor').textContent = `Play a card for ${ST.seats[p].name}`;
 }
 
 /* Leaving on purpose, which the table can tell from a phone going quiet: a
@@ -133,13 +123,8 @@ function renderLeave() {
 
 // What each player is remembered for, once the last round is scored.
 function renderWinner() {
-  const panel = $('#winner-panel');
-  const done = ST.phase === 'done';
-  if (done) Games.keep(ST, mySeat());
-  panel.hidden = !done;
-  if (!done) return;
-  $('#winner-title').textContent = Table.winner(ST).title;
-  Accolades.render($('#accolades'), ST.awards || [], ST.seats.map((s) => s.name), ST.cfg.accoladePay);
+  if (ST.phase === 'done') Games.keep(ST, mySeat());
+  Round.winner($('#winner-panel'), ST);
 }
 
 // A bum deal throws the hand in. The dealer can do it alone; anybody else asks
@@ -316,17 +301,9 @@ function renderLobby(me) {
     : (v.boss ? 'Start the game when everybody is seated.' : `${capName} starts the game when everybody is seated.`);
 }
 
-function renderRound(r, me) {
-  if (!r) {
-    $('#round-label').textContent = 'Game over';
-    $('#round-cards').textContent = '—';
-    $('#round-dealer').textContent = '—';
-    return;
-  }
-  $('#round-label').textContent = `Round ${ST.idx + 1} of ${ST.rounds.length}` +
-    (r.redeals ? ` · re-deal ${r.redeals}` : '');
-  $('#round-cards').textContent = r.cards;
-  $('#round-dealer').textContent = ST.seats[r.dealer].name + (r.dealer === me ? ' (you)' : '');
+function renderRound(r) {
+  Round.header($('.round-bar'), ST, view());
+  if (!r) return;
   // Only a deck the server deals turns a trump. On a real table the card is
   // lying there for everybody to see, so the page says nothing about it.
   const cur = Game.SUITS.find((s) => s.k === r.trump) || null;
@@ -334,67 +311,16 @@ function renderRound(r, me) {
   $('#round-trump').textContent = ST.cfg.trump ? (cur ? cur.g : '—') : 'n/a';
 }
 
-/* A phone that is not coming back. Bidding and playing for it a turn at a time
-   works, but somebody has to be there to do it; this hands the seat to the
-   table for the rest of the game. The seat keeps its name and its column, and
-   the phone it belongs to takes it back by coming to the table. */
-function renderPlayout() {
-  const row = $('#playout-row');
-  const p = Game.awaySeat(ST);
-  const on = !WATCH && amHost() && p >= 0 && Game.virtual(ST);
-  row.hidden = !on;
-  if (on) $('#btn-playout').textContent = `Let the table play ${ST.seats[p].name}'s hand`;
-}
-
-// The one place a table can stop dead: nobody may bid out of turn, so a
-// phone that has gone quiet holds up everybody. Whoever runs the table can
-// bid for that seat -- off its own cards where there are cards to read.
-function renderBidFor(r, me) {
-  const pad = $('#bidfor-pad');
-  // The bidding is stopped on a seat with nobody behind it, and the table
-  // cannot play it: a bot bids for itself, and so does a seat that left a
-  // table that deals on the phones.
-  const p = ST.phase === 'bid' ? Game.awaySeat(ST) : -1;
-  const on = !WATCH && amHost() && p >= 0 && p !== me;
-  pad.hidden = !on;
-  if (!on) return;
-  const who = ST.seats[p];
-  const dealt = Game.virtual(ST);
-  const forbidden = Game.forbiddenBid(r, p, ST.cfg, ST.seats.length);
-  $('#bidfor-hint').textContent = dealt
-    ? `${who.name} is not at the table. Bid from their hand, or tap the number they want.`
-    : `${who.name} is not at the table. Tap the bid they want.`;
-  const btn = $('#btn-bidfor');
-  btn.hidden = !dealt;
-  btn.textContent = `Bid for ${who.name}`;
-  const chips = $('#bidfor-chips');
-  chips.innerHTML = '';
-  for (let v = 0; v <= r.cards; v++) {
-    const c = document.createElement('button');
-    c.type = 'button'; c.className = 'chip'; c.textContent = v;
-    if (v === forbidden) { c.disabled = true; c.title = 'Screw the dealer: this bid is not allowed'; }
-    c.addEventListener('click', () => {
-      chips.querySelectorAll('.chip').forEach((x) => { x.disabled = true; });
-      Net.send({ t: 'bidfor', v });
-    });
-    chips.appendChild(c);
-  }
-}
-
 function renderTurn(r, me) {
   const panel = $('#turn-panel');
   const bidPad = $('#bid-pad');
-  const trickPad = $('#trick-pad');
-  bidPad.hidden = true; trickPad.hidden = true;
+  bidPad.hidden = true;
+  Round.trickPad($('#trick-pad'), ST, r, view());
   panel.classList.remove('mine', 'amend');
 
   if (!r) {
     $('#turn-eyebrow').textContent = 'Game over';
-    const t = ST.totals, top = Math.max(...t);
-    const champs = ST.seats.filter((s, i) => t[i] === top).map((s) => s.name);
-    $('#turn-text').textContent = champs.length > 1
-      ? `Tie: ${champs.join(' and ')} on ${top}`
-      : `${champs[0]} wins with ${top}`;
+    $('#turn-text').textContent = Table.winner(ST).title;
     return;
   }
 
@@ -466,69 +392,17 @@ function renderTurn(r, me) {
   }
   panel.classList.add('mine');
   $('#turn-text').textContent = `${leads} the first trick. Enter the tricks each player won.`;
-  trickPad.hidden = false;
-
-  // Everybody starts on 0, so the dealer only taps the players who won tricks.
-  const key = `${ST.idx}:${ST.phase}`;
-  if (draftKey !== key) { draftKey = key; draft = ST.seats.map(() => 0); }
-
-  const rows = $('#trick-rows');
-  rows.innerHTML = '';
-  ST.seats.forEach((s, p) => {
-    const row = document.createElement('div');
-    row.className = 'entry-row' + (p === me ? ' dealer' : '');
-    const who = document.createElement('div');
-    who.className = 'who';
-    const nm = document.createElement('span'); nm.textContent = s.name + (p === me ? ' (you)' : ''); who.appendChild(nm);
-    const b = document.createElement('span'); b.className = 'badge soft'; b.textContent = `bid ${r.bids[p]}`; who.appendChild(b);
-    row.appendChild(who);
-    const chips = document.createElement('div');
-    chips.className = 'chips';
-    const others = draft.reduce((a, v, i) => a + (i === p ? 0 : (v || 0)), 0);
-    for (let v = 0; v <= r.cards; v++) {
-      const c = document.createElement('button');
-      c.type = 'button'; c.className = 'chip'; c.textContent = v;
-      c.setAttribute('aria-pressed', String(draft[p] === v));
-      if (others + v > r.cards) { c.disabled = true; c.title = `Only ${r.cards - others} tricks are left`; }
-      c.addEventListener('click', () => { draft[p] = draft[p] === v ? 0 : v; renderTurn(r, me); });
-      chips.appendChild(c);
-    }
-    row.appendChild(chips);
-    rows.appendChild(row);
-  });
-
-  const sum = draft.reduce((a, v) => a + (v || 0), 0);
-  const ready = sum === r.cards;
-  const btn = $('#btn-tricks');
-  btn.disabled = !ready;
-  btn.textContent = ready ? 'Score the round' : `${r.cards - sum} of ${r.cards} tricks still to give`;
 }
 
 function renderBidStrip(r) {
-  const strip = $('#bidstrip');
-  strip.innerHTML = '';
+  lastBids = Round.bidStrip($('#bidstrip'), ST, r, view(), lastBids);
   if (!r) { $('#bid-tally').textContent = ''; return; }
-  // Once the cards are out these pills carry what each player has won against
+  Table.sayBids(ST, r, lastBids.landed, mySeat());     // a line says so, in case you looked away
+  // Once the cards are out the pills carry what each player has won against
   // what they bid. Only a virtual deck knows that as the hand is played; at a
   // table with real cards the tricks arrive all at once at the end.
   const play = ST.phase === 'tricks' && ST.play ? ST.play : null;
   $('#bid-title').textContent = play ? 'Tricks won' : 'Bids';
-  Game.bidOrder(r.dealer, ST.seats.length).forEach((p) => {
-    const bid = r.bids ? r.bids[p] : null;
-    const won = play ? play.won[p] : null;
-    const isTurn = play ? play.turn === p : ST.turn === p;
-    const pill = document.createElement('div');
-    pill.className = 'bidpill' + (isTurn ? ' now' : '') + (bid !== null ? ' in' : '') +
-      (play && won === bid ? ' hit' : '') + (play && won > bid ? ' over' : '');
-    pill.dataset.k = String(p);
-    pill.innerHTML = '<span class="nm"></span><span class="v"></span>';
-    pill.querySelector('.nm').textContent = ST.seats[p].name + (p === r.dealer ? ' (D)' : '');
-    pill.querySelector('.v').textContent = play ? `${won}/${bid}`
-      : (bid === null ? (isTurn ? '…' : '—') : bid);
-    strip.appendChild(pill);
-  });
-  lastBids = Table.bidsAfter(strip, ST, r, lastBids);   // a bid lands, the turn moves on
-  Table.sayBids(ST, r, lastBids.landed, mySeat());     // and a line says so, in case you looked away
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
   $('#bid-tally').textContent = play
     ? `${play.won.reduce((a, v) => a + v, 0)} of ${r.cards} played`
@@ -552,29 +426,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // other control on it.
   Chat.wire('#btn-chat', WATCH ? null : (text) => Net.send({ t: 'chat', text }));
   $('#btn-back-felt').addEventListener('click', () => Felt.show());
-  $('#btn-tricks').addEventListener('click', () => Net.send({ t: 'tricks', values: draft }));
   // The dealer and the table host deal again on the spot, so they are asked
   // first. Anybody else is asking the table, which can still be taken back.
   $('#btn-bum').addEventListener('click', () => {
-    const me = mySeat();
     const r = ST && ST.rounds[ST.idx];
-    const now = amHost() || (r && r.dealer === me);
-    const q = now
-      ? UI.ask('Bum deal?', 'The hand is thrown in. The same dealer deals it again, and the bids so far are lost.', 'Deal again')
-      : UI.ask('Call a bum deal?', 'Every player has to agree before the hand is thrown in.', 'Ask the table');
-    q.then((yes) => { if (yes) Net.send({ t: 'bumdeal' }); });
+    Round.bumDeal(view(), amHost() || !!(r && r.dealer === mySeat()));
   });
 
-  $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
-  $('#btn-bidfor').addEventListener('click', () => Net.send({ t: 'bidfor' }));
-  $('#btn-playout').addEventListener('click', () => {
-    const p = Game.awaySeat(ST);
-    const who = p >= 0 ? ST.seats[p].name : 'that seat';
-    UI.ask(`Let the table play ${who}'s hand?`,
-      `The seat keeps its name and its place on the scorecard, and the table plays it `
-      + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
-      'Hand it over').then((yes) => { if (yes) Net.send({ t: 'playout' }); });
-  });
   $('#btn-leave').addEventListener('click', () => {
     const lobby = !ST || ST.phase === 'lobby';
     UI.ask(lobby ? 'Leave the table?' : 'Leave the game?',
@@ -585,9 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
       'Leave').then((yes) => { if (yes) Net.send({ t: 'leave' }); });
   });
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
-  $('#btn-reset').addEventListener('click', () => {
-    UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.',
-      'New game').then((yes) => { if (yes) Net.send({ t: 'reset' }); });
-  });
+  $('#btn-reset').addEventListener('click', () => Round.newGame(view()));
   boot();
 });

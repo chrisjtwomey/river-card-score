@@ -716,22 +716,25 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 
 ## Files
 
-- `server.js` — the rooms, the sockets, and the wiring. Rooms live in memory.
+- `server.js` — the sockets, the presence, and the wiring. Rooms live in memory.
+- `lib/room.js` — the table as the game sees it: every verb that moves a game on, written once. The protocol and the dev controls call these and add nothing.
 - `lib/messages.js` — every message a seated socket may send, as a table: who may send it, when, and what it does.
 - `lib/http.js` — everything a browser asks for over plain HTTP: the pages, the QR code, the addresses, a finished game, a picture.
-- `lib/deck.js` — the dealer for a virtual table: the hands, and the rules of a trick.
+- `lib/deck.js` — the dealer for a virtual table: the hands, and the rules of a trick. It moves cards; the server holds a finished trick up.
 - `lib/bots.js` — the players the table provides: what a hand is worth, which card to play, and the driver that takes their turn.
 - `lib/games.js` — a finished game on disk.
 - `lib/dev.js` — the dev portal, which a real game never touches.
-- `public/ui.js` — shared page bits, such as the full-screen button.
-- `public/stage.js` — the overlay both scenes are played on, and the slot that says which one is open.
+- `public/ui.js` — shared page bits: the full-screen button, the wake lock, the motion setting every scene and flourish asks.
+- `public/stage.js` — the overlay both scenes are played on, its parts, and the slot that says which one is open.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
 - `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
-- `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a host screen and a phone.
+- `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a host screen and a phone; and what the deal and the finish read off the state.
+- `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the host screen, the table host's phone and the dev page.
+- `public/round.js` — the round in play: the round line, the bids as they land, the dealer's trick pad, the pads for a seat with nobody behind it, and the winner. Each widget takes the element it draws into and a view of who is looking.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
 - `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
-- `game.js` — the rules: schedule, bid order, forbidden bid, scoring. Used by the server and by every client.
+- `game.js` — the rules: schedule, bid order, forbidden bid, scoring, whose turn it is, which seats the table plays itself. Used by the server and by every client.
 - `test.js` — end-to-end test. `test-pages.js` — the pages, checked without a browser.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
@@ -745,7 +748,6 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player phone: your bid pad, the trick pad when you deal, standings, and the scorecard.
-- `public/table.js` — the scorecard table, shared by the host screen and the phones.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
 - `public/styles.css` — shared styles, light and dark.
 

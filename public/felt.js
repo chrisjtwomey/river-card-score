@@ -52,7 +52,7 @@ const Felt = (function () {
   let bidSlots = [];               // where each number sits, to aim a thumb at
   let sent = null;                 // a card played, until the table says so
 
-  const virtual = () => !!(ST && ST.cfg && ST.cfg.deck === 'virtual');
+  const virtual = () => !!ST && Game.virtual(ST);
   const round = () => (ST && ST.rounds ? ST.rounds[ST.idx] || null : null);
   const still = () => UI.motion() === 'off';
   const suitName = (k) => {

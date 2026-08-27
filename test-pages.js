@@ -1044,7 +1044,7 @@ part('the front page, and the screen');
     WebSocket.prototype.close = function () { this.readyState = 3; };
     const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8') + '\n;\n'
               + fs.readFileSync(path.join(ROOT, 'public/' + file), 'utf8');
-    const names = ['UI', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby'];
+    const names = ['UI', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round'];
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'console', ...names, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
@@ -1180,7 +1180,7 @@ part('bidding for a seat that is not there, and leaving');
     WebSocket.prototype.close = function () { this.readyState = 3; };
     const Table = new Function('UI', 'Game', 'document',
       fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
-    const src = ['public/lobby.js', 'public/net.js', 'public/play.js']
+    const src = ['public/lobby.js', 'public/round.js', 'public/net.js', 'public/play.js']
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
     const stubs = ['Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt'];
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
@@ -1215,23 +1215,23 @@ part('bidding for a seat that is not there, and leaving');
     said.length = 0;
     P.feed(table({}));
     ok(P.pick('#bidfor-pad').hidden === false, 'the host is offered the bid for a seat that is away');
-    ok(P.pick('#btn-bidfor').textContent === 'Bid for Cal',
-       'named, so nobody bids for the wrong seat  got ' + P.pick('#btn-bidfor').textContent);
-    ok(P.pick('#bidfor-chips').children.length === 3,
-       'with a number for every trick in the hand  got ' + P.pick('#bidfor-chips').children.length);
-    ok(/not at the table/.test(P.pick('#bidfor-hint').textContent),
-       'and says why it is there  got ' + P.pick('#bidfor-hint').textContent);
+    ok(P.pick('#bidfor-pad').querySelector('.btn').textContent === 'Bid for Cal',
+       'named, so nobody bids for the wrong seat  got ' + P.pick('#bidfor-pad').querySelector('.btn').textContent);
+    ok(P.pick('#bidfor-pad').querySelector('.chips').children.length === 3,
+       'with a number for every trick in the hand  got ' + P.pick('#bidfor-pad').querySelector('.chips').children.length);
+    ok(/not at the table/.test(P.pick('#bidfor-pad').querySelector('.hint').textContent),
+       'and says why it is there  got ' + P.pick('#bidfor-pad').querySelector('.hint').textContent);
     // the felt is the game on this table, so the page keeps no turn panel
     ok(P.pick('#turn-panel').hidden === true, 'the scorecard page keeps no turn panel');
     ok(P.pick('#attn-panel').hidden === false, 'the pad has a panel of its own');
 
     P.socks[0].sent.length = 0;
-    P.pick('#btn-bidfor').fire('click');
+    P.pick('#bidfor-pad').querySelector('.btn').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"bidfor"}',
        'the button asks the table to read that hand  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     P.socks[0].sent.length = 0;
-    P.pick('#bidfor-chips').children[2].fire('click');
+    P.pick('#bidfor-pad').querySelector('.chips').children[2].fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"bidfor","v":2}',
        'and a number sends that number  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
@@ -1280,10 +1280,10 @@ part('bidding for a seat that is not there, and leaving');
     const P = playPage(seed, '?c=TEST');
     P.feed(table({}));
     ok(P.pick('#playout-row').hidden === false, 'the host can hand the empty seat to the table');
-    ok(P.pick('#btn-playout').textContent === "Let the table play Cal's hand",
-       'named, like the bid  got ' + P.pick('#btn-playout').textContent);
+    ok(P.pick('#playout-row').querySelector('.btn').textContent === "Let the table play Cal's hand",
+       'named, like the bid  got ' + P.pick('#playout-row').querySelector('.btn').textContent);
     P.socks[0].sent.length = 0;
-    P.pick('#btn-playout').fire('click');
+    P.pick('#playout-row').querySelector('.btn').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"playout"}',
        'and the tap says so, once it is confirmed  got ' + JSON.stringify(P.socks[0].sent[0]));
 
