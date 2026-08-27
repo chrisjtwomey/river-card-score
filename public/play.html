@@ -132,6 +132,10 @@
     </div>
   </section>
 
+  <div class="row-actions leaverow" id="leave-row" hidden>
+    <button class="btn ghost danger" id="btn-leave" type="button">Leave the game</button>
+  </div>
+
   <section id="game" hidden>
     <!-- the felt is the game on a virtual table; this is the way back to it -->
     <div class="feltbar" id="felt-bar" hidden>
@@ -157,6 +161,29 @@
       </div>
     </div>
 
+    <!-- Only when the table needs a decision from this phone: a vote, or a
+         seat with nobody behind it that the table is stopped on. The rest of
+         the time it is not here at all. -->
+    <div class="panel" id="attn-panel" hidden>
+      <div class="votebox" id="votebox" hidden>
+        <div class="vote-text" id="vote-text">…</div>
+        <div class="row-actions" id="vote-actions"></div>
+      </div>
+      <div id="bidfor-pad" hidden>
+        <p class="hint" id="bidfor-hint"></p>
+        <div class="chips" id="bidfor-chips"></div>
+        <div class="row-actions">
+          <button class="btn ghost" id="btn-bidfor" type="button">Bid for them</button>
+        </div>
+      </div>
+      <div class="row-actions" id="playfor-row" hidden>
+        <button class="btn ghost" id="btn-playfor" type="button">Play a card for them</button>
+      </div>
+      <div class="row-actions" id="playout-row" hidden>
+        <button class="btn ghost danger" id="btn-playout" type="button">Let the table play that hand</button>
+      </div>
+    </div>
+
     <div class="panel turn-panel" id="turn-panel">
       <div class="turnbar" id="turnbar">
         <span class="turn-eyebrow" id="turn-eyebrow">Bidding</span>
@@ -165,22 +192,6 @@
       <div id="bid-pad" hidden>
         <div class="chips big-chips" id="bid-chips"></div>
         <p class="hint" id="bid-hint"></p>
-      </div>
-      <!-- a phone has gone quiet at the bidding, and the table cannot move -->
-      <div id="bidfor-pad" hidden>
-        <p class="hint" id="bidfor-hint"></p>
-        <div class="chips" id="bidfor-chips"></div>
-        <div class="row-actions">
-          <button class="btn ghost" id="btn-bidfor" type="button">Bid for them</button>
-        </div>
-      </div>
-      <!-- and a phone that is not coming back at all -->
-      <div class="row-actions" id="playout-row" hidden>
-        <button class="btn ghost danger" id="btn-playout" type="button">Let the table play that hand</button>
-      </div>
-      <div class="votebox" id="votebox" hidden>
-        <div class="vote-text" id="vote-text">…</div>
-        <div class="row-actions" id="vote-actions"></div>
       </div>
       <div class="row-actions bum-row" id="bum-row" hidden>
         <button class="btn ghost" id="btn-bum" type="button">Call a bum deal</button>
@@ -197,22 +208,7 @@
       <div class="accolades" id="accolades" hidden></div>
     </div>
 
-    <!-- the hand, when the table plays with a virtual deck -->
-    <div class="panel play-panel" id="play-panel" hidden>
-      <div class="entry-head">
-        <h2 id="play-title">The hand</h2>
-        <span class="tally" id="play-tally"></span>
-      </div>
-      <div class="upcard" id="upcard" hidden></div>
-      <div class="trick" id="trick"></div>
-      <p class="hint" id="hand-hint"></p>
-      <div class="hand" id="hand"></div>
-      <div class="row-actions" id="playfor-row" hidden>
-        <button class="btn ghost" id="btn-playfor" type="button">Play a card for them</button>
-      </div>
-    </div>
-
-    <div class="panel">
+    <div class="panel" id="bids-panel">
       <div class="entry-head">
         <h2 id="bid-title">Bids</h2>
         <span class="tally" id="bid-tally"></span>
@@ -233,10 +229,6 @@
       <div class="table-wrap"><table id="scorecard"></table></div>
     </details>
   </section>
-
-  <div class="row-actions leaverow" id="leave-row" hidden>
-    <button class="btn ghost danger" id="btn-leave" type="button">Leave the game</button>
-  </div>
 </main>
 
 <script src="/game.js"></script>

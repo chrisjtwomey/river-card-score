@@ -759,8 +759,11 @@ body.watching .topbar-actions button,
 body.showing .topbar-actions button,
 body.showing summary{pointer-events:auto}
 
-/* Leaving the table, at the foot of the player page. */
-.leaverow{justify-content:center;margin:18px 0 8px}
+/* Leaving the table, at the top of the player page, where the host's
+   "You run this table" panel sits. */
+.leaverow{justify-content:flex-start}
+/* On a virtual table the scorecard is the page: it is never folded away. */
+.scorecard-panel.pinned>summary{display:none}
 
 .code-input{font-size:28px;font-weight:800;letter-spacing:.32em;text-align:center;text-transform:uppercase}
 

@@ -213,12 +213,14 @@ top of it.
   call. Your own bid stays lit and can be changed until the next player bids.
   The number screw the dealer forbids is struck through.
 - The corner buttons are the way off the table: **Scorecard** drops the felt to
-  the page underneath -- the round bar, the bids, the standings, the scorecard,
-  the bum-deal button -- and **Back to the table** brings it back. The other
-  corner opens table talk.
+  the page underneath, and **Back to the table** brings it back. That page is
+  the scorecard and nothing else -- the round, the standings, and the card,
+  open, never folded away -- with **Leave the game** at the top. One panel
+  appears on it only when the table needs a decision from that phone: a vote
+  to answer, or a seat with nobody behind it that the table is stopped on.
+  The other corner opens table talk.
 - With **Animations** set to *Off* in the ⚙ menu the felt is drawn without the
-  deal and without any movement. Everything is still reachable, and the page
-  underneath keeps the plain card buttons for a keyboard.
+  deal and without any movement. Everything is still reachable.
 
 ### Bum deal
 

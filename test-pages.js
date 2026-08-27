@@ -1220,8 +1220,9 @@ part('bidding for a seat that is not there, and leaving');
        'with a number for every trick in the hand  got ' + P.pick('#bidfor-chips').children.length);
     ok(/not at the table/.test(P.pick('#bidfor-hint').textContent),
        'and says why it is there  got ' + P.pick('#bidfor-hint').textContent);
-    ok(P.pick('#turn-text').textContent === 'Cal is not at the table',
-       'the turn line says it too  got ' + P.pick('#turn-text').textContent);
+    // the felt is the game on this table, so the page keeps no turn panel
+    ok(P.pick('#turn-panel').hidden === true, 'the scorecard page keeps no turn panel');
+    ok(P.pick('#attn-panel').hidden === false, 'the pad has a panel of its own');
 
     P.socks[0].sent.length = 0;
     P.pick('#btn-bidfor').fire('click');
@@ -1244,8 +1245,19 @@ part('bidding for a seat that is not there, and leaving');
     const P = playPage(seed, '?c=TEST');
     P.feed(table({ away: false }));
     ok(P.pick('#bidfor-pad').hidden === true, 'and not while that phone is at the table');
-    ok(P.pick('#turn-text').textContent === 'Waiting for Cal to bid',
-       'which is an ordinary wait  got ' + P.pick('#turn-text').textContent);
+    ok(P.pick('#attn-panel').hidden === true,
+       'with nothing to decide, the panel is not there at all');
+  }
+
+  {   // the scorecard page, on a table the felt plays
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ away: false }));
+    ok(P.pick('#turn-panel').hidden === true, 'no turn panel: the felt asks for the bid');
+    ok(P.pick('#bids-panel').hidden === true, 'no bids strip: the felt stamps them');
+    ok(P.pick('#leave-row').hidden === false, 'leaving is at the top of the page');
+    const sc = P.dom.document.querySelector('.scorecard-panel');
+    ok(sc && sc.classList.contains('pinned') && sc.open === true,
+       'and the scorecard is open, not folded away');
   }
 
   {   // the page says a phone has gone, once

@@ -9,10 +9,6 @@ let lastTotals = null;         // seat id -> score, to show what a round paid
 let lastBids = null;           // { key, bids, turn }, to catch a bid landing
 let draft = [], draftKey = '';
 let dealtKey = null;           // the round already dealt on this phone
-let lastTrick = null;          // to catch the moment a trick is won
-let seenPlay = false;          // the hand has been on screen at least once
-let trickSig = null;           // what the trick box is currently showing
-let wonMine = false;           // whose way the last pile was leaning
 let lastPhase = null;          // to catch the moment the game ends
 let joinAddr = null;           // the address the others should open
 let seenWho = null;            // who was at the table on the state before
@@ -83,15 +79,47 @@ function render() {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
   renderRound(r, me);
-  renderTurn(r, me);
-  renderPlay(r, me);
+  /* On a virtual table the felt is the game, so this page is the scorecard
+     and nothing else: the round, the standings, the card. The bidding and
+     the hand live on the felt, and the bids are read off the scorecard. What
+     stays beyond the three is the attention panel, and only while the table
+     actually needs a decision from this phone. */
+  const virtual = ST.cfg.deck === 'virtual';
+  $('#turn-panel').hidden = virtual;
+  $('#bids-panel').hidden = virtual;
+  if (!virtual) renderTurn(r, me);
   renderWinner();
   renderVote(r, me);
+  renderAttention(r, me);
   renderBidStrip(r);
   renderStandings(me);
   UI.measureSticky();
+  const sc = document.querySelector('.scorecard-panel');
+  sc.classList.toggle('pinned', virtual);  // the card is the page here: never folded
+  if (virtual) sc.open = true;
   $('#scorecard').innerHTML = Table.scorecardHTML(ST, me);
   Table.followCurrent('#scorecard');
+}
+
+/* The panel that is only there when the table needs a decision from this
+   phone: a vote to answer, or a seat with nobody behind it that the table is
+   stopped on. renderVote has already said whether the vote box shows. */
+function renderAttention(r, me) {
+  renderBidFor(r, me);
+  renderPlayout();
+  renderPlayFor();
+  const rows = ['#votebox', '#bidfor-pad', '#playfor-row', '#playout-row'];
+  $('#attn-panel').hidden = rows.every((sel) => $(sel).hidden);
+}
+
+// A phone that has gone quiet would stop the table: whoever runs it plays a
+// card for that seat. The server picks, and only from the legal cards.
+function renderPlayFor() {
+  const row = $('#playfor-row');
+  const p = ST.phase === 'tricks' ? awaySeat() : -1;
+  const on = !WATCH && amHost() && p >= 0;
+  row.hidden = !on;
+  if (on) $('#btn-playfor').textContent = `Play a card for ${ST.seats[p].name}`;
 }
 
 /* Leaving on purpose, which the table can tell from a phone going quiet: a
@@ -112,113 +140,6 @@ function renderWinner() {
   if (!done) return;
   $('#winner-title').textContent = Table.winner(ST).title;
   Accolades.render($('#accolades'), ST.awards || [], ST.seats.map((s) => s.name), ST.cfg.accoladePay);
-}
-
-// The hand, when the table plays with a virtual deck. The server holds the
-// cards and the rules; this draws them and sends the one that is tapped.
-function renderPlay(r, me) {
-  const panel = $('#play-panel');
-  const bidding = ST.phase === 'bid';
-  const on = ST.cfg.deck === 'virtual' && (bidding || ST.phase === 'tricks') && !!r && !!ST.play;
-  panel.hidden = !on;
-  if (!on) return;
-  const p = ST.play;
-  const suit = (k) => (Game.SUITS.find((x) => x.k === k) || { name: 'none', g: '—' });
-
-  // The card the deck turned for trumps, over the hand it decides.
-  const up = $('#upcard');
-  up.innerHTML = '';
-  up.hidden = !p.upcard;
-  if (p.upcard) {
-    up.appendChild(Table.cardEl(p.upcard));
-    const k = document.createElement('span');
-    k.className = 'k';
-    k.textContent = `${suit(r.trump).name} are trumps`;
-    up.appendChild(k);
-  }
-
-  // Rebuilt only when the cards on the table actually change. A won trick is
-  // gathered into a pile by an animation, and that pile has to stay with its
-  // winner until they lead the next card -- a rebuild would spread it out
-  // again on the next state that arrives.
-  const sig = `${ST.idx}|${p.trick.map((x) => x.p + x.card).join(',')}|` +
-    (p.last ? `${p.last.winner}:${p.last.trick.map((x) => x.p + x.card).join(',')}` : '');
-  if (sig !== trickSig) {
-    const box = $('#trick');
-    // A gathered pile is not simply dropped: it carries on out of the way
-    // while the card that replaces it comes up.
-    const going = trickSig !== null && box.querySelector(':scope > .slot.won')
-      && Table.sweepOut(box, wonMine ? 64 : -56);
-    trickSig = sig;
-    Table.trickEl(box, ST, me);
-    if (going) Table.trickIn(box);
-  }
-  $('#play-title').textContent = bidding ? 'Your cards' : 'The hand';
-  $('#play-tally').textContent = bidding
-    ? `trump ${suit(r.trump).g} · ${r.cards} card${r.cards === 1 ? '' : 's'}`
-    : `you bid ${r.bids[me]} · won ${p.won[me]} of ${r.cards}`;
-
-  const hand = ST.hand || [];
-  const led = p.trick.length ? Game.suitOf(p.trick[0].card) : null;
-  const mine = p.turn === me;
-  const can = mine ? Game.legalPlays(hand, led) : [];
-  const box = $('#hand');
-  box.innerHTML = '';
-  hand.forEach((c) => {
-    const el = Table.cardEl(c, 'button');
-    el.type = 'button';
-    el.disabled = !mine || can.indexOf(c) < 0;
-    if (!el.disabled) el.classList.add('live');
-    el.addEventListener('click', () => {
-      box.querySelectorAll('.pcard').forEach((x) => { x.disabled = true; });
-      Net.send({ t: 'play', card: c });
-    });
-    box.appendChild(el);
-  });
-
-  const suitName = (k) => suit(k).name.toLowerCase();
-  let hint;
-  if (bidding) {
-    hint = r.trump && r.trump !== 'NT'
-      ? `Trump is ${suitName(r.trump)}. Bid the tricks you think these win.`
-      : 'No trumps this hand. Bid the tricks you think these win.';
-  } else if (mine) {
-    hint = !led ? 'Your lead. Play any card.'
-      : can.length === hand.length ? `You have no ${suitName(led)}, so play anything.`
-      : `Follow ${suitName(led)}.`;
-  } else if (p.turn === null) {
-    hint = p.last
-      ? (p.last.winner === me ? 'You won it.' : `${ST.seats[p.last.winner].name} won that trick.`)
-      : 'Waiting…';
-  } else {
-    hint = `Waiting for ${ST.seats[p.turn].name}.`;
-  }
-  $('#hand-hint').textContent = hint;
-
-  // A trick has just been won: the cards go to whoever took it, and the panel
-  // answers in green when that is you.
-  const key = p.last ? `${ST.idx}:${p.won.reduce((a, b) => a + b, 0)}:${p.last.winner}` : null;
-  if (key && key !== lastTrick) {
-    // A phone that reloads onto a finished trick has missed it, so it only
-    // watches from the next one on.
-    const fresh = seenPlay;
-    lastTrick = key;
-    wonMine = p.last.winner === me;
-    if (fresh) {
-      Table.sweepTrick($('#trick'), ST, me);
-      panel.classList.remove('won', 'lost');
-      void panel.offsetWidth;                     // restart the pulse
-      panel.classList.add(p.last.winner === me ? 'won' : 'lost');
-    }
-  } else if (!key) {
-    panel.classList.remove('won', 'lost');
-  }
-
-  // a phone that has gone quiet would stop the table
-  const stuck = !bidding && p.turn !== null && !ST.seats[p.turn].online;
-  $('#playfor-row').hidden = !(stuck && amHost());
-  if (stuck) $('#btn-playfor').textContent = `Play a card for ${ST.seats[p.turn].name}`;
-  seenPlay = true;
 }
 
 // A bum deal throws the hand in. The dealer can do it alone; anybody else asks
@@ -538,8 +459,9 @@ function renderPlayout() {
 // bid for that seat -- off its own cards where there are cards to read.
 function renderBidFor(r, me) {
   const pad = $('#bidfor-pad');
-  const p = ST.turn;
-  const on = !WATCH && amHost() && p !== null && p !== me && !ST.seats[p].online;
+  const p = ST.phase === 'bid' ? ST.turn : null;
+  const on = !WATCH && amHost() && p !== null && p !== me
+          && !ST.seats[p].online && !ST.seats[p].left && !ST.seats[p].bot;
   pad.hidden = !on;
   if (!on) return;
   const who = ST.seats[p];
@@ -569,8 +491,7 @@ function renderTurn(r, me) {
   const panel = $('#turn-panel');
   const bidPad = $('#bid-pad');
   const trickPad = $('#trick-pad');
-  bidPad.hidden = true; trickPad.hidden = true; $('#bidfor-pad').hidden = true;
-  renderPlayout();
+  bidPad.hidden = true; trickPad.hidden = true;
   panel.classList.remove('mine', 'amend');
 
   if (!r) {
@@ -605,8 +526,6 @@ function renderTurn(r, me) {
       }
       return forbidden;
     };
-
-    renderBidFor(r, me);
 
     if (ST.turn === me) {
       panel.classList.add('mine');
