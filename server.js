@@ -15,7 +15,6 @@ const G = require('./game.js');
 const A = require('./public/accolades.js');
 const Games = require('./lib/games.js');
 const Http = require('./lib/http.js');
-const Deck = require('./lib/deck.js');
 const Dev = require('./lib/dev.js');
 const Messages = require('./lib/messages.js');
 
@@ -291,9 +290,26 @@ function scoreRound(room, values) {
 // The dealer, when the table plays with no real cards. It holds the hands and
 // the rules of a trick; scoring a finished round is the table's own business,
 // so it hands that back.
-const { TRICK_HOLD, dealHands, startPlay, playPublic, playCard } = Deck({
-  G, curRound, broadcast, fail, scoreRound,
-});
+const Deck = require('./lib/deck.js')({ G, curRound, scoreRound });
+const { dealHands, startPlay, playPublic } = Deck;
+
+/* One card, from a phone or from a bot. The deck says whether it may go and
+   moves it; this is where a full trick is held up long enough for the table
+   to read it before the winner leads. */
+function playCard(ws, room, p, card) {
+  const why = Deck.refusal(room, p, card);
+  if (why) return fail(ws, why);
+  const winner = Deck.putCard(room, p, card);
+  if (winner !== null) {
+    const tag = room.play, at = room.idx;
+    setTimeout(() => {
+      if (room.play !== tag || room.idx !== at) return;      // the game moved on
+      Deck.settleTrick(room, winner);
+      broadcast(room);
+    }, Deck.TRICK_HOLD);
+  }
+  return broadcast(room);
+}
 
 // The players the table provides. They hold cards like everybody else and go
 // through the same rules; all the server does is take their turn for them.
@@ -305,14 +321,13 @@ const Bots = require('./lib/bots.js')({
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
   DEV, G, A, token, createRoom, attach, send, fail, broadcast, seatIndex, curRound,
-  syncCfg, newGame, unfinish, setAvatar, dealHands, startPlay, scoreRound,
-  finishGame,
+  syncCfg, newGame, unfinish, setAvatar, Deck, scoreRound, finishGame,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
 const { handleTable } = Messages({
   DEV, CHAT_KEEP, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish, addBot, seatBid,
-  dealHands, startPlay, playCard, scoreRound, bumDeal, bidValue: Bots.bidFor,
+  Deck, playCard, scoreRound, bumDeal, bidValue: Bots.bidFor,
   markPresence,
 });
 
