@@ -159,14 +159,9 @@ function render() {
     (r && r.trump) || '');
   if (document.activeElement !== $('#f-redeals')) $('#f-redeals').value = String((r && r.redeals) || 0);
 
-  // rules
+  // rules: the same form the lobby has, and it stays open after the start
   const c = ST.cfg;
-  const set = (sel, v) => { const el = $(sel); if (document.activeElement !== el) el.value = String(v); };
-  set('#cfg-max', c.max); set('#cfg-ones', c.ones); set('#cfg-pattern', c.pattern);
-  set('#cfg-bonus', c.bonus); set('#cfg-miss', c.miss); set('#cfg-deck', c.deck || 'physical'); set('#cfg-accolade-pay', c.accoladePay === undefined ? 10 : c.accoladePay);
-  set('#cfg-accolade-count', c.accoladeCount === undefined ? 3 : c.accoladeCount);
-  $('#cfg-screw').checked = !!c.screw;
-  $('#cfg-trump').checked = !!c.trump;
+  Lobby.rulesForm(document, ST, { me: -1, boss: true, send });
 
   // scorecard filler. Before the game starts the card is not built yet, so the
   // length comes from the rules.
@@ -322,18 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-apply').addEventListener('click', applyRound);
   $('#btn-clear').addEventListener('click', () =>
     act('patch', { patch: { round: { i: editRound, bids: null, tricks: null, trump: null, redeals: 0 } } }));
-
-  const patch = (p) => send({ t: 'config', patch: p });
-  $('#cfg-max').addEventListener('change', (e) => patch({ max: e.target.value }));
-  $('#cfg-ones').addEventListener('change', (e) => patch({ ones: e.target.value }));
-  $('#cfg-pattern').addEventListener('change', (e) => patch({ pattern: e.target.value }));
-  $('#cfg-bonus').addEventListener('change', (e) => patch({ bonus: e.target.value }));
-  $('#cfg-miss').addEventListener('change', (e) => patch({ miss: e.target.value }));
-  $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
-  $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
-  $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
-  $('#cfg-accolade-pay').addEventListener('change', (e) => patch({ accoladePay: e.target.value }));
-  $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
 
   connect();
   watchFiles();

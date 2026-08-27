@@ -15,6 +15,8 @@ let seenWho = null;            // who was at the table on the state before
 
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
+// This phone's seat, and whether it runs the table. A watching window runs nothing.
+const view = () => ({ me: mySeat(), boss: !WATCH && amHost(), send: (m) => Net.send(m) });
 
 function boot() {
   Net.claimFromHash('player');
@@ -251,30 +253,8 @@ function renderCaptain(lobby) {
   }
 
   renderJoinBox();
-
-  const n = ST.seats.length;
-  $('#btn-start').disabled = n < 2;
-  $('#btn-start').textContent = n < 2 ? 'Waiting for players…' : `Start game with ${n} players`;
-
-  const c = ST.cfg;
-  const setVal = (sel, v) => { const el = $(sel); if (el && document.activeElement !== el) el.value = String(v); };
-  $('#cfg-max').max = String(Game.maxCardsFor(Math.max(2, n)));
-  setVal('#cfg-max', c.max); setVal('#cfg-ones', c.ones); setVal('#cfg-pattern', c.pattern);
-  setVal('#cfg-bonus', c.bonus); setVal('#cfg-miss', c.miss);
-  $('#cfg-screw').checked = !!c.screw;
-  $('#cfg-trump').checked = !!c.trump;
-  // With real cards the deck on the table decides everything about trumps.
-  $('#cfg-trump-row').hidden = c.deck !== 'virtual';
-  setVal('#cfg-deck', c.deck || 'physical');
-  setVal('#cfg-accolade-pay', c.accoladePay === undefined ? 10 : c.accoladePay);
-  setVal('#cfg-accolade-count', c.accoladeCount === undefined ? 3 : c.accoladeCount);
-  $('#deck-hint').textContent = c.deck === 'virtual'
-    ? 'The server deals to each phone, turns the trump, and counts the tricks.'
-    : 'You deal real cards. The dealer types in the tricks at the end of a round.';
-  const cards = Game.schedule(c.max, c.pattern, c.ones);
-  $('#rounds-hint').textContent = `${cards.length} rounds: ${cards.join(' ')}`;
-  const ex = (w) => Game.roundScore(2, w, c);
-  $('#miss-hint').textContent = `Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`;
+  Lobby.rulesForm($('#cap-lobby'), ST, view());
+  Lobby.startButton($('#btn-start'), ST, view());
 }
 
 // The table host may be the only screen, so the code and the QR live here too.
@@ -326,63 +306,14 @@ function renderAvatar(me) {
 
 function renderLobby(me) {
   renderAvatar(me);
-  const box = $('#lobby-seats');
-  box.innerHTML = '';
-  const boss = amHost();
-  ST.seats.forEach((s, i) => {
-    const isCap = s.id === ST.captainId;
-    const isFirst = ST.firstDealerId ? ST.firstDealerId === s.id : i === 0;
-    const row = document.createElement('div');
-    row.className = 'seat-item' + (i === me ? ' me' : '') + (s.online ? '' : ' off') +
-      (isFirst ? ' first-dealer' : '') + (s.bot ? ' bot' : '');
-    row.innerHTML = `<span class="seat">${i + 1}</span><span class="nm"></span>` +
-      (isCap ? '<span class="badge">host</span>' : '') +
-      (s.bot ? '<span class="badge soft">bot</span>' : '') +
-      (isFirst ? '<span class="badge soft">deals first</span>' : '') +
-      '<span class="dotstat"></span>' +
-      // A bot cannot run the table, so it is never offered the star.
-      (boss ? (s.bot ? '' : `<button class="mini" data-a="cap" title="Make this player the table host" aria-pressed="${isCap}">★</button>`) +
-              `<button class="mini d" data-a="deal" title="Deals the first round" aria-pressed="${isFirst}">🂠</button>` +
-              '<button class="mini" data-a="up" title="Move up">↑</button>' +
-              '<button class="mini" data-a="down" title="Move down">↓</button>' +
-              (i === me ? '' : '<button class="mini x" data-a="kick" title="Remove">×</button>') : '');
-    row.querySelector('.nm').textContent = s.name + (i === me ? ' (you)' : '');
-    row.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-      const a = b.dataset.a;
-      if (a === 'kick') Net.send({ t: 'kick', id: s.id });
-      else if (a === 'cap') Net.send({ t: 'captain', id: s.id });
-      else if (a === 'deal') Net.send({ t: 'config', patch: { firstDealer: isFirst ? null : s.id } });
-      else Net.send({ t: 'seatMove', id: s.id, dir: a });
-    }));
-    box.appendChild(row);
-  });
-
-  renderBots(boss);
-
+  const v = view();
+  Lobby.seats($('#lobby-seats'), ST, v);
+  Lobby.bots($('#bot-row'), ST, v);
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
-  $('#lobby-title').textContent = boss ? 'Set the table' : 'Waiting for the table host';
+  $('#lobby-title').textContent = v.boss ? 'Set the table' : 'Waiting for the table host';
   $('#lobby-hint').textContent = ST.seats.length < 2
     ? 'Waiting for more players…'
-    : (boss ? 'Start the game when everybody is seated.' : `${capName} starts the game when everybody is seated.`);
-}
-
-/* Players the table provides, for a hand short of people. They hold cards, so
-   they belong to a table that deals them. */
-function renderBots(boss) {
-  const row = $('#bot-row');
-  if (!row) return;
-  row.hidden = !boss;
-  if (!boss) return;
-  const bots = ST.seats.filter((s) => s.bot).length;
-  const full = ST.seats.length >= 8;
-  const cards = Game.virtual(ST);
-  const btn = $('#btn-addbot');
-  btn.disabled = full;
-  btn.textContent = bots ? '+ Add another bot' : '+ Add a bot';
-  $('#bot-hint').textContent = full ? 'The table is full.'
-    : bots ? `${bots} of the ${ST.seats.length} seats play themselves.`
-    : cards ? 'It plays its own hand. Remove it with ×.'
-    : 'It plays its own hand, so the cards move to the phones.';
+    : (v.boss ? 'Start the game when everybody is seated.' : `${capName} starts the game when everybody is seated.`);
 }
 
 function renderRound(r, me) {
@@ -634,17 +565,6 @@ document.addEventListener('DOMContentLoaded', () => {
     q.then((yes) => { if (yes) Net.send({ t: 'bumdeal' }); });
   });
 
-  const patch = (p) => Net.send({ t: 'config', patch: p });
-  $('#cfg-max').addEventListener('change', (e) => patch({ max: e.target.value }));
-  $('#cfg-ones').addEventListener('change', (e) => patch({ ones: e.target.value }));
-  $('#cfg-pattern').addEventListener('change', (e) => patch({ pattern: e.target.value }));
-  $('#cfg-bonus').addEventListener('change', (e) => patch({ bonus: e.target.value }));
-  $('#cfg-miss').addEventListener('change', (e) => patch({ miss: e.target.value }));
-  $('#cfg-screw').addEventListener('change', (e) => patch({ screw: e.target.checked }));
-  $('#cfg-trump').addEventListener('change', (e) => patch({ trump: e.target.checked }));
-  $('#cfg-deck').addEventListener('change', (e) => patch({ deck: e.target.value }));
-  $('#cfg-accolade-pay').addEventListener('change', (e) => patch({ accoladePay: e.target.value }));
-  $('#cfg-accolade-count').addEventListener('change', (e) => patch({ accoladeCount: e.target.value }));
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
   $('#btn-bidfor').addEventListener('click', () => Net.send({ t: 'bidfor' }));
   $('#btn-playout').addEventListener('click', () => {
@@ -664,8 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
           + 'This phone can come back to it from the front page.',
       'Leave').then((yes) => { if (yes) Net.send({ t: 'leave' }); });
   });
-  $('#btn-addbot').addEventListener('click', () => Net.send({ t: 'addbot' }));
-  $('#btn-start').addEventListener('click', () => Net.send({ t: 'start' }));
   $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
   $('#btn-reset').addEventListener('click', () => {
     UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.',

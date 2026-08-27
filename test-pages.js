@@ -1044,7 +1044,7 @@ part('the front page, and the screen');
     WebSocket.prototype.close = function () { this.readyState = 3; };
     const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8') + '\n;\n'
               + fs.readFileSync(path.join(ROOT, 'public/' + file), 'utf8');
-    const names = ['UI', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt'];
+    const names = ['UI', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby'];
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'console', ...names, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
@@ -1180,8 +1180,8 @@ part('bidding for a seat that is not there, and leaving');
     WebSocket.prototype.close = function () { this.readyState = 3; };
     const Table = new Function('UI', 'Game', 'document',
       fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
-    const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8') + '\n;\n'
-              + fs.readFileSync(path.join(ROOT, 'public/play.js'), 'utf8');
+    const src = ['public/lobby.js', 'public/net.js', 'public/play.js']
+      .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
     const stubs = ['Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt'];
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
