@@ -51,6 +51,23 @@ const Stage = (function () {
     return { rx, ry, at };
   }
 
+  /* How big a seat's furniture is drawn. Eight piles at full size do not go
+     round a phone: they run into their neighbours, into the names under them,
+     and into the row of bid numbers. A table of many comes down in size, and
+     a table of few is left alone. */
+  const seatScale = (n) => Math.max(0.55, Math.min(1, 5.4 / Math.max(1, n)));
+
+  /* A seat's pile: where the kth card of `of` lies. The deal puts it there and
+     the table it hands over to keeps it there, so the question is asked once
+     -- two answers would drift, and the handover would jump. */
+  function pile(R, F, p, k, n) {
+    const s = R.at(p);
+    const z = seatScale(n);
+    const off = F.off(k);
+    return { x: s.x + off * 4.5 * z, y: s.y - k * 1.6 * z,
+             tilt: (s.x / (R.rx || 1)) * 9 + off * 2.2, z };
+  }
+
   /* A hand is a fan, not a row. Each card steps a fixed distance along from the
      one before -- far enough to read the corner, near enough to still overlap --
      and turns a fixed amount further round. A step worked out by dividing a
@@ -204,5 +221,6 @@ const Stage = (function () {
   function close(kind) { if (S.live && (!kind || S.live.kind === kind)) S.live.finish(); }
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
-  return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen, ring, fan, settle };
+  return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen,
+           ring, fan, pile, seatScale, settle };
 })();

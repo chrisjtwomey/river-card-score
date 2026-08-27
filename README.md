@@ -190,8 +190,8 @@ the last card, short enough that three of them are not a wait.
 
 With a virtual deck, a phone plays the round on the felt the deal lands on. It
 is the screen, not a flourish: the hand you were dealt is the fan in front of
-you, the card the deck turned sits under the line that names the trumps, and
-the middle of the table is where the cards played land.
+you, the card the deck turned lies in the middle, and the cards played ring it
+rather than pile onto it, so it is on show all round.
 
 - **Touch a card** and it lifts out of the fan and enlarges. **Run a thumb along
   the fan** and each card lifts in turn -- the overlap does not have to be aimed
@@ -203,9 +203,8 @@ the middle of the table is where the cards played land.
   its place, and the line at the bottom gives the reason.
 - **Tap the middle** and the pile separates into a row, every card under the
   name of whoever played it, the one taking the trick in gold, and the turned
-  card first, which comes down from its place to join the row. The names take
-  two lines, every other one lower, so a long name has room. Tap again to
-  stack it.
+  card first because it is the bottom of that pile. The names take two lines,
+  every other one lower, so a long name has room. Tap again to stack it.
 - **A trick taken is said out loud**: *"Otter won that trick"* comes up under
   the pile, so the card that took it is still there to see. Only when that has
   been read are the cards gathered by whoever took them, and one card of the
@@ -222,6 +221,11 @@ the middle of the table is where the cards played land.
   appears on it only when the table needs a decision from that phone: a vote
   to answer, or a seat with nobody behind it that the table is stopped on.
   The other corner opens table talk.
+- **A table of many comes down in size.** Eight piles at full size do not go
+  round a phone, so the piles, the stacks of tricks won and the names under
+  them shrink as seats are added, and the row of bid numbers takes whatever
+  room the seats either side of you leave it -- closing up and overlapping,
+  which costs nothing, because a thumb along them lifts each in turn.
 - With **Animations** set to *Off* in the ⚙ menu the felt is drawn without the
   deal and without any movement. Everything is still reachable.
 

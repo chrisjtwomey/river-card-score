@@ -215,11 +215,11 @@ const Deal = (function () {
           const own = virtual && p === mine;
           // Your own cards spread into a fan you can read. Everybody else gets
           // a neat pile.
-          const off = F.off(k);
           const spot = F.at(k);
-          const gx = x + (own ? spot.x : off * 4.5);
-          const gy = own ? spot.y : y - k * 1.6;
-          const tilt = (x / (rx || 1)) * 9 + (own ? spot.tilt : off * 2.2);
+          const heap = own ? null : Stage.pile(R, F, p, k, n);
+          const gx = own ? x + spot.x : heap.x;
+          const gy = own ? spot.y : heap.y;
+          const tilt = own ? (x / (rx || 1)) * 9 + spot.tilt : heap.tilt;
           const delay = dealAt + given * perCard;
           given += 1;
           lastAt[p] = delay;
@@ -230,7 +230,7 @@ const Deal = (function () {
           const up = !!face;
           const card = cardEl(face, own ? 'mine' : '', k === passes - 1 ? avatars[p] : null);
           stage.appendChild(card);
-          const landed = tf(gx, gy, tilt, up ? 0 : 180, 1);
+          const landed = tf(gx, gy, tilt, up ? 0 : 180, own ? 1 : heap.z);
           cardEls[p] = card;                          // the top of that seat's pile
           (piles[p] || (piles[p] = [])).push(card);    // and all of it, bottom first
           landedAt[p] = landed;

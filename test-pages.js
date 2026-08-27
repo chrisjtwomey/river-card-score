@@ -717,14 +717,11 @@ function bidding(o) {
       const label = F.at(0).y - 76;                // and the heading starts here
       ok(foot + 4 < label, `${W}x${H} c=${cards}: the numbers clear "Your hand"`);
       const top = foot - size * 1.34;
-      // The middle is the trick's: the numbers only have to clear the cards
-      // that land there, and the turned card is up under the trump line.
-      const hero = spotOf(overlay.querySelector('.dcard.hero'));
-      const ringTop = H / 2 - L.Stage.ring(n, me, W, H).ry - 56;
-      ok(hero.y + 20 < ringTop - H / 2,
-         `${W}x${H} c=${cards}: the turned card rests above the ring (${Math.round(hero.y)})`);
-      ok(top > -10 + (W <= 420 ? 74 : 90) / 2,
-         `${W}x${H} c=${cards}: and the numbers clear the middle (${Math.round(top)})`);
+      // The turned card lies in the middle, come down to the size of a card
+      // played, so the numbers have that to clear.
+      const ch = W <= 420 ? 74 : 90;
+      ok(top > -10 + ch / 2,
+         `${W}x${H} c=${cards}: and clear the turned card (${Math.round(top)})`);
       const chips = overlay.querySelectorAll('.bidchip');
       const xs = chips.map((c) => Number(/([-\d]+)px/.exec(c.style.left)[1]));
       ok(Math.min(...xs) - size / 2 >= -W / 2, `${W}x${H} c=${cards}: and stay on the screen`);
@@ -772,6 +769,101 @@ function bidding(o) {
       const wide = nms.map((e) => Number(/([\d]+)px/.exec(e.style.maxWidth)[1]));
       ok(wide.every((w) => w <= Math.max(40, step * 2)),
          `${W}x${H} n=${n}: and none wider than the room it has`);
+    }
+  }
+}
+
+/* A table of many: the piles, the cards played and the turned card all have to
+   lie somewhere without lying on each other. Eight seats at full size did not
+   go round a phone -- the piles ran into their neighbours, the names under
+   them, and the row of bid numbers. */
+{
+  // where a card actually covers, turned as it is
+  const box = (sp, w, h) => {
+    const r = Math.abs(sp.tilt) * Math.PI / 180;
+    const hw = ((w * Math.abs(Math.cos(r)) + h * Math.abs(Math.sin(r))) / 2) * sp.scale;
+    const hh = ((w * Math.abs(Math.sin(r)) + h * Math.abs(Math.cos(r))) / 2) * sp.scale;
+    return { l: sp.x - hw, r: sp.x + hw, t: sp.y - hh, b: sp.y + hh };
+  };
+  const over = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l))
+                       * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+
+  for (const [W, H] of [[360, 640], [412, 860], [500, 860], [760, 1000]]) {
+    for (const n of [2, 4, 6, 8]) {
+      const cards = Math.min(6, Game.maxCardsFor(n));
+      const me = 0;
+      const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: null, bids: Array(n).fill(1) });
+      made.ST.play.trick = made.hands.map((h, p) => ({ p, card: h[0] }));
+      made.ST.hand = made.ST.hand.slice(1);
+      made.ST.play.counts = made.hands.map((h) => h.length - 1);
+      const L = load(W, H, 'off');
+      L.Felt.sync(made.ST, me, { send: () => {} });
+      const stage = L.dom.document.getElementById('deal').querySelector('.deal-stage');
+      const cw = W <= 420 ? 52 : 64, ch = W <= 420 ? 74 : 90;
+      const tag = `${W}x${H} n=${n}`;
+
+      const all = stage.querySelectorAll('.dcard').map((e) => ({ e, sp: spotOf(e) })).filter((v) => v.sp);
+      const hero = all.find((v) => v.e.classList.contains('hero'));
+      // face down and standing: a seat's pile. Face up in the middle: the trick.
+      const piles = all.filter((v) => v.sp.face === 180 && !v.e.classList.contains('gone'));
+      const played = all.filter((v) => v.sp.face === 0 && !v.e.classList.contains('hero')
+                                    && Math.abs(v.sp.y + 10) < ch * 1.4 && Math.abs(v.sp.x) < W / 2 - 10
+                                    && Math.hypot(v.sp.x, v.sp.y + 10) > 1);
+      ok(!!hero && played.length === n, `${tag}: the turned card and one card a seat are on the table (${played.length})`);
+
+      // the trick rings the turned card rather than piling onto it
+      // the turned card is drawn at a played card's size, square on
+      const hbox = { l: hero.sp.x - cw / 2, r: hero.sp.x + cw / 2,
+                     t: hero.sp.y - ch / 2, b: hero.sp.y + ch / 2 };
+      const worst = Math.max(...played.map((v) => over(box(v.sp, cw, ch), hbox)));
+      ok(worst === 0, `${tag}: no card played covers the turned card (${Math.round(worst)}px²)`);
+
+      // nor each other
+      let pair = 0;
+      for (let i = 0; i < played.length; i++) {
+        for (let j = i + 1; j < played.length; j++) pair = Math.max(pair, over(box(played[i].sp, cw, ch), box(played[j].sp, cw, ch)));
+      }
+      ok(pair === 0, `${tag}: nor one another (${Math.round(pair)}px²)`);
+
+      // a seat's pile keeps off its neighbours', and stays on the screen
+      const R = L.Stage.ring(n, me, W, H);
+      const mine2 = (v) => { let best = 0, at = 0; for (let q = 0; q < n; q++) { const s = R.at(q); const d = Math.hypot(v.sp.x - s.x, v.sp.y - s.y); if (q === 0 || d < best) { best = d; at = q; } } return at; };
+      const bySeat = {};
+      piles.forEach((v) => { const q = mine2(v); (bySeat[q] || (bySeat[q] = [])).push(box(v.sp, cw, ch)); });
+      let clash = 0;
+      Object.keys(bySeat).forEach((q) => Object.keys(bySeat).forEach((w) => {
+        if (Number(q) >= Number(w)) return;
+        bySeat[q].forEach((a) => bySeat[w].forEach((b) => { clash = Math.max(clash, over(a, b)); }));
+      }));
+      ok(clash === 0, `${tag}: no seat's pile lies on another's (${Math.round(clash)}px²)`);
+      const off = piles.map((v) => box(v.sp, cw, ch)).filter((b) => b.l < -W / 2 || b.r > W / 2);
+      ok(!off.length, `${tag}: and every pile is on the screen (${off.length} off)`);
+
+      /* The row of bid numbers arcs above the reader's own hand, which is
+         where the two seats either side of them keep their piles. */
+      const size = W <= 420 ? 40 : 44;
+      const foot = L.Stage.fan(cards, W, H).at(0).y - 88;
+      const cnt = cards + 1;
+      const z = L.Stage.seatScale(n);
+      const tr = 12 * Math.PI / 180;
+      const phh = ((cw * Math.sin(tr) + ch * Math.cos(tr)) * z) / 2;
+      const phw = ((cw * Math.cos(tr) + ch * Math.sin(tr)) * z) / 2;
+      let room = Math.min(W - 20, 400);
+      for (let q = 0; q < n; q++) {
+        if (q === me) continue;
+        const sq = R.at(q);
+        if (sq.y + phh <= foot - size * 1.34 || sq.y - phh >= foot) continue;
+        room = Math.min(room, 2 * Math.max(size, Math.abs(sq.x) - phw - 6));
+      }
+      const step = cnt > 1 ? Math.min(size + 6, (room - size) / (cnt - 1)) : 0;
+      const half = ((cnt - 1) / 2) * step + size / 2;
+      const rail = { l: -half, r: half, t: foot - size * 1.34, b: foot };
+      let onRail = 0;
+      Object.keys(bySeat).forEach((q) => {
+        if (Number(q) === me) return;
+        bySeat[q].forEach((a) => { onRail = Math.max(onRail, over(a, rail)); });
+      });
+      ok(onRail === 0, `${tag}: and the bid numbers keep off them (${Math.round(onRail)}px²)`);
     }
   }
 }

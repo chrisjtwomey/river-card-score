@@ -36,7 +36,6 @@ const Felt = (function () {
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
   const GRAB = 30;              // and the card rides this far above the thumb
-  const PUSH = 18;              // how far a played card sits toward its player
 
   let ST = null, me = -1, send = null, watch = false;
   let key = null;                  // the round on the table: `idx:redeals`
@@ -152,10 +151,8 @@ const Felt = (function () {
   // stacked a little for each card in it. `of` is how many cards were dealt,
   // which is what set the step.
   function pileAt(g, p, k, of) {
-    const s = g.R.at(p);
-    const off = Stage.fan(of, g.W, g.H).off(k);
-    return tf(s.x + off * 4.5, s.y - k * 1.6,
-              (s.x / (g.R.rx || 1)) * 9 + off * 2.2, 180, 1);
+    const h = Stage.pile(g.R, Stage.fan(of, g.W, g.H), p, k, g.n);
+    return tf(h.x, h.y, h.tilt, 180, h.z);
   }
 
   // Your own hand: the fan, hung off your seat's spot exactly as the deal hung
@@ -172,10 +169,9 @@ const Felt = (function () {
      whoever played it, so a glance says whose it is and a tap can separate
      them. */
   function trickAt(g, p) {
-    const s = g.R.at(p);
-    const len = Math.max(1, Math.sqrt(s.x * s.x + s.y * s.y));
-    return tf(s.x / len * PUSH, -10 + s.y / len * PUSH,
-              (s.x / (g.R.rx || 1)) * 12, 0, 1);
+    const s = g.R.at(p), d = dirTo(g, p), r = trickRing(g);
+    return tf(d.x * r, -10 + d.y * r,
+              (s.x / (g.R.rx || 1)) * 12, 0, Stage.seatScale(g.n));
   }
 
   /* The tricks a seat has won, in a little stack beside its own cards. A real
@@ -185,10 +181,10 @@ const Felt = (function () {
      take up no more room than one that wins none, and the middle of the table
      and the fan below it are both already spoken for. */
   function wonAt(g, p, k) {
-    const s = g.R.at(p);
-    const side = (s.x + g.cw * 1.6 > g.W / 2) ? -1 : 1;   // in, if out would fall off
-    return tf(s.x + side * g.cw * 0.95 + k * 0.8, s.y - 4 - k * 1.6,
-              -4 + k * 1.2, 180, 0.42);
+    const s = g.R.at(p), z = Stage.seatScale(g.n);
+    const side = (s.x + g.cw * 1.6 * z > g.W / 2) ? -1 : 1;   // in, if out would fall off
+    return tf(s.x + side * g.cw * 0.95 * z + k * 0.8, s.y - 4 - k * 1.6,
+              -4 + k * 1.2, 180, 0.42 * z);
   }
 
   /* The pile, laid out to be read: side by side in the order they were played,
@@ -205,32 +201,58 @@ const Felt = (function () {
   const spreadX = (g, i, of) => (i - (of - 1) / 2) * spreadStep(g, of);
   const spreadAt = (g, i, of) => tf(spreadX(g, i, of), -10, 0, 0, 1);
 
-  /* Where the card the deck turned rests: under the trump line, out of the way
-     of the cards played. It used to lie in the middle, and every card played
-     landed on top of it -- so the one thing it is there to say was covered by
-     the second card of every trick. The middle is the trick's alone now.
+  /* The card the deck turned lies in the middle of the table, where a turned
+     card lies. It comes down to the size of a card played, so the ring the
+     trick makes around it can close in tight rather than reach the seats. */
+  const heroH = (g) => (T && T.hero && T.hero.offsetHeight) || 98;
+  const heroAt = (g) => tf(0, -10, 0, 0, g.ch / heroH(g));
 
-     It is given what is left between the trump line and the top of the ring,
-     and never more than a played card's height, so it reads as a card and not
-     as a fifth seat. The line itself tucks up to make the room. */
-  function heroFit(g) {
-    const box = T.stage.querySelector('.deal-head');
-    const cssH = (T.hero && T.hero.offsetHeight) || 98;
-    const k = `${g.W}x${g.H}:${g.n}:${cssH}:${box ? box.textContent : ''}`;
-    if (T.fit && T.fit.k === k) return T.fit;
-    const ringTop = g.H / 2 - g.R.ry - 56;             // the top card's top edge
-    const bare = Stage.dropTag(box, ringTop, 1e6);     // the line tucked right up
-    const h = Math.min(g.ch, Math.max(30, ringTop - bare - 12));
-    const foot = Stage.dropTag(box, ringTop, h + 12);
-    T.fit = { k, s: h / cssH, y: Math.round(foot + 6 + h / 2 - g.H / 2) };
-    return T.fit;
-  }
-  const heroAt = (g) => { const f = heroFit(g); return tf(0, f.y, 0, 0, f.s); };
-
-  function nameAt(el, g, p, own) {
+  // The way from the middle of the table out to a seat.
+  function dirTo(g, p) {
     const s = g.R.at(p);
-    el.style.left = `calc(50% + ${own ? 0 : s.x}px)`;
-    el.style.top = `calc(50% + ${own ? Stage.fan(1, g.W, g.H).y - 76 : s.y + 56}px)`;
+    const len = Math.max(1, Math.hypot(s.x, s.y));
+    return { x: s.x / len, y: s.y / len };
+  }
+
+  /* The cards played ring the turned card rather than pile onto it. Every card
+     played used to land in the middle, so the second card of every trick
+     covered the one thing the middle is there to say.
+
+     The ring is as tight as it will go, because everything else on the table
+     is outside it. Two things set it: a card played must clear the turned
+     card, and it must clear the card played beside it. Neither is a matter of
+     card widths alone -- a played card is turned a little, which widens what
+     it covers, and the seats are spread round an ellipse, so the way out to
+     one seat is not evenly spaced from the way out to the next. The closest
+     pair is the one the ring has to fit. */
+  function trickRing(g) {
+    const z = Stage.seatScale(g.n);
+    const t = 12 * Math.PI / 180;                    // the most a played card is turned
+    const hh = ((g.cw * Math.sin(t) + g.ch * Math.cos(t)) * z) / 2;
+    const hw = ((g.cw * Math.cos(t) + g.ch * Math.sin(t)) * z) / 2;
+    let ring = hh + g.ch / 2 + 4;                    // past the turned card
+    /* Two cards clear each other as soon as they are apart across or apart
+       down: whichever the ring reaches first is the one to ask for. The seats
+       up the sides of the table are all but level with each other, so what
+       parts those two is the drop between them, not the step across. */
+    for (let p = 0; p < g.n; p++) {
+      const a = dirTo(g, p), b = dirTo(g, (p + 1) % g.n);
+      const dx = Math.abs(a.x - b.x), dy = Math.abs(a.y - b.y);
+      const across = dx > 0.001 ? (hw * 2 + 6) / dx : Infinity;
+      const down = dy > 0.001 ? (hh * 2 + 6) / dy : Infinity;
+      const need = Math.min(across, down);
+      if (need < Infinity) ring = Math.max(ring, need);
+    }
+    return ring;
+  }
+
+  /* The name sits under its own pile, and hugs it: a name held a fixed way
+     down would be reaching into the seat below on a table of eight. */
+  function nameAt(el, g, p, own) {
+    const s = g.R.at(p), z = Stage.seatScale(g.n);
+    el.style.left = `calc(50% + ${own ? 0 : Math.round(s.x)}px)`;
+    el.style.top = `calc(50% + ${own ? Stage.fan(1, g.W, g.H).y - 76 : Math.round(s.y + g.ch * z / 2 + 19)}px)`;
+    if (!own) el.style.fontSize = z < 0.9 ? `${Math.max(10, Math.round(13 * z))}px` : '';
   }
 
   /* ---------------- cards ---------------- */
@@ -569,6 +591,28 @@ const Felt = (function () {
      range is the hand, the seat that may bid is turnSeat, the seat that may
      still change its mind is changeableSeat, and the one number the dealer may
      not call is forbiddenBid. */
+  /* How wide the row of numbers may lie. At a table of eight the two seats
+     either side of the reader keep their piles just where the row would
+     otherwise run, so it draws in and the numbers overlap each other. That
+     costs nothing: a thumb along them lifts each in turn, which is how they
+     are read anyway. */
+  function railRoom(g, size) {
+    const z = Stage.seatScale(g.n);
+    const t = 12 * Math.PI / 180;
+    const hh = ((g.cw * Math.sin(t) + g.ch * Math.cos(t)) * z) / 2;
+    const hw = ((g.cw * Math.cos(t) + g.ch * Math.sin(t)) * z) / 2;
+    const foot = g.F.at(0).y - 88;                  // the row stands on this line
+    const top = foot - size * 1.34;
+    let room = Math.min(g.W - 20, 400);
+    for (let p = 0; p < g.n; p++) {
+      if (p === me) continue;
+      const s = g.R.at(p);
+      if (s.y + hh <= top || s.y - hh >= foot) continue;   // that seat is not in the way
+      room = Math.min(room, 2 * Math.max(size, Math.abs(s.x) - hw - 6));
+    }
+    return room;
+  }
+
   function bidRail(r) {
     const rail = document.querySelector('#deal .felt-bids');
     if (!rail) return;
@@ -594,7 +638,7 @@ const Felt = (function () {
 
     const count = r.cards + 1;
     const size = g.W <= 420 ? 40 : 44;
-    const room = Math.min(g.W - 20, 400);
+    const room = railRoom(g, size);
     // Numbers step along at a fixed distance like the cards do, and like the
     // cards they overlap when there are a lot of them -- which is no trouble,
     // because a thumb passing over them lifts each in turn.
