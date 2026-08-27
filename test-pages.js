@@ -115,14 +115,14 @@ const ROOT = __dirname;
 function load(W, H, motion) {
   const dom = makeDom(W, H);
   dom.localStorage.setItem('river-card-score:motion:v1', motion || 'off');
-  const src = ['public/stage.js', 'public/deal.js', 'public/felt.js']
+  const src = ['public/ui.js', 'public/stage.js', 'public/deal.js', 'public/felt.js']
     .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
   const Avatar = { url: () => null };
   const Finale = { play: () => Promise.resolve() };
   const talk = [];
   const Chat = { also: (el) => { talk.push(el); return el; }, wire() {}, update() {} };
   const fn = new Function('window', 'document', 'localStorage', 'Game', 'Avatar', 'Finale', 'Chat', 'console',
-    src + '\n; return { Stage, Deal, Felt };');
+    src + '\n; return { UI, Stage, Deal, Felt };');
   return Object.assign({ dom, talk }, fn(dom.window, dom.document, dom.localStorage, Game, Avatar, Finale, Chat,
     { log() {}, info() {}, warn() {}, error(...a) { throw new Error('console.error: ' + a.join(' ')); } }));
 }
@@ -1391,7 +1391,7 @@ part('tapping the deal away');
   {   // a scene of its own (a phone at a table with real cards): tap, tap, gone
     const L = load(412, 860, 'full');
     const asked = record(L);
-    const overlay = L.Stage.overlayEl();
+    const overlay = L.Stage.parts().overlay;
     const p = L.Deal.play({
       names: ['Ann', 'Ben', 'Cal'], dealer: 0, cards: 3, round: 1,
       deck: 'physical', mine: 1, hand: [], upcard: null, trump: null, linger: 1000,

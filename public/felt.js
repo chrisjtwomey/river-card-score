@@ -29,7 +29,7 @@
    a move interrupted half way carries on from where the card actually is.
 */
 const Felt = (function () {
-  const { cardEl, tf, faceOf, overlayEl } = Stage;
+  const { cardEl, tf, faceOf, parts } = Stage;
 
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
@@ -54,7 +54,7 @@ const Felt = (function () {
 
   const virtual = () => !!(ST && ST.cfg && ST.cfg.deck === 'virtual');
   const round = () => (ST && ST.rounds ? ST.rounds[ST.idx] || null : null);
-  const still = () => Stage.mode() === 'off';
+  const still = () => UI.motion() === 'off';
   const suitName = (k) => {
     const s = Game.SUITS.find((x) => x.k === k);
     return s ? s.name.toLowerCase() : 'the suit led';
@@ -73,7 +73,7 @@ const Felt = (function () {
   // tapped away, so the "tap to skip" line and the pointer cursor go, and the
   // browser must not take the gestures for scrolling.
   function mount() {
-    const overlay = overlayEl();
+    const overlay = parts().overlay;
     // The stage is made hidden, and the deal is what usually shows it. A table
     // built without one -- a phone that arrived in the middle of a round, or a
     // reader with animations off -- has to show it itself.
@@ -122,11 +122,11 @@ const Felt = (function () {
       overlay.appendChild(line);
     }
     wire(overlay);
-    return { overlay, stage: overlay.querySelector('.deal-stage') };
+    return parts();
   }
 
   function unmount() {
-    const overlay = document.getElementById('deal');
+    const overlay = (parts(false) || {}).overlay;
     if (!overlay) return;
     overlay.classList.remove('table', 'still', 'dragging');
     ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids', '.felt-beat'].forEach((s) => {
@@ -141,7 +141,7 @@ const Felt = (function () {
   /* The same two answers the deal used, asked again: the fan closes up as the
      hand is played, so it is asked on every change and not kept. */
   function geom() {
-    const overlay = overlayEl();
+    const overlay = parts().overlay;
     const W = overlay.clientWidth, H = overlay.clientHeight;
     const n = ST.seats.length;
     const R = Stage.ring(n, Math.max(0, me), W, H);
@@ -819,7 +819,7 @@ const Felt = (function () {
   }
 
   function showLine(on, g) {
-    const overlay = document.getElementById('deal');
+    const overlay = (parts(false) || {}).overlay;
     if (!overlay) return;
     const line = overlay.querySelector('.felt-line');
     overlay.classList.toggle('dragging', !!on);
@@ -871,7 +871,7 @@ const Felt = (function () {
     drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
              i, moved: false, out: false, was: held === i, told: false };
     lift(i);
-    const overlay = document.getElementById('deal');
+    const overlay = (parts(false) || {}).overlay;
     if (overlay && overlay.setPointerCapture) {
       try { overlay.setPointerCapture(e.pointerId); } catch (err) {}
     }
@@ -903,7 +903,7 @@ const Felt = (function () {
       }
       showLine(true, g);
       const over = e.clientY - g.H / 2 < lineY(g);
-      const overlay = document.getElementById('deal');
+      const overlay = (parts(false) || {}).overlay;
       if (overlay) overlay.classList.toggle('armed', over);
       return;
     }
@@ -935,7 +935,7 @@ const Felt = (function () {
       return;
     }
     const g = geom();
-    const overlay = document.getElementById('deal');
+    const overlay = (parts(false) || {}).overlay;
     if (overlay) overlay.classList.remove('armed');
     showLine(false);
     const el = (T.slots.find((x) => x.i === d.i) || {}).el;
@@ -999,7 +999,7 @@ const Felt = (function () {
      server scores a round and deals the next in the same breath, so without
      this the result of a hand you have just played goes by unremarked. */
   function beat(prev) {
-    const overlay = overlayEl();
+    const overlay = parts().overlay;
     let el = overlay.querySelector('.felt-beat');
     if (!el) {
       el = document.createElement('div');
@@ -1103,7 +1103,7 @@ const Felt = (function () {
     want = true;
     const r = round();
     if (!ST || !r) return;
-    const overlay = overlayEl();
+    const overlay = parts().overlay;
     overlay.hidden = false;
     if (!T) build(r);
     else { mount(); reconcile(r); paint(r); }
@@ -1114,7 +1114,7 @@ const Felt = (function () {
     want = false;
     drag = null; held = -1; spread = false;
     if (pausing) { pausing = false; endBeat(); }
-    const overlay = document.getElementById('deal');
+    const overlay = (parts(false) || {}).overlay;
     if (overlay) { overlay.hidden = true; overlay.classList.remove('dragging', 'armed'); }
     if (onView) onView(false);
   }

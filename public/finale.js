@@ -6,19 +6,18 @@
    Deal.finale() is still the way in, so no page had to learn a new name.
 */
 const Finale = (function () {
-  const { S, mode, cardEl, fade, overlayEl, close } = Stage;
+  const { S, cardEl, fade, parts, close } = Stage;
 
   function finale(opts, force) {
     close();
     return new Promise((resolve) => {
-      const overlay = overlayEl();
+      const { overlay, stage } = parts();
       // The page behind already names the winner, so this scene must not let
       // anything through: the accolades come first.
       overlay.classList.add('solid');
-      const stage = overlay.querySelector('.deal-stage');
       const names = (opts && opts.names) || [];
       const totals = (opts && opts.totals) || [];
-      const m = force || mode();
+      const m = force || UI.motion();
 
       if (!names.length || !stage || !stage.animate) {
         console.warn('[finale] skipped: no players, or no Web Animations API');

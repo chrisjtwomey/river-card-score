@@ -307,12 +307,12 @@ const UI = (function () {
         get: zoomNow,
         set: setZoom });
     }
-    if (o.motion && typeof Stage !== 'undefined') {
+    if (o.motion) {
       list.push({ kind: 'choice',
         label: 'Animations',
         options: [{ v: 'full', label: 'Full' }, { v: 'reduced', label: 'Short' }, { v: 'off', label: 'Off' }],
-        get: Stage.mode,
-        set: Stage.setMode });
+        get: motion,
+        set: setMotion });
     }
     // Safari on an iPhone has no full screen at all, so the row is not offered.
     list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
@@ -485,17 +485,38 @@ const UI = (function () {
     });
   }
 
+  /* ---------- motion ---------- */
+
+  const KEY_MOTION = 'river-card-score:motion:v1';
+
+  // The reader's choice: 'full' | 'reduced' | 'off'. ?motion= in the address
+  // wins and is remembered; with no choice made, the system's reduce-motion
+  // setting decides. The scenes and the small movements all ask this one.
+  function motion() {
+    let saved = null;
+    try { saved = localStorage.getItem(KEY_MOTION); } catch (e) {}
+    const q = new URLSearchParams(window.location.search).get('motion');
+    if (q === 'full' || q === 'reduced' || q === 'off') {
+      saved = q;
+      try { localStorage.setItem(KEY_MOTION, q); } catch (e) {}
+    }
+    if (saved) return saved;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return reduce ? 'reduced' : 'full';
+  }
+
+  // From the settings menu. 'off' still shows the result of a deal: it is the
+  // flourish that goes, never the game.
+  function setMotion(m) {
+    if (m !== 'full' && m !== 'reduced' && m !== 'off') return;
+    try { localStorage.setItem(KEY_MOTION, m); } catch (e) {}
+  }
+
   /* ---------- small movements ---------- */
 
-  // The same switch the deal animation uses: the system setting, unless a
-  // ?motion= flag was saved for this browser.
-  function motionOK() {
-    let saved = null;
-    try { saved = localStorage.getItem('river-card-score:motion:v1'); } catch (e) {}
-    if (saved === 'off' || saved === 'reduced') return false;
-    if (saved === 'full') return true;
-    return !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }
+  // The flourishes play with motion on in full. 'reduced' keeps the scenes,
+  // shortened, and takes the small movements out.
+  const motionOK = () => motion() === 'full';
   const movable = (el) => !!(el && el.animate) && motionOK();
 
   // Rebuild a list, then slide each row from where it was to where it is now.
@@ -673,7 +694,7 @@ const UI = (function () {
   // runs as the file loads, which is as early as any of them could.
   startTheme();
 
-  return { wireFullscreen, isFull, canFull, toggleFullscreen, keepAwake, measureTopbar,
+  return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, keepAwake, measureTopbar,
            measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask,
            settingsMenu, commonSettings, startZoom, zoomNow, setZoom,

@@ -6,7 +6,7 @@
    so is the slot for whichever scene is open. The finish is in finale.js.
 */
 const Deal = (function () {
-  const { S, mode, faceOf, cardEl, tf, fade, overlayEl, close, SUIT_OF, SUIT_NAME } = Stage;
+  const { S, faceOf, cardEl, tf, fade, parts, close } = Stage;
   let last = null;        // the last status shown, to restore it on re-open
 
 
@@ -32,8 +32,7 @@ const Deal = (function () {
   function play(opts, force) {
     return build(opts, force).catch((e) => {
       console.error('[deal] the scene failed to build:', e);
-      const overlay = overlayEl();
-      const stage = overlay.querySelector('.deal-stage');
+      const { overlay, stage } = parts();
       S.live = null;
       overlay.hidden = true;
       if (stage) stage.innerHTML = '';
@@ -43,14 +42,13 @@ const Deal = (function () {
   function build(opts, force) {
     close();
     return new Promise((resolve) => {
-      const overlay = overlayEl();
+      const { overlay, stage, skip: skipEl } = parts();
       overlay.classList.remove('solid');
-      const stage = overlay.querySelector('.deal-stage');
       const names = (opts && opts.names) || [];
       const n = names.length;
       const cards = (opts && opts.cards) || 1;
       const dealer = (opts && opts.dealer) || 0;
-      const m = force || mode();
+      const m = force || UI.motion();
       const virtual = !!(opts && opts.deck === 'virtual');
       const mine = (opts && typeof opts.mine === 'number' && opts.mine >= 0) ? opts.mine : -1;
       const myHand = (virtual && opts && opts.hand) || [];
@@ -101,7 +99,6 @@ const Deal = (function () {
       // it in their own time and taps it away. The host screen holds through
       // the bidding anyway, so it needs none of this.
       const waitTap = !hold && !keep;
-      const skipEl = overlay.querySelector('.deal-skip');
       if (skipEl) skipEl.textContent = waitTap ? 'tap to continue' : 'tap to skip';
       let ended = false, settled = false;
 
@@ -312,7 +309,7 @@ const Deal = (function () {
       // suit alone. It can be set again: the host may correct a mis-tap.
       const setHeroFace = (k) => {
         if (virtual) return;
-        const su = SUIT_OF[k];
+        const su = Game.SUITS.find((x) => x.k === k && x.k !== 'NT');
         heroFront.classList.toggle('red', !!(su && su.red));
         heroFront.innerHTML = '<span class="big"></span>';
         heroFront.querySelector('.big').textContent = su ? su.g : 'NT';
@@ -369,9 +366,12 @@ const Deal = (function () {
       /* ---- the trump, in the band under the round line ---- */
       const tagEl = document.createElement('div');
       tagEl.className = 'deal-tag';
-      const trumpLine = (k) => (SUIT_NAME[k] ? `${SUIT_NAME[k]} are trumps` : 'No trumps');
+      const trumpLine = (k) => {
+        const su = Game.SUITS.find((x) => x.k === k && x.k !== 'NT');
+        return su ? `${su.name} are trumps` : 'No trumps';
+      };
       tagEl.textContent = virtual
-        ? (upFace ? trumpLine(String(opts.upcard).slice(-1)) : 'No trumps')
+        ? (upFace ? trumpLine(Game.suitOf(opts.upcard)) : 'No trumps')
         : (trumpK ? trumpLine(trumpK) : '');
       (anims[anims.push(tagEl.animate(
         [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
@@ -620,8 +620,8 @@ const Deal = (function () {
     if (next !== S.live.turn) { S.live.turn = next; applyTurn(); }
   }
 
-  /* The same six names as before the split, so no page changed: the finish
-     comes from finale.js and the stage answers for close and isOpen. */
+  /* The finish comes from finale.js and the stage answers for close and
+     isOpen, but a page asks the deal for all of them. */
   return { play, finale: (opts, force) => Finale.play(opts, force),
-           close: Stage.close, update, isOpen: Stage.isOpen, mode };
+           close: Stage.close, update, isOpen: Stage.isOpen };
 })();

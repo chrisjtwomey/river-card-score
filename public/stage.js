@@ -10,42 +10,16 @@
 const Stage = (function () {
   const S = { live: null };        // the scene on screen, while it is held open
 
-  const KEY_MOTION = 'river-card-score:motion:v1';
-  const FACES = [{ g: '♠', red: false }, { g: '♥', red: true }, { g: '♦', red: true }, { g: '♣', red: false }];
-
-  // The reader's choice, from the settings menu. 'off' still shows the result of
-  // a deal: it is the flourish that goes, never the game.
-  function setMode(m) {
-    if (m !== 'full' && m !== 'reduced' && m !== 'off') return;
-    try { localStorage.setItem(KEY_MOTION, m); } catch (e) {}
-  }
-
-  // 'full' | 'reduced' | 'off'.  ?motion=full in the URL wins and is remembered.
-  function mode() {
-    let saved = null;
-    try { saved = localStorage.getItem(KEY_MOTION); } catch (e) {}
-    const q = new URLSearchParams(window.location.search).get('motion');
-    if (q === 'full' || q === 'reduced' || q === 'off') {
-      saved = q;
-      try { localStorage.setItem(KEY_MOTION, q); } catch (e) {}
-    }
-    if (saved) return saved;
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return reduce ? 'reduced' : 'full';
-  }
-
-  // A card from the server, 'TH' or '9S', turned into a face this scene can
-  // draw. Deal.js stands alone -- the offline tracker has no game.js -- so it
-  // reads the card itself.
-  const SUIT_OF = { S: FACES[0], H: FACES[1], D: FACES[2], C: FACES[3] };
-  const SUIT_NAME = { S: 'Spades', H: 'Hearts', D: 'Diamonds', C: 'Clubs' };
+  // A card from the server, 'TH' or '9S', as the face this stage draws: the
+  // rank to print, and the suit's glyph and colour, read off the shared rules.
+  // Null for anything that is not a card.
   function faceOf(card) {
-    const c = String(card || '');
-    const s = SUIT_OF[c.slice(-1)];
-    if (!s) return null;
-    const r = c.slice(0, -1);
-    return { r: r === 'T' ? '10' : r, s };
+    if (!card) return null;
+    const s = SUITS_BY_KEY[Game.suitOf(card)];
+    return s ? { r: Game.cardFace(card), s: { g: s.g, red: s.red } } : null;
   }
+  const SUITS_BY_KEY = {};
+  Game.SUITS.forEach((s) => { if (s.k !== 'NT') SUITS_BY_KEY[s.k] = s; });
 
   // Every card on this stage is placed the same way, so a move only has to say
   // what changed: where it sits, how it lies, which way up, how big.
@@ -167,13 +141,19 @@ const Stage = (function () {
     return el;
   }
 
+  // The overlay and what stands on it: the stage the cards are placed on and
+  // the "tap to skip" line. Nobody else asks the overlay for its parts by
+  // name. With `make` false it only looks: a felt being taken down must not
+  // build an overlay to take it down from. Null then, when there is none.
+  function parts(make) {
+    const overlay = make === false ? document.getElementById('deal') : overlayEl();
+    if (!overlay) return null;
+    return { overlay, stage: overlay.querySelector('.deal-stage'), skip: overlay.querySelector('.deal-skip') };
+  }
+
   // Shuts whichever scene is open, or only that kind of scene.
   function close(kind) { if (S.live && (!kind || S.live.kind === kind)) S.live.finish(); }
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
-  // SUIT_OF and SUIT_NAME go out with the rest: with real cards the deal
-  // knows only the suit the dealer turned, and has to draw and name it
-  // without a card to read it off.
-  return { S, mode, setMode, faceOf, cardEl, tf, rad, fade, overlayEl, close, isOpen,
-           ring, fan, settle, SUIT_OF, SUIT_NAME };
+  return { S, faceOf, cardEl, tf, rad, fade, parts, close, isOpen, ring, fan, settle };
 })();
