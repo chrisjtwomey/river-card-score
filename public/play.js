@@ -72,8 +72,6 @@ function render() {
 
   const r = ST.rounds[ST.idx] || null;
   tableWatch(r);
-  // A deal waiting on the real dealer is released by the trump being picked.
-  if (r && ST.cfg.deck !== 'virtual' && Deal.isOpen('deal')) Deal.update({ trump: r.trump || null });
   finaleWatch();
   UI.keepAwake(ST.phase !== 'lobby').then((s) => {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
@@ -276,6 +274,8 @@ function renderCaptain(lobby) {
   setVal('#cfg-bonus', c.bonus); setVal('#cfg-miss', c.miss);
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
+  // With real cards the deck on the table decides everything about trumps.
+  $('#cfg-trump-row').hidden = c.deck !== 'virtual';
   setVal('#cfg-deck', c.deck || 'physical');
   setVal('#cfg-accolade-pay', c.accoladePay === undefined ? 10 : c.accoladePay);
   setVal('#cfg-accolade-count', c.accoladeCount === undefined ? 3 : c.accoladeCount);
@@ -401,36 +401,17 @@ function renderRound(r, me) {
     $('#round-label').textContent = 'Game over';
     $('#round-cards').textContent = '—';
     $('#round-dealer').textContent = '—';
-    $('#trump-row').hidden = true;
     return;
   }
   $('#round-label').textContent = `Round ${ST.idx + 1} of ${ST.rounds.length}` +
     (r.redeals ? ` · re-deal ${r.redeals}` : '');
   $('#round-cards').textContent = r.cards;
   $('#round-dealer').textContent = ST.seats[r.dealer].name + (r.dealer === me ? ' (you)' : '');
+  // Only a deck the server deals turns a trump. On a real table the card is
+  // lying there for everybody to see, so the page says nothing about it.
   const cur = Game.SUITS.find((s) => s.k === r.trump) || null;
+  $('#round-trump-row').hidden = ST.cfg.deck !== 'virtual';
   $('#round-trump').textContent = ST.cfg.trump ? (cur ? cur.g : '—') : 'n/a';
-
-  // only the dealer picks the trump on a phone
-  const bar = $('#trump-row');
-  if (!ST.cfg.trump || r.dealer !== me) { bar.hidden = true; return; }
-  bar.hidden = false;
-  bar.classList.toggle('set', !!cur);
-  const now = $('#trump-now');
-  // The table can see the card that was turned; noting its suit here is for
-  // the scorecard, and nothing waits on it.
-  now.textContent = cur ? cur.name : 'Not noted';
-  now.className = 'trump-now' + (cur ? (cur.red ? ' red' : '') : ' unset');
-  const pick = $('#trump-picker');
-  pick.innerHTML = '';
-  Game.SUITS.forEach((s) => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.textContent = s.g; b.title = s.name;
-    b.className = (s.red ? 'red' : '') + (s.k === 'NT' ? ' nt' : '');
-    b.setAttribute('aria-pressed', String(r.trump === s.k));
-    b.addEventListener('click', () => Net.send({ t: 'trump', k: s.k }));
-    pick.appendChild(b);
-  });
 }
 
 /* The seat the table is stopped on, if there is nobody behind it. A bot is

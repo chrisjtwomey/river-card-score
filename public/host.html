@@ -123,7 +123,7 @@
       </div>
       <div class="toggles">
         <label class="switch"><input type="checkbox" id="cfg-screw"><span>Screw the dealer (bids must not total the tricks)</span></label>
-        <label class="switch"><input type="checkbox" id="cfg-trump"><span>Record the trump suit each round</span></label>
+        <label class="switch" id="cfg-trump-row"><input type="checkbox" id="cfg-trump"><span>Turn a card for trumps</span></label>
       </div>
       <label class="field">
         <span>Cards</span>
@@ -175,12 +175,13 @@
         </div>
       </div>
       <div class="dots" id="round-dots"></div>
-      <div class="trump-bar" id="trump-row">
+      <!-- what the deck turned, when the server deals; a real table sees the
+           real card and needs nothing said -->
+      <div class="trump-bar turned" id="trump-row" hidden>
         <div class="trump-label">
           <span class="k">Trump suit</span>
-          <span class="trump-now" id="trump-now">Not noted</span>
+          <span class="trump-now" id="trump-now">—</span>
         </div>
-        <div class="trumps" id="trump-picker"></div>
       </div>
     </div>
 

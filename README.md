@@ -284,9 +284,9 @@ Phones reconnect on their own. A player who closes the page and comes back is of
   - **must make the bid** (default) — win more than your bid and you score the tricks won. Win fewer and you score 0. With a 10 bonus: bid 2, win 3 = 3; bid 2, win 2 = 12; bid 2, win 1 = 0.
   - **must make the bid, with a penalty** — the same, but short by *n* tricks costs *n* points.
   - **0 points**, **minus 1 per trick off**, or **tricks won only**.
-- Screw the dealer, and whether to record the trump suit. Recording it is a
-  note for the scorecard, made by the dealer or the host screen; the table can
-  see the real card that was turned, so nothing waits on it.
+- Screw the dealer, and -- on a virtual deck -- whether a card is turned for
+  trumps. With real cards the deck on the table decides everything about
+  trumps, so nothing on a phone or the host screen asks about them.
 - Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
 - How many accolades are drawn at the end, from none to five, and what each one pays: 20, 10, 5, or nothing. See [Accolades](#accolades).
 

@@ -279,6 +279,8 @@ function renderLobby() {
   setVal('#cfg-miss', c.miss);
   $('#cfg-screw').checked = !!c.screw;
   $('#cfg-trump').checked = !!c.trump;
+  // With real cards the deck on the table decides everything about trumps.
+  $('#cfg-trump-row').hidden = c.deck !== 'virtual';
   setVal('#cfg-deck', c.deck || 'physical');
   setVal('#cfg-accolade-pay', c.accoladePay === undefined ? 10 : c.accoladePay);
   setVal('#cfg-accolade-count', c.accoladeCount === undefined ? 3 : c.accoladeCount);
@@ -352,45 +354,16 @@ function renderVote(r) {
   $('#vote-text').textContent = Table.voteText(ST, -1);
 }
 
+// What the deck turned, when the server deals. On a real table the card is
+// lying there for everybody to see, so this screen says nothing about it.
 function renderTrump(r) {
-  // With a virtual deck the deck turns the trump, so there is nothing to pick.
-  if (ST.cfg.deck === 'virtual') {
-    const row = $('#trump-row');
-    const up = ST.play && ST.play.upcard;
-    row.classList.add('turned');
-    $('#trump-picker').innerHTML = '';
-    const s = r && r.trump ? Game.SUITS.find((x) => x.k === r.trump) : null;
-    $('#trump-now').textContent = !s ? 'No trumps'
-      : (up ? `${Game.cardName(up)} — ${s.name}` : s.name);
-    return;
-  }
-  $('#trump-row').classList.remove('turned');
-  return renderTrumpPicker(r);
-}
-
-function renderTrumpPicker(r) {
-  const bar = $('#trump-row');
-  if (!ST.cfg.trump || !r) { bar.hidden = true; return; }
-  bar.hidden = false;
-  const cur = Game.SUITS.find((s) => s.k === r.trump) || null;
-  bar.classList.toggle('set', !!cur);
-  const now = $('#trump-now');
-  // Everybody can see the card the dealer turned; noting its suit here is
-  // for the scorecard, and nothing waits on it.
-  now.textContent = cur ? cur.name : 'Not noted';
-  now.className = 'trump-now' + (cur ? (cur.red ? ' red' : '') : ' unset');
-  const pick = $('#trump-picker');
-  pick.innerHTML = '';
-  Game.SUITS.forEach((s) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = s.g;
-    b.title = s.name;
-    b.className = (s.red ? 'red' : '') + (s.k === 'NT' ? ' nt' : '');
-    b.setAttribute('aria-pressed', String(r.trump === s.k));
-    b.addEventListener('click', () => Net.send({ t: 'trump', k: s.k }));
-    pick.appendChild(b);
-  });
+  const row = $('#trump-row');
+  row.hidden = ST.cfg.deck !== 'virtual';
+  if (row.hidden) return;
+  const up = ST.play && ST.play.upcard;
+  const s = r && r.trump ? Game.SUITS.find((x) => x.k === r.trump) : null;
+  $('#trump-now').textContent = !s ? 'No trumps'
+    : (up ? `${Game.cardName(up)} — ${s.name}` : s.name);
 }
 
 function renderTurn(r, n) {

@@ -159,12 +159,10 @@ function client(name, url) {
   ok(host.state.turn === 2, 'round 2 starts with seat 2');
 
   // ---- trump ----
+  // The real card is lying on the real table for everybody to see, so there
+  // is nothing for a phone to say about it.
   P[1].send({ t: 'trump', k: 'H' }); await wait(100);
-  ok(host.state.rounds[1].trump === 'H', 'the dealer can set the trump');
-  P[2].send({ t: 'trump', k: 'S' }); await wait(100);
-  ok(host.state.rounds[1].trump === 'H', 'another player cannot set the trump');
-  host.send({ t: 'trump', k: 'S' }); await wait(100);
-  ok(host.state.rounds[1].trump === 'S', 'the host can set the trump');
+  ok(host.state.rounds[1].trump === null, 'nobody sets a trump by hand  got ' + host.state.rounds[1].trump);
 
   // ---- undo ----
   host.send({ t: 'undo' }); await wait(120);
@@ -351,7 +349,8 @@ function client(name, url) {
     ok(P[0].state.rounds[0].trump === up.slice(-1), 'and it sets the trump suit');
     P[0].errors.length = 0;
     P[0].send({ t: 'trump', k: 'S' }); await wait(120);
-    ok(P[0].errors.some((e) => /deck turns the trump/.test(e)), 'nobody may set the trump by hand');
+    ok(P[0].state.rounds[0].trump === up.slice(-1) && P[0].errors.length === 1,
+       'and nobody may change it by hand');
 
     // ---- the bidding, as usual ----
     const r0 = P[0].state.rounds[0];

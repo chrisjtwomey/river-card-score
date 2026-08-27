@@ -94,7 +94,7 @@
         </label>
         <div class="toggles">
           <label class="switch"><input type="checkbox" id="cfg-screw"><span>Screw the dealer</span></label>
-          <label class="switch"><input type="checkbox" id="cfg-trump"><span>Record the trump suit</span></label>
+          <label class="switch" id="cfg-trump-row"><input type="checkbox" id="cfg-trump"><span>Turn a card for trumps</span></label>
         </div>
         <label class="field"><span>Cards</span>
           <select id="cfg-deck">
@@ -149,15 +149,8 @@
         </div>
         <div class="round-meta">
           <div><span class="k">Dealer</span> <span id="round-dealer">—</span></div>
-          <div><span class="k">Trump</span> <span id="round-trump">—</span></div>
+          <div id="round-trump-row"><span class="k">Trump</span> <span id="round-trump">—</span></div>
         </div>
-      </div>
-      <div class="trump-bar" id="trump-row" hidden>
-        <div class="trump-label">
-          <span class="k">Trump suit</span>
-          <span class="trump-now" id="trump-now">Not noted</span>
-        </div>
-        <div class="trumps" id="trump-picker"></div>
       </div>
     </div>
 
