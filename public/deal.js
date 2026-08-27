@@ -11,13 +11,13 @@ const Deal = (function () {
 
 
   /* opts: { names, dealer, cards, round, hold, linger, deck, mine, hand,
-     upcard, trump, waitTrump, avatars }.
+     upcard, trump, avatars }.
      The deck is shuffled and cut on screen, and the whole hand is dealt round
      the table, face down. With deck 'virtual' the turned card is the real one
      and your own cards land face up: `mine` is the seat watching, `hand` the
-     cards it was given. With real cards and waitTrump, the deck shuffles over
-     and over -- the real dealer is shuffling too -- and the cut and the deal
-     play once update() brings the trump suit the dealer turned.
+     cards it was given. With real cards the scene deals straight through:
+     the real deck on the real table is the one that matters, and nothing on
+     screen waits for anybody.
      linger adds milliseconds to the pause before it clears itself.
      With hold, the scene stays on screen after the deal, until close() is
      called, so the table can see the hand while the bids come in.
@@ -104,12 +104,6 @@ const Deal = (function () {
       const skipEl = overlay.querySelector('.deal-skip');
       if (skipEl) skipEl.textContent = waitTap ? 'tap to continue' : 'tap to skip';
       let ended = false, settled = false;
-      // With real cards the deck on screen shuffles along with the dealer,
-      // over and over, until the trump suit is picked. Everything after the
-      // shuffle is built now but held paused, and released by that pick.
-      const waiting = !virtual && !calm && !!(opts && opts.waitTrump);
-      const gated = [];
-      const gate = (a) => { if (waiting) { a.pause(); gated.push(a); } return a; };
 
       /* ---- the deck in the middle, face down ---- */
       // The deck is a real stack: it is shuffled, cut, and dealt from, so it
@@ -142,12 +136,11 @@ const Deal = (function () {
       const riffleMs = splitMs + (stackN - 1) * step + landMs;
       const roundMs = riffleMs + squareMs;
       const half = Math.ceil(stackN / 2);
-      /* One riffle. `into` collects what it starts: the loop that runs while a
-         real dealer shuffles calls this over and over, and it has to be able to
-         call off the round before it. Left to pile up, a card ends up carrying
-         dozens of S.live transforms at once, and Chrome gives up keeping the card
-         in three dimensions -- the back stops facing the room and the blank
-         front is painted instead. */
+      /* One riffle. `into` collects what it starts, so a caller can call off
+         a round before starting another. Left to pile up, a card ends up
+         carrying dozens of live transforms at once, and Chrome gives up keeping
+         the card in three dimensions -- the back stops facing the room and the
+         blank front is painted instead. */
       const riffle = (at, into) => {
         const made = into || anims;
         deckEls.forEach((d, i) => {
@@ -187,16 +180,11 @@ const Deal = (function () {
       };
       const deckReady = T.deckPop + (stackN - 1) * popStep;
       let shuffleEnd = deckReady;
-      if (!calm && !waiting) {
+      if (!calm) {
         let at = deckReady + 60;
         riffle(at); at += roundMs;
         if (!brief) { at += 80; riffle(at); at += roundMs; }
         shuffleEnd = at;
-      } else if (waiting) {
-        // Everything past the shuffle is timed from the release, not from
-        // the start of the scene: it sits paused until the trump suit is
-        // picked.
-        shuffleEnd = 60;
       }
 
       /* ---- the deal ---- */
@@ -253,7 +241,7 @@ const Deal = (function () {
           const flight = { duration: T.fly, delay, fill: 'both',
                            easing: calm ? 'ease-out' : 'cubic-bezier(.25,.8,.3,1)' };
           if (!calm) {
-            gate(anims[anims.push(card.animate(
+            (anims[anims.push(card.animate(
               [{ transform: tf(0, 0, 0, 180, .9), offset: 0 },
                { transform: tf(gx * 0.55, gy * 0.55 - 26, tilt * 0.6, up ? 90 : 180, 1.06), offset: .55 },
                { transform: landed, offset: 1 }], flight)) - 1]);
@@ -272,12 +260,11 @@ const Deal = (function () {
 
       // The shuffle's z-order has done its work. It has to go before the
       // turned trump card flips on top of the pile, and by now the deck is
-      // fading out, so nobody sees the pile reorder. Timed from the release
-      // when the deck was waiting on the real dealer.
+      // fading out, so nobody sees the pile reorder.
       const dropBand = () => timers.push(setTimeout(() => {
         deckEls.forEach((d) => { d.style.zIndex = ''; });
       }, dealEnd));
-      if (!waiting) dropBand();
+      dropBand();
 
       for (let step = 1; step <= n; step++) {          // the names, as each pile lands
         const p = (dealer + step) % n;
@@ -292,7 +279,7 @@ const Deal = (function () {
         name.style.left = `calc(50% + ${own ? 0 : x}px)`;
         name.style.top = `calc(50% + ${own ? fanY - 76 : y + 56}px)`;
         stage.appendChild(name);
-        gate(anims[anims.push(name.animate(
+        (anims[anims.push(name.animate(
           [{ opacity: 0, transform: 'translate(-50%,6px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
           { duration: 220, delay: lastAt[p] + T.fly - 120, easing: 'ease-out', fill: 'both' }
         )) - 1]);
@@ -302,7 +289,7 @@ const Deal = (function () {
       if (!calm && myCards.length > 1) {
         myCards.forEach((c, k) => {
           const at = tf(c.gx, c.gy, c.tilt, 0, 1);
-          gate(anims[anims.push(c.el.animate(
+          (anims[anims.push(c.el.animate(
             [{ transform: at }, { transform: tf(c.gx, c.gy - 9, c.tilt, 0, 1.06), offset: .45 },
              { transform: at }],
             { duration: 380, delay: dealEnd + 40 + k * 34, easing: 'cubic-bezier(.2,.9,.3,1.35)' })) - 1]);
@@ -341,7 +328,7 @@ const Deal = (function () {
         hero.style.transform = tf(0, 0, 0, 0, 1.15);
         fade(hero, [{ opacity: 0 }, { opacity: 1 }], turn, anims);
       } else {
-        gate(anims[anims.push(hero.animate(
+        (anims[anims.push(hero.animate(
           [{ transform: tf(0, 0, 0, 180, .8) },
            { transform: tf(0, virtual ? -10 : 0, 0, 0, 1.15) }], turn)) - 1]);
       }
@@ -357,7 +344,7 @@ const Deal = (function () {
       head.appendChild(cap);
       anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'translateY(0)' }],
-        { duration: 300, delay: waiting ? 420 : heroAt + 120,
+        { duration: 300, delay: heroAt + 120,
           easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }
       ));
 
@@ -376,7 +363,7 @@ const Deal = (function () {
           { duration: 300, delay: T.fade + 200, easing: 'ease-out', fill: 'forwards' }));
         // It goes as soon as the shuffle is over, well before the cards move.
         const at = Math.max(0, Math.min(dealAt - 320, shuffleEnd + 400));
-        anims.push(gate(doingEl.animate(
+        anims.push((doingEl.animate(
           [{ opacity: 1, transform: 'translate(-50%,0)' }, { opacity: 0, transform: 'translate(-50%,-8px)' }],
           { duration: 280, delay: at, easing: 'ease-out', fill: 'forwards' })));
       }
@@ -388,7 +375,7 @@ const Deal = (function () {
       tagEl.textContent = virtual
         ? (upFace ? trumpLine(String(opts.upcard).slice(-1)) : 'No trumps')
         : (trumpK ? trumpLine(trumpK) : '');
-      gate(anims[anims.push(tagEl.animate(
+      (anims[anims.push(tagEl.animate(
         [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
         { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'forwards' }
       )) - 1]);
@@ -419,7 +406,7 @@ const Deal = (function () {
       if (hold) {
         anims.push(status.animate(
           [{ opacity: 0 }, { opacity: 1 }],
-          { duration: 260, delay: waiting ? 520 : dealEnd + 380, easing: 'ease-out', fill: 'both' }
+          { duration: 260, delay: dealEnd + 380, easing: 'ease-out', fill: 'both' }
         ));
       }
 
@@ -479,8 +466,7 @@ const Deal = (function () {
       window.addEventListener('keydown', skip);
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
       const trumpHold = waitTap ? 0 : T.hold + linger;
-      // Timed from the start of the scene, or from the release when the deck
-      // is waiting on the real dealer.
+      // Timed from the start of the scene.
       const naturalEnd = heroAt + T.flip + trumpHold;
       const landedAtEnd = heroAt + T.flip;               // the cards are all down
       function arm() {
@@ -495,48 +481,16 @@ const Deal = (function () {
         }
       }
 
-      // While the real dealer shuffles, so does the deck on screen: one
-      // riffle at a time, until the trump suit is picked.
-      let loopTimer = null, roundEndsAt = 0, released = false, loopAnims = [];
-      function dropLoop() {
-        loopAnims.forEach((a) => { try { a.cancel(); } catch (e) {} });
-        loopAnims = [];
-      }
-      function loopRiffle() {
-        if (ended || settled) return;
-        dropLoop();                        // last round's, before this round's
-        riffle(0, loopAnims);
-        roundEndsAt = Date.now() + roundMs;
-        loopTimer = setTimeout(loopRiffle, roundMs + 380);
-        timers.push(loopTimer);
-      }
-      function release() {
-        if (released || ended) return;
-        released = true;
-        if (loopTimer) clearTimeout(loopTimer);
-        if (settled) return;               // a tap already landed everything
-        // Let the burst in the air come home first, then cut and deal.
-        timers.push(setTimeout(() => {
-          if (ended || settled) return;
-          dropLoop();                      // the round is home; let go of it
-          gated.forEach((a) => { try { a.play(); } catch (e) {} });
-          dropBand();
-          arm();
-        }, Math.max(0, roundEndsAt - Date.now())));
-      }
-
-      if (hold || waiting || waitTap || keep) {
+      if (hold || waitTap || keep) {
         S.live = {
           kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
           key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
           bids: null,                       // what was on the table at the last update
-          release: waiting ? release : null,
           trumpSet,                         // repaints the suit if the host corrects it
         };
         if (hold && last && last.key === S.live.key) update(last);   // re-opened: catch up
       }
-      if (waiting) loopRiffle();
-      else arm();
+      arm();
     });
   }
 
@@ -645,10 +599,7 @@ const Deal = (function () {
   function update(o) {
     if (o) last = o;
     if (!S.live || S.live.kind !== 'deal') return;
-    if (o && o.trump) {
-      if (S.live.trumpSet) S.live.trumpSet(o.trump);
-      if (S.live.release) { S.live.release(); S.live.release = null; }
-    }
+    if (o && o.trump && S.live.trumpSet) S.live.trumpSet(o.trump);
     const bids = (o && o.bids) || [];
     // Anything new since the last push gets stamped on its card. A scene that
     // has just opened has nothing to compare with, so it stamps nothing.

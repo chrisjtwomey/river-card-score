@@ -310,9 +310,9 @@ function dealWatch(r) {
   dealtKey = key;
   if (first) return;                                  // do not replay on a reload
   const virtual = ST.cfg.deck === 'virtual';
-  // The dealer is the one shuffling the real deck, and this phone is where
-  // the trump suit is picked. The scene would only be in the way.
-  if (!virtual && ST.cfg.trump && r.dealer === mySeat()) return;
+  // The dealer is the one shuffling the real deck. A scene of it shuffling
+  // itself would only be in the way on that phone.
+  if (!virtual && r.dealer === mySeat()) return;
   Deal.play({
     names: ST.seats.map((s) => s.name),
     dealer: r.dealer, cards: r.cards, round: ST.idx + 1,
@@ -324,9 +324,6 @@ function dealWatch(r) {
     hand: ST.hand || [],
     upcard: ST.play ? ST.play.upcard : null,
     trump: r.trump || null,
-    // With real cards the deck on screen shuffles along with the dealer, and
-    // deals only once the trump suit is picked.
-    waitTrump: !virtual && !!ST.cfg.trump && !r.trump,
     linger: virtual ? 300 : 1000,   // a phone gets longer to read a bare deal
   });
 }
@@ -499,7 +496,9 @@ function renderRound(r, me) {
   bar.hidden = false;
   bar.classList.toggle('set', !!cur);
   const now = $('#trump-now');
-  now.textContent = cur ? cur.name : 'Turn the top card';
+  // The table can see the card that was turned; noting its suit here is for
+  // the scorecard, and nothing waits on it.
+  now.textContent = cur ? cur.name : 'Not noted';
   now.className = 'trump-now' + (cur ? (cur.red ? ' red' : '') : ' unset');
   const pick = $('#trump-picker');
   pick.innerHTML = '';

@@ -130,13 +130,13 @@ function playDealNow(mode) {
     hold: ST.phase === 'bid', key: roundKey(),
     // With a virtual deck the table has no cards of its own, so this screen
     // shuffles, deals the whole hand, and turns the card it turned. With real
-    // cards the deck on screen shuffles along with the dealer, and deals only
-    // once the trump suit is picked.
+    // cards the real deck on the real table is the one that matters: the scene
+    // deals straight through and waits on nobody -- everybody can see the
+    // trump card that was turned, and recording its suit is a side note.
     deck: ST.cfg.deck,
     avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
     upcard: ST.play ? ST.play.upcard : null,
     trump: r.trump || null,
-    waitTrump: ST.cfg.deck !== 'virtual' && !!ST.cfg.trump && !r.trump && ST.phase === 'bid',
   }, mode);
   pushDealStatus();          // fill in the bids that are already made
   return p;
@@ -146,15 +146,13 @@ function playDealNow(mode) {
 function pushDealStatus() {
   const r = ST && ST.rounds[ST.idx];
   if (!r || !Deal.isOpen('deal')) return;
-  const shuffling = ST.cfg.deck !== 'virtual' && ST.cfg.trump && !r.trump;
   Deal.update({
     key: roundKey(),
     bids: r.bids || [],
     turn: ST.turn,
     trump: r.trump || null,
-    text: ST.phase !== 'bid' ? 'All bids are in'
-      : shuffling ? `${ST.seats[r.dealer].name} shuffles — turn the top card`
-      : (ST.turn === null ? 'All bids are in' : `Waiting for ${ST.seats[ST.turn].name} to bid`),
+    text: (ST.phase !== 'bid' || ST.turn === null) ? 'All bids are in'
+      : `Waiting for ${ST.seats[ST.turn].name} to bid`,
   });
 }
 
@@ -377,7 +375,9 @@ function renderTrumpPicker(r) {
   const cur = Game.SUITS.find((s) => s.k === r.trump) || null;
   bar.classList.toggle('set', !!cur);
   const now = $('#trump-now');
-  now.textContent = cur ? cur.name : 'Turn the top card';
+  // Everybody can see the card the dealer turned; noting its suit here is
+  // for the scorecard, and nothing waits on it.
+  now.textContent = cur ? cur.name : 'Not noted';
   now.className = 'trump-now' + (cur ? (cur.red ? ' red' : '') : ' unset');
   const pick = $('#trump-picker');
   pick.innerHTML = '';
