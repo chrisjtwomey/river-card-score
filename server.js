@@ -168,7 +168,7 @@ function publicState(room) {
     idx: room.idx,
     turn: (room.phase === 'bid' && r) ? G.turnSeat(r, n) : null,
     vote: (room.vote && room.vote.round === room.idx) ? room.vote : null,
-    totals: n ? G.totals(room.cfg, room.rounds, n).map((v, i) => v + (bonus[i] || 0)) : [],
+    totals: n ? G.totalsWithBonus(room.cfg, room.rounds, n, bonus) : [],
     bonus,                          // what the accolades paid, once they are drawn
     awards: room.awards || null,    // the three drawn at the end
     gameId: room.phase === 'done' ? (room.gameId || null) : null,
@@ -210,13 +210,12 @@ function markPresence(room) {
    but their name: the table has gone nowhere without them, and everybody at it
    can see who is missing. */
 function waitingOn(room, p) {
+  if (p < 0) return false;
+  if (G.onTurn(room) === p) return true;
+  // With real cards the dealer types the tricks in, and until they do the
+  // table goes nowhere without them.
   const r = curRound(room);
-  if (p < 0 || !r) return false;
-  if (room.phase === 'bid') return G.turnSeat(r, room.seats.length) === p;
-  if (room.phase === 'tricks') {
-    return virtual(room) ? !!room.play && room.play.turn === p : r.dealer === p;
-  }
-  return false;
+  return room.phase === 'tricks' && !G.virtual(room) && !!r && r.dealer === p;
 }
 
 /* One bid, however it arrived: from a phone, or from a bot. The last bid closes
@@ -227,7 +226,7 @@ function seatBid(room, p, v) {
   r.bids[p] = v;
   if (G.turnSeat(r, n) === null) {
     room.phase = 'tricks';
-    if (virtual(room)) startPlay(room);
+    if (G.virtual(room)) startPlay(room);
   }
 }
 
@@ -250,7 +249,7 @@ function bumDeal(room) {
   r.redeals = (r.redeals || 0) + 1;
   room.phase = 'bid';
   room.vote = null;
-  if (virtual(room)) dealHands(room);
+  if (G.virtual(room)) dealHands(room);
   return true;
 }
 
@@ -285,35 +284,35 @@ function scoreRound(room, values) {
   else {
     room.rounds[room.idx].bids = Array(n).fill(null);
     room.phase = 'bid';
-    if (virtual(room)) dealHands(room);
+    if (G.virtual(room)) dealHands(room);
   }
 }
 
 // The dealer, when the table plays with no real cards. It holds the hands and
 // the rules of a trick; scoring a finished round is the table's own business,
 // so it hands that back.
-const { TRICK_HOLD, virtual, dealHands, startPlay, playPublic, playCard } = Deck({
+const { TRICK_HOLD, dealHands, startPlay, playPublic, playCard } = Deck({
   G, curRound, broadcast, fail, scoreRound,
 });
 
 // The players the table provides. They hold cards like everybody else and go
 // through the same rules; all the server does is take their turn for them.
 const Bots = require('./lib/bots.js')({
-  G, curRound, broadcast, virtual, seatBid, playCard, bumDeal,
+  G, curRound, broadcast, seatBid, playCard, bumDeal,
 });
 
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
   DEV, G, A, token, createRoom, attach, send, fail, broadcast, seatIndex, curRound,
-  syncCfg, newGame, unfinish, setAvatar, virtual, dealHands, startPlay, scoreRound,
+  syncCfg, newGame, unfinish, setAvatar, dealHands, startPlay, scoreRound,
   finishGame,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
 const { handleTable } = Messages({
   DEV, CHAT_KEEP, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish, addBot, seatBid,
-  virtual, dealHands, startPlay, playCard, scoreRound, bumDeal, bidValue: Bots.bidFor,
+  dealHands, startPlay, playCard, scoreRound, bumDeal, bidValue: Bots.bidFor,
   markPresence,
 });
 

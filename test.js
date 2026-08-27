@@ -38,6 +38,46 @@ function client(name, url) {
   ok(res.status === 200 && (await res.text()).includes('Join a table'), 'GET / serves the landing page');
   const g = await fetch(`http://127.0.0.1:${PORT}/game.js`);
   ok(g.status === 200 && (await g.text()).includes('forbiddenBid'), 'GET /game.js serves the shared rules');
+
+  /* ---- the rules the server and every screen ask alike ----
+     Whose turn it is, which seats the table plays itself, and which one seat
+     the table is stopped on with nobody behind it. Each used to be worked out
+     again wherever it was needed, and the copies disagreed. */
+  {
+    const G = require(path + '/game.js');
+    const seats = (n) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, name: 'P' + i, online: true }));
+    const v = { deck: 'virtual' }, real = { deck: 'physical' };
+    const round = (dealer, bids) => ({ cards: 3, dealer, trump: null, bids, tricks: null });
+    let st = { phase: 'bid', cfg: v, seats: seats(3), rounds: [round(0, [null, null, null])], idx: 0, play: null };
+    ok(G.onTurn(st) === 1, 'bidding: the seat left of the dealer is on turn');
+    st.rounds[0].bids = [null, 2, 0];
+    ok(G.onTurn(st) === 0, 'and the dealer bids last');
+    st = { phase: 'tricks', cfg: v, seats: seats(3), rounds: [round(0, [1, 1, 0])], idx: 0, play: { turn: 2 } };
+    ok(G.onTurn(st) === 2, 'playing: the seat on play is on turn');
+    st.play.turn = null;
+    ok(G.onTurn(st) === null, 'and nobody is, while a trick is held up');
+    st = { phase: 'tricks', cfg: real, seats: seats(3), rounds: [round(0, [1, 1, 0])], idx: 0, play: null };
+    ok(G.onTurn(st) === null, 'with real cards nobody is on turn: typing the tricks in is not a turn');
+    ok(G.onTurn({ phase: 'lobby', cfg: v, seats: seats(2), rounds: [], idx: 0 }) === null, 'nor is anybody in the lobby');
+    ok(G.tablePlays({ bot: true }, real) && G.tablePlays({ bot: true }, v), 'the table plays a bot at either kind of table');
+    ok(G.tablePlays({ left: true }, v), 'and a seat that left, where it deals the cards');
+    ok(!G.tablePlays({ left: true }, real), 'but not where the cards are real: nobody can hold that hand');
+    ok(!G.tablePlays({ online: false }, v), 'a phone that went quiet is waited for');
+    st = { phase: 'bid', cfg: real, seats: seats(3), rounds: [round(0, [null, null, null])], idx: 0, play: null };
+    ok(G.awaySeat(st) === -1, 'everybody here: no seat is away');
+    st.seats[1].online = false;
+    ok(G.awaySeat(st) === 1, 'the seat on turn with nobody behind it is the away seat');
+    st.seats[1].left = true;
+    ok(G.awaySeat(st) === 1, 'a seat that left a real-cards table still needs somebody to bid for it');
+    st.cfg = v;
+    ok(G.awaySeat(st) === -1, 'where the table can play that hand, it is not away');
+    st.seats[1] = { id: 's1', name: 'Bot', online: true, bot: true };
+    ok(G.awaySeat(st) === -1, 'and a bot is never away');
+    ok(G.firstLeader(round(2, null), 3) === 0, 'the seat left of the dealer leads');
+    ok(G.totalsWithBonus({ bonus: 10, miss: 'atleast' },
+                         [{ cards: 1, dealer: 0, bids: [1, 0], tricks: [1, 0] }], 2, [5, 0]).join() === '16,10',
+       'the accolades are paid into the totals');
+  }
   const bad = await fetch(`http://127.0.0.1:${PORT}/../server.js`);
   ok(bad.status !== 200, 'path traversal is blocked (' + bad.status + ')');
 
@@ -810,7 +850,7 @@ function client(name, url) {
   {
     const G = require(path + '/game.js');
     const Bots = require(path + '/lib/bots.js')({
-      G, curRound: () => null, broadcast: () => {}, virtual: () => true,
+      G, curRound: () => null, broadcast: () => {},
       seatBid: () => {}, playCard: () => {}, bumDeal: () => {},
     });
 

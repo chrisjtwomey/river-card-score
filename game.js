@@ -180,8 +180,49 @@
     return best.p;
   }
 
+  /* ---------- the table, as the server and every screen ask about it ---------- */
+
+  // A table that deals the cards on the phones. `state` is a room on the
+  // server or the state a screen holds: both carry the rules as cfg.
+  const virtual = (state) => !!(state && state.cfg && state.cfg.deck === 'virtual');
+
+  // The seat the table is stopped on, or null. Bidding: the next bidder.
+  // Playing: the seat on play. Never the dealer at a table with real cards --
+  // typing the tricks in is not a turn, and nobody is waited for.
+  function onTurn(state) {
+    const r = state.rounds && state.rounds[state.idx];
+    if (!r) return null;
+    if (state.phase === 'bid') return turnSeat(r, state.seats.length);
+    if (state.phase === 'tricks' && state.play) return state.play.turn;
+    return null;
+  }
+
+  // A seat the table plays itself: a bot, or a player who left a table that
+  // deals on the phones. With real cards a left seat has no hand the table
+  // could hold, so somebody at the table has to play it.
+  const tablePlays = (seat, cfg) =>
+    !!seat && (!!seat.bot || (!!seat.left && !!cfg && cfg.deck === 'virtual'));
+
+  // The seat on turn with nobody behind it, or -1: the one seat the table is
+  // stopped on and can do nothing about by itself.
+  function awaySeat(state) {
+    const p = onTurn(state);
+    if (p === null || p === undefined) return -1;
+    const s = state.seats[p];
+    return (s && !s.online && !tablePlays(s, state.cfg)) ? p : -1;
+  }
+
+  // The seat left of the dealer bids first and leads the first trick.
+  const firstLeader = (round, n) => (round.dealer + 1) % n;
+
+  // The scores with the accolades paid in, once they are.
+  function totalsWithBonus(cfg, rounds, n, bonus) {
+    return totals(cfg, rounds, n).map((v, i) => v + ((bonus && bonus[i]) || 0));
+  }
+
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
+                virtual, onTurn, tablePlays, awaySeat, firstLeader, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };
 
