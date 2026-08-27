@@ -125,4 +125,42 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
 - A change that alters what a player sees or may do is a **named behaviour change**:
   say it in the commit body, and update `README.md` in the same commit.
 - `README.md` "Files" lists every module. A new file goes there.
+
+## Running the game yourself
+
+The suites do not see a real screen. A change to a scene, a gesture, a layout
+or a flow still needs a game played on it.
+
+**Ask first.** Before you open a browser, drive a phone, or start a server,
+ask the user whether they want to check it themselves. Many do: they have the
+server running, the phones on the table, and they know what it should look
+like. Only run the game yourself when they say so, or when they have told you
+to test autonomously. Never touch a browser or a server the user is already
+running -- open your own, on a port of your own, and say which.
+
+When you do run it:
+
+- **Browser.** `PORT=8790 npm run dev` (live reload; a change under `public/`
+  reloads every open page, a change to `server.js`, `lib/` or `game.js` needs a
+  restart). Host screen at `/host.html`, a seat at `/` (type a name, *Start a
+  table and play*), the whole table at once at `/dev.html` (needs `DEV=1`, which
+  `npm run dev` sets): it seats stand-ins and shows the host screen and every
+  phone side by side, and its *Jump to* and *Force* controls reach any state a
+  real game can. A second phone is a second browser profile or a private window;
+  a seat is one browser, so two tabs of `play.html` share it.
+- **What to play through.** Real cards: lobby → bid in turn → the dealer types
+  the tricks → a round scores → go back → new game. Dealt on the phones: add a
+  bot, the deal lands on the felt, bid on the felt, play a trick, a bum deal,
+  finish → finale. Then the odd paths: a phone goes quiet at its turn (bid for /
+  play for / hand the seat over), *Show that table* on a second host screen, a
+  watching window from the dev page.
+- **Mobile.** A real phone on the same network reaches the laptop's server at
+  the address the console prints; the QR code on the host screen carries it. For
+  the Android app, `android/tools/push-dev.sh` writes the tree into a debug build
+  on a phone over USB (`adb`), and `adb logcat -s UpTheRiver-node` shows the
+  server's own output. A change under `public/` reloads the app's pages on its
+  own; a server change restarts the runtime.
+- **Say what you saw.** Report what you ran, on which port, and which of the
+  paths above you played, including the ones you did not. A screen that loads is
+  not a game that plays.
 - `android/tools/prepare.sh` copies `lib/` and `public/` whole; nothing to register.
