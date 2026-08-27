@@ -1,9 +1,7 @@
 # Up the River, Down the River — score tracker
 
-A score tracker for the betting card game. It runs in two ways:
-
-- **Table server** — one host screen plus a phone for each player. Players bid in turn on their own phone.
-- **Single device** — the original offline tracker in one HTML file, no server.
+A score tracker for the betting card game: one host screen plus a phone for
+each player. Players bid in turn on their own phone.
 
 ## Run the table server
 
@@ -271,7 +269,7 @@ When somebody bids, every other screen says so: a line slides in under the top b
 
 When the last round is scored, both screens play the finish: the places come up from last to first with the scores before the accolades, each accolade is then read out and paid into the list, and last the winner's card turns over and paper falls. Every player's score is on screen, best first, with a shared place for a draw. It clears itself after a few seconds. A tap lands it, and a second tap clears it. A screen that opens on a game already over does not replay it.
 
-The `?motion=` flag below works on `host.html` and `play.html` as well.
+The `?motion=` flag under [Motion](#motion) works on `host.html` and `play.html`.
 
 Phones reconnect on their own. A player who closes the page and comes back is offered their seat again, because the seat token is kept in that browser.
 
@@ -625,13 +623,9 @@ WebSockets work with no extra setting. If the tunnel points at an https origin w
 
 When the socket cannot connect, the page now says so at the bottom of the screen, with the address it tried and what to check.
 
-## Single-device tracker
+## Motion
 
-Open `public/local.html` in a browser. It needs no server and keeps its state in that browser. It has the same rules and scorecard, plus a deal animation when the game starts and the finish when the last round is scored.
-
-### Motion
-
-The deal animation lives in `public/deal.js` and the finish in `public/finale.js`, on the shared overlay in `public/stage.js`. All three are used by the host screen, the phones and the offline tracker.
+The deal animation lives in `public/deal.js` and the finish in `public/finale.js`, on the shared overlay in `public/stage.js`. Both are used by the host screen and the phones.
 
 The screens also move in smaller ways. When a round is scored the standings slide to their new order, each score runs up or down to its new value, and what the round paid floats up out of it in green or red. When a bid lands that player's pill springs, and a ring spreads out of the seat that has to bid next.
 
@@ -639,11 +633,11 @@ Both follow the system "reduce motion" setting. On macOS that is System Settings
 
 To override it, open the page with a flag. The choice is saved for that browser:
 
-- `local.html?motion=full` — always play the full deal
-- `local.html?motion=reduced` — always play the short fade
-- `local.html?motion=off` — never animate
+- `host.html?motion=full` — always play the full deal
+- `host.html?motion=reduced` — always play the short fade
+- `host.html?motion=off` — never animate
 
-From the browser console: `playDeal()`, `playFinale()`, either with `'reduced'`, and `motionMode()`.
+From the browser console on the host screen: `playDeal()`, `playFinale()`, either with `'reduced'`.
 
 ## Working on it
 
@@ -753,7 +747,6 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `public/play.html`, `play.js` — player phone: your bid pad, the trick pad when you deal, standings, and the scorecard.
 - `public/table.js` — the scorecard table, shared by the host screen and the phones.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
-- `public/local.html`, `app.js` — the offline single-device tracker.
 - `public/styles.css` — shared styles, light and dark.
 
 ## Notes

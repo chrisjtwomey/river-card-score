@@ -1,6 +1,6 @@
 'use strict';
 /* The deal flourish: a card flies to each seat, then a card turns over.
-   Used by the offline tracker, the host screen and the player phones.
+   Used by the host screen and the player phones.
 
    The overlay, the card, the fade and the motion setting are the Stage's, and
    so is the slot for whichever scene is open. The finish is in finale.js.

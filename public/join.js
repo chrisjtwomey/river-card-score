@@ -2,7 +2,7 @@
 
 const $ = (s) => document.querySelector(s);
 
-/* theme, shared with the offline app */
+/* The ⚙ menu, the same one every page has. */
 document.addEventListener('DOMContentLoaded', () => {
   UI.settingsMenu('#btn-settings', UI.commonSettings());
   /* The phone that runs the server reads this page from 127.0.0.1. That phone

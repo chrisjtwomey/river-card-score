@@ -1,7 +1,7 @@
 'use strict';
 /* What each player is remembered for. Worked out from the scorecard alone --
-   the bids, the tricks and the hand sizes -- so every screen can do it, and
-   the offline tracker can too. Shared by host.js, play.js and app.js. */
+   the bids, the tricks and the hand sizes -- so the server draws them and
+   every screen can show them. */
 const Accolades = (function () {
 
   const done = (r) => !!r && Array.isArray(r.bids) && r.bids.every((b) => b !== null) && Array.isArray(r.tricks);
