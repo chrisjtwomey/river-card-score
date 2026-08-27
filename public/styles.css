@@ -578,12 +578,15 @@ body.host .toast .note{font-size:19px}
 
 /* the tricks a seat has won, in a little stack by its name */
 .deal.table .dcard.gone .face{box-shadow:0 3px 9px rgba(0,0,0,.45)}
-/* read out, every card in the pile is named for whoever played it */
+/* Read out, every card in the pile is named for whoever played it. The names
+   take two lines, every other one lower, so a name has the room of two cards;
+   longer than that and the end is cut rather than let it run into its
+   neighbour. */
 .tname{
   position:absolute;transform:translate(-50%,0);z-index:7;
   font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
   color:rgba(255,255,255,.86);text-shadow:0 2px 8px rgba(0,0,0,.85);
-  white-space:nowrap;pointer-events:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;
 }
 .tname.took{color:var(--gold)}
 
@@ -595,7 +598,7 @@ body.host .toast .note{font-size:19px}
 }
 .deal.dragging .felt-line{opacity:1}
 .deal.dragging.armed .felt-line{border-top-color:rgba(246,212,136,.95)}
-.deal.dragging.armed .dcard.hero .front{box-shadow:0 0 0 6px rgba(246,212,136,.35), 0 12px 40px rgba(0,0,0,.55)}
+
 
 /* The two ways off the table: the talk on one side, the scorecard on the other.
    The table covers the page's own top bar, so both live here. */
@@ -620,10 +623,16 @@ body.host .toast .note{font-size:19px}
    on a table it is a caption, not the whole point of the screen. */
 .deal.table .deal-head{top:clamp(48px, 8vh, 78px)}
 .deal.table .deal-cap{font-size:clamp(18px, 4.2vw, 34px)}
+/* Nothing is said there once the cards are out -- the table talks along the
+   bottom -- and the room belongs to the card the deck turned. */
+.deal.table .deal-status:empty{display:none}
 
 /* what the round just gone paid, held up before the next is dealt */
 .felt-beat{
   position:absolute;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);
+  /* Sized to its own words. Anchored at the middle, its box would otherwise be
+     given half the table to fit in and would wrap a short line in two. */
+  width:max-content;max-width:min(86vw, 420px);
   display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:16px 26px;border-radius:16px;text-align:center;pointer-events:none;
   background:rgba(7,12,8,.9);border:1px solid rgba(255,255,255,.22);
@@ -636,6 +645,17 @@ body.host .toast .note{font-size:19px}
 .felt-beat span{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.62)}
 .felt-beat i{font-size:26px;font-weight:900;font-style:normal;color:#fff;font-variant-numeric:tabular-nums}
 @keyframes beatin{from{opacity:0;transform:translate(-50%,-50%) scale(.86)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+/* Who took the trick: clear under the pile, so the card that took it is not
+   the thing the news covers up. It grows downward, over the line naming your
+   own hand rather than over the cards. */
+.felt-beat.trick{
+  top:calc(50% + 68px);transform:translate(-50%,0);
+  padding:10px 20px;gap:1px;
+  animation:tookin .24s cubic-bezier(.2,.9,.3,1.3);
+}
+.felt-beat.trick b{font-size:17px;line-height:1.15}
+.felt-beat.trick span{font-size:11px}
+@keyframes tookin{from{opacity:0;transform:translate(-50%,12px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @media (prefers-reduced-motion: reduce){.felt-beat{animation:none}}
 /* what you may do about it, along the bottom where a thumb is not */
 .felt-hint{

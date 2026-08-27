@@ -161,13 +161,27 @@ const Stage = (function () {
     tag.textContent = o.tag || '';
     box.append(cap, status, tag);
     stage.appendChild(box);
+    dropTag(box, o.ringTop, o.reserve);
+    return { box, cap, status, tag };
+  }
+
+  /* The trump line drops most of the way down the empty band between the round
+     line and the top of the ring, so it belongs to neither. `reserve` is room
+     kept below it: the table parks the card the deck turned there, and the
+     line has to leave space for it. Answers where the line now ends, so the
+     caller can hang something off it. Safe to ask again. */
+  function dropTag(box, ringTop, reserve) {
+    const tag = box && box.querySelector('.deal-tag');
+    if (!tag) return 0;
+    tag.style.marginTop = '0px';
     // Measured from the free space below the line, so a screen with a narrow
     // band moves it a little and never pushes it into the cards. offsetTop,
     // not a client rect: the line may already be carrying its entry
     // animation, and a transform would skew what a rect reports.
     const foot = box.offsetTop + tag.offsetTop + tag.getBoundingClientRect().height;
-    tag.style.marginTop = `${Math.max(6, Math.round((o.ringTop - foot) * 0.45))}px`;
-    return { box, cap, status, tag };
+    const drop = Math.max(6, Math.round(Math.max(0, ringTop - (reserve || 0) - foot) * 0.45));
+    tag.style.marginTop = `${drop}px`;
+    return foot + drop;
   }
 
   // What the trump line says of a suit, or of no trumps at all.
@@ -190,5 +204,5 @@ const Stage = (function () {
   function close(kind) { if (S.live && (!kind || S.live.kind === kind)) S.live.finish(); }
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
-  return { S, faceOf, cardEl, tf, rad, fade, parts, head, trumpLine, close, isOpen, ring, fan, settle };
+  return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen, ring, fan, settle };
 })();

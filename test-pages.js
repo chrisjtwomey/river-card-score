@@ -717,8 +717,14 @@ function bidding(o) {
       const label = F.at(0).y - 76;                // and the heading starts here
       ok(foot + 4 < label, `${W}x${H} c=${cards}: the numbers clear "Your hand"`);
       const top = foot - size * 1.34;
-      const heroFoot = -10 + (H <= 0 ? 0 : (W <= 420 ? 74 : 90) * 1.15) / 2;
-      ok(top > heroFoot, `${W}x${H} c=${cards}: and clear the turned card (${Math.round(top)} > ${Math.round(heroFoot)})`);
+      // The middle is the trick's: the numbers only have to clear the cards
+      // that land there, and the turned card is up under the trump line.
+      const hero = spotOf(overlay.querySelector('.dcard.hero'));
+      const ringTop = H / 2 - L.Stage.ring(n, me, W, H).ry - 56;
+      ok(hero.y + 20 < ringTop - H / 2,
+         `${W}x${H} c=${cards}: the turned card rests above the ring (${Math.round(hero.y)})`);
+      ok(top > -10 + (W <= 420 ? 74 : 90) / 2,
+         `${W}x${H} c=${cards}: and the numbers clear the middle (${Math.round(top)})`);
       const chips = overlay.querySelectorAll('.bidchip');
       const xs = chips.map((c) => Number(/([-\d]+)px/.exec(c.style.left)[1]));
       ok(Math.min(...xs) - size / 2 >= -W / 2, `${W}x${H} c=${cards}: and stay on the screen`);
@@ -751,7 +757,21 @@ function bidding(o) {
       const cw = W <= 420 ? 52 : 64;
       const edge = Math.max(...row.map(Math.abs)) + cw / 2;
       ok(edge <= rx + 1, `${W}x${H} n=${n}: and stays inside the seats (${Math.round(edge)} <= ${Math.round(rx)})`);
-      ok(stage.querySelectorAll('.tname').length === n + 1, `${W}x${H} n=${n}: every card named`);
+      const nms = stage.querySelectorAll('.tname');
+      ok(nms.length === n + 1, `${W}x${H} n=${n}: every card named`);
+      /* Two lines, every other name lower, and none wider than the two cards
+         its line gives it -- names side by side used to run into each other. */
+      const spots = nms.map((e) => ({ x: Number(/([-\d]+)px/.exec(e.style.left)[1]),
+                                      y: Number(/([-\d]+)px/.exec(e.style.top)[1]) }))
+                       .sort((a, b) => a.x - b.x);
+      const lines = new Set(spots.map((v) => v.y));
+      ok(lines.size === 2, `${W}x${H} n=${n}: the names take two lines (${lines.size})`);
+      ok(spots.every((v, i) => (v.y === spots[0].y) === (i % 2 === 0)),
+         `${W}x${H} n=${n}: and neighbours are never on the same one`);
+      const step = Math.min(cw * 1.14, (Math.min(W * 0.9, 380, 2 * (rx - cw * 0.6)) - cw) / n);
+      const wide = nms.map((e) => Number(/([\d]+)px/.exec(e.style.maxWidth)[1]));
+      ok(wide.every((w) => w <= Math.max(40, step * 2)),
+         `${W}x${H} n=${n}: and none wider than the room it has`);
     }
   }
 }
@@ -839,6 +859,64 @@ function scored(motion) {
   const b = L.dom.document.getElementById('deal').querySelector('.felt-beat');
   ok(b.classList.contains('hit'), 'a bid made is marked as made');
   ok(/made it/.test(b.querySelectorAll('b')[0].textContent), 'and said out loud');
+}
+
+/* A trick taken is a moment of its own: the table says who took it, and only
+   when that has been read are the cards gathered in. */
+function tookTrick(motion) {
+  const n = 4, cards = 5, me = 1;
+  // every seat has played, and the seat across the table took it
+  const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: [1, 2, 1, 1] });
+  const L = load(412, 860, motion);
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const cardsPlayed = made.hands.map((h, p) => ({ p, card: h[0] }));
+  const held = JSON.parse(JSON.stringify(made.ST));
+  held.hand = made.ST.hand.slice(1);
+  held.play.trick = [];
+  held.play.last = { trick: cardsPlayed, winner: 3 };
+  held.play.won = [0, 0, 0, 1];
+  held.play.turn = null;
+  held.play.counts = made.hands.map((h) => h.length - 1);
+  L.Felt.sync(held, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  const stage = overlay.querySelector('.deal-stage');
+  return { L, held, overlay, stage, beat: () => overlay.querySelector('.felt-beat') };
+}
+{
+  const t = tookTrick('full');
+  const b = t.beat();
+  ok(b && !b.hidden && b.classList.contains('trick'), 'a trick taken is named');
+  ok(/won that trick/.test(b.querySelectorAll('b')[0].textContent),
+     'and says so  got ' + b.querySelectorAll('b')[0].textContent);
+  ok(!b.classList.contains('hit'), 'somebody else took this one, so it is not marked as yours');
+  ok(/trick 1 of 5/.test(b.querySelectorAll('span')[0].textContent),
+     'with the trick it was  got ' + b.querySelectorAll('span')[0].textContent);
+  ok(t.stage.querySelectorAll('.dcard.took').length === 1, 'the card that took it is still on the table');
+  ok(t.stage.querySelectorAll('.dcard.gone').length === 0, 'and nothing has been gathered yet');
+}
+{
+  // the same trick, taken by the reader
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: [1, 2, 1, 1] });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const held = JSON.parse(JSON.stringify(made.ST));
+  held.hand = made.ST.hand.slice(1);
+  held.play.trick = [];
+  held.play.last = { trick: made.hands.map((h, p) => ({ p, card: h[0] })), winner: me };
+  held.play.won = [0, 1, 0, 0];
+  held.play.turn = null;
+  L.Felt.sync(held, me, { send: () => {} });
+  const b = L.dom.document.getElementById('deal').querySelector('.felt-beat');
+  ok(b.classList.contains('hit'), 'a trick you took is marked as yours');
+  ok(/^You won/.test(b.querySelectorAll('b')[0].textContent), 'and named as yours');
+  ok(!b.querySelectorAll('i').length,
+     'and no tally: every seat carries its own under its pile');
+}
+{
+  const t = tookTrick('off');
+  ok(!t.beat() || t.beat().hidden, 'with animations off nothing is said');
+  ok(t.stage.querySelectorAll('.dcard.took').length === 1, 'and the trick lies there as it always did');
 }
 
 part('the settings menu');

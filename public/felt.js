@@ -31,6 +31,7 @@
 const Felt = (function () {
   const { cardEl, tf, faceOf, parts } = Stage;
 
+  const TOOK_HOLD = 1200;       // how long the trick just taken stays named
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
@@ -51,8 +52,14 @@ const Felt = (function () {
   let heldBid = -1;                // the number under the thumb, or none
   let bidSlots = [];               // where each number sits, to aim a thumb at
   let sent = null;                 // a card played, until the table says so
+  let told = null;                 // the finished trick this screen has announced
+  let swept = null;                // and the one it has gathered in
 
   const virtual = () => !!ST && Game.virtual(ST);
+  /* A trick that has been taken and is still lying in the middle. The server
+     leaves it there, with nobody on play, until the winner leads again. */
+  const heldTrick = (p) => (p && p.last && !p.trick.length ? p.last : null);
+  const trickSig = (h) => (h ? h.winner + ':' + h.trick.map((x) => x.card).join(',') : null);
   const round = () => (ST && ST.rounds ? ST.rounds[ST.idx] || null : null);
   const still = () => UI.motion() === 'off';
   const suitName = (k) => {
@@ -188,15 +195,37 @@ const Felt = (function () {
      each under the name of whoever played it. The card the deck turned is the
      bottom of that pile, so it is the first in the row and comes down to the
      size of the rest -- it would cover the card beside it otherwise. */
-  function spreadX(g, i, of) {
+  function spreadStep(g, of) {
     // Not past the seats on either side: a row that reached the piles would be
     // read as part of them. A big table's row overlaps instead, and overlaps
     // leftward, so every card still shows the corner it is named in.
     const room = Math.min(g.W * 0.9, 380, 2 * (g.R.rx - g.cw * 0.6));
-    const step = of > 1 ? Math.min(g.cw * 1.14, (room - g.cw) / (of - 1)) : 0;
-    return (i - (of - 1) / 2) * step;
+    return of > 1 ? Math.min(g.cw * 1.14, (room - g.cw) / (of - 1)) : 0;
   }
+  const spreadX = (g, i, of) => (i - (of - 1) / 2) * spreadStep(g, of);
   const spreadAt = (g, i, of) => tf(spreadX(g, i, of), -10, 0, 0, 1);
+
+  /* Where the card the deck turned rests: under the trump line, out of the way
+     of the cards played. It used to lie in the middle, and every card played
+     landed on top of it -- so the one thing it is there to say was covered by
+     the second card of every trick. The middle is the trick's alone now.
+
+     It is given what is left between the trump line and the top of the ring,
+     and never more than a played card's height, so it reads as a card and not
+     as a fifth seat. The line itself tucks up to make the room. */
+  function heroFit(g) {
+    const box = T.stage.querySelector('.deal-head');
+    const cssH = (T.hero && T.hero.offsetHeight) || 98;
+    const k = `${g.W}x${g.H}:${g.n}:${cssH}:${box ? box.textContent : ''}`;
+    if (T.fit && T.fit.k === k) return T.fit;
+    const ringTop = g.H / 2 - g.R.ry - 56;             // the top card's top edge
+    const bare = Stage.dropTag(box, ringTop, 1e6);     // the line tucked right up
+    const h = Math.min(g.ch, Math.max(30, ringTop - bare - 12));
+    const foot = Stage.dropTag(box, ringTop, h + 12);
+    T.fit = { k, s: h / cssH, y: Math.round(foot + 6 + h / 2 - g.H / 2) };
+    return T.fit;
+  }
+  const heroAt = (g) => { const f = heroFit(g); return tf(0, f.y, 0, 0, f.s); };
 
   function nameAt(el, g, p, own) {
     const s = g.R.at(p);
@@ -301,6 +330,7 @@ const Felt = (function () {
     T.piles.forEach((pile, q) => (pile || []).forEach((el, k) => own(el, pileAt(g, q, k, r.cards))));
     let i = 0;
     T.hand.forEach((el) => { own(el, handAt(g, i, false)); i += 1; });
+    // Left where the deal turned it; layout lifts it to its perch from there.
     if (T.hero) own(T.hero, tf(0, -10, 0, 0, 1.15));
     T.labels.forEach((el) => { if (el) { el.style.opacity = '1'; own(el, el.style.transform || ''); } });
     mount();
@@ -340,7 +370,11 @@ const Felt = (function () {
     const hand = myHand();
     // A finished trick is held up for a moment before it is gathered, and while
     // it is, it is still the thing on the table.
-    const shown = p.trick.length ? p.trick : (p.last ? p.last.trick : []);
+    // A trick that has had its moment is gathered, whatever the server still
+    // holds: the cards are on the winner's stack from here.
+    const taken = heldTrick(p);
+    const gone = !!taken && swept === trickSig(taken);
+    const shown = p.trick.length ? p.trick : (taken && !gone ? taken.trick : []);
     const onTable = new Set(shown.map((x) => x.card));
     const inHand = new Set(hand);
 
@@ -394,7 +428,7 @@ const Felt = (function () {
        table can see. A phone that arrived in the middle of a round has no cards
        to gather, so plain backs stand in for the tricks it missed. */
     const wonBy = (p && p.won) || [];
-    const holding = !!(p && p.last && !p.trick.length);
+    const holding = !!taken && !gone;
     const heir = T.heldWinner;
     for (let q = 0; q < ST.seats.length; q++) {
       T.won[q] = T.won[q] || [];
@@ -409,7 +443,7 @@ const Felt = (function () {
       }
     }
     gathered.forEach((el) => el.remove());     // nobody's: a round thrown in
-    T.heldWinner = p && p.last && !p.trick.length ? p.last.winner : null;
+    T.heldWinner = holding ? taken.winner : null;
 
     // The other seats' piles thin as they play. The server says how many each
     // still holds, so a pile is trimmed from the top -- the last card dealt is
@@ -445,17 +479,25 @@ const Felt = (function () {
       T.slots.push({ card: c, el, x: g.seat.x + spot.x, y: spot.y, i });
     });
 
-    const shown = p && p.trick.length ? p.trick : (p && p.last ? p.last.trick : []);
-    const winner = p && p.last && !p.trick.length ? p.last.winner : null;
+    const taken = heldTrick(p);
+    const gone = !!taken && swept === trickSig(taken);
+    const shown = p && p.trick.length ? p.trick : (taken && !gone ? taken.trick : []);
+    const winner = taken && !gone ? taken.winner : null;
     T.stage.querySelectorAll('.tname').forEach((el) => el.remove());
     // Read out, the turned card takes the first place in the row.
     const row = spread ? shown.length + 1 : 0;
+    /* A name is as wide as its card and no wider, so a long one would run into
+       the name beside it. They take two lines instead, every other name on the
+       lower one, which gives each of them the room of two cards; longer than
+       that and the end of it is cut rather than let it collide. */
+    const step = spreadStep(g, row);
     const label = (i, text, gold) => {
       const nm = document.createElement('div');
       nm.className = 'tname' + (gold ? ' took' : '');
       nm.textContent = text;
       nm.style.left = `calc(50% + ${Math.round(spreadX(g, i, row))}px)`;
-      nm.style.top = `calc(50% + ${Math.round(-10 + g.ch / 2 + 12)}px)`;
+      nm.style.top = `calc(50% + ${Math.round(-10 + g.ch / 2 + 12 + (i % 2 ? 17 : 0))}px)`;
+      nm.style.maxWidth = `${Math.max(40, Math.round(step * 2 - 8))}px`;
       T.stage.appendChild(nm);
     };
     shown.forEach((x, i) => {
@@ -479,11 +521,11 @@ const Felt = (function () {
       at(el, pileAt(g, q, k, r.cards));
     }));
     if (T.hero) {
-      T.hero.classList.toggle('slow', spread);
+      T.hero.classList.add('slow');       // it has a place of its own to glide to
       T.hero.style.zIndex = spread ? '6' : '';
       at(T.hero, spread
         ? tf(spreadX(g, 0, row), -10, 0, 0, g.cw / 86)
-        : tf(0, -10, 0, 0, 1.15));
+        : heroAt(g));
     }
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
   }
@@ -977,7 +1019,7 @@ const Felt = (function () {
   /* What the round paid, held for a moment before the next one is dealt. The
      server scores a round and deals the next in the same breath, so without
      this the result of a hand you have just played goes by unremarked. */
-  function beat(prev) {
+  function beatEl() {
     const overlay = parts().overlay;
     let el = overlay.querySelector('.felt-beat');
     if (!el) {
@@ -985,20 +1027,72 @@ const Felt = (function () {
       el.className = 'felt-beat';
       overlay.appendChild(el);
     }
+    return el;
+  }
+
+  const beatLine = (tag, text) => {
+    const x = document.createElement(tag);
+    x.textContent = text;
+    return x;
+  };
+
+  function beat(prev) {
     const bid = prev.bids[me], won = prev.tricks[me];
     const pts = Game.roundScore(bid, won, ST.cfg);
+    const el = beatEl();
     el.className = 'felt-beat' + (bid === won ? ' hit' : '');
-    const line = (tag, text) => {
-      const x = document.createElement(tag);
-      x.textContent = text;
-      return x;
-    };
     el.textContent = '';
-    el.append(line('b', bid === won ? 'You made it' : 'You went down'),
-              line('span', `bid ${bid} · won ${won}`),
-              line('i', `${pts >= 0 ? '+' : ''}${pts} point${Math.abs(pts) === 1 ? '' : 's'}`));
+    el.append(beatLine('b', bid === won ? 'You made it' : 'You went down'),
+              beatLine('span', `bid ${bid} · won ${won}`),
+              beatLine('i', `${pts >= 0 ? '+' : ''}${pts} point${Math.abs(pts) === 1 ? '' : 's'}`));
     el.hidden = false;
     return el;
+  }
+
+  /* Who took the trick, said over the table while the cards are still in the
+     middle -- the same bubble the round's result comes up in, because a table
+     has one place it says things. Under the pile, not over it: the card that
+     took the trick is half the news. */
+  function tookBeat(p, r) {
+    const w = p.last.winner, mine = w === me;
+    const el = beatEl();
+    el.className = 'felt-beat trick' + (mine ? ' hit' : '');
+    el.textContent = '';
+    // What each seat has against its bid is under its own pile already, so
+    // this says the one thing the table does not: who took this one.
+    el.append(beatLine('b', mine ? 'You won that trick' : `${ST.seats[w].name} won that trick`),
+              beatLine('span', `trick ${p.won.reduce((a, b) => a + b, 0)} of ${r.cards}`));
+    el.hidden = false;
+    return el;
+  }
+
+  /* A trick taken is a moment: it is named, and only when that has been read
+     are the cards gathered to whoever took them. Without it a trick ends by
+     the cards simply being somewhere else. */
+  function tellTrick(r) {
+    const p = ST.play;
+    const taken = heldTrick(p);
+    const sig = trickSig(taken);
+    if (!taken) {
+      if (told) { told = null; swept = null; endBeat(); }
+      return;
+    }
+    if (sig === told) return;
+    /* With no movement asked for, or with the felt dropped, nothing is said
+       and nothing is gathered early: the trick lies there until the table
+       moves on, which is what it does with no help from this screen. */
+    if (still() || !want) return;
+    told = sig;
+    swept = null;
+    tookBeat(p, r);
+    const k = key;
+    setTimeout(() => {
+      if (told !== sig || key !== k) return;   // the table moved on without us
+      swept = sig;
+      endBeat();
+      const now = round();
+      if (T && want && now) { reconcile(now); paint(now); }
+    }, TOOK_HOLD);
   }
 
   function endBeat() {
@@ -1009,6 +1103,7 @@ const Felt = (function () {
   function leave() {
     key = null;
     pausing = false;
+    told = null; swept = null;
     endBeat();
     if (T || dealing) { Stage.close('deal'); T = null; dealing = false; }
     unmount();
@@ -1041,6 +1136,7 @@ const Felt = (function () {
       dealing = false;
       sent = null;
       spread = false;
+      told = null; swept = null;
       if (!want) return;
       // A round has been played and scored on this table: its result is held up
       // for a moment, over the trick that ended it, before the next deal.
@@ -1071,6 +1167,7 @@ const Felt = (function () {
       Deal.update({ bids: (r.bids || []).slice(), turn: ST.turn, text: '' });
       return;
     }
+    tellTrick(r);
     if (!T) { build(r); return; }
     reconcile(r);
     paint(r);
@@ -1084,6 +1181,7 @@ const Felt = (function () {
     if (!ST || !r) return;
     const overlay = parts().overlay;
     overlay.hidden = false;
+    tellTrick(r);
     if (!T) build(r);
     else { mount(); reconcile(r); paint(r); }
     if (onView) onView(true);

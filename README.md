@@ -190,8 +190,8 @@ the last card, short enough that three of them are not a wait.
 
 With a virtual deck, a phone plays the round on the felt the deal lands on. It
 is the screen, not a flourish: the hand you were dealt is the fan in front of
-you, the card the deck turned stays in the middle, and the cards played go on
-top of it.
+you, the card the deck turned sits under the line that names the trumps, and
+the middle of the table is where the cards played land.
 
 - **Touch a card** and it lifts out of the fan and enlarges. **Run a thumb along
   the fan** and each card lifts in turn -- the overlap does not have to be aimed
@@ -203,9 +203,14 @@ top of it.
   its place, and the line at the bottom gives the reason.
 - **Tap the middle** and the pile separates into a row, every card under the
   name of whoever played it, the one taking the trick in gold, and the turned
-  card first because it is the bottom of that pile. Tap again to stack it.
-- A finished trick is gathered by whoever took it, and one card of it stays on a
-  little stack beside their seat. The stacks count the tricks won.
+  card first, which comes down from its place to join the row. The names take
+  two lines, every other one lower, so a long name has room. Tap again to
+  stack it.
+- **A trick taken is said out loud**: *"Otter won that trick"* comes up under
+  the pile, so the card that took it is still there to see. Only when that has
+  been read are the cards gathered by whoever took them, and one card of the
+  trick stays on a little stack beside their seat. The stacks count the tricks
+  won.
 - **Bidding** happens on the felt too: the numbers arc between the turned card
   and your fan and are picked up the same way -- touch to lift, tap again to
   call. Your own bid stays lit and can be changed until the next player bids.
