@@ -6,17 +6,15 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
-const dgram = require('dgram');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
-const qrcode = require('qrcode-generator');
 const G = require('./game.js');
 const A = require('./public/accolades.js');
 const Games = require('./lib/games.js');
 const Http = require('./lib/http.js');
 const Dev = require('./lib/dev.js');
 const Messages = require('./lib/messages.js');
+const RoomOf = require('./lib/room.js');
 
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = __dirname;
@@ -44,7 +42,7 @@ const DEV = process.env.DEV === '1';        // live reload, for working on it
 /* ---------------- what the browser asks for ---------------- */
 
 // Finished games on disk. It knows where they go and how many are kept.
-const { gameRecord, saveGame, readGame, listGames } = Games({ DATA, KEEP_GAMES, G });
+const { saveGame, readGame, listGames } = Games({ DATA, KEEP_GAMES, G });
 
 // The pages, the QR code, the addresses, a finished game, a picture. It reads
 // the rooms for a picture and knows nothing else about a game.
@@ -105,83 +103,22 @@ function newCode() {
   return c;
 }
 
+// The table as the game sees it: every verb that moves a game on, written
+// once. The server adds the sockets, the presence, and the telling.
+const Room = RoomOf({ G, A, token, saveGame, DEV });
+const { curRound, seatIndex, Deck } = Room;
+
 function createRoom() {
-  const room = {
-    code: newCode(),
-    hostToken: token(),
-    phase: 'lobby',
-    cfg: G.defaultCfg(2),
-    onesLocked: false,
-    firstDealerId: null,        // seat that deals round 1, or null for seat 1
-    captainId: null,            // the player who runs the table from their phone
-    seats: [],
-    rounds: [],
-    idx: 0,
-    vote: null,                 // an open "bum deal" vote, or null
-    stand: false,               // true for a dev table of stand-in players
-    play: null,                 // the hands and the trick, when the deck is virtual
-    awards: null,               // the accolades drawn at the end of the game
-    bonus: null,                // and what they paid each seat
-    sockets: new Set(),
-    chat: [],                   // table talk, the last CHAT_KEEP lines
-    chatSeq: 0,                 // every line numbered, so a page knows what is new
-    lastSeen: Date.now(),
-  };
+  const room = Room.create(newCode(), token());
   rooms.set(room.code, room);
   return room;
-}
-
-const seatIndex = (room, id) => room.seats.findIndex((s) => s.id === id);
-function curRound(room) { return room.rounds[room.idx] || null; }
-
-function syncCfg(room) {
-  const n = Math.max(2, room.seats.length);
-  room.cfg.max = Math.min(room.cfg.max, G.maxCardsFor(n));
-  if (!room.onesLocked) room.cfg.ones = n;
-  if (room.firstDealerId && seatIndex(room, room.firstDealerId) < 0) room.firstDealerId = null;
-  const boss = room.seats.find((s) => s.id === room.captainId);
-  if (!boss || boss.left) {
-    // Somebody has to run the table, and neither a bot nor a player who has
-    // left can: it would leave a game with nobody able to move it on.
-    const who = room.seats.find((s) => !s.bot && !s.left)
-             || room.seats.find((s) => !s.bot) || room.seats[0];
-    room.captainId = who ? who.id : null;
-  }
-}
-
-function publicState(room) {
-  const n = room.seats.length;
-  const r = curRound(room);
-  const bonus = room.bonus || Array(n).fill(0);
-  return {
-    t: 'state',
-    code: room.code,
-    phase: room.phase,
-    cfg: room.cfg,
-    seats: room.seats.map((s) => ({ id: s.id, name: s.name, online: s.online,
-                                    bot: !!s.bot, left: !!s.left,
-                                    av: s.av ? s.av.ver : null })),
-    firstDealerId: room.firstDealerId,
-    captainId: room.captainId,
-    rounds: room.rounds,
-    idx: room.idx,
-    turn: (room.phase === 'bid' && r) ? G.turnSeat(r, n) : null,
-    vote: (room.vote && room.vote.round === room.idx) ? room.vote : null,
-    totals: n ? G.totalsWithBonus(room.cfg, room.rounds, n, bonus) : [],
-    bonus,                          // what the accolades paid, once they are drawn
-    awards: room.awards || null,    // the three drawn at the end
-    gameId: room.phase === 'done' ? (room.gameId || null) : null,
-    play: playPublic(room),         // the cards on the table, never the hands
-    chat: room.chat,                // what has been said at this table
-    dev: DEV,                       // the host screen offers the dev page when it is on
-  };
 }
 
 // A hand is a secret, so each socket gets the table plus its own cards. A
 // screen with no seat -- the host screen -- gets the table alone.
 function broadcast(room) {
   room.lastSeen = Date.now();
-  const base = publicState(room);
+  const base = Room.publicState(room);
   const shared = JSON.stringify(base);
   room.sockets.forEach((ws) => {
     if (ws.readyState !== 1) return;
@@ -202,96 +139,6 @@ function markPresence(room) {
       (w) => w.ctx && w.ctx.seatId === s.id && w.ctx.role !== 'watch'));
   });
 }
-
-/* Is the table stopped, waiting on this one seat? Nobody may bid or play out
-   of turn, so a seat that is on turn holds up everybody else. It is the one
-   moment where a player who has lost their seat can be let back in on nothing
-   but their name: the table has gone nowhere without them, and everybody at it
-   can see who is missing. */
-function waitingOn(room, p) {
-  if (p < 0) return false;
-  if (G.onTurn(room) === p) return true;
-  // With real cards the dealer types the tricks in, and until they do the
-  // table goes nowhere without them.
-  const r = curRound(room);
-  return room.phase === 'tricks' && !G.virtual(room) && !!r && r.dealer === p;
-}
-
-/* One bid, however it arrived: from a phone, or from a bot. The last bid closes
-   the bidding and the cards go out, so this is the one place that decides it. */
-function seatBid(room, p, v) {
-  const r = curRound(room), n = room.seats.length;
-  if (!r || !r.bids) return;
-  r.bids[p] = v;
-  if (G.turnSeat(r, n) === null) {
-    room.phase = 'tricks';
-    if (G.virtual(room)) startPlay(room);
-  }
-}
-
-// A player the table provides. It takes a seat like anybody else -- it has a
-// name and a hand -- and the server plays it.
-function addBot(room) {
-  room.seats.push({ id: token().slice(0, 8), name: Bots.botName(room),
-                    token: token(), watch: token(), online: true, bot: true });
-  syncCfg(room);
-}
-
-// A bum deal: the cards were dealt wrong, so throw the hand in and deal it
-// again. Same dealer, same hand size, bids and tricks cleared.
-function bumDeal(room) {
-  const r = curRound(room);
-  if (!r) return false;
-  r.bids = Array(room.seats.length).fill(null);
-  r.tricks = null;
-  r.trump = null;
-  r.redeals = (r.redeals || 0) + 1;
-  room.phase = 'bid';
-  room.vote = null;
-  if (G.virtual(room)) dealHands(room);
-  return true;
-}
-
-// The last round is in. A few of the accolades the table earned are drawn at
-// random and paid, and only then is the winner known.
-function finishGame(room) {
-  const n = room.seats.length;
-  room.phase = 'done';
-  room.idx = room.rounds.length;
-  const earned = A.list(room.rounds, n, (b, w) => G.roundScore(b, w, room.cfg));
-  room.awards = A.pick(earned, room.cfg.accoladeCount);
-  room.bonus = A.bonus(room.awards, n, room.cfg.accoladePay);
-  if (!room.gameId) room.gameId = token().slice(0, 12);
-  saveGame(room);
-}
-
-// Back into play: the accolades are not settled after all.
-function unfinish(room) { room.awards = null; room.bonus = null; }
-
-/* A fresh set of rounds is a fresh game, and it gets a file of its own. Going
-   back into a game that was already over does not: it writes over its own. */
-function newGame(room) { room.gameId = null; room.finishedAt = null; }
-
-// The round is over, however the tricks were counted.
-function scoreRound(room, values) {
-  const n = room.seats.length;
-  curRound(room).tricks = values;
-  room.vote = null;
-  room.play = null;
-  room.idx += 1;
-  if (room.idx >= room.rounds.length) { finishGame(room); }
-  else {
-    room.rounds[room.idx].bids = Array(n).fill(null);
-    room.phase = 'bid';
-    if (G.virtual(room)) dealHands(room);
-  }
-}
-
-// The dealer, when the table plays with no real cards. It holds the hands and
-// the rules of a trick; scoring a finished round is the table's own business,
-// so it hands that back.
-const Deck = require('./lib/deck.js')({ G, curRound, scoreRound });
-const { dealHands, startPlay, playPublic } = Deck;
 
 /* One card, from a phone or from a bot. The deck says whether it may go and
    moves it; this is where a full trick is held up long enough for the table
@@ -314,28 +161,25 @@ function playCard(ws, room, p, card) {
 // The players the table provides. They hold cards like everybody else and go
 // through the same rules; all the server does is take their turn for them.
 const Bots = require('./lib/bots.js')({
-  G, curRound, broadcast, seatBid, playCard, bumDeal,
+  G, curRound, broadcast, seatBid: Room.seatBid, playCard, bumDeal: Room.bumDeal,
 });
 
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
-  DEV, G, A, token, createRoom, attach, send, fail, broadcast, seatIndex, curRound,
-  syncCfg, newGame, unfinish, setAvatar, Deck, scoreRound, finishGame,
+  DEV, G, createRoom, attach, send, fail, broadcast, setAvatar, Room,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
 const { handleTable } = Messages({
-  DEV, CHAT_KEEP, G, send, fail, broadcast, seatIndex, curRound, syncCfg, newGame, unfinish, addBot, seatBid,
-  Deck, playCard, scoreRound, bumDeal, bidValue: Bots.bidFor,
-  markPresence,
+  DEV, CHAT_KEEP, G, send, fail, broadcast, Room, playCard, markPresence,
+  addBot: (room) => Room.addBot(room, Bots.botName(room)),
+  bidValue: Bots.bidFor,
 });
 
 /* ---------------- socket protocol ---------------- */
 
 const wss = new WebSocketServer({ server, path: '/ws' });
-
-
 
 function attach(ws, room, ctx) {
   if (ws.ctx && ws.ctx.room && ws.ctx.room !== room) ws.ctx.room.sockets.delete(ws);
@@ -402,7 +246,7 @@ function handle(ws, m) {
       if (held.bot) return fail(ws, `${held.name} is a player the table provides`);
       if (held.online) return fail(ws, `${held.name} is already at the table`);
       if (held.left) return fail(ws, `${held.name} left the game, so the table is playing that hand`);
-      if (!waitingOn(room, seatIndex(room, held.id))) {
+      if (!Room.waitingOn(room, seatIndex(room, held.id))) {
         return fail(ws, `the game has gone on without ${held.name}. Only the phone that holds that seat can come back to it`);
       }
       attach(ws, room, { role: 'player', seatId: held.id });
@@ -412,10 +256,10 @@ function handle(ws, m) {
 
     if (room.seats.length >= 8) return fail(ws, 'the table is full');
     if (held) return fail(ws, 'that name is taken');
-    const seat = { id: token().slice(0, 8), name, token: token(), watch: token(), online: true };
+    const seat = Room.seat(name);
     room.seats.push(seat);
     if (!room.captainId) room.captainId = seat.id;      // first in, table host
-    syncCfg(room);
+    Room.syncCfg(room);
     attach(ws, room, { role: 'player', seatId: seat.id });
     send(ws, { t: 'hello', role: 'player', code: room.code, token: seat.token, seatId: seat.id });
     return broadcast(room);
