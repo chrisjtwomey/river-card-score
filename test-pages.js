@@ -97,6 +97,7 @@ function makeDom(W, H) {
   const window = {
     innerWidth: W, innerHeight: H,
     addEventListener: (t, f) => listeners.push([t, f]),
+    removeEventListener: (t, f) => { const i = listeners.findIndex((l) => l[0] === t && l[1] === f); if (i >= 0) listeners.splice(i, 1); },
     matchMedia: () => ({ matches: false }),
     location: { search: '' },
     fire: (t) => listeners.filter((l) => l[0] === t).forEach((l) => l[1]()),
@@ -1316,4 +1317,37 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.Net.tables().length === 1,
        'and the table is still remembered, so the seat can be taken back');
   }
+}
+
+/* ---- the deal, with motion on ----
+
+   Every other check here runs with motion off, where the deal bows out
+   before it builds a scene. That let a throw inside the scene go unseen: the
+   shuffle started, the build fell over on a name that had been deleted, and
+   the felt stood up a still table with no deal at all. So the scene is built
+   once with the Web Animations API stubbed to record what it is asked for. */
+part('the deal, with motion on');
+{
+  const L = load(412, 860, 'full');
+  const asked = [];
+  L.dom.El.prototype.animate = function (kf, opts) {
+    const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {}, play() {},
+                finished: Promise.resolve() };
+    asked.push(a);
+    return a;
+  };
+  L.dom.El.prototype.getAnimations = () => [];
+  const { ST } = stateFor(3, 5, 1, { phase: 'bid', turn: 2 });
+  let threw = null;
+  try { L.Felt.sync(ST, 1, { send() {}, watch: false, onView() {} }); } catch (e) { threw = e; }
+  ok(!threw, 'the scene builds without throwing  ' + (threw ? threw.message : ''));
+  const cls = (a) => a.el.className;
+  const deck = asked.filter((a) => /\bdcard\b/.test(cls(a)) && /\bdeck\b/.test(cls(a)));
+  const mine = asked.filter((a) => /\bdcard\b/.test(cls(a)) && /\bmine\b/.test(cls(a)));
+  const hero = asked.filter((a) => /\bhero\b/.test(cls(a)));
+  ok(deck.length >= 30, 'the deck is shuffled on screen  got ' + deck.length + ' moves');
+  ok(mine.length >= 5, 'and every card of the hand is dealt  got ' + mine.length);
+  ok(hero.length >= 1, 'and a card is turned for trumps');
+  const ends = asked.map((a) => (a.opts.delay || 0) + (a.opts.duration || 0));
+  ok(Math.max(...ends) > 3000, 'the whole thing takes a few seconds  got ' + Math.round(Math.max(...ends)) + 'ms');
 }

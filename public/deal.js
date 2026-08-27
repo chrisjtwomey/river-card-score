@@ -251,8 +251,7 @@ const Deal = (function () {
           // Held at nothing until its turn comes: the card is not on the table
           // before it is dealt.
           fade(card, [{ opacity: 0 }, { opacity: 1 }],
-            { duration: calm ? T.fly : 140, delay, easing: 'ease-out', fill: 'both' }, anims)
-            .forEach(gate);
+            { duration: calm ? T.fly : 140, delay, easing: 'ease-out', fill: 'both' }, anims);
         }
       }
 
@@ -299,8 +298,7 @@ const Deal = (function () {
       // The deck goes quiet once it has given everything out.
       deckEls.forEach((d, i) => fade(d,
         [{ opacity: 1 }, { opacity: keep ? 0 : (i === stackN - 1 ? .5 : .18) }],
-        { duration: 320, delay: dealEnd - 200, easing: 'ease-out', fill: 'both' }, anims)
-        .forEach(gate));
+        { duration: 320, delay: dealEnd - 200, easing: 'ease-out', fill: 'both' }, anims));
 
       /* ---- the card turned for trumps ---- */
       const heroAt = dealEnd + (virtual ? 260 : 140);
