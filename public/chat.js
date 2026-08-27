@@ -39,8 +39,25 @@ const Chat = (function () {
     document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') shut(); });
   }
 
-  /* Another button for the same sheet -- the one on the felt, which covers the
-     page's own. It carries the same unread count. */
+  const ICON = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.6 3h10.8A2.6 2.6 0'
+    + ' 0 1 18 5.6v6.3a2.6 2.6 0 0 1-2.6 2.6H9.1l-3.5 3.1a.7.7 0 0 1-1.2-.52v-2.58H4.6A2.6 2.6 0'
+    + ' 0 1 2 11.9V5.6A2.6 2.6 0 0 1 4.6 3z"/></svg>';
+
+  /* A button of this sheet's own, for a place the page's top bar cannot be
+     reached from -- the felt covers it. Same icon, same unread count. */
+  function button(cls) {
+    const el = document.createElement('button');
+    el.className = cls || '';
+    el.type = 'button';
+    el.title = 'Table talk';
+    el.setAttribute('aria-label', 'Table talk');
+    el.innerHTML = ICON + '<span class="chat-badge" hidden></span>';
+    also(el);
+    return el;
+  }
+
+  /* Another button for the same sheet, already on the page. It carries the
+     same unread count. */
   function also(button) {
     const el = typeof button === 'string' ? document.querySelector(button) : button;
     if (!el || btns.indexOf(el) >= 0) return null;
@@ -179,5 +196,5 @@ const Chat = (function () {
     if (open) { draw(); markRead(); } else countUnread();
   }
 
-  return { wire, also, update, show, shut, isOpen: () => open };
+  return { wire, also, button, update, show, shut, isOpen: () => open };
 })();

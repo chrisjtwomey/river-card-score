@@ -120,7 +120,15 @@ function load(W, H, motion) {
   const Avatar = { url: () => null };
   const Finale = { play: () => Promise.resolve() };
   const talk = [];
-  const Chat = { also: (el) => { talk.push(el); return el; }, wire() {}, update() {} };
+  const Chat = {
+    also: (el) => { talk.push(el); return el; },
+    button: (cls) => {
+      const el = dom.document.createElement('button');
+      el.className = cls; el.innerHTML = '<span class="chat-badge" hidden></span>';
+      talk.push(el); return el;
+    },
+    wire() {}, update() {},
+  };
   const fn = new Function('window', 'document', 'localStorage', 'Game', 'Avatar', 'Finale', 'Chat', 'console',
     src + '\n; return { UI, Stage, Deal, Felt };');
   return Object.assign({ dom, talk }, fn(dom.window, dom.document, dom.localStorage, Game, Avatar, Finale, Chat,

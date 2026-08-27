@@ -328,15 +328,16 @@ const Deal = (function () {
            { transform: tf(0, virtual ? -10 : 0, 0, 0, 1.15) }], turn)) - 1]);
       }
 
-      // The round line sits across the top of the screen, clear of the cards.
-      const head = document.createElement('div');
-      head.className = 'deal-head';
-      stage.appendChild(head);
-
-      const cap = document.createElement('div');
-      cap.className = 'deal-cap';
-      cap.textContent = `Round ${opts.round || 1} · ${cards} card${cards === 1 ? '' : 's'} · ${names[dealer]} deals`;
-      head.appendChild(cap);
+      /* ---- the round line across the top, and the trump under it ----
+         Where it sits is the stage's to say: the felt draws the same line
+         when there was no deal, and the handover must not jump. */
+      const { cap, status, tag: tagEl } = Stage.head(stage, {
+        round: opts.round || 1, cards, dealer: names[dealer],
+        tag: virtual
+          ? (upFace ? Stage.trumpLine(Game.suitOf(opts.upcard)) : 'No trumps')
+          : (trumpK ? Stage.trumpLine(trumpK) : ''),
+        ringTop: H / 2 - ry - 56,              // the top card's top edge
+      });
       anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'translateY(0)' }],
         { duration: 300, delay: heroAt + 120,
@@ -363,16 +364,6 @@ const Deal = (function () {
           { duration: 280, delay: at, easing: 'ease-out', fill: 'forwards' })));
       }
 
-      /* ---- the trump, in the band under the round line ---- */
-      const tagEl = document.createElement('div');
-      tagEl.className = 'deal-tag';
-      const trumpLine = (k) => {
-        const su = Game.SUITS.find((x) => x.k === k && x.k !== 'NT');
-        return su ? `${su.name} are trumps` : 'No trumps';
-      };
-      tagEl.textContent = virtual
-        ? (upFace ? trumpLine(Game.suitOf(opts.upcard)) : 'No trumps')
-        : (trumpK ? trumpLine(trumpK) : '');
       (anims[anims.push(tagEl.animate(
         [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
         { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'forwards' }
@@ -381,26 +372,9 @@ const Deal = (function () {
       // What the trump pick paints, whenever it lands or changes.
       const trumpSet = virtual ? null : (k) => {
         setHeroFace(k);
-        tagEl.textContent = trumpLine(k);
+        tagEl.textContent = Stage.trumpLine(k);
       };
 
-      const status = document.createElement('div');
-      status.className = 'deal-status';
-      head.appendChild(status);
-
-      // The trump line goes last in the head, then drops most of the way
-      // down the empty band between the round line and the top of the ring,
-      // so it belongs to neither.
-      head.appendChild(tagEl);
-      {
-        const ringTop = H / 2 - ry - 56;              // the top card's top edge
-        // Measured from the free space below the line, so a screen with a
-        // narrow band moves it a little and never pushes it into the cards.
-        // offsetTop, not a client rect: the line is already carrying its
-        // entry animation, and a transform would skew what a rect reports.
-        const foot = head.offsetTop + tagEl.offsetTop + tagEl.getBoundingClientRect().height;
-        tagEl.style.marginTop = `${Math.max(6, Math.round((ringTop - foot) * 0.45))}px`;
-      }
       if (hold) {
         anims.push(status.animate(
           [{ opacity: 0 }, { opacity: 1 }],

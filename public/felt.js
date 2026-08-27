@@ -93,17 +93,8 @@ const Felt = (function () {
       overlay.appendChild(out);
     }
     // The table covers the page's top bar, and the talk has to stay reachable.
-    if (typeof Chat !== 'undefined' && Chat.also && !overlay.querySelector('.felt-talk')) {
-      const talk = document.createElement('button');
-      talk.className = 'felt-talk';
-      talk.type = 'button';
-      talk.title = 'Table talk';
-      talk.setAttribute('aria-label', 'Table talk');
-      talk.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.6 3h10.8A2.6 2.6 0'
-        + ' 0 1 18 5.6v6.3a2.6 2.6 0 0 1-2.6 2.6H9.1l-3.5 3.1a.7.7 0 0 1-1.2-.52v-2.58H4.6A2.6 2.6 0'
-        + ' 0 1 2 11.9V5.6A2.6 2.6 0 0 1 4.6 3z"/></svg><span class="chat-badge" hidden></span>';
-      overlay.appendChild(talk);
-      Chat.also(talk);
+    if (typeof Chat !== 'undefined' && Chat.button && !overlay.querySelector('.felt-talk')) {
+      overlay.appendChild(Chat.button('felt-talk'));
     }
     if (!overlay.querySelector('.felt-hint')) {
       const hint = document.createElement('p');
@@ -324,18 +315,9 @@ const Felt = (function () {
     const stage = T.stage;
     let box = stage.querySelector('.deal-head');
     if (!box) {
-      box = document.createElement('div');
-      box.className = 'deal-head';
-      box.innerHTML = '<div class="deal-cap"></div><div class="deal-status"></div><div class="deal-tag"></div>';
-      stage.appendChild(box);
       const g = geom();
-      const tag = box.querySelector('.deal-tag');
-      // The same measure the deal takes: most of the way down the empty band
-      // between the round line and the top of the ring, so it belongs to
-      // neither.
-      const ringTop = g.H / 2 - g.R.ry - 56;
-      const foot = box.offsetTop + tag.offsetTop + tag.getBoundingClientRect().height;
-      tag.style.marginTop = `${Math.max(6, Math.round((ringTop - foot) * 0.45))}px`;
+      box = Stage.head(stage, { round: ST.idx + 1, cards: r.cards, dealer: ST.seats[r.dealer].name,
+                                ringTop: g.H / 2 - g.R.ry - 56 }).box;
     }
     box.querySelectorAll('.deal-cap,.deal-status,.deal-tag').forEach((el) => { el.style.opacity = '1'; });
     const cap = box.querySelector('.deal-cap');
@@ -344,10 +326,7 @@ const Felt = (function () {
         + `${ST.seats[r.dealer].name} deals`;
     }
     const tag = box.querySelector('.deal-tag');
-    if (tag) {
-      const s = Game.SUITS.find((x) => x.k === r.trump);
-      tag.textContent = r.trump && r.trump !== 'NT' && s ? `${s.name} are trumps` : 'No trumps';
-    }
+    if (tag) tag.textContent = Stage.trumpLine(r.trump);
   }
 
   /* ---------------- keeping it right ---------------- */

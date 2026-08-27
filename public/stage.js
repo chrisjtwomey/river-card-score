@@ -141,6 +141,41 @@ const Stage = (function () {
     return el;
   }
 
+  /* The round line across the top of the stage -- the caption, a status line
+     under it, and the trump line, which drops most of the way down the empty
+     band between the line and the top of the ring so it belongs to neither.
+     The deal builds it, and the felt builds it when there was no deal; a
+     line placed two ways would jump at the handover, so it is placed here.
+     `ringTop` is the top card's top edge, from the middle of the stage.
+     Returns the parts, for the deal to animate. */
+  function head(stage, o) {
+    const box = document.createElement('div');
+    box.className = 'deal-head';
+    const cap = document.createElement('div');
+    cap.className = 'deal-cap';
+    cap.textContent = `Round ${o.round} · ${o.cards} card${o.cards === 1 ? '' : 's'} · ${o.dealer} deals`;
+    const status = document.createElement('div');
+    status.className = 'deal-status';
+    const tag = document.createElement('div');
+    tag.className = 'deal-tag';
+    tag.textContent = o.tag || '';
+    box.append(cap, status, tag);
+    stage.appendChild(box);
+    // Measured from the free space below the line, so a screen with a narrow
+    // band moves it a little and never pushes it into the cards. offsetTop,
+    // not a client rect: the line may already be carrying its entry
+    // animation, and a transform would skew what a rect reports.
+    const foot = box.offsetTop + tag.offsetTop + tag.getBoundingClientRect().height;
+    tag.style.marginTop = `${Math.max(6, Math.round((o.ringTop - foot) * 0.45))}px`;
+    return { box, cap, status, tag };
+  }
+
+  // What the trump line says of a suit, or of no trumps at all.
+  function trumpLine(k) {
+    const su = Game.SUITS.find((x) => x.k === k && x.k !== 'NT');
+    return su ? `${su.name} are trumps` : 'No trumps';
+  }
+
   // The overlay and what stands on it: the stage the cards are placed on and
   // the "tap to skip" line. Nobody else asks the overlay for its parts by
   // name. With `make` false it only looks: a felt being taken down must not
@@ -155,5 +190,5 @@ const Stage = (function () {
   function close(kind) { if (S.live && (!kind || S.live.kind === kind)) S.live.finish(); }
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
-  return { S, faceOf, cardEl, tf, rad, fade, parts, close, isOpen, ring, fan, settle };
+  return { S, faceOf, cardEl, tf, rad, fade, parts, head, trumpLine, close, isOpen, ring, fan, settle };
 })();
