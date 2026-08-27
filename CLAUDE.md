@@ -1,0 +1,128 @@
+# Up the River, Down the River — how this code is built
+
+A score tracker for the card game: one server, one host screen, one phone per
+player. Read this before changing anything. It says where each thing lives,
+and the rules that keep two copies of the same idea from drifting apart.
+
+## The shape of it
+
+```
+game.js            THE RULES. Pure functions over plain data. Runs in Node and in the
+                   browser (IIFE, `module.exports` or `window.Game`). No DOM, no sockets.
+lib/room.js        THE TABLE. Every verb that moves a game on, once: openRound, startGame,
+                   seatBid, closeBidding, scoreRound, bumDeal, undo, toLobby, finishGame,
+                   waitingOn, publicState. Owns lib/deck.js. Never broadcasts.
+lib/deck.js        The virtual dealer: dealHands, startPlay, refusal, putCard, settleTrick.
+                   Arithmetic over the room; no sockets, no timers.
+lib/bots.js        The players the table provides: what a hand is worth, which card to play,
+                   and the driver that takes their turn through the same verbs a phone uses.
+lib/messages.js    THE PROTOCOL. A table of every message a seated socket may send: who may
+                   send it, when, and which Room verb it calls. Guards are declarative.
+lib/dev.js         The dev controls. Calls Room verbs; invents nothing a real game cannot reach.
+lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures.
+lib/games.js       A finished game on disk.
+server.js          Wiring only: http/ws servers, the rooms map, the entry messages
+                   (create/join/resume/screen/watch/avatar), presence, broadcast, the trick
+                   hold timer, upkeep.
+
+public/ui.js       Page chrome shared by every page: settings menu, theme, zoom, wake lock,
+                   full screen, the ask() dialog, the motion setting, the small effects (fx).
+public/net.js      The socket client: reconnect, sessions, one table per page address.
+public/table.js    The scorecard, standings, winner, vote line, presence and bid toasts, and
+                   what the scenes read off the state (roundKey, dealOpts, finaleOpts).
+public/lobby.js    Widgets for the lobby: seats, bots, rulesForm, startButton.
+public/round.js    Widgets for a round in play: header, bidStrip, trickPad, bidFor, playFor,
+                   playout, winner, and the two dialogs (newGame, bumDeal).
+public/stage.js    The overlay both scenes play on, its parts, the round line (head), cards
+                   drawn off Game, the seat ring and the fan geometry.
+public/deal.js     The deal scene.   public/finale.js  The finish.   public/felt.js  The
+                   table a phone plays a virtual round on; the deal hands it the stage.
+public/chat.js     Table talk.       public/accolades.js  Shared with the server (A.list/pick/bonus).
+public/host.js     THE HOST FLOW: connect, deal-hold policy, table panel, compose widgets.
+public/play.js     THE PHONE FLOW: connect, felt/deal policy, vote buttons, avatar, compose.
+public/join.js, dev.js, history.js   The other pages.
+```
+
+Read these together: a **state** is the same shape on the server (`room`) and on
+every screen (`ST` from `publicState`). `game.js` functions accept either.
+
+## The rules that stop drift
+
+1. **One home per concept.** A rule of the game goes in `game.js`. A thing that
+   moves a game on goes in `lib/room.js`. A thing drawn on more than one screen goes
+   in `table.js`, `lobby.js` or `round.js`. If you are about to write the same
+   `if` in two files, you are in the wrong file.
+2. **Never re-derive a rule.** Ask `Game.onTurn`, `Game.awaySeat`, `Game.tablePlays`,
+   `Game.virtual`, `Game.firstLeader`, `Game.forbiddenBid`, `Game.changeableSeat`.
+   `cfg.deck === 'virtual'` appears in `game.js` and nowhere else.
+3. **A new message is a row in `lib/messages.js`.** Give it `who`, `phase`, `deck`
+   and `when` guards and a one-line `run` that calls a Room verb. Never put game
+   logic in a message body. Never add a `trump` message: with real cards nothing is
+   recorded (the tests assert it is refused).
+4. **Room verbs are synchronous and silent.** They change the room and return.
+   `broadcast` lives in `server.js`, runs once after the verb, and nudges the bots.
+   Timers (trick hold, bot delay) live outside the room and re-check the room's
+   identity when they fire (`room.play !== tag`).
+5. **`openRound` is the only place a round is reset for bidding** (bids null,
+   tricks null, phase `bid`, vote null, play null, deal if virtual). `bumDeal`
+   bumps `redeals` *before* calling it: every screen keys its deal on
+   `Table.roundKey(ST)` = `idx:redeals`, and the felt hands over on it.
+6. **`publicState.turn` is bid-only.** During tricks the seat on play is `play.turn`.
+   The phone and the felt branch on `play ? play.turn : ST.turn`.
+7. **A widget is `(root, ST, view)`.** `view = { me, boss, send }`: this screen's
+   seat (-1 for a screen that belongs to nobody), whether it may act, and how a
+   message leaves. A widget queries inside `root` only, is null-tolerant (not every
+   page has every part), builds with `createElement` what the page does not carry,
+   and wires its own buttons once (`el._wired`). It never reads `ST`, `SHOW`,
+   `WATCH` or `$` from the page. Handlers read fresh state at tap time.
+8. **The flow files (`host.js`, `play.js`) own only what differs between screens:**
+   how they connect, when a scene plays and how long it holds, the vote buttons,
+   the avatar picker, the table panel. If a block in one looks like a block in the
+   other, move it into a widget.
+9. **Scenes are state-agnostic.** `deal.js`, `finale.js`, `felt.js` take options.
+   What those options are read off the state is `Table.dealOpts` / `finaleOpts`,
+   and the caller adds its own (`hold`, `key`, `hand`, `linger`, `keep`). Scenes ask
+   `Stage.parts()` for the overlay; they never query `#deal` or `.deal-stage`.
+10. **The motion setting is `UI.motion()` / `UI.setMotion()`.** `UI.fx.on()` is
+    `motion() === 'full'`. Nobody else reads the storage key.
+11. **Cards are strings** (`'TH'`, `'9S'`). Read them with `Game.suitOf`,
+    `cardFace`, `cardGlyph`, `cardRed`. `Stage.faceOf` is the only adapter to a
+    drawable face.
+12. **No build step, no ES modules.** Every file is an IIFE assigned to one top-level
+    `const`. Classic scripts share one lexical scope, so a new file declares no
+    top-level `$` or `esc` (the pages own those). Script order in each HTML: `game.js`
+    → helpers (`ui`, `net`, `stage`, `deal`, `finale`, `felt`) → `table` → `lobby` →
+    `round` → the page. `deal/felt/finale` destructure `Stage` at load time.
+
+## How to add things
+
+- **A rule** (e.g. a new scoring option): `game.js` + the `config` row in
+  `messages.js` that accepts it + `Lobby.rulesForm`'s `RULES` list + the `<select>`
+  in `host.html`, `play.html`, `dev.html` + a check in `test.js`.
+- **A step in the game** (a new phase or transition): a Room verb, called from a
+  message row; `publicState` if screens need to see it; then the widget that draws it.
+- **A screen control that acts for the table**: a widget in `round.js` gated on
+  `view.boss`, using `Game.awaySeat`/`onTurn` for who it is about.
+- **A page setting**: a row from `UI.commonSettings(opts)` or a page-specific item in
+  its `UI.settingsMenu` call.
+- **A behaviour that differs by mode** (real cards vs dealt on the phones): a `deck`
+  guard on the message row, or `Game.virtual(state)` at the one seam in the Room verb
+  (`openRound`, `closeBidding`). Not an `if` in a screen.
+
+## Working and testing
+
+- `npm test` runs `test.js` (whole games over WebSockets, ports 8899–8903) and
+  `test-pages.js` (pages and scenes in a fake DOM). **Both must be green after every
+  change.** Add a check for every rule you add or fix; `test.js` has a pure-rules
+  section near the top, `test-pages.js` has `playPage`/`loadPage` for screens.
+- The fake DOM parses `innerHTML` only for `div|span|p` with a class; build widget
+  innards with `createElement`, and assert on `pick('#container').querySelector('.btn')`,
+  not on inner ids.
+- `npm run dev` serves with live reload on 8787. A change to `server.js`, `lib/` or
+  `game.js` needs a restart; client files do not.
+- One change, one commit, locally. Commit titles are one plain sentence saying what
+  is true now ("The room is a thing of its own"). Comments say why, not what.
+- A change that alters what a player sees or may do is a **named behaviour change**:
+  say it in the commit body, and update `README.md` in the same commit.
+- `README.md` "Files" lists every module. A new file goes there.
+- `android/tools/prepare.sh` copies `lib/` and `public/` whole; nothing to register.
