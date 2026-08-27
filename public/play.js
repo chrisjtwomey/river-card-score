@@ -82,7 +82,7 @@ function render() {
      the hand live on the felt, and the bids are read off the scorecard. What
      stays beyond the three is the attention panel, and only while the table
      actually needs a decision from this phone. */
-  const virtual = ST.cfg.deck === 'virtual';
+  const virtual = Game.virtual(ST);
   $('#turn-panel').hidden = virtual;
   $('#bids-panel').hidden = virtual;
   if (!virtual) renderTurn(r, me);
@@ -114,7 +114,7 @@ function renderAttention(r, me) {
 // card for that seat. The server picks, and only from the legal cards.
 function renderPlayFor() {
   const row = $('#playfor-row');
-  const p = ST.phase === 'tricks' ? awaySeat() : -1;
+  const p = ST.phase === 'tricks' ? Game.awaySeat(ST) : -1;
   const on = !WATCH && amHost() && p >= 0;
   row.hidden = !on;
   if (on) $('#btn-playfor').textContent = `Play a card for ${ST.seats[p].name}`;
@@ -181,14 +181,8 @@ function renderVote(r, me) {
 // a game already over does not replay it.
 function finaleWatch() {
   if (Table.justFinished(ST, lastPhase)) {
-    Deal.finale({
-      names: ST.seats.map((s) => s.name),
-      totals: ST.totals,                     // the accolades are already in these
-      awards: ST.awards || [],
-      points: ST.cfg.accoladePay,
-      bonus: ST.bonus || [],
-      linger: 1000,             // a phone gets a second longer to read it
-    });
+    // a phone gets a second longer to read it
+    Deal.finale(Object.assign(Table.finaleOpts(ST), { linger: 1000 }));
   }
   lastPhase = ST.phase;
 }
@@ -198,7 +192,7 @@ function finaleWatch() {
    is nothing to touch, so the deal stays what it always was -- a flourish that
    plays and goes. */
 function tableWatch(r) {
-  if (ST.cfg.deck === 'virtual') {
+  if (Game.virtual(ST)) {
     dealtKey = null;                       // the felt owns the deal on this table
     Felt.sync(ST, mySeat(), {
       send: (m) => Net.send(m),
@@ -214,7 +208,7 @@ function tableWatch(r) {
 function feltView(on) {
   const bar = $('#felt-bar');
   if (!bar) return;
-  const live = ST && ST.cfg.deck === 'virtual' && (ST.phase === 'bid' || ST.phase === 'tricks');
+  const live = ST && Game.virtual(ST) && (ST.phase === 'bid' || ST.phase === 'tricks');
   bar.hidden = !!on || !live;
 }
 
@@ -223,28 +217,23 @@ function feltView(on) {
 function dealWatch(r) {
   if (ST.phase === 'lobby') { dealtKey = null; return; }
   if (!r || ST.phase !== 'bid') return;
-  const key = `${ST.idx}:${r.redeals || 0}`;
+  const key = Table.roundKey(ST);
   if (dealtKey === key) return;
   const first = dealtKey === null && ST.idx > 0;     // a reload part way through
   dealtKey = key;
   if (first) return;                                  // do not replay on a reload
-  const virtual = ST.cfg.deck === 'virtual';
+  const virtual = Game.virtual(ST);
   // The dealer is the one shuffling the real deck. A scene of it shuffling
   // itself would only be in the way on that phone.
   if (!virtual && r.dealer === mySeat()) return;
-  Deal.play({
-    names: ST.seats.map((s) => s.name),
-    dealer: r.dealer, cards: r.cards, round: ST.idx + 1,
-    // With a virtual deck the cards come to you: your own land face up in a
-    // fan, so the scene already shows the hand and needs no extra pause.
-    deck: ST.cfg.deck,
+  // With a virtual deck the cards come to you: your own land face up in a
+  // fan, so the scene already shows the hand and needs no extra pause.
+  Deal.play(Object.assign(Table.dealOpts(ST, ST.idx), {
     avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
     mine: mySeat(),
     hand: ST.hand || [],
-    upcard: ST.play ? ST.play.upcard : null,
-    trump: r.trump || null,
     linger: virtual ? 300 : 1000,   // a phone gets longer to read a bare deal
-  });
+  }));
 }
 
 // The table host runs the game from their phone: rules, seats, start, go
@@ -386,7 +375,7 @@ function renderBots(boss) {
   if (!boss) return;
   const bots = ST.seats.filter((s) => s.bot).length;
   const full = ST.seats.length >= 8;
-  const cards = ST.cfg.deck === 'virtual';
+  const cards = Game.virtual(ST);
   const btn = $('#btn-addbot');
   btn.disabled = full;
   btn.textContent = bots ? '+ Add another bot' : '+ Add a bot';
@@ -410,17 +399,8 @@ function renderRound(r, me) {
   // Only a deck the server deals turns a trump. On a real table the card is
   // lying there for everybody to see, so the page says nothing about it.
   const cur = Game.SUITS.find((s) => s.k === r.trump) || null;
-  $('#round-trump-row').hidden = ST.cfg.deck !== 'virtual';
+  $('#round-trump-row').hidden = !Game.virtual(ST);
   $('#round-trump').textContent = ST.cfg.trump ? (cur ? cur.g : '—') : 'n/a';
-}
-
-/* The seat the table is stopped on, if there is nobody behind it. A bot is
-   never away, and a seat the table already plays is not waited for. */
-function awaySeat() {
-  const p = ST.phase === 'bid' ? ST.turn : (ST.play ? ST.play.turn : null);
-  if (p === null || p === undefined) return -1;
-  const s = ST.seats[p];
-  return (s && !s.online && !s.left && !s.bot) ? p : -1;
 }
 
 /* A phone that is not coming back. Bidding and playing for it a turn at a time
@@ -429,8 +409,8 @@ function awaySeat() {
    the phone it belongs to takes it back by coming to the table. */
 function renderPlayout() {
   const row = $('#playout-row');
-  const p = awaySeat();
-  const on = !WATCH && amHost() && p >= 0 && ST.cfg.deck === 'virtual';
+  const p = Game.awaySeat(ST);
+  const on = !WATCH && amHost() && p >= 0 && Game.virtual(ST);
   row.hidden = !on;
   if (on) $('#btn-playout').textContent = `Let the table play ${ST.seats[p].name}'s hand`;
 }
@@ -440,13 +420,15 @@ function renderPlayout() {
 // bid for that seat -- off its own cards where there are cards to read.
 function renderBidFor(r, me) {
   const pad = $('#bidfor-pad');
-  const p = ST.phase === 'bid' ? ST.turn : null;
-  const on = !WATCH && amHost() && p !== null && p !== me
-          && !ST.seats[p].online && !ST.seats[p].left && !ST.seats[p].bot;
+  // The bidding is stopped on a seat with nobody behind it, and the table
+  // cannot play it: a bot bids for itself, and so does a seat that left a
+  // table that deals on the phones.
+  const p = ST.phase === 'bid' ? Game.awaySeat(ST) : -1;
+  const on = !WATCH && amHost() && p >= 0 && p !== me;
   pad.hidden = !on;
   if (!on) return;
   const who = ST.seats[p];
-  const dealt = ST.cfg.deck === 'virtual';
+  const dealt = Game.virtual(ST);
   const forbidden = Game.forbiddenBid(r, p, ST.cfg, ST.seats.length);
   $('#bidfor-hint').textContent = dealt
     ? `${who.name} is not at the table. Bid from their hand, or tap the number they want.`
@@ -535,10 +517,10 @@ function renderTurn(r, me) {
   // tricks phase
   // The player left of the dealer leads the first trick, the same one who bid
   // first.
-  const leader = (r.dealer + 1) % ST.seats.length;
+  const leader = Game.firstLeader(r, ST.seats.length);
   const leads = leader === me ? 'You lead' : `${ST.seats[leader].name} leads`;
   $('#turn-eyebrow').textContent = 'Tricks won';
-  if (ST.cfg.deck === 'virtual') {                 // the hand is played below
+  if (Game.virtual(ST)) {                 // the hand is played below
     const p = ST.play;
     $('#turn-text').textContent = !p ? 'Dealing…'
       : p.turn === me ? 'Your card'
@@ -666,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-playfor').addEventListener('click', () => Net.send({ t: 'playfor' }));
   $('#btn-bidfor').addEventListener('click', () => Net.send({ t: 'bidfor' }));
   $('#btn-playout').addEventListener('click', () => {
-    const p = awaySeat();
+    const p = Game.awaySeat(ST);
     const who = p >= 0 ? ST.seats[p].name : 'that seat';
     UI.ask(`Let the table play ${who}'s hand?`,
       `The seat keeps its name and its place on the scorecard, and the table plays it `

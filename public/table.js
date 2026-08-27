@@ -177,12 +177,36 @@ const Table = (function () {
     });
   }
 
+  /* ---------- the round on screen ---------- */
+
+  // The deal on screen belongs to one round and one re-deal of it. Every
+  // screen keys its deal on this, so the felt, the host and the phone agree.
+  const roundKey = (ST) => {
+    const r = ST.rounds[ST.idx];
+    return r ? `${ST.idx}:${r.redeals || 0}` : null;
+  };
+
+  // What the deal scene needs of round i: who sits where, who deals, the hand
+  // size, and what the deck turned. Each screen adds its own -- whether the
+  // scene holds, the hand it was dealt, how long it lingers.
+  function dealOpts(ST, i) {
+    const r = ST.rounds[i];
+    return { names: ST.seats.map((s) => s.name), dealer: r.dealer, cards: r.cards, round: i + 1,
+             deck: ST.cfg.deck, upcard: ST.play ? ST.play.upcard : null, trump: r.trump || null };
+  }
+
+  // What the finish needs: the places, and the accolades that were paid into them.
+  function finaleOpts(ST) {
+    return { names: ST.seats.map((s) => s.name), totals: ST.totals, awards: ST.awards || [],
+             points: ST.cfg.accoladePay, bonus: ST.bonus || [] };
+  }
+
   /* ---------- the bids, as they land ---------- */
 
   // Pops the pill of a bid that has just arrived, and rings the seat that has
   // to act now. `last` is { key, bids, turn } from the render before.
   function bidsAfter(strip, ST, r, last) {
-    const key = `${ST.idx}:${r.redeals || 0}`;
+    const key = roundKey(ST);
     const bids = (r.bids || []).slice();
     const mark = { key, bids, turn: ST.turn, landed: [] };
     if (!last || last.key !== key) return mark;         // a new round: nothing landed
@@ -312,7 +336,8 @@ const Table = (function () {
   // after it: the finish plays once.
   const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
 
-  return { scorecardHTML, followCurrent, esc, bidsAfter, sayBids, sayPresence, cardEl, trickEl,
+  return { scorecardHTML, followCurrent, esc, roundKey, dealOpts, finaleOpts,
+           bidsAfter, sayBids, sayPresence, cardEl, trickEl,
            sweepTrick, sweepOut, trickIn,
            standings, winner, voteText, justFinished };
 })();

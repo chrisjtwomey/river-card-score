@@ -1200,7 +1200,7 @@ part('bidding for a seat that is not there, and leaving');
   const seed = { 'rcs:tables:v1': JSON.stringify([{ code: 'TEST', token: 't0', role: 'player', seatId: 's0' }]) };
   // three seats, two cards each, bidding, and the third seat is on turn
   const table = (o) => {
-    const { ST } = stateFor(3, 2, 0, { phase: 'bid', turn: 2 });
+    const { ST } = stateFor(3, 2, 0, { phase: 'bid', turn: 2, bids: [null, 1, null] });   // Ben bid, Cal to bid
     ST.t = 'state';                       // it arrives the way the server sends it
     ST.captainId = o.boss === false ? 's1' : 's0';
     ST.seats[2].online = o.away === false;
