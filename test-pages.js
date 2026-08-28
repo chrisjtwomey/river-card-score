@@ -542,25 +542,13 @@ part('the pile in the middle');
   ok(count() === all, 'and the trick is still all there while it is held');
   ok(!stage.querySelectorAll('.dcard.gone').length, 'nothing is on a won stack yet');
 
-  // tap the middle: the cards separate, each under a name
+  /* A tap on the middle of the table does nothing: every card played is on
+     show where its own player put it, so there is nothing to open. */
   const cy = L.Stage.ring(n, me, W, H).cy;
-  const mid = { clientX: W / 2, clientY: H / 2 + cy, pointerId: 1, button: 0 };
-  overlay.fire('pointerdown', mid);
-  const names = stage.querySelectorAll('.tname');
-  ok(names.length === n + 1, `tapping the pile separates it and names every card (${names.length})`);
-  ok(names[names.length - 1].textContent === 'Trump', 'the turned card takes the first place in the row');
-  ok(names.filter((e) => e.classList.contains('took')).length === 1, 'and marks the one that took it');
-  const row = stage.querySelectorAll('.dcard').filter((e) => {
-    const sp = spotOf(e);
-    return sp && sp.face === 0 && Math.round(sp.y) === cy;
-  }).map((e) => Math.round(spotOf(e).x));
-  ok(row.length === n + 1, `every card of the pile is in the row, turned card included (${row.length})`);
-  ok(new Set(row).size === row.length, 'with no two on the same spot');
-  const heroSpot = spotOf(stage.querySelector('.dcard.hero'));
-  ok(heroSpot.scale < 1.1, 'and the turned card comes down to the size of the rest');
-  ok(/stack them/.test((overlay.querySelector('.felt-hint') || {}).textContent || ''), 'and says how to close it');
-  overlay.fire('pointerdown', mid);
-  ok(stage.querySelectorAll('.tname').length === 0, 'and tapping again stacks it back up');
+  const before = stage.querySelectorAll('.dcard').map((e) => e.style.transform).join('|');
+  overlay.fire('pointerdown', { clientX: W / 2, clientY: H / 2 + cy, pointerId: 1, button: 0 });
+  ok(stage.querySelectorAll('.dcard').map((e) => e.style.transform).join('|') === before,
+    'a tap on the middle of the table moves nothing');
 
   // the winner leads: the trick is gathered onto their own stack
   step({ turn: null, pturn: 2, trick: [{ p: 2, card: base.hands[2][1] }], won,
@@ -741,50 +729,6 @@ function bidding(o) {
       const xs = chips.map((c) => Number(/([-\d]+)px/.exec(c.style.left)[1]));
       ok(Math.min(...xs) - size / 2 >= -W / 2, `${W}x${H} c=${cards}: and stay on the screen`);
       ok(Math.max(...xs) + size / 2 <= W / 2, `${W}x${H} c=${cards}: on the other side too`);
-    }
-  }
-}
-
-// the pile read out must not spill onto the seats either side of it
-{
-  for (const [W, H] of [[360, 640], [412, 860], [500, 860], [760, 1000]]) {
-    for (const n of [2, 4, 6, 8]) {
-      const cards = 3, me = 1;
-      const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: null, bids: Array(n).fill(1) });
-      const trick = made.hands.map((h, p) => ({ p, card: h[0] }));
-      made.ST.play.trick = trick;
-      made.ST.hand = made.ST.hand.slice(1);
-      made.ST.play.counts = made.hands.map((h) => h.length - 1);
-      const L = load(W, H, 'off');
-      L.Felt.sync(made.ST, me, { send: () => {} });
-      const overlay = L.dom.document.getElementById('deal');
-      const stage = overlay.querySelector('.deal-stage');
-      const cy = L.Stage.ring(n, me, W, H).cy;
-      overlay.fire('pointerdown', { clientX: W / 2, clientY: H / 2 + cy, pointerId: 1, button: 0 });
-      const row = stage.querySelectorAll('.dcard').filter((e) => {
-        const sp = spotOf(e);
-        return sp && sp.face === 0 && Math.round(sp.y) === cy;
-      }).map((e) => spotOf(e).x);
-      ok(row.length === n + 1, `${W}x${H} n=${n}: the whole pile is read out (${row.length})`);
-      const rx = L.Stage.ring(n, me, W, H).rx;
-      const cw = W <= 420 ? 52 : 64;
-      const edge = Math.max(...row.map(Math.abs)) + cw / 2;
-      ok(edge <= rx + 1, `${W}x${H} n=${n}: and stays inside the seats (${Math.round(edge)} <= ${Math.round(rx)})`);
-      const nms = stage.querySelectorAll('.tname');
-      ok(nms.length === n + 1, `${W}x${H} n=${n}: every card named`);
-      /* Two lines, every other name lower, and none wider than the two cards
-         its line gives it -- names side by side used to run into each other. */
-      const spots = nms.map((e) => ({ x: Number(/([-\d]+)px/.exec(e.style.left)[1]),
-                                      y: Number(/([-\d]+)px/.exec(e.style.top)[1]) }))
-                       .sort((a, b) => a.x - b.x);
-      const lines = new Set(spots.map((v) => v.y));
-      ok(lines.size === 2, `${W}x${H} n=${n}: the names take two lines (${lines.size})`);
-      ok(spots.every((v, i) => (v.y === spots[0].y) === (i % 2 === 0)),
-         `${W}x${H} n=${n}: and neighbours are never on the same one`);
-      const step = Math.min(cw * 1.14, (Math.min(W * 0.9, 380, 2 * (rx - cw * 0.6)) - cw) / n);
-      const wide = nms.map((e) => Number(/([\d]+)px/.exec(e.style.maxWidth)[1]));
-      ok(wide.every((w) => w <= Math.max(40, step * 2)),
-         `${W}x${H} n=${n}: and none wider than the room it has`);
     }
   }
 }

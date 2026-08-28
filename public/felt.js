@@ -47,7 +47,6 @@ const Felt = (function () {
   let onView = null;               // the page, told when the felt comes and goes
   let held = -1;                   // the card in the reader's fingers, or none
   let drag = null;                 // the gesture in progress
-  let spread = false;              // the pile in the middle, laid out to be read
   let heldBid = -1;                // the number under the thumb, or none
   let bidSlots = [];               // where each number sits, to aim a thumb at
   let sent = null;                 // a card played, until the table says so
@@ -187,20 +186,6 @@ const Felt = (function () {
               -4 + k * 1.2, 180, 0.42 * z);
   }
 
-  /* The pile, laid out to be read: side by side in the order they were played,
-     each under the name of whoever played it. The card the deck turned is the
-     bottom of that pile, so it is the first in the row and comes down to the
-     size of the rest -- it would cover the card beside it otherwise. */
-  function spreadStep(g, of) {
-    // Not past the seats on either side: a row that reached the piles would be
-    // read as part of them. A big table's row overlaps instead, and overlaps
-    // leftward, so every card still shows the corner it is named in.
-    const room = Math.min(g.W * 0.9, 380, 2 * (g.R.rx - g.cw * 0.6));
-    return of > 1 ? Math.min(g.cw * 1.14, (room - g.cw) / (of - 1)) : 0;
-  }
-  const spreadX = (g, i, of) => (i - (of - 1) / 2) * spreadStep(g, of);
-  const spreadAt = (g, i, of) => tf(spreadX(g, i, of), g.R.cy, 0, 0, 1);
-
   /* The card the deck turned lies in the middle of the table, where a turned
      card lies. It comes down to the size of a card played, so the ring the
      trick makes around it can close in tight rather than reach the seats. */
@@ -289,8 +274,8 @@ const Felt = (function () {
     stage.innerHTML = '';
     const p = ST.play;
     T = { stage, piles: [], labels: [], hero: null, hand: new Map(), table: new Map(),
-          slots: [], places: [], won: [], heldWinner: null, shown: '' };
-    held = -1; drag = null; spread = false;
+          slots: [], places: [], won: [], heldWinner: null };
+    held = -1; drag = null;
 
     const g0 = geom();
     for (let q = 0; q < g0.n; q++) {
@@ -334,8 +319,8 @@ const Felt = (function () {
   function adopt(ctx, r) {
     T = { stage: ctx.stage, piles: (ctx.piles || []).map((a) => (a || []).slice()),
           labels: ctx.labels || [], hero: ctx.hero, hand: new Map(), table: new Map(),
-          slots: [], places: [], won: [], heldWinner: null, shown: '' };
-    held = -1; drag = null; spread = false;
+          slots: [], places: [], won: [], heldWinner: null };
+    held = -1; drag = null;
     const mineCards = T.piles[me] || [];
     (ST.hand || []).forEach((c, i) => { if (mineCards[i]) T.hand.set(c, mineCards[i]); });
     T.piles[me] = [];                      // your cards are a hand now, not a pile
@@ -392,11 +377,6 @@ const Felt = (function () {
     const shown = p.trick.length ? p.trick : (taken && !gone ? taken.trick : []);
     const onTable = new Set(shown.map((x) => x.card));
     const inHand = new Set(hand);
-
-    // A new card on the table stacks the pile again: whoever was reading it has
-    // read it.
-    const sig = shown.map((x) => x.p + x.card).join(',');
-    if (sig !== T.shown) { spread = false; T.shown = sig; }
 
     /* A finished trick leaves the middle, and it does not vanish: it goes to
        whoever took it, face down, and joins the little stack of tricks they
@@ -500,33 +480,14 @@ const Felt = (function () {
     const gone = !!taken && swept === trickSig(taken);
     const shown = p && p.trick.length ? p.trick : (taken && !gone ? taken.trick : []);
     const winner = taken && !gone ? taken.winner : null;
-    T.stage.querySelectorAll('.tname').forEach((el) => el.remove());
-    // Read out, the turned card takes the first place in the row.
-    const row = spread ? shown.length + 1 : 0;
-    /* A name is as wide as its card and no wider, so a long one would run into
-       the name beside it. They take two lines instead, every other name on the
-       lower one, which gives each of them the room of two cards; longer than
-       that and the end of it is cut rather than let it collide. */
-    const step = spreadStep(g, row);
-    const label = (i, text, gold) => {
-      const nm = document.createElement('div');
-      nm.className = 'tname' + (gold ? ' took' : '');
-      nm.textContent = text;
-      nm.style.left = `calc(50% + ${Math.round(spreadX(g, i, row))}px)`;
-      nm.style.top = `calc(50% + ${Math.round(g.R.cy + g.ch / 2 + 12 + (i % 2 ? 17 : 0))}px)`;
-      nm.style.maxWidth = `${Math.max(40, Math.round(step * 2 - 8))}px`;
-      T.stage.appendChild(nm);
-    };
     shown.forEach((x, i) => {
       const el = T.table.get(x.card);
       if (!el) return;
       el.style.zIndex = String(7 + i);
       el.classList.toggle('took', winner !== null && x.p === winner);
-      el.classList.toggle('slow', spread);
-      at(el, spread ? spreadAt(g, i + 1, row) : trickAt(g, x.p));
-      if (spread) label(i + 1, x.p === me ? 'You' : ST.seats[x.p].name, x.p === winner);
+      el.classList.remove('slow');       // a card played moves at a card's pace
+      at(el, trickAt(g, x.p));
     });
-    if (spread) label(0, 'Trump', false);
 
     (T.won || []).forEach((stack, q) => (stack || []).forEach((el, k) => {
       el.style.zIndex = String(2);
@@ -539,10 +500,7 @@ const Felt = (function () {
     }));
     if (T.hero) {
       T.hero.classList.add('slow');       // it has a place of its own to glide to
-      T.hero.style.zIndex = spread ? '6' : '';
-      at(T.hero, spread
-        ? tf(spreadX(g, 0, row), g.R.cy, 0, 0, g.cw / 86)
-        : heroAt(g));
+      at(T.hero, heroAt(g));
     }
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
   }
@@ -731,7 +689,6 @@ const Felt = (function () {
   function hint(r) {
     const p = ST.play;
     const bidding = ST.phase === 'bid';
-    if (spread) return say('Tap again to stack them.');
     if (watch) return say('You are watching this table.');
     if (bidding) {
       const n = ST.seats.length;
@@ -805,16 +762,6 @@ const Felt = (function () {
     return best;
   }
 
-  // The pile in the middle: a generous box round the card the deck turned, so
-  // a thumb aimed at it hits it.
-  function onPile(px, py) {
-    if (!T || !T.table.size) return false;
-    const g = geom();
-    const cx = px - g.W / 2, cy = py - g.H / 2 - g.R.cy;
-    if (spread) return Math.abs(cy) < g.ch * 0.9 && Math.abs(cx) < g.W * 0.48;
-    return Math.abs(cx) < g.cw * 1.15 && Math.abs(cy) < g.ch * 1.1;
-  }
-
   function lift(i) {
     if (held === i) return;
     held = i;
@@ -874,7 +821,7 @@ const Felt = (function () {
     T.hand.delete(s.card);
     T.table.set(s.card, el);
     sent = s.card;
-    held = -1; drag = null; spread = false;
+    held = -1; drag = null;
     send({ t: 'play', card: s.card });
     layout();
     say('…');
@@ -926,19 +873,7 @@ const Felt = (function () {
     }
 
     const i = cardUnder(e.clientX, e.clientY);
-    if (i < 0) {
-      // A tap on the pile separates it, so the cards played can be read; the
-      // next one stacks it again.
-      if (onPile(e.clientX, e.clientY)) {
-        spread = !spread;
-        drop();
-        layout();
-        hint(round());
-        return;
-      }
-      drop();
-      return;
-    }
+    if (i < 0) { drop(); return; }
     drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
              i, moved: false, out: false, was: held === i, told: false };
     lift(i);
@@ -1185,7 +1120,6 @@ const Felt = (function () {
       T = null;
       dealing = false;
       sent = null;
-      spread = false;
       told = null; swept = null;
       if (!want) return;
       // A round has been played and scored on this table: its result is held up
@@ -1239,7 +1173,7 @@ const Felt = (function () {
 
   function hide() {
     want = false;
-    drag = null; held = -1; spread = false;
+    drag = null; held = -1;
     if (pausing) { pausing = false; endBeat(); }
     const overlay = (parts(false) || {}).overlay;
     if (overlay) { overlay.hidden = true; overlay.classList.remove('dragging', 'armed'); }

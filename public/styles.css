@@ -600,18 +600,6 @@ body.host .toast .note{font-size:19px}
 
 /* the tricks a seat has won, in a little stack by its name */
 .deal.table .dcard.gone .face{box-shadow:0 3px 9px rgba(0,0,0,.45)}
-/* Read out, every card in the pile is named for whoever played it. The names
-   take two lines, every other one lower, so a name has the room of two cards;
-   longer than that and the end is cut rather than let it run into its
-   neighbour. */
-.tname{
-  position:absolute;transform:translate(-50%,0);z-index:7;
-  font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-  color:rgba(255,255,255,.86);text-shadow:0 2px 8px rgba(0,0,0,.85);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;
-}
-.tname.took{color:var(--gold)}
-
 /* the line a card has to clear to be played */
 .felt-line{
   position:absolute;z-index:1;left:8%;right:8%;height:0;opacity:0;
@@ -651,7 +639,9 @@ body.host .toast .note{font-size:19px}
 
 /* what the round just gone paid, held up before the next is dealt */
 .felt-beat{
-  position:absolute;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);
+  /* Over everything on the table: the cards played run from z-index 7 upward,
+     and a card lifted out of the hand higher still. */
+  position:absolute;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);
   /* Sized to its own words. Anchored at the middle, its box would otherwise be
      given half the table to fit in and would wrap a short line in two. */
   width:max-content;max-width:min(86vw, 420px);

@@ -210,10 +210,6 @@ that band.
   seat's pile -- lies on a dashed outline of itself, and the outline stays when
   the card is played. A hand played out to nothing leaves its place, not a
   hole.
-- **Tap the middle** and the pile separates into a row, every card under the
-  name of whoever played it, the one taking the trick in gold, and the turned
-  card first because it is the bottom of that pile. The names take two lines,
-  every other one lower, so a long name has room. Tap again to stack it.
 - **A trick taken is said out loud**: *"Otter won that trick"* comes up under
   the pile, so the card that took it is still there to see. Only when that has
   been read are the cards gathered by whoever took them, and one card of the
@@ -727,7 +723,7 @@ stop anything of your own on those first.
 big enough to hold a page and drives real events at it: where every card on the
 felt lies at five screen sizes and every legal hand size, the thumb along the
 fan, the push that plays a card and the one that does not, the card that
-refuses, the pile read out, the bid numbers, the round held up at the end, and
+refuses, the trick taken and gathered, the bid numbers, the round held up, and
 the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 
 ## Files
