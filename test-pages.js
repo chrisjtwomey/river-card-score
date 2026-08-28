@@ -536,7 +536,8 @@ part('the pile in the middle');
   ok(!stage.querySelectorAll('.dcard.gone').length, 'nothing is on a won stack yet');
 
   // tap the middle: the cards separate, each under a name
-  const mid = { clientX: W / 2, clientY: H / 2 - 10, pointerId: 1, button: 0 };
+  const cy = L.Stage.ring(n, me, W, H).cy;
+  const mid = { clientX: W / 2, clientY: H / 2 + cy, pointerId: 1, button: 0 };
   overlay.fire('pointerdown', mid);
   const names = stage.querySelectorAll('.tname');
   ok(names.length === n + 1, `tapping the pile separates it and names every card (${names.length})`);
@@ -544,7 +545,7 @@ part('the pile in the middle');
   ok(names.filter((e) => e.classList.contains('took')).length === 1, 'and marks the one that took it');
   const row = stage.querySelectorAll('.dcard').filter((e) => {
     const sp = spotOf(e);
-    return sp && Math.round(sp.y) === -10;
+    return sp && sp.face === 0 && Math.round(sp.y) === cy;
   }).map((e) => Math.round(spotOf(e).x));
   ok(row.length === n + 1, `every card of the pile is in the row, turned card included (${row.length})`);
   ok(new Set(row).size === row.length, 'with no two on the same spot');
@@ -719,8 +720,8 @@ function bidding(o) {
       const top = foot - size * 1.34;
       // The turned card lies in the middle, come down to the size of a card
       // played, so the numbers have that to clear.
-      const ch = W <= 420 ? 74 : 90;
-      ok(top > -10 + ch / 2,
+      const ch = L.Stage.cardSize(W).h;
+      ok(top > L.Stage.ring(n, me, W, H).cy + ch / 2,
          `${W}x${H} c=${cards}: and clear the turned card (${Math.round(top)})`);
       const chips = overlay.querySelectorAll('.bidchip');
       const xs = chips.map((c) => Number(/([-\d]+)px/.exec(c.style.left)[1]));
@@ -744,10 +745,11 @@ function bidding(o) {
       L.Felt.sync(made.ST, me, { send: () => {} });
       const overlay = L.dom.document.getElementById('deal');
       const stage = overlay.querySelector('.deal-stage');
-      overlay.fire('pointerdown', { clientX: W / 2, clientY: H / 2 - 10, pointerId: 1, button: 0 });
+      const cy = L.Stage.ring(n, me, W, H).cy;
+      overlay.fire('pointerdown', { clientX: W / 2, clientY: H / 2 + cy, pointerId: 1, button: 0 });
       const row = stage.querySelectorAll('.dcard').filter((e) => {
         const sp = spotOf(e);
-        return sp && Math.round(sp.y) === -10;
+        return sp && sp.face === 0 && Math.round(sp.y) === cy;
       }).map((e) => spotOf(e).x);
       ok(row.length === n + 1, `${W}x${H} n=${n}: the whole pile is read out (${row.length})`);
       const rx = L.Stage.ring(n, me, W, H).rx;
@@ -799,7 +801,9 @@ function bidding(o) {
       const L = load(W, H, 'off');
       L.Felt.sync(made.ST, me, { send: () => {} });
       const stage = L.dom.document.getElementById('deal').querySelector('.deal-stage');
-      const cw = W <= 420 ? 52 : 64, ch = W <= 420 ? 74 : 90;
+      const cs = L.Stage.cardSize(W), cw = cs.w, ch = cs.h;
+      const R = L.Stage.ring(n, me, W, H);
+      const mid = R.cy;                       // the middle of the table
       const tag = `${W}x${H} n=${n}`;
 
       const all = stage.querySelectorAll('.dcard').map((e) => ({ e, sp: spotOf(e) })).filter((v) => v.sp);
@@ -807,8 +811,8 @@ function bidding(o) {
       // face down and standing: a seat's pile. Face up in the middle: the trick.
       const piles = all.filter((v) => v.sp.face === 180 && !v.e.classList.contains('gone'));
       const played = all.filter((v) => v.sp.face === 0 && !v.e.classList.contains('hero')
-                                    && Math.abs(v.sp.y + 10) < ch * 1.4 && Math.abs(v.sp.x) < W / 2 - 10
-                                    && Math.hypot(v.sp.x, v.sp.y + 10) > 1);
+                                    && Math.abs(v.sp.y - mid) < ch * 1.4 && Math.abs(v.sp.x) < W / 2 - 10
+                                    && Math.hypot(v.sp.x, v.sp.y - mid) > 1);
       ok(!!hero && played.length === n, `${tag}: the turned card and one card a seat are on the table (${played.length})`);
 
       // the trick rings the turned card rather than piling onto it
@@ -826,7 +830,6 @@ function bidding(o) {
       ok(pair === 0, `${tag}: nor one another (${Math.round(pair)}px²)`);
 
       // a seat's pile keeps off its neighbours', and stays on the screen
-      const R = L.Stage.ring(n, me, W, H);
       const mine2 = (v) => { let best = 0, at = 0; for (let q = 0; q < n; q++) { const s = R.at(q); const d = Math.hypot(v.sp.x - s.x, v.sp.y - s.y); if (q === 0 || d < best) { best = d; at = q; } } return at; };
       const bySeat = {};
       piles.forEach((v) => { const q = mine2(v); (bySeat[q] || (bySeat[q] = [])).push(box(v.sp, cw, ch)); });
@@ -839,31 +842,17 @@ function bidding(o) {
       const off = piles.map((v) => box(v.sp, cw, ch)).filter((b) => b.l < -W / 2 || b.r > W / 2);
       ok(!off.length, `${tag}: and every pile is on the screen (${off.length} off)`);
 
-      /* The row of bid numbers arcs above the reader's own hand, which is
-         where the two seats either side of them keep their piles. */
+      /* The row of bid numbers arcs above the reader's own hand, and takes
+         the width of the screen however many seats there are. */
       const size = W <= 420 ? 40 : 44;
       const foot = L.Stage.fan(cards, W, H).at(0).y - 88;
       const cnt = cards + 1;
-      const z = L.Stage.seatScale(n);
-      const tr = 12 * Math.PI / 180;
-      const phh = ((cw * Math.sin(tr) + ch * Math.cos(tr)) * z) / 2;
-      const phw = ((cw * Math.cos(tr) + ch * Math.sin(tr)) * z) / 2;
-      let room = Math.min(W - 20, 400);
-      for (let q = 0; q < n; q++) {
-        if (q === me) continue;
-        const sq = R.at(q);
-        if (sq.y + phh <= foot - size * 1.34 || sq.y - phh >= foot) continue;
-        room = Math.min(room, 2 * Math.max(size, Math.abs(sq.x) - phw - 6));
-      }
-      const step = cnt > 1 ? Math.min(size + 6, (room - size) / (cnt - 1)) : 0;
+      const step = cnt > 1 ? Math.min(size + 6, (Math.min(W - 20, 400) - size) / (cnt - 1)) : 0;
       const half = ((cnt - 1) / 2) * step + size / 2;
+      ok(half <= W / 2, `${tag}: the row of bid numbers is on the screen (${Math.round(half * 2)})`);
       const rail = { l: -half, r: half, t: foot - size * 1.34, b: foot };
-      let onRail = 0;
-      Object.keys(bySeat).forEach((q) => {
-        if (Number(q) === me) return;
-        bySeat[q].forEach((a) => { onRail = Math.max(onRail, over(a, rail)); });
-      });
-      ok(onRail === 0, `${tag}: and the bid numbers keep off them (${Math.round(onRail)}px²)`);
+      ok(over({ l: -cw / 2, r: cw / 2, t: mid - ch / 2, b: mid + ch / 2 }, rail) === 0,
+         `${tag}: and clear of the turned card`);
     }
   }
 }

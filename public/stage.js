@@ -37,25 +37,50 @@ const Stage = (function () {
   */
 
   /* The seats, round an ellipse. `anchor` sits at the bottom, nearest the
-     player watching, and the rest follow round from there. */
+     player watching, and the rest follow round from there.
+
+     `cy` is the middle of the table, and everything on it -- the seats, the
+     card the deck turned, the trick -- hangs off that and not off the middle
+     of the screen. The reader's own hand takes the foot of the screen, and
+     takes more room there than the round line takes at the head, so the table
+     sits a little above the middle: it has to be in the middle of the band
+     between those two, which is not the middle of the screen. */
   function ring(n, anchor, W, H) {
     const rx = Math.min(W * 0.33, 250);
     // A wider screen gives the ring more room, so the piles stand clear of the
     // round line above and the turned card in the middle. A phone has none to
     // spare, so it keeps the tighter ring.
     const ry = Math.min(H * 0.27, W < 560 ? 160 : 192);
+    const cy = -Math.round(Math.min(H * 0.035, 30));
     const at = (p) => {
       const a = (Math.PI / 2) + ((((p - anchor) % n) + n) % n) * 2 * Math.PI / n;
-      return { x: Math.cos(a) * rx, y: Math.sin(a) * ry };
+      return { x: Math.cos(a) * rx, y: cy + Math.sin(a) * ry };
     };
-    return { rx, ry, at };
+    return { rx, ry, cy, at };
   }
+
+  /* How big a card is drawn, which the stylesheet's narrow rule says too. One
+     question, so a layout worked out here and a card drawn there agree. */
+  const cardSize = (W) => (W <= 420 ? { w: 52, h: 74 } : { w: 64, h: 90 });
 
   /* How big a seat's furniture is drawn. Eight piles at full size do not go
      round a phone: they run into their neighbours, into the names under them,
      and into the row of bid numbers. A table of many comes down in size, and
      a table of few is left alone. */
   const seatScale = (n) => Math.max(0.55, Math.min(1, 5.4 / Math.max(1, n)));
+
+  /* What a pile is called, written under it and hugging it: a name held a
+     fixed way down would be reaching into the seat below on a table of eight.
+     The reader's own cards are named above their fan instead. Both the deal
+     and the table it hands over to write these, so the answer is here. */
+  function nameAt(el, R, p, own, n, W, H) {
+    const z = seatScale(n);
+    const s = R.at(p);
+    el.style.left = `calc(50% + ${own ? 0 : Math.round(s.x)}px)`;
+    el.style.top = `calc(50% + ${own ? Math.round(fan(1, W, H).y - 76)
+                                    : Math.round(s.y + cardSize(W).h * z / 2 + 19)}px)`;
+    if (!own) el.style.fontSize = z < 0.9 ? `${Math.max(10, Math.round(13 * z))}px` : '';
+  }
 
   /* A seat's pile: where the kth card of `of` lies. The deal puts it there and
      the table it hands over to keeps it there, so the question is asked once
@@ -222,5 +247,5 @@ const Stage = (function () {
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
   return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen,
-           ring, fan, pile, seatScale, settle };
+           ring, fan, pile, seatScale, cardSize, nameAt, settle };
 })();

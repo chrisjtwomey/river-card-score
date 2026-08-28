@@ -143,8 +143,8 @@ const Felt = (function () {
     const n = ST.seats.length;
     const R = Stage.ring(n, Math.max(0, me), W, H);
     const F = Stage.fan(Math.max(1, myHand().length), W, H);
-    return { W, H, n, R, F, seat: R.at(Math.max(0, me)),
-             cw: W <= 420 ? 52 : 64, ch: W <= 420 ? 74 : 90 };
+    const c = Stage.cardSize(W);
+    return { W, H, n, R, F, seat: R.at(Math.max(0, me)), cw: c.w, ch: c.h };
   }
 
   // A pile lies where the deal left it: the seat's spot, stepped along and
@@ -170,7 +170,7 @@ const Felt = (function () {
      them. */
   function trickAt(g, p) {
     const s = g.R.at(p), d = dirTo(g, p), r = trickRing(g);
-    return tf(d.x * r, -10 + d.y * r,
+    return tf(d.x * r, g.R.cy + d.y * r,
               (s.x / (g.R.rx || 1)) * 12, 0, Stage.seatScale(g.n));
   }
 
@@ -199,19 +199,19 @@ const Felt = (function () {
     return of > 1 ? Math.min(g.cw * 1.14, (room - g.cw) / (of - 1)) : 0;
   }
   const spreadX = (g, i, of) => (i - (of - 1) / 2) * spreadStep(g, of);
-  const spreadAt = (g, i, of) => tf(spreadX(g, i, of), -10, 0, 0, 1);
+  const spreadAt = (g, i, of) => tf(spreadX(g, i, of), g.R.cy, 0, 0, 1);
 
   /* The card the deck turned lies in the middle of the table, where a turned
      card lies. It comes down to the size of a card played, so the ring the
      trick makes around it can close in tight rather than reach the seats. */
   const heroH = (g) => (T && T.hero && T.hero.offsetHeight) || 98;
-  const heroAt = (g) => tf(0, -10, 0, 0, g.ch / heroH(g));
+  const heroAt = (g) => tf(0, g.R.cy, 0, 0, g.ch / heroH(g));
 
   // The way from the middle of the table out to a seat.
   function dirTo(g, p) {
-    const s = g.R.at(p);
-    const len = Math.max(1, Math.hypot(s.x, s.y));
-    return { x: s.x / len, y: s.y / len };
+    const s = g.R.at(p), y = s.y - g.R.cy;
+    const len = Math.max(1, Math.hypot(s.x, y));
+    return { x: s.x / len, y: y / len };
   }
 
   /* The cards played ring the turned card rather than pile onto it. Every card
@@ -246,14 +246,7 @@ const Felt = (function () {
     return ring;
   }
 
-  /* The name sits under its own pile, and hugs it: a name held a fixed way
-     down would be reaching into the seat below on a table of eight. */
-  function nameAt(el, g, p, own) {
-    const s = g.R.at(p), z = Stage.seatScale(g.n);
-    el.style.left = `calc(50% + ${own ? 0 : Math.round(s.x)}px)`;
-    el.style.top = `calc(50% + ${own ? Stage.fan(1, g.W, g.H).y - 76 : Math.round(s.y + g.ch * z / 2 + 19)}px)`;
-    if (!own) el.style.fontSize = z < 0.9 ? `${Math.max(10, Math.round(13 * z))}px` : '';
-  }
+  const nameAt = (el, g, p, own) => Stage.nameAt(el, g.R, p, own, g.n, g.W, g.H);
 
   /* ---------------- cards ---------------- */
 
@@ -353,7 +346,7 @@ const Felt = (function () {
     let i = 0;
     T.hand.forEach((el) => { own(el, handAt(g, i, false)); i += 1; });
     // Left where the deal turned it; layout lifts it to its perch from there.
-    if (T.hero) own(T.hero, tf(0, -10, 0, 0, 1.15));
+    if (T.hero) own(T.hero, tf(0, g.R.cy, 0, 0, 1.15));
     T.labels.forEach((el) => { if (el) { el.style.opacity = '1'; own(el, el.style.transform || ''); } });
     mount();
     head(r);
@@ -369,7 +362,7 @@ const Felt = (function () {
     if (!box) {
       const g = geom();
       box = Stage.head(stage, { round: ST.idx + 1, cards: r.cards, dealer: ST.seats[r.dealer].name,
-                                ringTop: g.H / 2 - g.R.ry - 56 }).box;
+                                ringTop: g.H / 2 + g.R.cy - g.R.ry - 56 }).box;
     }
     box.querySelectorAll('.deal-cap,.deal-status,.deal-tag').forEach((el) => { el.style.opacity = '1'; });
     const cap = box.querySelector('.deal-cap');
@@ -518,7 +511,7 @@ const Felt = (function () {
       nm.className = 'tname' + (gold ? ' took' : '');
       nm.textContent = text;
       nm.style.left = `calc(50% + ${Math.round(spreadX(g, i, row))}px)`;
-      nm.style.top = `calc(50% + ${Math.round(-10 + g.ch / 2 + 12 + (i % 2 ? 17 : 0))}px)`;
+      nm.style.top = `calc(50% + ${Math.round(g.R.cy + g.ch / 2 + 12 + (i % 2 ? 17 : 0))}px)`;
       nm.style.maxWidth = `${Math.max(40, Math.round(step * 2 - 8))}px`;
       T.stage.appendChild(nm);
     };
@@ -546,7 +539,7 @@ const Felt = (function () {
       T.hero.classList.add('slow');       // it has a place of its own to glide to
       T.hero.style.zIndex = spread ? '6' : '';
       at(T.hero, spread
-        ? tf(spreadX(g, 0, row), -10, 0, 0, g.cw / 86)
+        ? tf(spreadX(g, 0, row), g.R.cy, 0, 0, g.cw / 86)
         : heroAt(g));
     }
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
@@ -591,28 +584,6 @@ const Felt = (function () {
      range is the hand, the seat that may bid is turnSeat, the seat that may
      still change its mind is changeableSeat, and the one number the dealer may
      not call is forbiddenBid. */
-  /* How wide the row of numbers may lie. At a table of eight the two seats
-     either side of the reader keep their piles just where the row would
-     otherwise run, so it draws in and the numbers overlap each other. That
-     costs nothing: a thumb along them lifts each in turn, which is how they
-     are read anyway. */
-  function railRoom(g, size) {
-    const z = Stage.seatScale(g.n);
-    const t = 12 * Math.PI / 180;
-    const hh = ((g.cw * Math.sin(t) + g.ch * Math.cos(t)) * z) / 2;
-    const hw = ((g.cw * Math.cos(t) + g.ch * Math.sin(t)) * z) / 2;
-    const foot = g.F.at(0).y - 88;                  // the row stands on this line
-    const top = foot - size * 1.34;
-    let room = Math.min(g.W - 20, 400);
-    for (let p = 0; p < g.n; p++) {
-      if (p === me) continue;
-      const s = g.R.at(p);
-      if (s.y + hh <= top || s.y - hh >= foot) continue;   // that seat is not in the way
-      room = Math.min(room, 2 * Math.max(size, Math.abs(s.x) - hw - 6));
-    }
-    return room;
-  }
-
   function bidRail(r) {
     const rail = document.querySelector('#deal .felt-bids');
     if (!rail) return;
@@ -638,7 +609,7 @@ const Felt = (function () {
 
     const count = r.cards + 1;
     const size = g.W <= 420 ? 40 : 44;
-    const room = railRoom(g, size);
+    const room = Math.min(g.W - 20, 400);
     // Numbers step along at a fixed distance like the cards do, and like the
     // cards they overlap when there are a lot of them -- which is no trouble,
     // because a thumb passing over them lifts each in turn.
@@ -804,7 +775,7 @@ const Felt = (function () {
   function onPile(px, py) {
     if (!T || !T.table.size) return false;
     const g = geom();
-    const cx = px - g.W / 2, cy = py - g.H / 2 + 10;
+    const cx = px - g.W / 2, cy = py - g.H / 2 - g.R.cy;
     if (spread) return Math.abs(cy) < g.ch * 0.9 && Math.abs(cx) < g.W * 0.48;
     return Math.abs(cx) < g.cw * 1.15 && Math.abs(cy) < g.ch * 1.1;
   }

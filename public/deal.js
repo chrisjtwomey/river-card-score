@@ -110,7 +110,7 @@ const Deal = (function () {
       // not need that told slowly.
       const popStep = brief ? 16 : 40;
       const deckEls = [];
-      const deckRest = (i) => tf(0, -i * 0.9, (i - (stackN - 1) / 2) * 2.2, 180, 1);
+      const deckRest = (i) => tf(0, R.cy - i * 0.9, (i - (stackN - 1) / 2) * 2.2, 180, 1);
       for (let i = 0; i < stackN; i++) {
         const d = cardEl(null, 'deck');
         const rest = deckRest(i);
@@ -141,7 +141,7 @@ const Deal = (function () {
       const riffle = (at, into) => {
         const made = into || anims;
         deckEls.forEach((d, i) => {
-          const rest = deckRest(i), lift = -i * 0.9;
+          const rest = deckRest(i), lift = R.cy - i * 0.9;
           const left = i < half;
           const side = left ? -1 : 1;
           const j = left ? i : i - half;              // place within the half
@@ -202,14 +202,13 @@ const Deal = (function () {
       // ring, tightening as the hand grows. The table that carries on after
       // this scene asks the same question and gets the same fan.
       const F = Stage.fan(passes, W, H);
-      const fanY = F.y;
       const lastAt = [], myCards = [];
       let given = 0;
 
       for (let k = 0; k < passes; k++) {
         for (let step = 1; step <= n; step++) {       // left of the dealer first
           const p = (dealer + step) % n;
-          const { x, y } = seat(p);
+          const { x } = seat(p);
           // A seat only owns its cards when the deck is virtual. At a real
           // table every card is decoration, so they all land face up alike.
           const own = virtual && p === mine;
@@ -239,8 +238,8 @@ const Deal = (function () {
                            easing: calm ? 'ease-out' : 'cubic-bezier(.25,.8,.3,1)' };
           if (!calm) {
             (anims[anims.push(card.animate(
-              [{ transform: tf(0, 0, 0, 180, .9), offset: 0 },
-               { transform: tf(gx * 0.55, gy * 0.55 - 26, tilt * 0.6, up ? 90 : 180, 1.06), offset: .55 },
+              [{ transform: tf(0, R.cy, 0, 180, .9), offset: 0 },
+               { transform: tf(gx * 0.55, R.cy + (gy - R.cy) * 0.55 - 26, tilt * 0.6, up ? 90 : 180, 1.06), offset: .55 },
                { transform: landed, offset: 1 }], flight)) - 1]);
           } else {
             card.style.transform = landed;
@@ -264,7 +263,6 @@ const Deal = (function () {
 
       for (let step = 1; step <= n; step++) {          // the names, as each pile lands
         const p = (dealer + step) % n;
-        const { x, y } = seat(p);
         // Your own cards are named for what they are, above the fan. Every
         // other pile is named for whose it is, below it.
         const own = virtual && p === mine;
@@ -272,8 +270,7 @@ const Deal = (function () {
         name.className = 'dname' + (own ? ' mine' : '');
         name.textContent = own ? 'Your hand' : names[p];
         labels[p] = name;
-        name.style.left = `calc(50% + ${own ? 0 : x}px)`;
-        name.style.top = `calc(50% + ${own ? fanY - 76 : y + 56}px)`;
+        Stage.nameAt(name, R, p, own, n, W, H);
         stage.appendChild(name);
         (anims[anims.push(name.animate(
           [{ opacity: 0, transform: 'translate(-50%,6px)' }, { opacity: 1, transform: 'translate(-50%,0)' }],
@@ -320,12 +317,12 @@ const Deal = (function () {
       const turn = { duration: T.flip, delay: heroAt, fill: 'both',
                      easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.3)' };
       if (calm) {
-        hero.style.transform = tf(0, 0, 0, 0, 1.15);
+        hero.style.transform = tf(0, R.cy, 0, 0, 1.15);
         fade(hero, [{ opacity: 0 }, { opacity: 1 }], turn, anims);
       } else {
         (anims[anims.push(hero.animate(
-          [{ transform: tf(0, 0, 0, 180, .8) },
-           { transform: tf(0, virtual ? -10 : 0, 0, 0, 1.15) }], turn)) - 1]);
+          [{ transform: tf(0, R.cy, 0, 180, .8) },
+           { transform: tf(0, R.cy, 0, 0, 1.15) }], turn)) - 1]);
       }
 
       /* ---- the round line across the top, and the trump under it ----
@@ -336,7 +333,7 @@ const Deal = (function () {
         tag: virtual
           ? (upFace ? Stage.trumpLine(Game.suitOf(opts.upcard)) : 'No trumps')
           : (trumpK ? Stage.trumpLine(trumpK) : ''),
-        ringTop: H / 2 - ry - 56,              // the top card's top edge
+        ringTop: H / 2 + R.cy - ry - 56,       // the top card's top edge
       });
       anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'translateY(0)' }],

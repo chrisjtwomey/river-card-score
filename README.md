@@ -191,7 +191,9 @@ the last card, short enough that three of them are not a wait.
 With a virtual deck, a phone plays the round on the felt the deal lands on. It
 is the screen, not a flourish: the hand you were dealt is the fan in front of
 you, the card the deck turned lies in the middle, and the cards played ring it
-rather than pile onto it, so it is on show all round.
+rather than pile onto it, so it is on show all round. The table sits a little
+above the middle of the screen: your own hand takes the foot of it, and takes
+more room there than the round line takes at the head.
 
 - **Touch a card** and it lifts out of the fan and enlarges. **Run a thumb along
   the fan** and each card lifts in turn -- the overlap does not have to be aimed
@@ -223,9 +225,7 @@ rather than pile onto it, so it is on show all round.
   The other corner opens table talk.
 - **A table of many comes down in size.** Eight piles at full size do not go
   round a phone, so the piles, the stacks of tricks won and the names under
-  them shrink as seats are added, and the row of bid numbers takes whatever
-  room the seats either side of you leave it -- closing up and overlapping,
-  which costs nothing, because a thumb along them lifts each in turn.
+  them shrink as seats are added.
 - With **Animations** set to *Off* in the ⚙ menu the felt is drawn without the
   deal and without any movement. Everything is still reachable.
 
