@@ -238,10 +238,11 @@ that band.
   the card is played. A hand played out to nothing leaves its place, not a
   hole.
 - **A trick taken is said out loud**: *"Otter won that trick"* comes up under
-  the pile, so the card that took it is still there to see. Only when that has
-  been read are the cards gathered by whoever took them, and one card of the
-  trick stays on a little stack beside their seat. The stacks count the tricks
-  won.
+  the pile, so the card that took it is still there to see. It stays for two
+  seconds; only then are the cards gathered by whoever took them, and one card
+  of the trick stays on a little stack beside their seat. The stacks count the
+  tricks won. The table holds the trick a little longer than that before the
+  winner leads, so a lead never cuts the news short (`TRICK_HOLD`).
 - **Bidding** happens on the felt too: the numbers arc above your hand, under
   a heading of their own, and are picked up the same way -- touch to lift, tap
   again to call. Your own bid stays lit and can be changed until the next player bids.

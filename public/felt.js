@@ -31,7 +31,11 @@
 const Felt = (function () {
   const { cardEl, tf, faceOf, parts } = Stage;
 
-  const TOOK_HOLD = 1200;       // how long the trick just taken stays named
+  /* How long the trick just taken stays named before the cards are gathered to
+     whoever took it. The server holds the table on that trick for a little
+     longer still (TRICK_HOLD in lib/deck.js): the winner must not lead while
+     the news of the last one is still on the screen. */
+  const TOOK_HOLD = 2000;
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
