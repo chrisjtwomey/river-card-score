@@ -20,6 +20,7 @@ import android.os.PowerManager;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,6 +53,16 @@ public class NodeService extends Service {
   private PowerManager.WakeLock wakeLock;
   private final Handler tick = new Handler(Looper.getMainLooper());
   private String lastAddrs = null;
+  /* How often the wake lock is reconsidered. This is a Handler and not an
+     alarm, so it does not wake a sleeping phone by itself: it fires on the
+     next wake, which is exactly when the answer could have changed. */
+  private static final long WAKE_TICK = 5000;
+  private final Runnable holdOnlyWhileInUse = new Runnable() {
+    @Override public void run() {
+      syncWakeLock();
+      tick.postDelayed(this, WAKE_TICK);
+    }
+  };
   /* Android will not tell node what this phone's addresses are, so this does it
      every half minute. A phone joins a network, or starts sharing one of its
      own, long after the table is open. */
@@ -88,9 +99,15 @@ public class NodeService extends Service {
       nodeStarted = true;
       PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
       wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "UpTheRiver:node");
+      // Held or not held, never counted: the tick below asks the same question
+      // over and over, and a count would need every answer to be matched.
+      wakeLock.setReferenceCounted(false);
+      // The server has not answered yet, so nothing may be assumed idle.
       wakeLock.acquire();
       new Thread(this::runNode, "node-main").start();
     }
+    tick.removeCallbacks(holdOnlyWhileInUse);
+    tick.postDelayed(holdOnlyWhileInUse, WAKE_TICK);
     return START_STICKY;
   }
 
@@ -108,6 +125,10 @@ public class NodeService extends Service {
 
     setEnv("PORT", String.valueOf(PORT));
     setEnv("DATA_DIR", data.getAbsolutePath());
+    // Where the server says whether anybody is at a table. Last time's answer
+    // is no answer at all: it goes before node is asked the question again.
+    busyFile().delete();
+    setEnv("BUSY_FILE", busyFile().getAbsolutePath());
     // Where this phone leaves its own addresses for the server to read. It is
     // written before node starts, and again whenever it changes.
     writeLanAddrs();
@@ -158,8 +179,49 @@ public class NodeService extends Service {
   @Override
   public void onDestroy() {
     tick.removeCallbacks(keepAddrsFresh);
+    tick.removeCallbacks(holdOnlyWhileInUse);
     if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
     super.onDestroy();
+  }
+
+  /* ---- the phone stays awake for a table, not for an app that is open ---- */
+
+  /**
+   * The wake lock keeps the CPU running with the screen off, which is what a
+   * table needs: the other phones must still be answered while this one is in
+   * a pocket. It used to be taken when the server started and held until the
+   * process died, so a table nobody had touched since last night held the
+   * phone awake all night.
+   *
+   * The server says whether anybody is at a table, and that is what the lock
+   * follows. It answers "yes" for a while after the last phone goes, so a
+   * network that drops for a moment does not put the table to sleep.
+   *
+   * Asleep, this does not run at all -- and it does not need to. The lock is
+   * already off, and the packet that brings a phone back wakes the CPU by
+   * itself; this then fires on that wake and takes the lock again.
+   */
+  private void syncWakeLock() {
+    if (wakeLock == null) return;
+    boolean inUse = tableInUse();
+    if (inUse && !wakeLock.isHeld()) wakeLock.acquire();
+    else if (!inUse && wakeLock.isHeld()) wakeLock.release();
+  }
+
+  private File busyFile() {
+    return new File(getFilesDir(), "table-busy");
+  }
+
+  /* No answer means the server has not given one yet -- it is starting, or it
+     is too old to know the question. Hold the phone awake: an idle table that
+     stays awake is a flat battery, but a live table that sleeps is a game
+     nobody can play. */
+  private boolean tableInUse() {
+    try (InputStream in = new FileInputStream(busyFile())) {
+      return in.read() != '0';
+    } catch (IOException e) {
+      return true;
+    }
   }
 
   /* ---- the addresses, which only Java may ask for ---- */

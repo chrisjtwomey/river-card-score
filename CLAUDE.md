@@ -113,7 +113,7 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
 
 ## Working and testing
 
-- `npm test` runs `test.js` (whole games over WebSockets, ports 8899–8903) and
+- `npm test` runs `test.js` (whole games over WebSockets, ports 8899–8905) and
   `test-pages.js` (pages and scenes in a fake DOM). **Both must be green after every
   change.** Add a check for every rule you add or fix; `test.js` has a pure-rules
   section near the top, `test-pages.js` has `playPage`/`loadPage` for screens.

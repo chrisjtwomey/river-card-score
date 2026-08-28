@@ -139,6 +139,9 @@ function broadcast(room) {
   // A table in play outlives the server it is on: this is the one moment
   // something about it has changed, so this is where it is written down.
   Tables.save(room);
+  // Somebody is at this table, or has just left it. Whoever is holding the
+  // machine awake for the table wants to know either way.
+  sayBusy();
   // Whoever is on play now, this is where a bot finds out it is them.
   Bots.nudge(room);
 }
@@ -367,6 +370,33 @@ setInterval(() => {
     ws.ping();
   });
 }, 30000);
+
+/* Whether anybody is at a table on this server, for whoever is holding the
+   machine awake on its behalf. The phone app takes a wake lock so the table
+   keeps answering with the screen off, and a table nobody is at does not need
+   one: it would hold the phone awake all night for a game that ended hours
+   ago. Written to BUSY_FILE, and only when the answer changes.
+
+   A socket that has just gone does not make a table idle. A phone whose
+   network drops is coming back in a moment, and the table must not go to
+   sleep underneath it, so the last change to any table counts for a while
+   after it. */
+const BUSY_FILE = process.env.BUSY_FILE || '';
+const BUSY_QUIET = Math.max(0, Number(process.env.BUSY_QUIET_MS) || 5 * 60e3);
+let saidBusy = null;
+function sayBusy() {
+  if (!BUSY_FILE) return;
+  let newest = 0;
+  rooms.forEach((room) => { if (room.lastSeen > newest) newest = room.lastSeen; });
+  const busy = wss.clients.size > 0 || (Date.now() - newest) < BUSY_QUIET;
+  if (busy === saidBusy) return;
+  saidBusy = busy;
+  try { fs.writeFileSync(BUSY_FILE, busy ? '1' : '0'); }
+  catch (e) { console.warn('[busy] cannot say whether the table is in use:', e.message); }
+}
+// Often enough that a table wakes up promptly, rarely enough to be nothing.
+setInterval(sayBusy, Math.max(200, Math.min(30000, Math.round(BUSY_QUIET / 2)))).unref();
+sayBusy();
 
 setInterval(() => {                       // drop idle rooms, memory and disk alike
   const cutoff = Date.now() - KEEP_HOURS * 3600e3;

@@ -407,6 +407,11 @@ browser, for anyone who prefers it.
 While a table is open the app shows a notification, so Android leaves the server
 running with the screen off. **Stop** on that notification closes the table.
 
+The phone is held awake for a table that is being played, not for one that is
+merely open: once every phone has gone and nothing has happened for five
+minutes, it is allowed to sleep, and the next player to arrive wakes it. A game
+left open overnight no longer costs a night of battery.
+
 **Android asks for the local network permission on first run. Say yes.** Without
 it Android 16 and later cut the app off from the Wi-Fi, and no other phone can
 reach the table.

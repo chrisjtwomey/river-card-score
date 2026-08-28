@@ -1075,6 +1075,44 @@ function client(name, url) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 
+  /* ---- the table says when it is in use ----
+
+     The phone that hosts a game holds a wake lock, so the table keeps
+     answering with the screen off. It used to hold it from the moment the
+     server started until the process died: a table nobody had touched since
+     last night kept the phone awake all night. The server writes down whether
+     anybody is at a table, and the app takes the lock only while they are. */
+  {
+    console.log('\n-- the table says whether anybody is at it --');
+    const port8 = PORT + 6;
+    const dir = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-busy-'));
+    const busy = path2.join(dir, 'table-busy');
+    const url = `ws://127.0.0.1:${port8}/ws`;
+    // A quiet table is one nobody has touched for half a second, here.
+    const srv8 = spawn('node', [path + '/server.js'],
+      { env: { ...process.env, PORT: port8, NO_TLS: '1', DATA_DIR: dir, BUSY_FILE: busy, BUSY_QUIET_MS: '500' },
+        stdio: 'ignore' });
+    await wait(700);
+    const says = () => { try { return fs.readFileSync(busy, 'utf8'); } catch (e) { return '(nothing)'; } };
+
+    ok(says() === '0', 'a server with no table on it is not in use  got ' + says());
+    const one = client('busyone', url); await one.ready;
+    one.send({ t: 'create' }); await wait(200);
+    ok(says() === '1', 'a screen at a table is  got ' + says());
+
+    one.ws.close(); await wait(250);
+    ok(says() === '1', 'a phone that has just gone does not put the table to sleep  got ' + says());
+    await wait(700);
+    ok(says() === '0', 'but a table nobody comes back to falls quiet  got ' + says());
+
+    const two = client('busytwo', url); await two.ready;
+    two.send({ t: 'create' }); await wait(200);
+    ok(says() === '1', 'and a table somebody comes to is in use again  got ' + says());
+    two.ws.close();
+    srv8.kill();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
   /* ---- a phone that goes, and a phone that comes back ----
 
      A game was lost to this. A player's browser held one table, a second table
