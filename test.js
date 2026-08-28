@@ -1051,6 +1051,13 @@ function client(name, url) {
     bidder.send({ t: 'bid', v: 1 }); await wait(150);
     ok(h.state.rounds[0].bids[first] === 1, 'a game is under way  got ' + JSON.stringify(h.state.rounds[0].bids));
 
+    /* A burst of changes is written down once, when it is over, and what is
+       written is the newest of them -- not whichever one the gap fell on. */
+    h.send({ t: 'chat', text: 'one' });
+    ann.send({ t: 'chat', text: 'two' });
+    ben.send({ t: 'chat', text: 'three' });
+    await wait(400);
+
     // the phone hosting it is stopped, and started again
     h.ws.close(); ann.ws.close(); ben.ws.close();
     srv7.kill(); await wait(400);
@@ -1069,6 +1076,9 @@ function client(name, url) {
        'the phone that has not come back yet is away, not still at the table');
     ok(Array.isArray(back.state.hand) && back.state.hand.length === back.state.rounds[0].cards,
        'the hand that was dealt is the hand that comes back  got ' + JSON.stringify(back.state.hand));
+    ok(back.state.chat.map((c) => c.text).join(',') === 'one,two,three',
+       'and a burst of changes is written down whole, newest and all  got '
+       + JSON.stringify(back.state.chat.map((c) => c.text)));
 
     back.ws.close();
     srv7.kill();
