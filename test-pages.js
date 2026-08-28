@@ -1595,6 +1595,25 @@ part('the deal, with motion on');
   ok(hero.length >= 1, 'and a card is turned for trumps');
   const ends = asked.map((a) => (a.opts.delay || 0) + (a.opts.duration || 0));
   ok(Math.max(...ends) > 3000, 'the whole thing takes a few seconds  got ' + Math.round(Math.max(...ends)) + 'ms');
+
+  /* ---- the card of the player to act ----
+
+     It peeks up, shivers and lies down again, once every three seconds. That
+     was one animation of three seconds repeating for ever, two seconds of it
+     holding the card where it already was, and the phone drew every frame of
+     it: a whole core, for the whole of the bidding. The peek is the animation
+     now and the wait between peeks is a timer, so nothing is drawn while the
+     card lies still. Anything on this screen that repeats for ever costs the
+     same, so none of it may. */
+  const before = asked.length;
+  L.Stage.S.live.settled = true;                  // the cards have landed
+  L.Deal.update({ turn: 2, bids: [null, null, null] });
+  const peek = asked.slice(before);
+  ok(peek.length >= 1, 'the card of the player to act moves  got ' + peek.length + ' animations');
+  ok(peek.every((a) => a.opts.duration <= 1200),
+     'and the peek is a second, not three  got ' + JSON.stringify(peek.map((a) => a.opts.duration)));
+  ok(asked.every((a) => a.opts.iterations === undefined || Number.isFinite(a.opts.iterations)),
+     'nothing on the deal repeats for ever: a phone would draw it for ever');
 }
 
 /* ---- tapping the deal away ----

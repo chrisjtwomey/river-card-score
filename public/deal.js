@@ -471,21 +471,27 @@ const Deal = (function () {
   // Closes a held scene, if one is open. With a kind, 'deal' or 'finale', it
   // closes only that one and leaves the other alone.
 
-  // The card of the player to act breathes, so the table can see whose turn it
-  // is from across the room. The landing used the Web Animations API, and that
-  // owns the transform, so this has to be an animation too, not a CSS class.
+  /* The card of the player to act breathes, so the table can see whose turn it
+     is from across the room. The landing used the Web Animations API, and that
+     owns the transform, so this has to be an animation too, not a CSS class.
+
+     The peek is a second of movement and then stillness until the next one.
+     The stillness is a timer, not part of the animation: written as one
+     three-second animation repeating for ever, the phone drew every frame of
+     the two seconds in which the card was already lying still, and a whole
+     core went on the bidding. Nothing is drawn between peeks now. */
   function applyTurn() {
     if (!S.live || S.live.kind !== 'deal' || !S.live.settled) return;
     if (S.live.turnAnim) { try { S.live.turnAnim.cancel(); } catch (e) {} S.live.turnAnim = null; }
     const p = S.live.turn;
     const card = (p === null || p === undefined) ? null : S.live.cards[p];
-    if (!card || S.live.calm) return;                 // reduced motion: the label is enough
+    if (!card || S.live.calm || !card.animate) return;   // reduced motion: the label is enough
     // The card tips up on its edge, shivers while it is up, settles, then
     // waits. Written in milliseconds, because that is how it is judged.
     const UP = 182, SHIVER_IN = 280, SHIVER_OUT = 784, SIDE = 84, DOWN_AT = 868, FLAT = 1050;
-    const D = 3000;                                 // one peek every three seconds
+    const EVERY = 3000;                             // one peek every three seconds
     const at = S.live.landedAt[p];
-    const o = (ms) => Number((ms / D).toFixed(4));
+    const o = (ms) => Number((ms / FLAT).toFixed(4));
     const rest = 'drop-shadow(0 5px 9px rgba(0,0,0,.45)) drop-shadow(0 0 5px rgba(255,255,255,.22))';
     const up = 'drop-shadow(0 16px 18px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(255,255,255,.4))';
     const tip = `${at} translateY(-11px) rotateX(-26deg)`;
@@ -509,15 +515,25 @@ const Deal = (function () {
       });
     }
     frames.push({ transform: tip, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
-    frames.push({ transform: at, offset: o(FLAT) });
     frames.push({ transform: at, offset: 1 });
     glow.push({ filter: up, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
-    glow.push({ filter: rest, offset: o(FLAT) });
     glow.push({ filter: rest, offset: 1 });
-    const opt = { duration: D, iterations: Infinity };
-    const set = [card.animate(frames, opt)];
-    card.querySelectorAll('.face').forEach((f) => set.push(f.animate(glow, opt)));
-    S.live.turnAnim = { cancel: () => set.forEach((a) => a.cancel()) };
+
+    /* Nothing fills forwards: the peek ends and the card is left to the
+       landing, which still holds it where it came down. */
+    let set = [], timer = null;
+    const drop = () => set.forEach((a) => { try { a.cancel(); } catch (e) {} });
+    const mine = { cancel: () => { clearTimeout(timer); drop(); } };
+    const peek = () => {
+      // The scene may have gone, or the turn moved on, since this was set.
+      if (!S.live || S.live.turnAnim !== mine) return;
+      drop();
+      set = [card.animate(frames, { duration: FLAT })];
+      card.querySelectorAll('.face').forEach((f) => set.push(f.animate(glow, { duration: FLAT })));
+      timer = setTimeout(peek, EVERY);
+    };
+    S.live.turnAnim = mine;
+    peek();
   }
 
   /* The finish, in three moves:
