@@ -250,9 +250,10 @@ that band.
 - The corner buttons are the way off the table: **Scorecard** drops the felt to
   the page underneath, and **Back to the table** brings it back. That page is
   the scorecard and nothing else -- the round, the standings, and the card,
-  open, never folded away -- with **Leave the game** at the foot. One panel
-  appears on it only when the table needs a decision from that phone: a vote
-  to answer, or a seat with nobody behind it that the table is stopped on.
+  open, never folded away -- read as one page rather than a stack of cards,
+  with **Leave the game** across the foot of it. One panel appears on it only
+  when the table needs a decision from that phone: a vote to answer, or a seat
+  with nobody behind it that the table is stopped on.
   The other corner opens table talk.
 - **A table of many comes down in size.** Eight piles at full size do not go
   round a phone, so the piles, the stacks of tricks won and the names under

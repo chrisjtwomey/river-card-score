@@ -795,7 +795,24 @@ body.showing summary{pointer-events:auto}
 
 /* Leaving the table, at the top of the player page, where the host's
    "You run this table" panel sits. */
-.leaverow{justify-content:flex-start}
+/* The way out of the game is as wide as the page it stands at the foot of. */
+.leaverow{justify-content:stretch}
+.leaverow .btn{width:100%}
+
+/* ---------- a page, not a stack of cards ----------
+   The scorecard page is one page: its sections are sections of a sheet, with
+   no corners of their own and no line between them. The border box stays, so
+   nothing shifts when a border does mean something -- the panel goes gold when
+   the table is on you, and again when the game is over -- and the standings
+   keep their shadow, because they stick and have to lift off what runs under
+   them. */
+body.sheet .panel{border-radius:0;border-color:transparent;box-shadow:none}
+body.sheet .turn-panel.mine,
+body.sheet .turn-panel.amend,
+body.sheet .winner-panel{border-color:var(--gold)}
+body.sheet .turn-panel.mine{box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+body.sheet .winner-panel{box-shadow:0 0 0 2px rgba(184,134,43,.2)}
+body.sheet .standings-panel{box-shadow:var(--shadow)}
 /* On a virtual table the scorecard is the page: it is never folded away. */
 .scorecard-panel.pinned>summary{display:none}
 
