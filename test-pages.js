@@ -46,6 +46,13 @@ function makeDom(W, H) {
       while ((m = re.exec(String(v)))) { const e = new El(m[1]); e.className = m[2]; this.appendChild(e); }
     }
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; }
+    insertBefore(c, ref) {
+      c.parentNode = this;
+      const i = ref ? this.children.indexOf(ref) : -1;
+      if (i < 0) this.children.push(c); else this.children.splice(i, 0, c);
+      return c;
+    }
+    get firstChild() { return this.children[0] || null; }
     append(...cs) { cs.forEach((c) => this.appendChild(c)); }
     remove() { if (!this.parentNode) return; const i = this.parentNode.children.indexOf(this); if (i >= 0) this.parentNode.children.splice(i, 1); this.parentNode = null; }
     addEventListener(t, f) { (this._on || (this._on = {}))[t] = ((this._on || {})[t] || []).concat([f]); }
@@ -853,6 +860,18 @@ function bidding(o) {
       const rail = { l: -half, r: half, t: foot - size * 1.34, b: foot };
       ok(over({ l: -cw / 2, r: cw / 2, t: mid - ch / 2, b: mid + ch / 2 }, rail) === 0,
          `${tag}: and clear of the turned card`);
+      /* And clear of the seats either side of the reader, whose piles hang at
+         exactly the height the row wants. The fan carries the row down with
+         it, so how deep the ring is says how far down both of them lie -- on a
+         screen with the room for it. A short one has none: the fan can go no
+         lower without reaching the line along the bottom. */
+      const room = L.Stage.fan(cards, W, H).y < H / 2 - 92;
+      let onRail = 0;
+      Object.keys(bySeat).forEach((q) => {
+        if (Number(q) === me) return;
+        bySeat[q].forEach((a) => { onRail = Math.max(onRail, over(a, rail)); });
+      });
+      ok(!room || onRail === 0, `${tag}: and off the piles either side (${Math.round(onRail)}px²)`);
     }
   }
 }
@@ -861,6 +880,37 @@ function bidding(o) {
 {
   const t = bidding({ turn: 1, hooks: { watch: true } });
   ok(t.rail().hidden && t.chips().length === 0, 'a watching window is offered no bid');
+}
+
+/* A hand played out to nothing left a hole in the table. The last card of a
+   hand lies on a dashed outline of itself, and the outline stays when the card
+   goes -- so the place a hand had is still a place, and nothing has to appear
+   out of nowhere at the moment it empties. */
+{
+  const n = 4, cards = 5, me = 1, W = 412, H = 860;
+  const draw = (left) => {
+    const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: 0, bids: Array(n).fill(1) });
+    made.ST.hand = made.hands[me].slice(0, left);
+    made.ST.play.counts = Array(n).fill(left);
+    const L = load(W, H, 'off');
+    L.Felt.sync(made.ST, me, { send: () => {} });
+    const stage = L.dom.document.querySelector('.deal-stage');
+    return { on: stage.querySelectorAll('.dplace').filter((e) => !e.hidden).map(spotOf),
+             cards: stage.querySelectorAll('.dcard') };
+  };
+
+  const spare = draw(3);
+  ok(spare.on.length === 0, `no outline while a hand has cards to spare (${spare.on.length})`);
+  const last = draw(1);
+  ok(last.on.length === n, `every seat's last card lies on an outline (${last.on.length})`);
+  ok(last.on.every((s) => last.cards.some((e) => {
+    const c = spotOf(e);
+    return c && Math.abs(c.x - s.x) < 0.5 && Math.abs(c.y - s.y) < 0.5;
+  })), 'each one exactly under the card standing on it, so it is not seen yet');
+  const empty = draw(0);
+  ok(empty.on.length === n, `and they stay when the hands are played out (${empty.on.length})`);
+  ok(empty.on.every((s, i) => Math.abs(s.x - last.on[i].x) < 0.5 && Math.abs(s.y - last.on[i].y) < 0.5),
+    'in the same places, so nothing moves as the last cards go');
 }
 
 part('off the table, and on to the next round');

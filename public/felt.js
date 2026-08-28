@@ -289,7 +289,7 @@ const Felt = (function () {
     stage.innerHTML = '';
     const p = ST.play;
     T = { stage, piles: [], labels: [], hero: null, hand: new Map(), table: new Map(),
-          slots: [], won: [], heldWinner: null, shown: '' };
+          slots: [], places: [], won: [], heldWinner: null, shown: '' };
     held = -1; drag = null; spread = false;
 
     const g0 = geom();
@@ -334,7 +334,7 @@ const Felt = (function () {
   function adopt(ctx, r) {
     T = { stage: ctx.stage, piles: (ctx.piles || []).map((a) => (a || []).slice()),
           labels: ctx.labels || [], hero: ctx.hero, hand: new Map(), table: new Map(),
-          slots: [], won: [], heldWinner: null, shown: '' };
+          slots: [], places: [], won: [], heldWinner: null, shown: '' };
     held = -1; drag = null; spread = false;
     const mineCards = T.piles[me] || [];
     (ST.hand || []).forEach((c, i) => { if (mineCards[i]) T.hand.set(c, mineCards[i]); });
@@ -494,6 +494,8 @@ const Felt = (function () {
       T.slots.push({ card: c, el, x: g.seat.x + spot.x, y: spot.y, i });
     });
 
+    places(g, r, hand.length);
+
     const taken = heldTrick(p);
     const gone = !!taken && swept === trickSig(taken);
     const shown = p && p.trick.length ? p.trick : (taken && !gone ? taken.trick : []);
@@ -543,6 +545,30 @@ const Felt = (function () {
         : heroAt(g));
     }
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
+  }
+
+  /* Where a hand was. A seat playing its last card leaves a hole in the table
+     -- suddenly nothing where a hand has been all round -- so the last card of
+     a hand is played off a dashed outline of itself, and the outline stays
+     until the round does not. It is drawn only under that last card, so it is
+     never seen between cards and never has to appear from nowhere. */
+  function places(g, r, mine) {
+    for (let q = 0; q < g.n; q++) {
+      let el = T.places[q];
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'dplace';
+        // First on the stage: every card lies over it, whatever its z-index.
+        T.stage.insertBefore(el, T.stage.firstChild);
+        T.places[q] = el;
+      }
+      const left = q === me ? mine : (T.piles[q] || []).length;
+      el.hidden = left > 1;
+      if (el.hidden) continue;
+      if (q === me) { at(el, handAt(g, 0, false)); continue; }
+      const h = Stage.pile(g.R, Stage.fan(r.cards, g.W, g.H), q, 0, g.n);
+      at(el, tf(h.x, h.y, h.tilt, 0, h.z));
+    }
   }
 
   // What each pile is called, which cards you may play, and the line at the

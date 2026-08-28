@@ -45,12 +45,14 @@ const Stage = (function () {
      takes more room there than the round line takes at the head, so the table
      sits a little above the middle: it has to be in the middle of the band
      between those two, which is not the middle of the screen. */
+  // How deep the ring is. A wider screen gives it more room, so the piles stand
+  // clear of the round line above and the turned card in the middle; a phone
+  // has none to spare and keeps the tighter ring. The fan below asks this too.
+  const ringRy = (W, H) => Math.min(H * 0.27, W < 560 ? 160 : 192);
+
   function ring(n, anchor, W, H) {
     const rx = Math.min(W * 0.33, 250);
-    // A wider screen gives the ring more room, so the piles stand clear of the
-    // round line above and the turned card in the middle. A phone has none to
-    // spare, so it keeps the tighter ring.
-    const ry = Math.min(H * 0.27, W < 560 ? 160 : 192);
+    const ry = ringRy(W, H);
     const cy = -Math.round(Math.min(H * 0.035, 30));
     const at = (p) => {
       const a = (Math.PI / 2) + ((((p - anchor) % n) + n) % n) * 2 * Math.PI / n;
@@ -104,10 +106,14 @@ const Stage = (function () {
      is given. `at(i)` answers in offsets from the middle of the fan, so a caller
      can hang it off a seat.  */
   function fan(count, W, H) {
-    const cardW = W <= 420 ? 52 : 64;             // .dcard, and its narrow rule
-    // The hand sits below the ring, not in it: at a full table the seats either
-    // side reach down far enough to clip a fan left at seat height.
-    const y = Math.min(H * 0.34, 240);
+    const cardW = cardSize(W).w;
+    /* The hand sits below the ring, not in it, and well below: at a full table
+       the seats either side of the reader reach down to seat height, and the
+       row of bid numbers that goes above the fan runs at exactly that height.
+       So it is the ring's own depth that says how far down the fan lies -- a
+       deeper ring pushes it further -- and on a short screen no further than
+       leaves the outer cards of the fan clear of the line along the bottom. */
+    const y = Math.min(H * 0.37, ringRy(W, H) * 1.65, H / 2 - 92);
     const room = Math.min(W * 0.86, 340);
     const step = count > 1 ? Math.min(cardW * 0.62, (room - cardW) / (count - 1)) : 0;
     // The whole fan turns through 34 degrees at most, however many cards are in

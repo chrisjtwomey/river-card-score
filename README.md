@@ -192,8 +192,9 @@ With a virtual deck, a phone plays the round on the felt the deal lands on. It
 is the screen, not a flourish: the hand you were dealt is the fan in front of
 you, the card the deck turned lies in the middle, and the cards played ring it
 rather than pile onto it, so it is on show all round. The table sits a little
-above the middle of the screen: your own hand takes the foot of it, and takes
-more room there than the round line takes at the head.
+above the middle of the screen, and your own hand well below it: the seats
+either side of you keep their piles at seat height, and the row of bid numbers
+that goes above your hand would run at exactly that height.
 
 - **Touch a card** and it lifts out of the fan and enlarges. **Run a thumb along
   the fan** and each card lifts in turn -- the overlap does not have to be aimed
@@ -203,6 +204,10 @@ more room there than the round line takes at the head.
   already lifted is played by tapping it again, so nothing needs a drag.
 - A card you may not play is dimmed, and says why if you try: it shakes, keeps
   its place, and the line at the bottom gives the reason.
+- **The place a hand had stays.** The last card of a hand -- yours, or any
+  seat's pile -- lies on a dashed outline of itself, and the outline stays when
+  the card is played. A hand played out to nothing leaves its place, not a
+  hole.
 - **Tap the middle** and the pile separates into a row, every card under the
   name of whoever played it, the one taking the trick in gold, and the turned
   card first because it is the bottom of that pile. The names take two lines,

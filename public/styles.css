@@ -576,6 +576,17 @@ body.host .toast .note{font-size:19px}
 @media (max-width:420px){.bidchip{font-size:17px;border-radius:11px}}
 @media (prefers-reduced-motion: reduce){.bidchip{transition:none}}
 
+/* Where a hand was. A hand played out to nothing left a hole in the table, so
+   the last card of a hand lies on an outline of itself and the outline stays. */
+.deal.table .dplace{
+  position:absolute;left:50%;top:50%;width:64px;height:90px;margin:-45px 0 0 -32px;
+  border:2px dashed rgba(255,255,255,.17);border-radius:9px;
+  z-index:0;pointer-events:none;
+  transition:transform .14s cubic-bezier(.25,.85,.3,1);
+}
+.deal.table.still .dplace{transition:none}
+@media (prefers-reduced-motion: reduce){.deal.table .dplace{transition:none}}
+
 /* the tricks a seat has won, in a little stack by its name */
 .deal.table .dcard.gone .face{box-shadow:0 3px 9px rgba(0,0,0,.45)}
 /* Read out, every card in the pile is named for whoever played it. The names
@@ -749,6 +760,7 @@ body.host .toast .note{font-size:19px}
 
 @media (max-width:420px){
   .dcard{width:52px;height:74px;margin:-37px 0 0 -26px}
+  .deal.table .dplace{width:52px;height:74px;margin:-37px 0 0 -26px}
   .dcard .front .big{font-size:26px}
   .dcard.hero{width:70px;height:98px;margin:-49px 0 0 -35px}
   .deal-doing{top:calc(50% - 72px)}
