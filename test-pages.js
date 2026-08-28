@@ -626,7 +626,8 @@ function bidding(o) {
   L.Felt.sync(made.ST, me, Object.assign({ send: (m) => sends.push(m) }, o && o.hooks));
   const overlay = L.dom.document.getElementById('deal');
   const F = L.Stage.fan(cards, W, H);
-  const size = W <= 420 ? 40 : 44;
+  const B = L.Stage.bidRow(W);
+  const size = B.size;
   const count = cards + 1;
   const room = Math.min(W - 20, 400);
   const step = count > 1 ? Math.min(size + 6, (room - size) / (count - 1)) : 0;
@@ -637,7 +638,8 @@ function bidding(o) {
            // where a thumb has to land to be on that number
            spot: (v) => ({ pointerId: 1, button: 0,
                            clientX: W / 2 + arc.off(v) * step,
-                           clientY: H / 2 + F.at(0).y - 88 - size / 2 }),
+                           clientY: H / 2 + F.at(0).y - B.foot - size / 2 }),
+           head: () => (overlay.querySelector('.bidname') || null),
            hint: () => (overlay.querySelector('.felt-hint') || {}).textContent || '' };
 }
 
@@ -648,6 +650,9 @@ function bidding(o) {
   ok(t.chips().length === t.cards + 1, `one for every possible bid (${t.chips().length})`);
   ok(t.chips().map((c) => c.textContent).join(',') === '0,1,2,3,4,5', 'nought to the hand size');
   ok(/How many of the 5 tricks/.test(t.hint()), 'and it asks: ' + JSON.stringify(t.hint()));
+  ok(!!t.head() && t.head().textContent === 'Your bid', 'the row is named, the way the hand is');
+  ok(Number(/([\d]+)px/.exec(t.head().style.bottom)[1]) >= t.L.Stage.bidRow(t.W).up,
+    'and stands clear of a number lifted under a thumb');
   // the numbers are picked up like the cards: a touch lifts one, a tap on the
   // one already up calls it
   const at3 = t.spot(3);
@@ -675,6 +680,7 @@ function bidding(o) {
 {
   const t = bidding({ turn: 2 });
   ok(t.rail().hidden && t.chips().length === 0, 'no numbers when it is not your turn');
+  ok(!t.head(), 'and no heading over them');
   ok(/Waiting for/.test(t.hint()), 'and it says who is bidding: ' + JSON.stringify(t.hint()));
 }
 
@@ -797,7 +803,7 @@ function bidding(o) {
   const over = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l))
                        * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
 
-  for (const [W, H] of [[360, 640], [412, 860], [500, 860], [760, 1000]]) {
+  for (const [W, H] of [[360, 640], [412, 860], [412, 915], [500, 860], [760, 1000]]) {
     for (const n of [2, 4, 6, 8]) {
       const cards = Math.min(6, Game.maxCardsFor(n));
       const me = 0;
@@ -862,10 +868,11 @@ function bidding(o) {
          `${tag}: and clear of the turned card`);
       /* And clear of the seats either side of the reader, whose piles hang at
          exactly the height the row wants. The fan carries the row down with
-         it, so how deep the ring is says how far down both of them lie -- on a
-         screen with the room for it. A short one has none: the fan can go no
-         lower without reaching the line along the bottom. */
-      const room = L.Stage.fan(cards, W, H).y < H / 2 - 92;
+         it, and both are put in the middle of the band under the piles -- on a
+         screen with the room for it. A short one has none: the block is bigger
+         than the band, and the fan can go no lower without reaching the line
+         along the bottom. */
+      const room = !L.Stage.fan(cards, W, H).pressed;
       let onRail = 0;
       Object.keys(bySeat).forEach((q) => {
         if (Number(q) === me) return;
@@ -874,6 +881,28 @@ function bidding(o) {
       ok(!room || onRail === 0, `${tag}: and off the piles either side (${Math.round(onRail)}px²)`);
     }
   }
+}
+
+/* Your hand, the heading that names it, the row of numbers and the heading over
+   that are one block, and the block goes in the band between the piles either
+   side of the reader and the line along the bottom of the screen. */
+{
+  const W = 412, H = 915, n = 8, cards = 6, me = 0;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: me });
+  const L = load(W, H, 'off');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const stage = L.dom.document.getElementById('deal').querySelector('.deal-stage');
+  const F = L.Stage.fan(cards, W, H), B = L.Stage.bidRow(W), c = L.Stage.cardSize(W);
+  const topOf = (el) => Number(/([-\d]+)px/.exec(el.style.top)[1]);
+  const names = stage.querySelectorAll('.dname').filter((e) => !e.classList.contains('mine'));
+  const lowest = Math.max(...names.map(topOf)) + 15;   // a name stands about this tall
+  const head = F.at(0).y - B.foot - B.head - 15;       // the top of the block
+  const foot = F.at(0).y + c.h / 2;                    // and its lowest card
+  const line = H / 2 - 76;                             // the line along the bottom
+  ok(head > lowest, `the block starts below the piles either side (${Math.round(head)} > ${Math.round(lowest)})`);
+  ok(foot < line, `and ends above the line along the bottom (${Math.round(foot)} < ${Math.round(line)})`);
+  ok(Math.abs((head - lowest) - (line - foot)) < 24,
+    `with what is left over shared between its two ends (${Math.round(head - lowest)} / ${Math.round(line - foot)})`);
 }
 
 // a watching window has no numbers

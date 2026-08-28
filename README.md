@@ -192,9 +192,11 @@ With a virtual deck, a phone plays the round on the felt the deal lands on. It
 is the screen, not a flourish: the hand you were dealt is the fan in front of
 you, the card the deck turned lies in the middle, and the cards played ring it
 rather than pile onto it, so it is on show all round. The table sits a little
-above the middle of the screen, and your own hand well below it: the seats
-either side of you keep their piles at seat height, and the row of bid numbers
-that goes above your hand would run at exactly that height.
+above the middle of the screen, and your own hand well below it. Between the
+piles either side of you and the line along the bottom there is a band, and
+what stands in it -- your hand, the heading that names it, and while the
+bidding is on the row of numbers and its own heading -- goes in the middle of
+that band.
 
 - **Touch a card** and it lifts out of the fan and enlarges. **Run a thumb along
   the fan** and each card lifts in turn -- the overlap does not have to be aimed
@@ -217,9 +219,9 @@ that goes above your hand would run at exactly that height.
   been read are the cards gathered by whoever took them, and one card of the
   trick stays on a little stack beside their seat. The stacks count the tricks
   won.
-- **Bidding** happens on the felt too: the numbers arc between the turned card
-  and your fan and are picked up the same way -- touch to lift, tap again to
-  call. Your own bid stays lit and can be changed until the next player bids.
+- **Bidding** happens on the felt too: the numbers arc above your hand, under
+  a heading of their own, and are picked up the same way -- touch to lift, tap
+  again to call. Your own bid stays lit and can be changed until the next player bids.
   The number screw the dealer forbids is struck through.
 - The corner buttons are the way off the table: **Scorecard** drops the felt to
   the page underneath, and **Back to the table** brings it back. That page is

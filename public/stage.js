@@ -49,11 +49,14 @@ const Stage = (function () {
   // clear of the round line above and the turned card in the middle; a phone
   // has none to spare and keeps the tighter ring. The fan below asks this too.
   const ringRy = (W, H) => Math.min(H * 0.27, W < 560 ? 160 : 192);
+  // And how far above the middle of the screen it sits. The fan below asks
+  // this too, to know what room is left under the table.
+  const ringCy = (H) => -Math.round(Math.min(H * 0.035, 30));
 
   function ring(n, anchor, W, H) {
     const rx = Math.min(W * 0.33, 250);
     const ry = ringRy(W, H);
-    const cy = -Math.round(Math.min(H * 0.035, 30));
+    const cy = ringCy(H);
     const at = (p) => {
       const a = (Math.PI / 2) + ((((p - anchor) % n) + n) % n) * 2 * Math.PI / n;
       return { x: Math.cos(a) * rx, y: cy + Math.sin(a) * ry };
@@ -95,6 +98,17 @@ const Stage = (function () {
              tilt: (s.x / (R.rx || 1)) * 9 + off * 2.2, z };
   }
 
+  /* The row of bid numbers stands on a line above the fan, with its own
+     heading above that. The felt draws them there and the fan is placed with
+     room for them, so the two have to be one answer. Everything is measured up
+     from the line the row stands on, which is 88 above the first card. */
+  function bidRow(W) {
+    const size = W <= 420 ? 40 : 44;
+    const up = size * 1.34;             // a number under the thumb stands this tall
+    const head = up + 14;               // its heading sits clear of one
+    return { size, foot: 88, up, head, tall: head + 15 };
+  }
+
   /* A hand is a fan, not a row. Each card steps a fixed distance along from the
      one before -- far enough to read the corner, near enough to still overlap --
      and turns a fixed amount further round. A step worked out by dividing a
@@ -107,13 +121,29 @@ const Stage = (function () {
      can hang it off a seat.  */
   function fan(count, W, H) {
     const cardW = cardSize(W).w;
-    /* The hand sits below the ring, not in it, and well below: at a full table
-       the seats either side of the reader reach down to seat height, and the
-       row of bid numbers that goes above the fan runs at exactly that height.
-       So it is the ring's own depth that says how far down the fan lies -- a
-       deeper ring pushes it further -- and on a short screen no further than
-       leaves the outer cards of the fan clear of the line along the bottom. */
-    const y = Math.min(H * 0.37, ringRy(W, H) * 1.65, H / 2 - 92);
+    /* Where the fan lies. Between the seats either side of the reader and the
+       line along the bottom of the screen there is a band, and what stands in
+       that band is the hand, the heading that names it and -- while the
+       bidding is on -- the row of numbers with its own heading. All of that
+       goes in the middle of the band, and never so low that the outer cards of
+       the fan reach the line along the bottom.
+
+       The band is measured for a full table, so the hand keeps its place
+       whoever is at the table: a seat arriving must not move the reader's own
+       cards. */
+    const card = cardSize(W);
+    // A full table's neighbours sit a quarter turn round the ring, at the size
+    // a full table draws them, with their names hung under them.
+    const bandTop = ringCy(H) + ringRy(W, H) * Math.cos(Math.PI / 4)
+                  + card.h * seatScale(8) / 2 + 36;
+    const bandBottom = H / 2 - 76;               // the line along the bottom of the screen
+    const above = bidRow(W).foot + bidRow(W).tall;   // the block, from the fan's middle up
+    const below = card.h / 2 + 12;                   // and down past its lowest card
+    const want = (bandTop + bandBottom) / 2 + (above - below) / 2;
+    const y = Math.min(want, bandBottom - below);
+    // A short screen has less band than block: it is pressed against the line
+    // along the bottom, and the numbers reach the piles either side.
+    const pressed = y < want;
     const room = Math.min(W * 0.86, 340);
     const step = count > 1 ? Math.min(cardW * 0.62, (room - cardW) / (count - 1)) : 0;
     // The whole fan turns through 34 degrees at most, however many cards are in
@@ -128,7 +158,7 @@ const Stage = (function () {
       const o = off(i);
       return { x: o * step, y: y + pivot * (1 - Math.cos(rad(o * tilt))), tilt: o * tilt };
     };
-    return { count, cardW, y, room, step, tilt, pivot, off, at };
+    return { count, cardW, y, room, step, tilt, pivot, off, at, pressed };
   }
 
   /* A card keeps its resting place as an inline transform, and never more than
@@ -253,5 +283,5 @@ const Stage = (function () {
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
   return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen,
-           ring, fan, pile, seatScale, cardSize, nameAt, settle };
+           ring, fan, pile, seatScale, cardSize, nameAt, bidRow, settle };
 })();

@@ -443,7 +443,7 @@ body.host .toast .note{font-size:19px}
 }
 /* the heading over your own hand */
 .dname.mine{
-  font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   color:rgba(255,255,255,.92);
 }
 .deal-head{
@@ -550,6 +550,13 @@ body.host .toast .note{font-size:19px}
    band between the turned card and the top of the fan, and lift at the ends the
    way the cards below them do. */
 .felt-bids{position:absolute;z-index:4;left:0;right:0;height:0}
+/* The row is named, the way the hand below it is. */
+.bidname{
+  position:absolute;left:50%;transform:translate(-50%,0);
+  font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.92);text-shadow:0 2px 8px rgba(0,0,0,.7);
+  white-space:nowrap;pointer-events:none;
+}
 /* Placed one by one, like the cards, so they can overlap when a hand is long
    and still be picked out one at a time by a thumb passing over them. */
 .bidchip{
@@ -557,7 +564,7 @@ body.host .toast .note{font-size:19px}
   font:inherit;font-weight:800;font-variant-numeric:tabular-nums;
   padding:0;cursor:pointer;display:grid;place-items:center;
   border-radius:12px;border:1px solid rgba(255,255,255,.28);
-  background:rgba(9,14,10,.72);color:#f3efe2;font-size:19px;
+  background:rgba(9,14,10,.72);color:#f3efe2;font-size:17px;
   box-shadow:0 4px 14px rgba(0,0,0,.45);
   transition:transform .13s cubic-bezier(.25,.85,.3,1);
   backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
@@ -573,7 +580,7 @@ body.host .toast .note{font-size:19px}
 }
 .bidchip:disabled{cursor:not-allowed;opacity:.45}
 .bidchip.nope{text-decoration:line-through;opacity:.4}
-@media (max-width:420px){.bidchip{font-size:17px;border-radius:11px}}
+@media (max-width:420px){.bidchip{font-size:15px;border-radius:11px}}
 @media (prefers-reduced-motion: reduce){.bidchip{transition:none}}
 
 /* Where a hand was. A hand played out to nothing left a hole in the table, so

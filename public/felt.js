@@ -628,13 +628,21 @@ const Felt = (function () {
     heldBid = -1;
 
     const g = geom();
+    const B = Stage.bidRow(g.W);
     /* Anchored by its foot, not its head: the heading above the fan has to stay
        readable, and a long hand's numbers must grow upward into the empty
        middle of the table and never down over the cards. */
-    rail.style.bottom = `calc(50% - ${Math.round(g.F.at(0).y - 88)}px)`;
+    rail.style.bottom = `calc(50% - ${Math.round(g.F.at(0).y - B.foot)}px)`;
+
+    // Named, the way the hand below it is named.
+    const title = document.createElement('div');
+    title.className = 'bidname';
+    title.textContent = 'Your bid';
+    title.style.bottom = `${Math.round(B.head)}px`;
+    rail.appendChild(title);
 
     const count = r.cards + 1;
-    const size = g.W <= 420 ? 40 : 44;
+    const size = B.size;
     const room = Math.min(g.W - 20, 400);
     // Numbers step along at a fixed distance like the cards do, and like the
     // cards they overlap when there are a lot of them -- which is no trouble,
@@ -690,8 +698,9 @@ const Felt = (function () {
     const g = geom();
     const rail = document.querySelector('#deal .felt-bids');
     if (!rail || rail.hidden) return -1;
-    const foot = g.H / 2 + g.F.at(0).y - 88;          // the rail's own foot
-    const size = g.W <= 420 ? 40 : 44;
+    const B = Stage.bidRow(g.W);
+    const foot = g.H / 2 + g.F.at(0).y - B.foot;      // the rail's own foot
+    const size = B.size;
     if (py > foot + 14 || py < foot - size - 24) return -1;
     const cx = px - g.W / 2;
     const lo = Math.min(...bidSlots.map((s) => s.x)) - size / 2 - 12;
