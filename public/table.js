@@ -49,6 +49,24 @@ const Table = (function () {
     return html;
   }
 
+  /* The card on screen, drawn only when it has something new to say.
+
+     It is built from the state, and a state arrives for everything: a card
+     played, a line of talk, a phone coming back. Drawing it parses a table of
+     HTML, lays it out, and then reads it back to keep the round in play in
+     view -- and most states do not change a single figure on it. So the HTML
+     is compared with what is already there, and an unchanged card is left
+     exactly as it is. */
+  function scorecard(sel, ST, me) {
+    const box = document.querySelector(sel);
+    if (!box) return;
+    const html = scorecardHTML(ST, me);
+    if (box._html === html) return;
+    box._html = html;
+    box.innerHTML = html;
+    followCurrent(sel);
+  }
+
   // Scrolls the scorecard box so the round in play stays in view. It moves the
   // box only, never the page.
   function followCurrent(tableSel) {
@@ -286,7 +304,15 @@ const Table = (function () {
     const hi = Math.max(...t), lo = Math.min(0, ...t), span = hi - lo;
     const before = UI.fx.barsBefore(box);
 
-    UI.fx.flip(box, () => {
+    /* Sliding the rows to their new places means reading where every one of
+       them is, before and after. Only a change of places is worth that: a
+       score that went up without overtaking anybody leaves the list in the
+       order it was already in, and the figures alone change. */
+    const places = order.map((row) => ST.seats[row.i].id).join(',');
+    const moved = box._places !== undefined && box._places !== places;
+    box._places = places;
+
+    const redraw = () => {
       box.innerHTML = '';
       order.forEach((row, rank) => {
         const el = document.createElement('div');
@@ -301,7 +327,8 @@ const Table = (function () {
           + (row.i === me ? ' (you)' : (who.left ? ' (left)' : ''));
         box.appendChild(el);
       });
-    });
+    };
+    if (moved) UI.fx.flip(box, redraw); else redraw();
 
     const now = {};
     ST.seats.forEach((seat, i) => { now[seat.id] = t[i]; });
@@ -336,7 +363,7 @@ const Table = (function () {
   // after it: the finish plays once.
   const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
 
-  return { scorecardHTML, followCurrent, esc, roundKey, dealOpts, finaleOpts,
+  return { scorecardHTML, scorecard, followCurrent, esc, roundKey, dealOpts, finaleOpts,
            bidsAfter, sayBids, sayPresence, cardEl, trickEl,
            sweepTrick, sweepOut, trickIn,
            standings, winner, voteText, justFinished };

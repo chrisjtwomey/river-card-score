@@ -1506,6 +1506,33 @@ part('bidding for a seat that is not there, and leaving');
        'and the scorecard is open, not folded away');
   }
 
+  /* ---- the card is drawn when it changes, and not when it does not ----
+
+     A state arrives for everything a table does -- a card played, a line of
+     talk, a phone coming back -- and the card was rebuilt from scratch on
+     every one of them: a table of HTML parsed and laid out again, then read
+     back to keep the round in play in view. Most states do not change a
+     figure on it. */
+  {
+    const P = playPage(seed, '?c=TEST');
+    // One table, arriving again and again the way the server sends it: a fresh
+    // object every time, saying the same thing.
+    const base = table({});
+    const arrives = () => JSON.parse(JSON.stringify(base));
+    P.feed(arrives());
+    const box = P.pick('#scorecard');
+    let draws = 0;
+    const write = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(box), 'innerHTML').set;
+    Object.defineProperty(box, 'innerHTML', { set(v) { draws += 1; write.call(this, v); } });
+
+    P.feed(arrives());
+    ok(draws === 0, 'a state that says nothing new leaves the card alone  got ' + draws + ' redraws');
+    const bidIn = arrives();
+    bidIn.rounds[0].bids = [0, 1, 1];
+    P.feed(bidIn);
+    ok(draws === 1, 'and a bid that lands draws it  got ' + draws + ' redraws');
+  }
+
   {   // the page says a phone has gone, once
     const P = playPage(seed, '?c=TEST');
     P.feed(table({ away: false }));

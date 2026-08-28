@@ -353,8 +353,7 @@ function renderStandings() {
 
 function renderScorecard() {
   UI.measureSticky();
-  $('#scorecard').innerHTML = Table.scorecardHTML(ST, -1);
-  Table.followCurrent('#scorecard');
+  Table.scorecard('#scorecard', ST, -1);
 }
 
 /* ---------- wiring ---------- */
