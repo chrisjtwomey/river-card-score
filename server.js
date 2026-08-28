@@ -11,6 +11,7 @@ const { WebSocketServer } = require('ws');
 const G = require('./game.js');
 const A = require('./public/accolades.js');
 const Games = require('./lib/games.js');
+const TablesOf = require('./lib/tables.js');
 const Http = require('./lib/http.js');
 const Dev = require('./lib/dev.js');
 const Messages = require('./lib/messages.js');
@@ -23,6 +24,10 @@ const PUB = path.join(ROOT, 'public');
 // https. Drop a key and certificate in certs/ (npm run cert) to serve https.
 const DATA = process.env.DATA_DIR || path.join(__dirname, 'data');
 const KEEP_GAMES = Math.max(1, Number(process.env.KEEP_GAMES) || 200);
+// How long a table nobody has touched is kept -- in memory, and on the disk it
+// is read back from. One rule, so a table cannot be dropped from one and held
+// by the other.
+const KEEP_HOURS = Math.max(0, Number(process.env.KEEP_HOURS) || 6);
 // How many lines of table talk a table keeps. Long enough to scroll back
 // through a game, short enough that every state carries it without a thought.
 const CHAT_KEEP = Math.max(1, Number(process.env.CHAT_KEEP) || 100);
@@ -43,6 +48,9 @@ const DEV = process.env.DEV === '1';        // live reload, for working on it
 
 // Finished games on disk. It knows where they go and how many are kept.
 const { saveGame, readGame, listGames } = Games({ DATA, KEEP_GAMES, G });
+
+// And the tables still in play, so that stopping this server does not end them.
+const Tables = TablesOf({ DATA, KEEP_HOURS });
 
 // The pages, the QR code, the addresses, a finished game, a picture. It reads
 // the rooms for a picture and knows nothing else about a game.
@@ -128,9 +136,34 @@ function broadcast(room) {
     ws.send(JSON.stringify(base));
   });
   delete base.hand;
+  // A table in play outlives the server it is on: this is the one moment
+  // something about it has changed, so this is where it is written down.
+  Tables.save(room);
   // Whoever is on play now, this is where a bot finds out it is them.
   Bots.nudge(room);
 }
+
+/* The tables this machine had when it was last up. A phone that hosts a game
+   is stopped and started again -- from its own notification, or by Android --
+   and every seat at that table is held on another phone with nothing to come
+   back to unless the table comes back too. */
+function restore() {
+  Tables.all().forEach((rec) => {
+    if (rooms.has(rec.code)) return;
+    const room = Object.assign(Room.create(rec.code, rec.hostToken), rec, { sockets: new Set() });
+    // Nobody is at the table until they connect to this server. A bot never
+    // went anywhere.
+    room.seats.forEach((s) => { s.online = !!s.bot; });
+    /* A trick was being held up for the table to read when the server stopped.
+       It has been read by now, so the table moves on rather than sitting on a
+       hold that nothing is left to end. */
+    if (room.phase === 'tricks' && room.play && room.play.turn === null && room.play.last) {
+      Deck.settleTrick(room, room.play.last.winner);
+    }
+    rooms.set(room.code, room);
+  });
+}
+restore();
 
 function markPresence(room) {
   room.seats.forEach((s) => {
@@ -335,10 +368,14 @@ setInterval(() => {
   });
 }, 30000);
 
-setInterval(() => {                       // drop idle rooms after 6 hours
-  const cutoff = Date.now() - 6 * 3600e3;
+setInterval(() => {                       // drop idle rooms, memory and disk alike
+  const cutoff = Date.now() - KEEP_HOURS * 3600e3;
   rooms.forEach((room, code) => {
-    if (room.sockets.size === 0 && room.lastSeen < cutoff) { Bots.stop(room); rooms.delete(code); }
+    if (room.sockets.size === 0 && room.lastSeen < cutoff) {
+      Bots.stop(room);
+      rooms.delete(code);
+      Tables.forget(code);
+    }
   });
 }, 600000);
 

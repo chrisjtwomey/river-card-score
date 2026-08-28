@@ -36,7 +36,13 @@ function boot() {
     onHello: (m) => { ME = m.seatId; Net.pin(m.code); },
     onState: (m) => { ST = m; render(); },
     onError: (msg) => {
-      if (/seat is gone|table is gone/i.test(msg)) { Net.setSession(null); location.href = 'index.html'; return; }
+      // The table is over, or this seat is not at it any more. Say which
+      // table it was: the front page is otherwise a silent bounce.
+      if (/seat is gone|table is gone/i.test(msg)) {
+        Net.setSession(null);
+        location.href = 'index.html?gone=' + encodeURIComponent(s.code || '');
+        return;
+      }
       const el = $('#play-err'); el.textContent = msg; el.hidden = false;
       setTimeout(() => { el.hidden = true; }, 3500);
     },

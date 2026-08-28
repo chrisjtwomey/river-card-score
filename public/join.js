@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const code = new URLSearchParams(location.search).get('code');
   if (code) $('#in-code').value = code.toUpperCase().slice(0, 4);
 
+  /* The name this phone plays under is asked for once. Coming back to join
+     another table, it is already there. */
+  const knownName = Net.name();
+  if (knownName) { $('#in-name').value = knownName; $('#new-name').value = knownName; }
+
   /* Every table this browser holds a seat at, newest first. There used to be
      room for one, so a second table wrote over the first and the seat at it
      was gone with no way back. */
@@ -97,12 +102,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const err = (msg) => { $('#join-err').textContent = msg; $('#join-err').hidden = !msg; };
 
+  /* Sent back here by a table that is not there any more. Without this the
+     player taps Rejoin and lands on this page with nothing said. */
+  const gone = new URLSearchParams(location.search).get('gone');
+  if (gone) {
+    Net.forget(gone);
+    err(`Table ${gone.toUpperCase().slice(0, 4)} is over. Join another, or start one.`);
+  }
+
   $('#btn-join').addEventListener('click', () => {
     const c = $('#in-code').value.trim();
     const name = $('#in-name').value.trim();
     if (c.length !== 4) return err('Type the 4-character table code.');
     if (!name) return err('Type your name.');
     err('');
+    Net.setName(name);
     $('#btn-join').disabled = true;
     Net.connect({
       onOpen: () => Net.send({ t: 'join', code: c, name }),
@@ -121,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = $('#new-name').value.trim();
     if (!name) return newErr('Type your name.');
     newErr('');
+    Net.setName(name);
     $('#btn-new-table').disabled = true;
     $('#btn-join').disabled = true;
     let stage = 'create';

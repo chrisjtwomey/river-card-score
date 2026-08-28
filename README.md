@@ -95,6 +95,27 @@ and every page pins its table to its own address (`play.html?c=CODE`). A second
 table therefore cannot lose the seat at the first — which it used to, because
 there was one slot for a seat and every page wrote it on every reconnect.
 
+The name a phone plays under is kept with them, so coming back to join another
+table does not mean typing it again. A table that has ended says so on the
+front page rather than sending the player back with nothing said.
+
+### A table outlives the server it is on
+
+The phone that hosts a game is a phone: it is stopped from its own
+notification, or put away, or Android takes the memory back. The game is in
+that server's memory, and every other phone still holds its seat — so a table
+in play is written to disk after every change and read back when the server
+comes up. Rejoin then goes back to the game, in the round it was in, with the
+hands that were dealt. A trick that was being held up for the table to read
+when the server stopped is settled as it comes back, because nothing is left
+to end that hold.
+
+Nobody is at a restored table until they connect to it, so every seat starts
+away and fills in as the phones come back. Pictures are not kept with the
+table — 48K apiece, and every phone hands its own over again. `KEEP_HOURS`,
+6 by default, is how long a table nobody has touched is kept, in memory and on
+disk alike.
+
 ### Table talk
 
 Every table has a chat room of its own. 💬 in the top bar opens a sheet over the
@@ -188,7 +209,7 @@ same **×** that removes a person.
   round is bid only then.
 
 `BOT_DELAY` sets how long a bot waits before it acts, in milliseconds. The
-default is 850: long enough that it does not answer before the table has read
+default is 1250: long enough that it does not answer before the table has read
 the last card, short enough that three of them are not a wait. `BOT_DEAL_WAIT`
 is the longest it waits for a phone that says nothing at all, 9000 by default.
 
@@ -289,7 +310,7 @@ When the last round is scored, both screens play the finish: the places come up 
 
 The `?motion=` flag under [Motion](#motion) works on `host.html` and `play.html`.
 
-Phones reconnect on their own. A player who closes the page and comes back is offered their seat again, because the seat token is kept in that browser.
+Phones reconnect on their own. A player who closes the page and comes back is offered their seat again, because the seat token is kept in that browser, and the table is still there because it is [kept on disk](#a-table-outlives-the-server-it-is-on).
 
 ### Rules the host can set
 
@@ -741,6 +762,7 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `lib/deck.js` — the dealer for a virtual table: the hands, and the rules of a trick. It moves cards; the server holds a finished trick up.
 - `lib/bots.js` — the players the table provides: what a hand is worth, which card to play, and the driver that takes their turn.
 - `lib/games.js` — a finished game on disk.
+- `lib/tables.js` — a table still in play, on disk, so that stopping the server does not end it.
 - `lib/dev.js` — the dev portal, which a real game never touches.
 - `public/ui.js` — shared page bits: the full-screen button, the wake lock, the motion setting every scene and flourish asks.
 - `public/stage.js` — the overlay both scenes are played on, its parts, and the slot that says which one is open.

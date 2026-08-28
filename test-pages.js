@@ -1295,6 +1295,32 @@ part('the front page, and the screen');
     ok(P.Net.tables().length === 1 && P.Net.tables()[0].code === 'AAAA', 'and it is the one that goes');
   }
 
+  {   // the name this phone plays under is asked for once
+    const P = loadPage('join.js', { 'rcs:name:v1': 'Chris' });
+    P.start();
+    ok(P.pick('#in-name').value === 'Chris' && P.pick('#new-name').value === 'Chris',
+       'the name this phone played under is already there  got ' + P.pick('#in-name').value);
+    const Q = loadPage('join.js', {});
+    Q.start();
+    ok(Q.pick('#in-name').value === undefined || Q.pick('#in-name').value === '',
+       'and a phone that has not played is asked');
+    Q.pick('#in-code').value = 'AB2K';
+    Q.pick('#in-name').value = 'Ann';
+    Q.pick('#btn-join').fire('click');
+    ok(Q.Net.name() === 'Ann', 'the name a seat was taken under is kept  got ' + Q.Net.name());
+  }
+
+  {   // a table that is not there any more says so
+    const P = loadPage('join.js',
+      { 'rcs:tables:v1': JSON.stringify([{ code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' }]) },
+      '?gone=AAAA');
+    P.start();
+    ok(/AAAA is over/.test(P.pick('#join-err').textContent),
+       'a table that has ended says so, instead of a silent bounce  got '
+       + JSON.stringify(P.pick('#join-err').textContent));
+    ok(!P.Net.tables().some((t) => t.code === 'AAAA'), 'and it is not offered again');
+  }
+
   {   // a browser at no table is offered nothing
     const P = loadPage('join.js', {});
     P.pick('#rejoin-panel').hidden = true;

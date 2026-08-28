@@ -21,6 +21,8 @@ lib/messages.js    THE PROTOCOL. A table of every message a seated socket may se
 lib/dev.js         The dev controls. Calls Room verbs; invents nothing a real game cannot reach.
 lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures.
 lib/games.js       A finished game on disk.
+lib/tables.js      A table still in play, on disk: written after every broadcast,
+                   read back when the server comes up. Sockets and pictures left out.
 server.js          Wiring only: http/ws servers, the rooms map, the entry messages
                    (create/join/resume/screen/watch/avatar), presence, broadcast, the trick
                    hold timer, upkeep.

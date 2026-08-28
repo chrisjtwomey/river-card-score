@@ -1020,6 +1020,61 @@ function client(name, url) {
     srv6.kill();
   }
 
+  /* ---- a table outlives the server it is on ----
+
+     The phone that hosts a game is a phone: it is stopped from its own
+     notification, or Android takes the memory back. Every other phone still
+     holds its seat, and used to come back to a table that was not there. */
+  {
+    console.log('\n-- a table that outlives its server --');
+    const port7 = PORT + 5;
+    const dir = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-tables-'));
+    const env = { ...process.env, PORT: port7, NO_TLS: '1', DATA_DIR: dir, BOT_DEAL_WAIT: '150' };
+    const url = `ws://127.0.0.1:${port7}/ws`;
+    let srv7 = spawn('node', [path + '/server.js'], { env, stdio: 'ignore' });
+    await wait(700);
+
+    const h = client('keepscreen', url); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.state.code;
+    const ann = client('keepann', url); await ann.ready;
+    ann.send({ t: 'join', code, name: 'Ann' }); await wait(150);
+    const ben = client('keepben', url); await ben.ready;
+    ben.send({ t: 'join', code, name: 'Ben' }); await wait(150);
+    const annToken = ann.hello.token;
+    // Dealt on the phones, so the hands are the table's to keep and the test
+    // can ask for one back.
+    ann.send({ t: 'config', patch: { deck: 'virtual', max: 2, pattern: 'down', ones: 1 } }); await wait(150);
+    ann.send({ t: 'start' }); await wait(200);
+    const first = h.state.turn;
+    const bidder = first === 0 ? ann : ben;
+    bidder.send({ t: 'bid', v: 1 }); await wait(150);
+    ok(h.state.rounds[0].bids[first] === 1, 'a game is under way  got ' + JSON.stringify(h.state.rounds[0].bids));
+
+    // the phone hosting it is stopped, and started again
+    h.ws.close(); ann.ws.close(); ben.ws.close();
+    srv7.kill(); await wait(400);
+    srv7 = spawn('node', [path + '/server.js'], { env, stdio: 'ignore' });
+    await wait(800);
+
+    const back = client('keepback', url); await back.ready;
+    back.send({ t: 'resume', code, token: annToken }); await wait(250);
+    ok(!back.errors.length, 'the seat is still there to come back to  got ' + JSON.stringify(back.errors));
+    ok(!!back.state && back.state.code === code, 'and it is the same table  got ' + (back.state && back.state.code));
+    ok(!!back.state && back.state.phase === 'bid' && back.state.rounds[0].bids[first] === 1,
+       'with the game where it was left  got ' + JSON.stringify(back.state && back.state.rounds[0].bids));
+    ok(!!back.state && back.state.seats.length === 2 && back.state.seats[0].name === 'Ann',
+       'and everybody still in their seat');
+    ok(!!back.state && back.state.seats[1].online === false,
+       'the phone that has not come back yet is away, not still at the table');
+    ok(Array.isArray(back.state.hand) && back.state.hand.length === back.state.rounds[0].cards,
+       'the hand that was dealt is the hand that comes back  got ' + JSON.stringify(back.state.hand));
+
+    back.ws.close();
+    srv7.kill();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
   /* ---- a phone that goes, and a phone that comes back ----
 
      A game was lost to this. A player's browser held one table, a second table

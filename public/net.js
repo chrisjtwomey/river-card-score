@@ -2,6 +2,7 @@
 /* Tiny WebSocket client: one connection, auto-reconnect, saved session. */
 const Net = (function () {
   const KEY = 'rcs:session:v1';       // the seat this browser used last
+  const NAME = 'rcs:name:v1';         // and the name it plays under
   const LIST = 'rcs:tables:v1';       // every table this browser holds a seat at
   const CAP = 8;
   let ws = null, handlers = {}, backoff = 700, queue = [];
@@ -72,6 +73,16 @@ const Net = (function () {
       if (one && one.code) list = [one];
     }
     return list;
+  }
+
+  /* The name this phone plays under. It is asked for once and kept, so coming
+     back to start another table does not mean typing it again. */
+  function name() {
+    try { return localStorage.getItem(NAME) || ''; } catch (e) { return ''; }
+  }
+  function setName(v) {
+    const n = String(v || '').trim().slice(0, 16);
+    try { n ? localStorage.setItem(NAME, n) : localStorage.removeItem(NAME); } catch (e) {}
   }
 
   function current() {
@@ -185,5 +196,5 @@ const Net = (function () {
     return true;
   }
 
-  return { connect, send, session, tables, setSession, forget, pin, claimFromHash };
+  return { connect, send, session, tables, setSession, forget, pin, claimFromHash, name, setName };
 })();
