@@ -806,13 +806,13 @@ body.showing summary{pointer-events:auto}
    the table is on you, and again when the game is over -- and the standings
    keep their shadow, because they stick and have to lift off what runs under
    them. */
-body.sheet .panel{border-radius:0;border-color:transparent;box-shadow:none}
-body.sheet .turn-panel.mine,
-body.sheet .turn-panel.amend,
-body.sheet .winner-panel{border-color:var(--gold)}
-body.sheet .turn-panel.mine{box-shadow:0 0 0 2px rgba(184,134,43,.22)}
-body.sheet .winner-panel{box-shadow:0 0 0 2px rgba(184,134,43,.2)}
-body.sheet .standings-panel{box-shadow:var(--shadow)}
+body.player .panel{border-radius:0;border-color:transparent;box-shadow:none}
+body.player .turn-panel.mine,
+body.player .turn-panel.amend,
+body.player .winner-panel{border-color:var(--gold)}
+body.player .turn-panel.mine{box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+body.player .winner-panel{box-shadow:0 0 0 2px rgba(184,134,43,.2)}
+body.player .standings-panel{box-shadow:var(--shadow)}
 /* On a virtual table the scorecard is the page: it is never folded away. */
 .scorecard-panel.pinned>summary{display:none}
 

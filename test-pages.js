@@ -1654,3 +1654,26 @@ part('tapping the deal away');
     p.then(() => ok(true, 'the scene\'s promise settles'));
   }
 }
+
+
+part('the pages and the stylesheet agree');
+
+/* A class on a <body> styles the whole page. One that already means something
+   else in the stylesheet turns the page into that thing: `class="sheet"` made
+   a page the sheet the table talk opens in -- fixed, over everything, and the
+   wrong size. So a class the pages put on a body may only ever be written
+   `body.that` in the stylesheet, and never on its own. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const pages = fs.readdirSync(path.join(ROOT, 'public')).filter((f) => f.endsWith('.html'));
+  pages.forEach((file) => {
+    const html = fs.readFileSync(path.join(ROOT, 'public', file), 'utf8');
+    const m = /<body[^>]*\sclass="([^"]*)"/.exec(html);
+    (m ? m[1].split(/\s+/) : []).filter(Boolean).forEach((cls) => {
+      const re = new RegExp('(^|[\\s,{}>+~])(body)?\\.' + cls + '(?![\\w-])', 'g');
+      let loose = 0, hit;
+      while ((hit = re.exec(css))) { if (!hit[2]) loose += 1; }
+      ok(loose === 0, `${file}: body class "${cls}" is a page's own, not something else in the stylesheet`);
+    });
+  });
+}
