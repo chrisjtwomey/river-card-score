@@ -348,6 +348,13 @@ const Deal = (function () {
         const doingEl = document.createElement('div');
         doingEl.className = 'deal-doing';
         doingEl.textContent = doing;
+        /* Just above the deck, which lies in the middle of the table and not in
+           the middle of the screen. The cards turn as they riffle, which makes
+           the deck taller than one card, so the line stands off by that much. */
+        const cs = Stage.cardSize(W);
+        const deckTop = R.cy - (cs.w * Math.sin(Stage.rad(12))
+                              + cs.h * Math.cos(Stage.rad(12))) / 2;
+        doingEl.style.top = `calc(50% + ${Math.round(deckTop - 32)}px)`;
         stage.appendChild(doingEl);
         // fill 'forwards': a backwards fill on the fade out would reach back
         // and cancel the fade in.

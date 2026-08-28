@@ -461,8 +461,10 @@ body.host .toast .note{font-size:19px}
   text-shadow:0 2px 12px rgba(0,0,0,.85);opacity:0;min-height:1.2em;
 }
 /* what the table is doing, just above the deck it is doing it to */
+/* What is happening, just above the deck. Where that is the scene says, since
+   the deck lies in the middle of the table and not in the middle of the page. */
 .deal-doing{
-  position:absolute;left:50%;top:calc(50% - 86px);transform:translate(-50%,0);
+  position:absolute;left:50%;transform:translate(-50%,0);
   font-size:clamp(13px, 1.6vw, 18px);font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.9);
   text-shadow:0 2px 12px rgba(0,0,0,.9);opacity:0;pointer-events:none;
@@ -764,7 +766,6 @@ body.host .toast .note{font-size:19px}
   .deal.table .dplace{width:52px;height:74px;margin:-37px 0 0 -26px}
   .dcard .front .big{font-size:26px}
   .dcard.hero{width:70px;height:98px;margin:-49px 0 0 -35px}
-  .deal-doing{top:calc(50% - 72px)}
   .dstamp{font-size:34px}
   .fin-card .cup{font-size:34px}
 }

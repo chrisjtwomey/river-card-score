@@ -50,6 +50,7 @@ const Felt = (function () {
   let heldBid = -1;                // the number under the thumb, or none
   let bidSlots = [];               // where each number sits, to aim a thumb at
   let sent = null;                 // a card played, until the table says so
+  let ready = null;                // the round this screen has said it can see
   let told = null;                 // the finished trick this screen has announced
   let swept = null;                // and the one it has gathered in
 
@@ -264,6 +265,15 @@ const Felt = (function () {
 
   const at = (el, to) => { el.style.transform = to; };
 
+  /* The table is up: the deal has played out, or was tapped away, or was never
+     played at all. The room waits to hear this before it bids a hand for a bot,
+     so that nothing is bid while the cards are still in the air. Once a round. */
+  function sayReady() {
+    if (watch || !send || me < 0 || ready === key || !virtual()) return;
+    ready = key;
+    send({ t: 'dealt' });
+  }
+
   /* ---------------- building it ---------------- */
 
   // A hand, a pile per seat, the turned card, a name under each pile: the deal
@@ -313,6 +323,7 @@ const Felt = (function () {
     head(r);
     reconcile(r);
     paint(r);
+    sayReady();
   }
 
   // What the deal left standing, taken over as it stands.
@@ -337,6 +348,7 @@ const Felt = (function () {
     head(r);
     reconcile(r);
     paint(r);
+    sayReady();
   }
 
   // The round line at the top, and the trump under it. The deal builds these

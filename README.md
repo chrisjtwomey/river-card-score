@@ -181,10 +181,16 @@ same **×** that removes a person.
 - It plays through the same rules as everybody else, so it cannot renege, play
   out of turn, or play a card it does not hold.
 - It has no opinion about a bum deal, so it agrees to one.
+- It waits for the deal to be watched. The round is dealt on the phones before
+  it is bid, and a bot that bid while the cards were in the air had bid before
+  anybody saw one. Each phone says when its table is up -- the deal played out,
+  or was tapped away, or was never played at all -- and the first hand of the
+  round is bid only then.
 
 `BOT_DELAY` sets how long a bot waits before it acts, in milliseconds. The
 default is 850: long enough that it does not answer before the table has read
-the last card, short enough that three of them are not a wait.
+the last card, short enough that three of them are not a wait. `BOT_DEAL_WAIT`
+is the longest it waits for a phone that says nothing at all, 9000 by default.
 
 ### The table
 

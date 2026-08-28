@@ -7,7 +7,10 @@ const fs = require('fs');
 const os = require('os');
 // The finished games are written to a folder of their own, thrown away after.
 const DATA_DIR = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-games-'));
-const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120', DATA_DIR, KEEP_GAMES: '3', CHAT_KEEP: '5' }, stdio: ['ignore', 'pipe', 'pipe'] });
+const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120', DATA_DIR, KEEP_GAMES: '3', CHAT_KEEP: '5',
+         // These clients are not phones and never say their table is up, so the
+         // bots' wait for one falls back at once. The wait itself is checked below.
+         BOT_DEAL_WAIT: '150' }, stdio: ['ignore', 'pipe', 'pipe'] });
 srv.stderr.on('data', d => process.stderr.write('[srv] ' + d));
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -151,6 +154,11 @@ function client(name, url) {
   host.send({ t: 'start' }); await wait(150);
   ok(host.state.phase === 'bid' && host.state.rounds.length === 4, 'game started, 4 rounds');
   ok(host.state.turn === 1, 'round 1: seat 1 bids first (dealer is seat 0)');
+
+  P[1].errors.length = 0;
+  P[1].send({ t: 'dealt' }); await wait(100);
+  ok(P[1].errors.some(e => /real cards/.test(e)),
+     'a table with real cards deals nothing on the phones, so it is told nothing');
 
   // ---- bidding order is enforced ----
   P[0].send({ t: 'bid', v: 1 }); await wait(100);
@@ -548,7 +556,7 @@ function client(name, url) {
   {
     const port3 = PORT + 2;
     const srv3 = spawn('node', [path + '/server.js'], {
-      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', TRICK_HOLD: '120', DATA_DIR }, stdio: 'ignore',
+      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', TRICK_HOLD: '120', DATA_DIR, BOT_DEAL_WAIT: '150' }, stdio: 'ignore',
     });
     await wait(700);
     const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
@@ -741,7 +749,7 @@ function client(name, url) {
     const port4 = PORT + 3;
     const srv4 = spawn('node', [path + '/server.js'], {
       env: { ...process.env, PORT: port4, NO_TLS: '1', DEV: '1', TRICK_HOLD: '60',
-             DATA_DIR, KEEP_GAMES: '3' }, stdio: 'ignore',
+             DATA_DIR, KEEP_GAMES: '3', BOT_DEAL_WAIT: '150' }, stdio: 'ignore',
     });
     await wait(800);
     const d = client('gamefile', `ws://127.0.0.1:${port4}/ws`); await d.ready;
@@ -972,6 +980,44 @@ function client(name, url) {
     }
 
     h.ws.close(); you.ws.close();
+  }
+
+  /* ---- a bot waits for the phones before it bids ----
+
+     The round is dealt on the phones before it can be bid: the deck is
+     shuffled, the cards fly out and the trump is turned. A bot that bids while
+     that is playing has bid before anybody saw a card. This table is given a
+     long wait, so what answers here has to be the phone saying it is up and
+     not the fallback running out. */
+  {
+    console.log('\n-- a bot waits for the deal to be watched --');
+    const port6 = PORT + 4;
+    const srv6 = spawn('node', [path + '/server.js'], {
+      env: { ...process.env, PORT: port6, NO_TLS: '1', DATA_DIR, BOT_DEAL_WAIT: '6000' }, stdio: 'ignore',
+    });
+    await wait(700);
+    const url = `ws://127.0.0.1:${port6}/ws`;
+    const h = client('waitscreen', url); await h.ready;
+    h.send({ t: 'create' }); await wait(150);
+    const code = h.state.code;
+    const you = client('waitphone', url); await you.ready;
+    you.send({ t: 'join', code, name: 'You' }); await wait(150);
+    you.send({ t: 'addbot' }); await wait(150);
+    you.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 1 } }); await wait(150);
+    you.send({ t: 'start' }); await wait(1600);
+
+    const bids = () => you.state.rounds[you.state.idx].bids;
+    ok(you.state.phase === 'bid' && you.state.turn === 1,
+       'the bot bids first  got turn ' + you.state.turn);
+    ok(bids().every((b) => b === null || b === undefined),
+       'and nothing is bid while the phone is still watching the deal  got ' + JSON.stringify(bids()));
+
+    you.send({ t: 'dealt' }); await wait(1400);
+    ok(bids()[1] !== null && bids()[1] !== undefined,
+       'the phone says its table is up, and the bot bids  got ' + JSON.stringify(bids()));
+
+    h.ws.close(); you.ws.close();
+    srv6.kill();
   }
 
   /* ---- a phone that goes, and a phone that comes back ----

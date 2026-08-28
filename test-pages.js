@@ -151,6 +151,11 @@ function spotOf(el) {
   return { x: +m[1], y: +m[2], tilt: +m[3], face: +m[4], scale: +m[5] };
 }
 
+/* The felt tells the table when it is up, so that nothing is bid for a bot
+   while the cards are still in the air. That is not a move, so the checks that
+   watch for moves do not count it; it is checked on its own below. */
+const moves = (list) => (m) => { if (m.t !== 'dealt') list.push(m); };
+
 function stateFor(n, cards, me, o) {
   o = o || {};
   const D = Game.shuffle(Game.deck());
@@ -323,7 +328,7 @@ function table(o) {
     bids: Array(n).fill(1) }, o || {}));
   const L = load(W, H, 'off');
   const sends = [];
-  L.Felt.sync(made.ST, me, { send: (m) => sends.push(m), watch: false, onView: () => {} });
+  L.Felt.sync(made.ST, me, { send: moves(sends), watch: false, onView: () => {} });
   const overlay = L.dom.document.getElementById('deal');
   const stage = overlay.querySelector('.deal-stage');
   const F = L.Stage.fan(made.ST.hand.length, W, H);
@@ -408,7 +413,7 @@ function table(o) {
   }
   const L = load(W, H, 'off');
   const sends = [];
-  L.Felt.sync(made.ST, me, { send: (m) => sends.push(m) });
+  L.Felt.sync(made.ST, me, { send: moves(sends) });
   const overlay = L.dom.document.getElementById('deal');
   const stage = overlay.querySelector('.deal-stage');
   const duds = stage.querySelectorAll('.dcard.dud').length;
@@ -445,7 +450,7 @@ function table(o) {
   const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: Array(n).fill(1) });
   const L = load(W, H, 'off');
   const sends = [];
-  L.Felt.sync(made.ST, me, { send: (m) => sends.push(m), watch: true });
+  L.Felt.sync(made.ST, me, { send: moves(sends), watch: true });
   const overlay = L.dom.document.getElementById('deal');
   const F = L.Stage.fan(cards, W, H);
   const seat = L.Stage.ring(n, me, W, H).at(me);
@@ -611,7 +616,7 @@ function bidding(o) {
   const made = stateFor(n, cards, me, Object.assign({ phase: 'bid' }, o || {}));
   const L = load(W, H, 'off');
   const sends = [];
-  L.Felt.sync(made.ST, me, Object.assign({ send: (m) => sends.push(m) }, o && o.hooks));
+  L.Felt.sync(made.ST, me, Object.assign({ send: moves(sends) }, o && o.hooks));
   const overlay = L.dom.document.getElementById('deal');
   const F = L.Stage.fan(cards, W, H);
   const B = L.Stage.bidRow(W);
@@ -689,7 +694,7 @@ function bidding(o) {
   made.ST.cfg.screw = true;
   const L = load(W, H, 'off');
   const sends = [];
-  L.Felt.sync(made.ST, me, { send: (m) => sends.push(m) });
+  L.Felt.sync(made.ST, me, { send: moves(sends) });
   const overlay = L.dom.document.getElementById('deal');
   const chips = overlay.querySelectorAll('.bidchip');
   const out = chips.filter((c) => c.classList.contains('nope'));
@@ -885,6 +890,29 @@ function bidding(o) {
   ok(empty.on.length === n, `and they stay when the hands are played out (${empty.on.length})`);
   ok(empty.on.every((s, i) => Math.abs(s.x - last.on[i].x) < 0.5 && Math.abs(s.y - last.on[i].y) < 0.5),
     'in the same places, so nothing moves as the last cards go');
+}
+
+/* The felt tells the table when it is up -- the deal played out, or was tapped
+   away, or was never played at all. The table waits to hear it before it bids a
+   hand for a bot, so that nothing is bid while the cards are still in the air. */
+{
+  const n = 4, cards = 5, me = 1, W = 412, H = 860;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: 0 });
+  const L = load(W, H, 'off');
+  const sent = [];
+  const say = (m) => sent.push(m);
+  const said = () => sent.filter((m) => m.t === 'dealt').length;
+  L.Felt.sync(made.ST, me, { send: say });
+  ok(said() === 1, `the felt says when its table is up (${said()})`);
+  L.Felt.sync(made.ST, me, { send: say });
+  ok(said() === 1, 'once for the round, however often it is drawn');
+  made.ST.rounds[0].redeals = 1;                 // a bum deal: the hand is dealt again
+  L.Felt.sync(made.ST, me, { send: say });
+  ok(said() === 2, `and again when the hand is dealt again (${said()})`);
+
+  const seen = [];
+  load(W, H, 'off').Felt.sync(made.ST, me, { send: (m) => seen.push(m), watch: true });
+  ok(!seen.some((m) => m.t === 'dealt'), 'a window that only watches is dealt nothing, and says nothing');
 }
 
 part('off the table, and on to the next round');
