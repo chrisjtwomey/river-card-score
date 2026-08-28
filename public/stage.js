@@ -82,7 +82,7 @@ const Stage = (function () {
     const z = seatScale(n);
     const s = R.at(p);
     el.style.left = `calc(50% + ${own ? 0 : Math.round(s.x)}px)`;
-    el.style.top = `calc(50% + ${own ? Math.round(fan(1, W, H).y - 76)
+    el.style.top = `calc(50% + ${own ? Math.round(fan(1, W, H).y - 66)
                                     : Math.round(s.y + cardSize(W).h * z / 2 + 19)}px)`;
     if (!own) el.style.fontSize = z < 0.9 ? `${Math.max(10, Math.round(13 * z))}px` : '';
   }
@@ -104,8 +104,12 @@ const Stage = (function () {
      from the line the row stands on, which is 88 above the first card. */
   function bidRow(W) {
     const size = W <= 420 ? 40 : 44;
-    const up = size * 1.34;             // a number under the thumb stands this tall
-    const head = up + 14;               // its heading sits clear of one
+    // A number under the thumb grows and rises a little; this is how tall it
+    // then stands, measured up from the line the row stands on.
+    const up = size * 1.17 + 6;
+    // The heading hugs the row, the way the one over the hand hugs the fan,
+    // and still clears a number held up under a thumb.
+    const head = Math.max(size + 14, up + 1);
     return { size, foot: 88, up, head, tall: head + 15 };
   }
 

@@ -687,7 +687,7 @@ const Felt = (function () {
       const up = s.v === heldBid;
       s.el.classList.toggle('up', up);
       s.el.style.zIndex = String(up ? 40 : 10 + s.v);
-      s.el.style.transform = `translate(-50%,${Math.round(s.dy) - (up ? 13 : 0)}px) `
+      s.el.style.transform = `translate(-50%,${Math.round(s.dy) - (up ? 6 : 0)}px) `
         + `rotate(${s.tilt.toFixed(2)}deg) scale(${up ? 1.34 : 1})`;
     });
   }

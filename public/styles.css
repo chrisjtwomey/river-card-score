@@ -501,6 +501,10 @@ body.host .toast .note{font-size:19px}
   letter-spacing:.01em;
   text-shadow:0 0 16px rgba(255,255,255,.55), 0 2px 10px rgba(0,0,0,.85);
 }
+/* The heading over your own hand is a heading, not a name: it lights up when
+   the table is on you, but it does not grow, or it would not match the one
+   over the row of numbers. */
+.dname.mine.turn{font-size:12px;letter-spacing:.14em}
 /* ---------- the felt, when it is the game and not a scene ---------- */
 /* A table is not tapped away, so it loses the cursor and the line that says
    it can be. */

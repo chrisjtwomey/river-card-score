@@ -726,11 +726,12 @@ function bidding(o) {
       L.Felt.sync(made.ST, me, { send: () => {} });
       const overlay = L.dom.document.getElementById('deal');
       const F = L.Stage.fan(cards, W, H);
-      const size = W <= 420 ? 40 : 44;
-      const foot = F.at(0).y - 88;                 // the rail sits on this line
-      const label = F.at(0).y - 76;                // and the heading starts here
+      const B = L.Stage.bidRow(W);
+      const size = B.size;
+      const foot = F.at(0).y - B.foot;             // the rail sits on this line
+      const label = F.at(0).y - 66;                // and the heading starts here
       ok(foot + 4 < label, `${W}x${H} c=${cards}: the numbers clear "Your hand"`);
-      const top = foot - size * 1.34;
+      const top = foot - B.up;
       // The turned card lies in the middle, come down to the size of a card
       // played, so the numbers have that to clear.
       const ch = L.Stage.cardSize(W).h;
