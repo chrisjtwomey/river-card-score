@@ -406,6 +406,9 @@ browser, for anyone who prefers it.
 
 While a table is open the app shows a notification, so Android leaves the server
 running with the screen off. **Stop** on that notification closes the table.
+Tapping it comes back to the chooser you already had, rather than building
+another on top of it, so back is one step out and not a walk down through
+every screen the app has ever opened.
 
 The phone is held awake for a table that is being played, not for one that is
 merely open: once every phone has gone and nothing has happened for five

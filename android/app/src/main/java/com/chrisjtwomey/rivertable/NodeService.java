@@ -156,8 +156,11 @@ public class NodeService extends Service {
       ch.setShowBadge(false);
       nm.createNotificationChannel(ch);
     }
+    // The chooser this comes back to is the one already there, if it is the
+    // screen you are on: tapping the notification twice is one screen, not two.
     PendingIntent open = PendingIntent.getActivity(this, 0,
-        new Intent(this, MainActivity.class),
+        new Intent(this, MainActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     Intent stopIntent = new Intent(this, NodeService.class).setAction(ACTION_STOP);
     PendingIntent stop = PendingIntent.getService(this, 1, stopIntent,

@@ -32,8 +32,15 @@
       android:theme="@style/TableTheme">
 
     <!-- A launcher icon has room for about twelve characters, so the icon
-         carries the short name and everything else the whole one. -->
+         carries the short name and everything else the whole one.
+
+         singleTop, because the chooser is asked for again and again: the
+         notification, the launcher, and "host this table" from the tools all
+         point at it. Without it each ask built another chooser on top of the
+         last, each with a WebView of its own, and back walked down through
+         them one at a time. -->
     <activity android:name=".MainActivity" android:exported="true"
+        android:launchMode="singleTop"
         android:label="@string/launcher_name">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
@@ -41,7 +48,10 @@
       </intent-filter>
     </activity>
 
+    <!-- Also singleTop: the table is opened by address, and opening the one
+         already on screen hands it the address instead of building a second. -->
     <activity android:name=".TableActivity" android:exported="false"
+        android:launchMode="singleTop"
         android:configChanges="orientation|screenSize|keyboardHidden" />
 
     <!-- The node runtime cannot be stopped and started again inside one
