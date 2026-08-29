@@ -127,7 +127,7 @@ const Lobby = (function () {
     // Not on the seat that already runs the table: a row that does nothing.
     if (!s.bot && !is.isCap) items.push({ label: 'Make table host', msg: { t: 'captain', id: s.id } });
     if (!is.isFirst) items.push({ label: 'Make dealer', msg: { t: 'config', patch: { firstDealer: s.id } } });
-    if (!is.mine) items.push({ label: 'Remove', danger: true, msg: { t: 'kick', id: s.id } });
+    if (!is.mine) items.push({ label: 'Kick', danger: true, msg: { t: 'kick', id: s.id } });
     if (!items.length) return null;           // the host's own seat, already dealing: nothing to offer
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -178,7 +178,7 @@ const Lobby = (function () {
     }
     text(root, '#bot-hint', full ? 'The table is full.'
       : count ? `${count} of the ${ST.seats.length} seats play themselves.`
-      : Game.virtual(ST) ? 'It plays its own hand. Remove it with ×.'
+      : Game.virtual(ST) ? 'It plays its own hand. Kick it from its ⋯ menu.'
       : 'It plays its own hand, so the cards move to the phones.');
   }
 

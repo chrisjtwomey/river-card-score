@@ -200,8 +200,8 @@ The rules are held on the server, so a phone cannot renege, play out of turn, or
 
 A hand short of people, bots can play the empty seats. In the lobby,
 whoever runs the table taps **Add a bot**. A bot takes a seat like anybody else:
-it has a name, it is dealt a hand, and it bids and plays it. Remove it with the
-same **×** that removes a person.
+it has a name, it is dealt a hand, and it bids and plays it. **Kick** it from
+the ⋯ menu beside it, as you would a person.
 
 - A bot needs cards of its own to hold, so adding one sets **Cards** to *Deal on
   the phones*. At a table with real cards there is nothing for a bot to hold and

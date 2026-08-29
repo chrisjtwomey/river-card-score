@@ -1854,7 +1854,7 @@ part('bidding for a seat that is not there, and leaving');
     // the words are on a span inside the button, and the fake DOM does not roll text up
     const label = (b) => b.querySelector('.menu-label').textContent;
     const names = menu ? menu.querySelectorAll('.menu-tap').map(label) : [];
-    ok(names.indexOf('Make table host') >= 0 && names.indexOf('Make dealer') >= 0 && names.indexOf('Remove') >= 0,
+    ok(names.indexOf('Make table host') >= 0 && names.indexOf('Make dealer') >= 0 && names.indexOf('Kick') >= 0,
        'with the controls named  got ' + names.join(' | '));
     P.socks[0].sent.length = 0;
     menu.querySelectorAll('.menu-tap').find((b) => label(b) === 'Make dealer').fire('click');
