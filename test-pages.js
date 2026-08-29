@@ -1822,6 +1822,23 @@ part('bidding for a seat that is not there, and leaving');
     ok(H.pick('#btn-bum').hidden === true, 'while the vote box carries the bum deal');
   }
 
+  {   // the bids are tallied in the same words on the phone and the TV screen
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ away: false }));
+    ok(P.pick('#bid-tally').textContent === 'Bids total 1 · 2 tricks',
+       'the phone tallies the bids against the hand  got ' + P.pick('#bid-tally').textContent);
+    const H = hostPage('host');
+    H.feed(table({ away: false }));
+    ok(H.pick('#turn-tally').textContent === 'Bids total 1 · 2 tricks',
+       'in the words the TV screen uses  got ' + H.pick('#turn-tally').textContent);
+    const playing = table({ away: false, phase: 'tricks' }); playing.turn = null;
+    playing.rounds[0].bids = [1, 1, 0];
+    playing.play = { turn: 1, trick: [], won: [1, 0, 0], last: null, upcard: 'TH', counts: [1, 1, 1] };
+    P.feed(playing); H.feed(playing);
+    ok(P.pick('#bid-tally').textContent === '1 of 2 tricks played' && H.pick('#turn-tally').textContent === '1 of 2 tricks played',
+       'and once the cards are out both count the tricks played  got ' + P.pick('#bid-tally').textContent + ' / ' + H.pick('#turn-tally').textContent);
+  }
+
   {   // what the round paid is said on the phone and on the TV screen
     const before = table({ away: false, phase: 'tricks' }); before.cfg.deck = 'physical'; before.turn = null;
     before.rounds[0].bids = [1, 1, 0];

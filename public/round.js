@@ -81,6 +81,20 @@ const Round = (function () {
     return Table.bidsAfter(strip, ST, r, last);   // a bid lands, the turn moves on
   }
 
+  /* ---------- the bids against the hand ----------
+     "Bids total 3 · 5 tricks" while the bids come in; "2 of 5 tricks played"
+     once the cards are out and the table counts them. The TV screen and the
+     phone said it two ways; the figure is the same figure. */
+  function tally(el, ST, r) {
+    if (!el) return;
+    if (!r) { el.textContent = ''; return; }
+    const play = ST.phase === 'tricks' && ST.play ? ST.play : null;
+    const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
+    el.textContent = play
+      ? `${play.won.reduce((a, v) => a + v, 0)} of ${r.cards} tricks played`
+      : `Bids total ${sum} · ${r.cards} tricks`;
+  }
+
   /* ---------- the dealer's trick pad ----------
      One row a seat, a chip for every count. Everybody starts on 0, so only
      the winners need a tap, and the chips that would take the total past the
@@ -301,5 +315,5 @@ const Round = (function () {
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
-  return { header, bidStrip, trickPad, bidFor, playFor, playout, winner, bum, vote, newGame, bumDeal, undo };
+  return { header, bidStrip, tally, trickPad, bidFor, playFor, playout, winner, bum, vote, newGame, bumDeal, undo };
 })();

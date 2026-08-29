@@ -285,8 +285,7 @@ function renderTurn(r, n) {
       : 'Press "New game" to play again with the same players.';
     return;
   }
-  const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
-  $('#turn-tally').textContent = `Bids total ${sum} · ${r.cards} tricks`;
+  Round.tally($('#turn-tally'), ST, r);
   $('#turn-tally').className = 'tally';
 
   if (ST.phase === 'bid') {
