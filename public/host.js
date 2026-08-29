@@ -284,7 +284,7 @@ function renderTurn(r, n) {
     return;
   }
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
-  $('#turn-tally').textContent = `Bids ${sum} of ${r.cards}`;
+  $('#turn-tally').textContent = `Bids total ${sum} · ${r.cards} tricks`;
   $('#turn-tally').className = 'tally';
 
   if (ST.phase === 'bid') {

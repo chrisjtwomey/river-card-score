@@ -411,9 +411,11 @@ function renderBidStrip(r) {
   const play = ST.phase === 'tricks' && ST.play ? ST.play : null;
   $('#bid-title').textContent = play ? 'Tricks won' : 'Bids';
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
+  // "total 3 · 5 tricks", not "3 of 5": the sum of the bids against the
+  // hand, which is what screw the dealer and the table both care about.
   $('#bid-tally').textContent = play
-    ? `${play.won.reduce((a, v) => a + v, 0)} of ${r.cards} played`
-    : `${sum} of ${r.cards}`;
+    ? `${play.won.reduce((a, v) => a + v, 0)} of ${r.cards} tricks played`
+    : `total ${sum} · ${r.cards} tricks`;
 }
 
 // The rows slide to their new places, the scores run to their new values, and
