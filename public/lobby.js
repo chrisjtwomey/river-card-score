@@ -121,7 +121,8 @@ const Lobby = (function () {
     btn.setAttribute('aria-label', `Options for ${s.name}`);
     btn.setAttribute('aria-haspopup', 'true');
     const items = [];
-    if (!s.bot) items.push({ label: 'Make table host', on: is.isCap, msg: { t: 'captain', id: s.id } });
+    // Not on the seat that already runs the table: a row that does nothing.
+    if (!s.bot && !is.isCap) items.push({ label: 'Make table host', msg: { t: 'captain', id: s.id } });
     items.push({ label: 'Deals first', on: is.isFirst,
                  msg: { t: 'config', patch: { firstDealer: is.isFirst ? null : s.id } } });
     if (!is.mine) items.push({ label: 'Remove', danger: true, msg: { t: 'kick', id: s.id } });

@@ -1862,6 +1862,10 @@ part('bidding for a seat that is not there, and leaving');
        'and a row sends what the glyph sent  got ' + JSON.stringify(P.socks[0].sent[0]));
     ok(!rows[1].querySelector('.seatmenu'), 'the menu shuts on the tap');
     ok(names.indexOf('Move up') < 0 && names.indexOf('Move down') < 0, 'the order is changed by dragging, not from the menu');
+    rows[0].querySelector('.more').fire('click');           // the seat that runs the table
+    const host = rows[0].querySelector('.seatmenu').querySelectorAll('.menu-tap').map(label);
+    ok(host.indexOf('Make table host') < 0 && host.indexOf('Deals first') >= 0,
+       'the seat that already runs the table is not offered the job  got ' + host.join(' | '));
     P.feed(table({ phase: 'lobby', boss: false }));
     ok(!P.pick('#lobby-seats').children[1].querySelector('.more'), 'a player who does not run the table has no menu');
   }
