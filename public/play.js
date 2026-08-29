@@ -315,7 +315,7 @@ function renderRound(r) {
   // lying there for everybody to see, so the page says nothing about it.
   const cur = Game.SUITS.find((s) => s.k === r.trump) || null;
   $('#round-trump-row').hidden = !Game.virtual(ST);
-  $('#round-trump').textContent = ST.cfg.trump ? (cur ? cur.g : '—') : 'n/a';
+  $('#round-trump').textContent = cur ? cur.g : 'none';   // no card turned, or trumps off
 }
 
 function renderTurn(r, me) {
