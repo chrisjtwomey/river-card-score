@@ -166,7 +166,7 @@ function renderVote(r, me) {
     acts.append(yes, no);
   } else if (v.by === me) {
     const c = document.createElement('button');
-    c.className = 'btn ghost'; c.type = 'button'; c.textContent = 'Take it back';
+    c.className = 'btn ghost'; c.type = 'button'; c.textContent = 'Withdraw the vote';
     c.addEventListener('click', () => Net.send({ t: 'votecancel' }));
     acts.appendChild(c);
   }
