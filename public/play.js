@@ -303,7 +303,7 @@ function renderLobby(me) {
   Lobby.seats($('#lobby-seats'), ST, v);
   Lobby.bots($('#bot-row'), ST, v);
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
-  $('#lobby-title').textContent = v.boss ? 'Set the table' : 'Waiting for the table host';
+  $('#lobby-title').textContent = v.boss ? 'Get the table ready' : 'Waiting for the table host';
   $('#lobby-hint').textContent = ST.seats.length < 2
     ? 'Waiting for more players…'
     : (v.boss ? 'Start the game when everybody is seated.' : `${capName} starts the game when everybody is seated.`);

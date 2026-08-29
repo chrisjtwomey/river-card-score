@@ -114,7 +114,7 @@ const Lobby = (function () {
     { id: 'cfg-trump', key: 'trump', kind: 'check', label: 'Turn a card for trumps' },
     { id: 'cfg-deck', key: 'deck', kind: 'select', label: 'Cards' },
     { id: 'cfg-accolade-count', key: 'accoladeCount', kind: 'select', label: 'Accolades drawn',
-      hint: 'Drawn at random when the game ends.' },
+      hint: 'Prizes for how you played, drawn at random when the game ends.' },
     { id: 'cfg-accolade-pay', key: 'accoladePay', kind: 'select', label: 'Each one pays',
       hint: 'Added before the winner is known.' },
   ];
