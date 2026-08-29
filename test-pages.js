@@ -930,6 +930,38 @@ part('off the table, and on to the next round');
   ok(!!overlay.querySelector('.felt-out'), 'and the way out to the scorecard');
 }
 
+// the page knows the felt is up, so what it says in passing keeps off the round line
+{
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: me });
+  const L = load(412, 860, 'off');
+  const body = L.dom.document.body;
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  ok(body.classList.contains('felt-up'), 'the page is marked while the felt is up');
+  L.Felt.hide();
+  ok(!body.classList.contains('felt-up'), 'and not once it is dropped');
+  L.Felt.show();
+  ok(body.classList.contains('felt-up'), 'and again when it comes back');
+  L.Felt.sync(Object.assign({}, made.ST, { phase: 'lobby', rounds: [], play: null }), me, { send: () => {} });
+  ok(!body.classList.contains('felt-up'), 'nor when the round is over and the felt goes');
+}
+
+// the foot line is cleared while the next hand is in the air
+{
+  const n = 4, cards = 5, me = 1;
+  // a round with a bid already in is built as it stands, with no deal
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: 2, bids: [1, 1, null, null] });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  const hint = () => (overlay.querySelector('.felt-hint') || {}).textContent || '';
+  ok(hint().length > 0, 'the felt has a line at its foot  got ' + hint());
+  made.ST.rounds[0].redeals = 1;                 // a bum deal: the hand is dealt again, untouched
+  made.ST.rounds[0].bids = [null, null, null, null]; made.ST.turn = 0;
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  ok(hint() === '', 'and says nothing while the cards are in the air again  got ' + JSON.stringify(hint()));
+}
+
 // a vote on a bum deal reaches a player on the felt, and is answered there
 {
   const n = 4, cards = 5, me = 1;

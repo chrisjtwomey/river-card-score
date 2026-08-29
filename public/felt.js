@@ -86,8 +86,10 @@ const Felt = (function () {
     const overlay = parts().overlay;
     // The stage is made hidden, and the deal is what usually shows it. A table
     // built without one -- a phone that arrived in the middle of a round, or a
-    // reader with animations off -- has to show it itself.
-    if (want) overlay.hidden = false;
+    // reader with animations off -- has to show it itself. The page is told
+    // too: what it says in passing (a bid landing, a phone going) moves to the
+    // foot of the felt, off the round line.
+    if (want) { overlay.hidden = false; document.body.classList.add('felt-up'); }
     overlay.classList.add('table');
     overlay.classList.toggle('still', still());
     if (!overlay.querySelector('.felt-out')) {
@@ -137,6 +139,7 @@ const Felt = (function () {
     const overlay = (parts(false) || {}).overlay;
     if (!overlay) return;
     overlay.classList.remove('table', 'still', 'dragging');
+    document.body.classList.remove('felt-up');
     ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids', '.felt-beat', '.felt-vote'].forEach((s) => {
       const el = overlay.querySelector(s);
       if (el) el.remove();
@@ -1004,6 +1007,7 @@ const Felt = (function () {
     if (!untouched || still()) { build(r); return; }
 
     mount();
+    say('');                             // last round's line has no place over a shuffle
     const long = !dealtOnce;
     dealtOnce = true;
     T = null;
@@ -1209,6 +1213,7 @@ const Felt = (function () {
     if (pausing) { pausing = false; endBeat(); }
     const overlay = (parts(false) || {}).overlay;
     if (overlay) { overlay.hidden = true; overlay.classList.remove('dragging', 'armed'); }
+    document.body.classList.remove('felt-up');
     if (onView) onView(false);
   }
 

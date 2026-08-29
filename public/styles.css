@@ -380,6 +380,9 @@ body.host .seatcount .left{font-size:16px}
 .toast.err{background:var(--red);color:#fff}
 body.host .toast{font-size:24px;padding:12px 22px}
 body.host .toast .note{font-size:19px}
+/* With the felt up the round line is at the top, and a toast landed on it.
+   They come up from the foot instead, just above the felt's own line. */
+body.felt-up .toaster{top:auto;bottom:calc(46px + env(safe-area-inset-bottom));flex-direction:column-reverse}
 
 /* ---------- deal animation ---------- */
 .deal{
