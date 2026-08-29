@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const mine = $('#new-panel');
     mine.parentNode.insertBefore(mine, $('#join-panel'));
     $('.brand .sub').textContent = 'Your table';
+    // and the one green button is the one this phone came for
+    $('#btn-new-table').classList.add('primary');
+    $('#btn-join').classList.remove('primary');
   }
 
   const code = new URLSearchParams(location.search).get('code');
