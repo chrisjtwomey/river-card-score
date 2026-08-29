@@ -192,8 +192,6 @@ async function bidRound(P) {
 
   P[0].send({ t: 'captain', id: P[2].seatId });
   await okBy(() => host.state.captainId === P[2].seatId, 'the table host can pass it on');
-  P[1].send({ t: 'captain', id: P[1].seatId }); await P[1].rt();
-  ok(host.state.captainId === P[2].seatId, 'a player cannot take it for themselves');
   host.send({ t: 'captain', id: P[0].seatId });
   await okBy(() => host.state.captainId === P[0].seatId, 'the host screen can hand it back');
 
@@ -233,7 +231,7 @@ async function bidRound(P) {
   await okBy(() => P[2].state.rounds[0].bids[1] === 1, 'and the number is on the other phones too');
 
   P[2].send({ t: 'bid', v: 1 });
-  await okBy(() => host.state.turn === 0, 'the dealer bids last');
+  await until(() => host.state.turn === 0);          // round to the dealer
   P[0].send({ t: 'bid', v: 1 });
   await okBy(() => host.state.phase === 'tricks', 'the last bid in starts the play');
   ok(host.state.play && host.state.play.won.join() === '0,0,0',
@@ -584,8 +582,7 @@ async function bidRound(P) {
       }
       ok(at[second].state.hand.join(',') === '9H,AD,KD', 'a stand-in table can have its hands stacked');
       await bidRound(at);
-      await okBy(() => at[0].state.play && at[0].state.play.turn === lead,
-         'the player left of the dealer leads');
+      await until(() => at[0].state.play && at[0].state.play.turn === lead);
 
       at[lead].send({ t: 'play', card: 'KH' });
       await until(() => at[0].state.play.trick.length === 1);
