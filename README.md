@@ -129,8 +129,10 @@ seat carries this phone's name and nobody is behind it, and **Watch** — the
 screen a TV shows, which changes nothing at the table. So the phone that runs
 the server never types a code: a code reaches that server and no other, and
 every table on it is already named here. What is left of the join panel there
-is the camera, which reaches somebody else's phone. A mark beside each says what it is doing: a game
-in play turns, a table waiting for players breathes, a game that is over is
+is the camera, which reaches somebody else's phone. Each row reads the same way: the table's name, then the mark
+and the badge that end the line, the buttons on the line under it, and who is
+at the table under those. The mark says what the table is doing: a game in
+play turns, a table waiting for players breathes, a game that is over is
 still. With reduce motion on, the marks are the same shapes and do not move. `GET /tables.json` answers that, and only to the machine the server
 runs on: a table's four characters are the only door it has, and a listing
 handed to every browser on the network would open every table to anybody who

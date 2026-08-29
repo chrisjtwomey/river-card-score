@@ -199,9 +199,17 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
     });
-    row.append(mark, nm, badge, who);
-    if (sit) row.appendChild(sit);
-    row.append(go, drop);
+    /* Two lines, always the same two: what the table is on the first, what
+       can be done with it on the second. One line that wrapped when it ran out
+       of room put the buttons in a different place on every row. */
+    const head = document.createElement('div');
+    head.className = 'trow-head';
+    head.append(nm, mark, badge);            // the badge is the end of the line
+    const acts = document.createElement('div');
+    acts.className = 'trow-acts';
+    if (sit) acts.appendChild(sit);
+    acts.append(go, drop);
+    row.append(head, acts, who);
     return row;
   }
 

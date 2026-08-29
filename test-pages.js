@@ -1628,6 +1628,15 @@ part('the front page, and the screen');
         ok(marks.length === 2 && marks[0].classList.contains('play') && marks[1].classList.contains('play'),
            'a game in play is marked as turning  got ' + marks.map((m) => m.className).join(' | '));
       });
+      const head = rows[0].querySelector('.trow-head');
+      ok(!!head && head.children.length === 3
+         && head.children[0].classList.contains('nm')
+         && head.children[1].classList.contains('tmark')
+         && head.children[2].classList.contains('badge'),
+         'the first line is the table, its mark and its badge, in that order  got '
+         + (head ? head.children.map((c) => c.className).join(' | ') : 'no line'));
+      ok(rows[0].children.length === 3 && rows[0].children[1].classList.contains('trow-acts'),
+         'the buttons are a line of their own, under it');
       const btns = rows[0].querySelectorAll('.btn').map((b) => b.textContent);
       ok(btns.join(' | ') === 'Take a seat | Watch',
          'a table in the lobby is sat down at, or watched  got ' + btns.join(' | '));

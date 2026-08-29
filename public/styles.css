@@ -878,14 +878,18 @@ body.player .standings-panel{box-shadow:var(--shadow)}
   flex-wrap:nowrap;
 }
 .seat-item .badge{flex:none;white-space:nowrap}
-/* The tables on the front page -- the ones this browser is at, and the ones
-   this phone runs -- carry longer badges, a line of names and two buttons, so
-   those lists may still wrap. */
-#rejoin-list .seat-item,#server-list .seat-item{flex-wrap:wrap}
-#server-list .seat-item small{flex:1 1 100%;order:3;opacity:.75;font-weight:600}
-#server-list .seat-item .btn.primary{margin-left:auto}
-#server-list .seat-item .btn:not(.primary){margin-left:auto}
-#server-list .seat-item .btn.primary ~ .btn{margin-left:0}
+/* The tables a browser is at, on the front page: a longer badge and two
+   buttons, so that list may still wrap. */
+#rejoin-list .seat-item{flex-wrap:wrap}
+/* A table this phone runs is three lines, always the same three: what it is,
+   what can be done with it, and who is at it. */
+#server-list .seat-item{flex-direction:column;align-items:stretch;gap:8px}
+#server-list .trow-head{display:flex;align-items:center;gap:8px}
+#server-list .trow-head .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the mark and the badge belong together, at the end of the line */
+#server-list .trow-head .tmark{margin-left:auto}
+#server-list .trow-acts{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+#server-list .seat-item small{opacity:.75;font-weight:600}
 /* What a running table is doing, in the space of a full stop. A game in play
    turns; a table waiting for people breathes; one that is over is still. */
 .tmark{flex:none;width:13px;height:13px;border-radius:50%;display:block}
