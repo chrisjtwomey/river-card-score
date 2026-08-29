@@ -721,14 +721,14 @@ const Felt = (function () {
       }
       if (ST.turn === null) return say('All bids are in.');
       const who = ST.seats[ST.turn];
-      if (!who) return say('Waiting for the table to bid.');
+      if (!who) return say('Waiting for a bid.');
       // A seat with nobody behind it stops the table, and the felt should not
       // leave a player guessing why nothing is happening. The bid for it is
       // made from the page under the felt, by whoever runs the table.
       if (!who.online) {
         return say(who.left
-          ? `${who.name} left the game. The table is playing that hand.`
-          : `${who.name} is not at the table. The table waits, or the host bids for them.`);
+          ? `${who.name} left the game. Auto-play has that hand.`
+          : `${who.name} is not at the table. The game waits, or the table host bids for them.`);
       }
       return say(`Waiting for ${who.name} to bid.`);
     }
@@ -749,10 +749,10 @@ const Felt = (function () {
     const on = ST.seats[p.turn];
     if (on && !on.online) {
       return say(on.left
-        ? `${on.name} left the game. The table is playing that hand.`
+        ? `${on.name} left the game. Auto-play has that hand.`
         : `${on.name} is not at the table.`);
     }
-    return say(`Waiting for ${on ? on.name : 'the table'}.`);
+    return say(`Waiting for ${on ? on.name : 'the next card'}.`);
   }
 
   /* ---------------- the hand, in your fingers ---------------- */

@@ -1260,7 +1260,7 @@ part('who came, and who went');
   said.length = 0;
   Table.sayPresence(st({ benOn: false, benLeft: true }), 0, back);
   ok(said.length === 1 && /^Ben left the game/.test(said[0]), 'leaving is a different line  got ' + said[0]);
-  ok(/plays that hand/.test(said[0]), 'and it says what the table does about it  got ' + said[0]);
+  ok(/auto-play has that hand/.test(said[0]), 'and it says who has the hand now  got ' + said[0]);
 
   said.length = 0;
   Table.sayPresence(st({ benOn: false }), 1, first);
@@ -1601,11 +1601,11 @@ part('bidding for a seat that is not there, and leaving');
     ok(said.length === 1 && /^Cal is back/.test(said[0]), 'coming back is said  got ' + said[0]);
   }
 
-  {   // handing a seat to the table for good
+  {   // handing a seat to auto-play for good
     const P = playPage(seed, '?c=TEST');
     P.feed(table({}));
-    ok(P.pick('#playout-row').hidden === false, 'the host can hand the empty seat to the table');
-    ok(P.pick('#playout-row').querySelector('.btn').textContent === "Let the table play Cal's hand",
+    ok(P.pick('#playout-row').hidden === false, 'the host can hand the empty seat to auto-play');
+    ok(P.pick('#playout-row').querySelector('.btn').textContent === "Auto-play Cal's hand",
        'named, like the bid  got ' + P.pick('#playout-row').querySelector('.btn').textContent);
     P.socks[0].sent.length = 0;
     P.pick('#playout-row').querySelector('.btn').fire('click');

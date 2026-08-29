@@ -279,9 +279,9 @@ function handle(ws, m) {
        A seat somebody is sitting in is never handed over. */
     if (room.phase !== 'lobby') {
       if (!held) return fail(ws, 'that game has already started. To come back to your seat, type the name you played under');
-      if (held.bot) return fail(ws, `${held.name} is a player the table provides`);
+      if (held.bot) return fail(ws, `${held.name} is a bot`);
       if (held.online) return fail(ws, `${held.name} is already at the table`);
-      if (held.left) return fail(ws, `${held.name} left the game, so the table is playing that hand`);
+      if (held.left) return fail(ws, `${held.name} left the game, so auto-play has that hand`);
       if (!Room.waitingOn(room, seatIndex(room, held.id))) {
         return fail(ws, `the game has gone on without ${held.name}. Only the phone that holds that seat can come back to it`);
       }

@@ -72,19 +72,22 @@ waiting on them. Three ways back:
   the bots use, or the host taps the number the player at the table asks for.
   *Play a card for them* does the same once the cards are out.
 
-**A phone that is not coming back** can be handed to the table for good:
-**Let the table play their hand** appears beside the bid-for and play-for
-buttons whenever the table is stopped on an empty seat. The seat keeps its
-name and its column, the table plays it from there on, and the phone that
-holds the seat takes it back by coming to the table. Only the seat the table
-is waiting on can be handed over, and only on a table dealt on the phones —
-with real cards there is no hand for the table to play.
+**A phone that is not coming back** can be handed to auto-play for good:
+**Auto-play their hand** appears beside the bid-for and play-for buttons
+whenever the game is stopped on an empty seat. The seat keeps its name and
+its column, auto-play takes it from there on, and the phone that holds the
+seat takes it back by coming to the table. Only the seat the game is waiting
+on can be handed over, and only on a table dealt on the phones — with real
+cards there is no hand for auto-play to hold.
+
+Every screen calls it **auto-play**: the word "table" is the room the game is
+in, and nothing else.
 
 **A player who leaves on purpose** — **Leave the game** at the foot of the
 player page — is not waited for. Before the cards go out the seat simply goes.
 After that it cannot: the scorecard is a column for every seat and the rounds
-already played are that player's. So the seat stays, marked as gone, and the
-table plays its hand from there on. That phone can still come back to the seat
+already played are that player's. So the seat stays, marked as gone, and
+auto-play takes its hand from there on. That phone can still come back to the seat
 from the front page, and it is a player's again.
 
 ### A browser holds more than one table
@@ -178,13 +181,12 @@ The rules are held on the server, so a phone cannot renege, play out of turn, or
 - The dealer's trick pad is gone, and typing the tricks in is refused.
 - Nobody picks the trump. The deck turns it.
 - **Go back** deals that hand again, because those cards are gone.
-- The empty seats can be played by the table itself: see **Players the table
-  provides**.
+- The empty seats can be played by bots: see **Bots**.
 - A phone that goes quiet would stop the table, so whoever runs the table gets **Play a card for them**. The server picks, and only from the cards the rules allow, so nobody chooses another player's card.
 
-### Players the table provides
+### Bots
 
-A hand short of people, the table can play the empty seats itself. In the lobby,
+A hand short of people, bots can play the empty seats. In the lobby,
 whoever runs the table taps **Add a bot**. A bot takes a seat like anybody else:
 it has a name, it is dealt a hand, and it bids and plays it. Remove it with the
 same **×** that removes a person.

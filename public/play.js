@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     UI.ask(lobby ? 'Leave the table?' : 'Leave the game?',
       lobby
         ? 'Your seat is given up. Join again with the table code while the game has not started.'
-        : 'Your seat stays on the scorecard and the table plays your hand from here. '
+        : 'Your seat stays on the scorecard and auto-play takes your hand from here. '
           + 'This phone can come back to it from the front page.',
       'Leave').then((yes) => { if (yes) Net.send({ t: 'leave' }); });
   });

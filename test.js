@@ -1295,7 +1295,7 @@ function client(name, url) {
     h.send({ t: 'start' }); await wait(250);
     h.errors.length = 0;
     h.send({ t: 'playout' }); await wait(150);
-    ok(h.errors.some((e) => /no cards to play that hand with/.test(e)),
+    ok(h.errors.some((e) => /no cards to hold/.test(e)),
        'a table with real cards cannot hand a seat over  got ' + JSON.stringify(h.errors));
     h.send({ t: 'reset' }); await wait(150);
 

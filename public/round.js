@@ -128,7 +128,7 @@ const Round = (function () {
      Nobody may bid or play out of turn, so a phone that has gone quiet stops
      the whole table. Whoever runs the table can act for that seat: bid for
      it -- off its own cards where there are cards to read -- play a card for
-     it, or hand the seat to the table for good. */
+     it, or hand the seat to auto-play for good. */
 
   function bidFor(root, ST, r, view) {
     if (!root) return;
@@ -175,7 +175,7 @@ const Round = (function () {
   }
 
   /* A phone that is not coming back. The seat keeps its name and its column,
-     the table plays it from here on, and the phone that holds the seat takes
+     auto-play takes it from here on, and the phone that holds the seat takes
      it back by coming to the table. Only a table that deals the cards has a
      hand to play. */
   function playout(root, ST, view) {
@@ -185,14 +185,14 @@ const Round = (function () {
     root.hidden = !on;
     if (!on) return;
     root._who = ST.seats[p].name;               // read at the tap, not at the draw
-    const btn = part(root, '.btn', () => button('btn ghost danger', 'Let the table play that hand'));
-    btn.textContent = `Let the table play ${root._who}'s hand`;
+    const btn = part(root, '.btn', () => button('btn ghost danger', 'Auto-play that hand'));
+    btn.textContent = `Auto-play ${root._who}'s hand`;
     onClick(btn, () => {
       const who = root._who || 'that seat';
-      UI.ask(`Let the table play ${who}'s hand?`,
-        `The seat keeps its name and its place on the scorecard, and the table plays it `
+      UI.ask(`Auto-play ${who}'s hand?`,
+        `The seat keeps its name and its place on the scorecard, and auto-play takes the hand `
         + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
-        'Hand it over').then((yes) => { if (yes) view.send({ t: 'playout' }); });
+        'Auto-play').then((yes) => { if (yes) view.send({ t: 'playout' }); });
     });
   }
 

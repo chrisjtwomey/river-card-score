@@ -285,7 +285,7 @@ const Table = (function () {
       const was = last[s.id];
       if (!was || was === now[s.id] || p === me) return;
       if (now[s.id] === 'left') {
-        UI.fx.toast(`${s.name} left the game`, { note: 'the table plays that hand now' });
+        UI.fx.toast(`${s.name} left the game`, { note: 'auto-play has that hand now' });
       } else if (now[s.id] === 'away') {
         UI.fx.toast(`${s.name} dropped out`,
           { note: waiting(p) ? 'the table is waiting on them' : 'they can come back to their seat' });
