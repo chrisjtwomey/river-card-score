@@ -241,7 +241,7 @@ function renderGame() {
   renderTrump(r);
   renderTurn(r, n);
   renderVote(r);
-  $('#btn-bum').hidden = !r;
+  $('#btn-bum').hidden = !r || !!ST.vote;     // the vote box carries it while a vote is open
   renderTable(r);
   Round.playFor($('#playfor-row'), ST, view());
   renderStandings();
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
       run: newGame },
   ]));
   $('#btn-bum').addEventListener('click', () => Round.bumDeal(view(), true));
-  $('#btn-vote-do').addEventListener('click', () => Net.send({ t: 'bumdeal' }));
+  $('#btn-vote-do').addEventListener('click', () => Round.bumDeal(view(), true));   // asked first, like the other
   $('#btn-vote-cancel').addEventListener('click', () => Net.send({ t: 'votecancel' }));
   // playDeal() in the console replays it for the current table.
   window.playDeal = (mode) => playDealNow(mode || 'full');
