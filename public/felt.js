@@ -94,11 +94,11 @@ const Felt = (function () {
       const out = document.createElement('button');
       out.className = 'felt-out';
       out.type = 'button';
-      out.title = 'The round, the bids and the scorecard';
+      out.title = 'The scores and the round';
       out.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true">'
         + '<rect x="2.5" y="3" width="15" height="14" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/>'
         + '<path d="M2.5 7.5h15M8 7.5V17M2.5 12h15" stroke="currentColor" stroke-width="1.3" fill="none"/>'
-        + '</svg><span>Scorecard</span>';
+        + '</svg><span>Scores</span>';
       out.addEventListener('click', (e) => { e.stopPropagation(); hide(); });
       overlay.appendChild(out);
     }

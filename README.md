@@ -249,8 +249,8 @@ that band.
   a heading of their own, and are picked up the same way -- touch to lift, tap
   again to call. Your own bid stays lit and can be changed until the next player bids.
   The number screw the dealer forbids is struck through.
-- The corner buttons are the way off the table: **Scorecard** drops the felt to
-  the page underneath, and **Back to the table** brings it back. That page is
+- The corner buttons are the way off the table: **Scores** drops the felt to
+  the page underneath, and **Back to your cards** brings it back. That page is
   the scorecard and nothing else -- the round, the standings, and the card,
   open, never folded away -- read as one page rather than a stack of cards,
   with **Leave the game** across the foot of it. One panel appears on it only
