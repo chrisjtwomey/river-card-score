@@ -134,6 +134,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const nm = document.createElement('span');
     nm.className = 'nm';
     nm.textContent = `Table ${t.code}`;
+    /* What the table is doing, at a glance: a game in play turns, a table
+       waiting for people breathes, a game that is over is still. */
+    const mark = document.createElement('span');
+    const state = t.phase === 'lobby' ? 'open' : t.phase === 'done' ? 'over' : 'play';
+    mark.className = 'tmark ' + state;
+    mark.title = state === 'play' ? 'a game in play' : state === 'open' ? 'waiting for players' : 'the game is over';
     const badge = document.createElement('span');
     badge.className = 'badge soft';
     badge.textContent = t.phase === 'lobby' ? 'in the lobby'
@@ -151,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     go.addEventListener('click', () => {
       location.href = 'host.html?c=' + encodeURIComponent(t.code);
     });
-    row.append(nm, badge, who, go);
+    row.append(mark, nm, badge, who, go);
     return row;
   }
 

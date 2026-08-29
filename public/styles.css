@@ -873,6 +873,21 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 #rejoin-list .seat-item,#server-list .seat-item{flex-wrap:wrap}
 #server-list .seat-item small{flex:1 1 100%;order:3;opacity:.75;font-weight:600}
 #server-list .seat-item .btn{margin-left:auto}
+/* What a running table is doing, in the space of a full stop. A game in play
+   turns; a table waiting for people breathes; one that is over is still. */
+.tmark{flex:none;width:13px;height:13px;border-radius:50%;display:block}
+.tmark.play{
+  border:2px solid var(--chip);border-top-color:var(--gold);
+  animation:tspin 900ms linear infinite;
+}
+.tmark.open{background:var(--good);animation:tbreath 2.4s ease-in-out infinite}
+.tmark.over{background:var(--chip);border:2px solid var(--line)}
+@keyframes tspin{to{transform:rotate(360deg)}}
+@keyframes tbreath{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
+@media (prefers-reduced-motion: reduce){
+  /* The mark still says which is which: the arc stays, it simply does not turn. */
+  .tmark.play,.tmark.open{animation:none}
+}
 .seat-item.me{border-color:var(--gold)}
 /* a seat the table plays itself */
 .seat-item.bot .nm{color:var(--ink-dim)}

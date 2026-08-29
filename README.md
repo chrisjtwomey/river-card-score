@@ -123,8 +123,10 @@ browser's own memory, and a server can be running tables it knows nothing
 about: one started from a TV screen, or one whose seat this browser has
 forgotten. So the front page, read on the machine that serves it, asks the
 server what it is running and offers the rest under **Tables on this phone**,
-each with **Watch** — the screen a TV shows, which changes nothing at the
-table. `GET /tables.json` answers that, and only to the machine the server
+each under **Running tables**, with **Watch** — the screen a TV shows, which
+changes nothing at the table. A mark beside each says what it is doing: a game
+in play turns, a table waiting for players breathes, a game that is over is
+still. With reduce motion on, the marks are the same shapes and do not move. `GET /tables.json` answers that, and only to the machine the server
 runs on: a table's four characters are the only door it has, and a listing
 handed to every browser on the network would open every table to anybody who
 could reach the page. A table that has ended says so on the

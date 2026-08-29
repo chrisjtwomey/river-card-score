@@ -1597,7 +1597,19 @@ part('the front page, and the screen');
       ok(P.pick('#server-panel').hidden === false, 'and offers what it finds');
       const rows = P.pick('#server-list').children;
       ok(rows.length === 1, 'a table this browser holds a seat at is not repeated  got ' + rows.length);
-      ok(rows[0].children[0].textContent === 'Table CCCC', 'the other one is there');
+      ok(rows[0].querySelector('.nm').textContent === 'Table CCCC', 'the other one is there');
+      ok(rows[0].querySelector('.tmark').classList.contains('open'),
+         'a table waiting for players is marked as waiting');
+      running.tables[1].phase = 'bid';                      // and one in play turns
+      const R = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', { hostname: '127.0.0.1', fetch: answer });
+      const rbox = R.dom.document.createElement('div');
+      rbox.append(R.pick('#join-panel'), R.pick('#new-panel'));
+      R.start();
+      Promise.resolve().then(() => Promise.resolve()).then(() => {
+        const marks = R.pick('#server-list').querySelectorAll('.tmark');
+        ok(marks.length === 2 && marks[0].classList.contains('play') && marks[1].classList.contains('play'),
+           'a game in play is marked as turning  got ' + marks.map((m) => m.className).join(' | '));
+      });
       const btn = rows[0].querySelector('.btn');
       ok(btn.textContent === 'Watch', 'and it is watched, not joined');
       btn.fire('click');
