@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const go = document.createElement('button');
       go.className = 'btn primary';
       go.type = 'button';
-      go.textContent = screen ? 'Show it' : 'Rejoin';
+      go.textContent = screen ? 'Show this table' : 'Rejoin';
       go.addEventListener('click', () => {
         location.href = (screen ? 'host.html?c=' : 'play.html?c=') + encodeURIComponent(t.code);
       });

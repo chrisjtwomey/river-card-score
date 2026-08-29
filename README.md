@@ -34,11 +34,11 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 ### How a game runs
 
-**One phone is enough.** On the landing page, type your name and press **Start a table and play**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A TV screen is optional.
+**One phone is enough.** On the landing page, type your name and press **Start a table**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A TV screen is optional.
 
 **The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, undo, and new game. They can hand that over with the ★ button beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
 
-1. Someone starts the table, from a phone with **Start a table and play**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone and on the TV screen. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
+1. Someone starts the table, from a phone with **Start a table**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone and on the TV screen. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
 2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can move a player up or down, or remove one, until the game starts.
 3. The table host taps 🂠 beside a player to say who deals the first round. Without a choice, seat 1 deals. The deal then moves on one seat each round. ★ passes the table host badge to another player.
 4. The table host sets the rules and presses **Start game**. Nobody can join after that.
@@ -274,8 +274,8 @@ If the table host leaves the table, the badge moves to the first seat.
 
 ### TV screen
 
-A TV screen belongs to one table, and it asks which. **Start a new table**
-makes one. Or type a table code and **Show that table**: the screen shows a
+A TV screen belongs to one table, and it asks which. **Start a table**
+makes one. Or type a table code and **Show a table**: the screen shows a
 game that is already running, and changes nothing at it — the players keep
 their seats and their phones still run the game. That screen cannot touch the
 game, which is what lets it take a code alone: it is shown only what is already
@@ -397,7 +397,7 @@ Android asks whether to allow the install, because it did not come from a store.
 Say yes, open the app, and allow the local network when it asks.
 
 **In the app.** *Host on this phone* starts the server and opens the landing
-page, where **Start a table and play** takes seat 1 as usual. That page leads
+page, where **Start a table** takes seat 1 as usual. That page leads
 with Start when it is read on the phone that runs the server, and with Join
 everywhere else -- the host wants a table, a player wants a seat. Join is still
 there for the host: a table made from a TV screen needs a seat taken
