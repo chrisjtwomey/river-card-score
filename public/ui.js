@@ -641,7 +641,7 @@ const UI = (function () {
       document.body.appendChild(box);
     }
     const el = document.createElement('div');
-    el.className = 'toast';
+    el.className = 'toast' + (o.err ? ' err' : '');   // red: the table refused something
     const what = document.createElement('span');
     what.className = 'what';
     what.textContent = text;

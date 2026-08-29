@@ -43,8 +43,10 @@ function boot() {
         location.href = 'index.html?gone=' + encodeURIComponent(s.code || '');
         return;
       }
-      const el = $('#play-err'); el.textContent = msg; el.hidden = false;
-      setTimeout(() => { el.hidden = true; }, 3500);
+      // A line under the top bar, over whatever is on screen. The panel that
+      // carried this was hidden on a virtual table, in the lobby and under the
+      // felt, so a refusal went unseen exactly where it mattered.
+      UI.fx.toast(msg, { err: true, ms: 4000 });
     },
     onKicked: () => { location.href = 'index.html'; },
     // You left. The seat is still yours to come back to, so it is remembered.

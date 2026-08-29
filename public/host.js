@@ -96,8 +96,7 @@ function enter(mode, code) {
         Net.send({ t: 'create' });
         return;
       }
-      const el = $('#host-err'); el.textContent = msg; el.hidden = false;
-      setTimeout(() => { el.hidden = true; }, 4000);
+      UI.fx.toast(msg, { err: true, ms: 4000 });   // the same line a bid is said in
     },
     onDown: () => { $('#netpill').hidden = false; },
     onUp: () => { $('#netpill').hidden = true; },

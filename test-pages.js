@@ -1550,6 +1550,15 @@ part('bidding for a seat that is not there, and leaving');
        'and the scorecard is open, not folded away');
   }
 
+  {   // a refusal is said where it can be seen
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ away: false }));            // a virtual table: the turn panel is hidden
+    said.length = 0;
+    P.feed({ t: 'error', msg: 'Too late to change your bid.' });
+    ok(said.length === 1 && /Too late/.test(said[0]),
+       'a refused action is said in a line under the top bar, not in a panel the felt hides  got ' + said.join());
+  }
+
   /* ---- the card is drawn when it changes, and not when it does not ----
 
      A state arrives for everything a table does -- a card played, a line of

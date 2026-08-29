@@ -381,6 +381,7 @@ body.host .seatcount .left{font-size:16px}
   font-size:15px;font-weight:700;
 }
 .toast .note{font-size:13px;font-weight:600;opacity:.72;white-space:nowrap}
+.toast.err{background:var(--red);color:#fff}
 body.host .toast{font-size:24px;padding:12px 22px}
 body.host .toast .note{font-size:19px}
 
