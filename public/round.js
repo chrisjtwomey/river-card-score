@@ -219,6 +219,56 @@ const Round = (function () {
     });
   }
 
+  /* ---------- a bum deal, and the vote on one ----------
+     The button and the vote box were each page's own, and the phone's went
+     with the panel it sat in: on a table dealt on the phones that panel is
+     not there, so no phone could throw a hand in. The dealer and whoever runs
+     the table throw it in; a player asks, and the table votes. */
+
+  // `root` is the button, or a row that carries one.
+  function bum(root, ST, view) {
+    if (!root) return;
+    const r = ST.rounds[ST.idx] || null;
+    const live = !!r && (ST.phase === 'bid' || ST.phase === 'tricks');
+    const may = view.me >= 0 || view.boss;     // a seat asks; a screen that runs the table decides
+    const on = live && may && !ST.vote;        // the vote box carries it while a vote is open
+    root.hidden = !on;
+    if (!on) return;
+    const btn = root.tagName === 'BUTTON' ? root : part(root, '.btn', () => button('btn ghost', 'Bum deal'));
+    root._now = view.boss || r.dealer === view.me;    // read at the tap, not at the draw
+    btn.textContent = root._now ? 'Bum deal' : 'Ask for a bum deal';
+    onClick(btn, () => bumDeal(view, !!root._now));
+  }
+
+  /* The sentence, and the answers. A phone answers; a screen that runs the
+     table ends it either way; a screen that only shows the table reads it. */
+  function vote(root, ST, view) {
+    if (!root) return;
+    const r = ST.rounds[ST.idx] || null;
+    const v = ST.vote;
+    const on = !!v && !!r && (ST.phase === 'bid' || ST.phase === 'tricks');
+    root.hidden = !on;
+    if (!on) return;
+    const text = part(root, '.vote-text', () => make('div', 'vote-text'));
+    const acts = part(root, '.row-actions', () => make('div', 'row-actions'));
+    text.textContent = Table.voteText(ST, view.me);
+    // Built afresh on every state: a vote cast is said, and the other answer
+    // stays, so a mind can be changed.
+    acts.innerHTML = '';
+    const say = (cls, label, fn) => { const b = button(cls, label); b.addEventListener('click', fn); acts.appendChild(b); };
+    const me = view.me;
+    if (me >= 0) {
+      if (v.by === me) { say('btn ghost', 'Withdraw the vote', () => view.send({ t: 'votecancel' })); return; }
+      if (v.yes.includes(me)) acts.appendChild(make('span', 'hint', 'You agreed. Waiting for the others.'));
+      else say('btn primary', 'Agree, deal again', () => view.send({ t: 'vote', agree: true }));
+      say('btn ghost', 'No, play on', () => view.send({ t: 'vote', agree: false }));
+      return;
+    }
+    if (!view.boss) return;
+    say('btn primary', 'Throw it in now', () => bumDeal(view, true));   // asked first, like the button
+    say('btn ghost', 'Withdraw the vote', () => view.send({ t: 'votecancel' }));
+  }
+
   /* ---------- the three things a table is asked twice about ---------- */
 
   /* A step back takes bids or a score with it, and on a table that deals the
@@ -251,5 +301,5 @@ const Round = (function () {
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
-  return { header, bidStrip, trickPad, bidFor, playFor, playout, winner, newGame, bumDeal, undo };
+  return { header, bidStrip, trickPad, bidFor, playFor, playout, winner, bum, vote, newGame, bumDeal, undo };
 })();

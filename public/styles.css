@@ -933,6 +933,18 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 }
 .vote-text{font-size:15px;font-weight:650}
 .bum-row{justify-content:flex-end}
+/* On the phone the button has a strip of its own under the turn panel: the
+   panel is not there on a table dealt on the phones, and the button must be. */
+.panel.bum-row{flex-direction:row;padding:10px 16px}
+/* The vote, over the table where a player is: between the round line and the
+   piles, and above every card. */
+.felt-vote{
+  position:absolute;z-index:52;left:14px;right:14px;
+  top:calc(clamp(48px, 8vh, 78px) + 84px);
+  background:rgba(7,12,8,.92);color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.6);
+}
+.felt-vote .vote-text{color:#fff}
+.felt-vote .hint{color:rgba(255,255,255,.75)}
 
 td.mecol,th.mecol{background:rgba(184,134,43,.10)}
 th.mecol{color:var(--gold)}

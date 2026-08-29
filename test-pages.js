@@ -122,7 +122,7 @@ const ROOT = __dirname;
 function load(W, H, motion) {
   const dom = makeDom(W, H);
   dom.localStorage.setItem('river-card-score:motion:v1', motion || 'off');
-  const src = ['public/ui.js', 'public/stage.js', 'public/deal.js', 'public/felt.js']
+  const src = ['public/ui.js', 'public/stage.js', 'public/deal.js', 'public/felt.js', 'public/table.js', 'public/round.js']
     .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
   const Avatar = { url: () => null };
   const Finale = { play: () => Promise.resolve() };
@@ -930,6 +930,40 @@ part('off the table, and on to the next round');
   ok(!!overlay.querySelector('.felt-out'), 'and the way out to the scorecard');
 }
 
+// a vote on a bum deal reaches a player on the felt, and is answered there
+{
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: me });
+  const L = load(412, 860, 'off');
+  const sent = [];
+  L.Felt.sync(made.ST, me, { send: (m) => sent.push(m) });
+  const overlay = L.dom.document.getElementById('deal');
+  const box = () => overlay.querySelector('.felt-vote');
+  ok(box() && box().hidden === true, 'with no vote on, the felt shows none');
+  made.ST.vote = { kind: 'bumdeal', by: 2, round: 0, yes: [2], no: [] };
+  L.Felt.sync(made.ST, me, { send: (m) => sent.push(m) });
+  ok(box().hidden === false, 'a vote called shows on the felt');
+  ok(/bum deal/.test((box().querySelector('.vote-text') || {}).textContent || ''),
+     'with the sentence  got ' + ((box().querySelector('.vote-text') || {}).textContent));
+  const btns = box().querySelectorAll('button');
+  ok(btns.length === 2 && btns[0].textContent === 'Agree, deal again',
+     'and the answers  got ' + btns.map((b) => b.textContent).join('|'));
+  sent.length = 0;
+  btns[0].fire('click');
+  ok(JSON.stringify(sent[0]) === '{"t":"vote","agree":true}',
+     'an answer goes to the table  got ' + JSON.stringify(sent[0]));
+  made.ST.vote = null;
+  L.Felt.sync(made.ST, me, { send: (m) => sent.push(m) });
+  ok(box().hidden === true, 'and the box goes when the vote does');
+  const seen = [];
+  const W = load(412, 860, 'off');
+  made.ST.vote = { kind: 'bumdeal', by: 2, round: 0, yes: [2], no: [] };
+  W.Felt.sync(made.ST, me, { send: (m) => seen.push(m), watch: true });
+  const wb = W.dom.document.getElementById('deal').querySelector('.felt-vote');
+  ok(wb && wb.hidden === false && wb.querySelectorAll('button').length === 0,
+     'a window that only watches reads the vote and cannot answer it');
+}
+
 /* A round is scored and the next dealt in the same breath, so what the round
    paid is held up over the trick that ended it. */
 function scored(motion) {
@@ -1546,6 +1580,14 @@ part('bidding for a seat that is not there, and leaving');
     P.feed(table({ away: false }));
     ok(P.pick('#turn-panel').hidden === true, 'no turn panel: the felt asks for the bid');
     ok(P.pick('#bids-panel').hidden === true, 'no bids strip: the felt stamps them');
+    // the bum deal is not the turn panel's, so it stays when the panel goes
+    ok(P.pick('#bum-row').hidden === false, 'a bum deal can still be asked for on the page');
+    ok(P.pick('#bum-row').querySelector('.btn').textContent === 'Bum deal',
+       'and the table host throws it in  got ' + P.pick('#bum-row').querySelector('.btn').textContent);
+    const other = table({ away: false, boss: false }); other.rounds[0].dealer = 1;   // neither host nor dealer
+    P.feed(other);
+    ok(P.pick('#bum-row').querySelector('.btn').textContent === 'Ask for a bum deal',
+       'while anybody else asks  got ' + P.pick('#bum-row').querySelector('.btn').textContent);
     ok(P.pick('#leave-row').hidden === false, 'leaving is at the top of the page');
     ok(P.pick('#scorecard').hidden !== true, 'and the scorecard is drawn on a plain panel, never folded away');
   }
@@ -1599,12 +1641,13 @@ part('bidding for a seat that is not there, and leaving');
     const st = table({ away: false }); st.cfg.deck = 'physical';
     st.vote = { kind: 'bumdeal', by: 1, round: 0, yes: [1, 0], no: [] };   // Ben asked, and I agreed
     P.feed(st);
-    const acts = P.pick('#vote-actions');
+    const acts = P.pick('#votebox').querySelector('.row-actions');
     ok(P.pick('#votebox').hidden === false, 'the vote box is up');
     ok(!!acts.querySelector('.hint') && /You agreed/.test(acts.querySelector('.hint').textContent),
        'and it says my vote landed  got ' + (acts.querySelector('.hint') || {}).textContent);
     const btns = acts.querySelectorAll('button');
     ok(btns.length === 1 && btns[0].textContent === 'No, play on', 'with the other answer still there  got ' + btns.map((b) => b.textContent).join('|'));
+    ok(P.pick('#bum-row').hidden === true, 'and the button that asks is away while the vote is on');
   }
 
   {   // the order of play is changed by dragging a seat by its handle

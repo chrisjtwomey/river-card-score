@@ -240,20 +240,13 @@ function renderGame() {
   finaleWatch();
   renderTrump(r);
   renderTurn(r, n);
-  renderVote(r);
-  $('#btn-bum').hidden = !r || !!ST.vote;     // the vote box carries it while a vote is open
+  Round.vote($('#votebox'), ST, view());
+  Round.bum($('#btn-bum'), ST, view());
   renderTable(r);
   Round.playFor($('#playfor-row'), ST, view());
   renderStandings();
   renderScorecard();
   Round.winner($('#winner-panel'), ST);
-}
-
-function renderVote(r) {
-  const box = $('#votebox');
-  if (!ST.vote || !r) { box.hidden = true; return; }
-  box.hidden = false;
-  $('#vote-text').textContent = Table.voteText(ST, -1);
 }
 
 // What the deck turned, when the server deals. On a real table the card is
@@ -391,9 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
       href: devLink() },
   ]));
   $('#btn-reset').addEventListener('click', newGame);
-  $('#btn-bum').addEventListener('click', () => Round.bumDeal(view(), true));
-  $('#btn-vote-do').addEventListener('click', () => Round.bumDeal(view(), true));   // asked first, like the other
-  $('#btn-vote-cancel').addEventListener('click', () => Net.send({ t: 'votecancel' }));
   // playDeal() in the console replays it for the current table.
   window.playDeal = (mode) => playDealNow(mode || 'full');
   // playFinale() in the console replays the result.

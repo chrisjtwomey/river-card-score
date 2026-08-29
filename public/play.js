@@ -98,7 +98,7 @@ function render() {
   $('#bids-panel').hidden = virtual;
   if (!virtual && r) renderTurn(r, me);
   renderWinner();
-  renderVote(r, me);
+  renderVote();
   renderAttention(r, me);
   renderBidStrip(r);
   renderStandings(me);
@@ -134,50 +134,12 @@ function renderWinner() {
 }
 
 // A bum deal throws the hand in. The dealer can do it alone; anybody else asks
-// the table, and every player must agree.
-function renderVote(r, me) {
-  const box = $('#votebox');
-  const acts = $('#vote-actions');
-  const bumRow = $('#bum-row');
-  const live = r && (ST.phase === 'bid' || ST.phase === 'tricks');
-  const v = ST.vote;
-
-  bumRow.hidden = !live || !!v;
-  if (live) {
-    // The dealer and the table host throw the hand in themselves; anybody else asks.
-    $('#btn-bum').textContent = (r.dealer === me || amHost()) ? 'Bum deal' : 'Ask for a bum deal';
-  }
-
-  if (!v || !live) { box.hidden = true; return; }
-  box.hidden = false;
-  $('#vote-text').textContent = Table.voteText(ST, me);
-
-  // Only a phone answers a vote, so the buttons live here. A vote cast is
-  // said, and the other button stays, so a mind can be changed: the table
-  // accepts a changed vote, and a box gone blank read as a tap that missed.
-  const agreed = v.yes.includes(me);
-  acts.innerHTML = '';
-  if (v.by !== me) {
-    if (agreed) {
-      const said = document.createElement('span');
-      said.className = 'hint'; said.textContent = 'You agreed. Waiting for the others.';
-      acts.appendChild(said);
-    } else {
-      const yes = document.createElement('button');
-      yes.className = 'btn primary'; yes.type = 'button'; yes.textContent = 'Agree, deal again';
-      yes.addEventListener('click', () => Net.send({ t: 'vote', agree: true }));
-      acts.appendChild(yes);
-    }
-    const no = document.createElement('button');
-    no.className = 'btn ghost'; no.type = 'button'; no.textContent = 'No, play on';
-    no.addEventListener('click', () => Net.send({ t: 'vote', agree: false }));
-    acts.appendChild(no);
-  } else {
-    const c = document.createElement('button');
-    c.className = 'btn ghost'; c.type = 'button'; c.textContent = 'Withdraw the vote';
-    c.addEventListener('click', () => Net.send({ t: 'votecancel' }));
-    acts.appendChild(c);
-  }
+// the table, and every player must agree. The button and the vote box are
+// widgets, so the felt can carry the vote too.
+function renderVote() {
+  const v = view();
+  Round.bum($('#bum-row'), ST, v);
+  Round.vote($('#votebox'), ST, v);
 }
 
 // The finish plays once, when the last round is scored. A phone that opens on
@@ -438,13 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // other control on it.
   Chat.wire('#btn-chat', WATCH ? null : (text) => Net.send({ t: 'chat', text }));
   $('#btn-back-felt').addEventListener('click', () => Felt.show());
-  // The dealer and the table host deal again on the spot, so they are asked
-  // first. Anybody else is asking the table, which can still be taken back.
-  $('#btn-bum').addEventListener('click', () => {
-    const r = ST && ST.rounds[ST.idx];
-    Round.bumDeal(view(), amHost() || !!(r && r.dealer === mySeat()));
-  });
-
   $('#btn-leave').addEventListener('click', () => {
     const lobby = !ST || ST.phase === 'lobby';
     UI.ask(lobby ? 'Leave the table?' : 'Leave the game?',

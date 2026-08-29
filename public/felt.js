@@ -122,6 +122,13 @@ const Felt = (function () {
       line.className = 'felt-line';
       overlay.appendChild(line);
     }
+    // A vote on a bum deal reaches a player where they are, which is here.
+    if (!overlay.querySelector('.felt-vote')) {
+      const box = document.createElement('div');
+      box.className = 'felt-vote votebox';
+      box.hidden = true;
+      overlay.appendChild(box);
+    }
     wire(overlay);
     return parts();
   }
@@ -130,7 +137,7 @@ const Felt = (function () {
     const overlay = (parts(false) || {}).overlay;
     if (!overlay) return;
     overlay.classList.remove('table', 'still', 'dragging');
-    ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids', '.felt-beat'].forEach((s) => {
+    ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids', '.felt-beat', '.felt-vote'].forEach((s) => {
       const el = overlay.querySelector(s);
       if (el) el.remove();
     });
@@ -574,6 +581,15 @@ const Felt = (function () {
     head(r);
     bidRail(r);
     hint(r);
+    voteBox();
+  }
+
+  // The vote on a bum deal, the same widget the page under the felt draws. A
+  // window that only watches reads the sentence and gets no answers.
+  function voteBox() {
+    const el = document.querySelector('#deal .felt-vote');
+    if (!el || typeof Round === 'undefined') return;
+    Round.vote(el, ST, { me: watch ? -1 : me, boss: false, send });
   }
 
   /* The bid, made while you are holding your cards -- which is when a bid is
@@ -872,7 +888,7 @@ const Felt = (function () {
   function onDown(e) {
     if (!T || !want || (e.button !== undefined && e.button > 0)) return;
     // The scorecard button answers for itself.
-    if (e.target && e.target.closest && e.target.closest('.felt-out,.felt-talk')) return;
+    if (e.target && e.target.closest && e.target.closest('.felt-out,.felt-talk,.felt-vote')) return;
 
     // The numbers are picked up the way the cards are: a touch lifts one, a
     // thumb along them lifts each in turn, and a tap on the one already up

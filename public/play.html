@@ -122,13 +122,17 @@
         <div class="chips big-chips" id="bid-chips"></div>
         <p class="hint" id="bid-hint"></p>
       </div>
-      <div class="row-actions bum-row" id="bum-row" hidden>
-        <button class="btn ghost" id="btn-bum" type="button" title="Throw the hand in and deal it again">Ask for a bum deal</button>
-      </div>
       <div id="trick-pad" hidden>
         <div class="entry-rows"></div>
         <button class="btn primary big" type="button" disabled>Score the round</button>
       </div>
+    </div>
+
+    <!-- A bum deal: the dealer and the table host throw the hand in, anybody
+         else asks. Outside the turn panel, which a table dealt on the phones
+         does not have. -->
+    <div class="panel bum-row" id="bum-row" hidden>
+      <button class="btn ghost" id="btn-bum" type="button" title="Throw the hand in and deal it again">Ask for a bum deal</button>
     </div>
 
     <div class="panel winner-panel" id="winner-panel" hidden>

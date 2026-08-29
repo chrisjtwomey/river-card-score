@@ -270,6 +270,7 @@ If the cards were dealt wrong, throw the hand in and deal it again. The round ke
 
 - The **dealer** or the **table host** presses **Bum deal** and re-deals on their own. They are asked to confirm first, so one stray tap cannot throw a hand in.
 - Any other player presses **Ask for a bum deal** and the table votes. Every player must agree. One "no" ends it, and the player who asked can withdraw it. The table host, or the TV screen, can also throw the hand in without waiting for the vote.
+- On a table dealt on the phones the button is on the page under the felt (press **Scores**), and the vote shows on the felt as well, so a player answers it without leaving their cards.
 
 If the table host leaves the table, the badge moves to the first seat.
 
