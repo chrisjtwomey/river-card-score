@@ -103,15 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* A code typed here reaches this server and no other, and every table on it
-     is listed above with a way in. So on the phone that runs the server that
-     part of the panel goes, and what is left is the camera: a QR code from
-     another phone opens that phone's table, which nothing here can do. */
-  if (UI.servedHere()) {
-    $('#join-here').hidden = true;
-    $('#btn-join').hidden = true;
-    $('#join-title').textContent = 'Join another phone\'s table';
-    if (!Scan.can()) $('#join-panel').hidden = true;      // no camera, nothing left to offer
-  }
+     is listed above with a way in -- so on the machine that runs the server
+     there is nothing for this panel to do. Joining somebody else's table from
+     here would mean running a server for a game played on another phone; the
+     app's own chooser opens their address without starting one. */
+  const runsIt = UI.servedHere();
+  if (runsIt) $('#join-panel').hidden = true;
 
   /* Every table this phone is running, asked of the server itself. The list
      above is what this browser remembers; this is what is actually there, and
@@ -255,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* The camera reads the QR code the table shows. The button is here only if
      this browser has both a camera and a reader for the code. */
-  if (Scan.can()) {
+  if (!runsIt && Scan.can()) {
     const scan = $('#btn-scan');
     scan.hidden = false;
     scan.addEventListener('click', () => {

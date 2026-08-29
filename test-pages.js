@@ -1651,9 +1651,8 @@ part('the front page, and the screen');
       ok(JSON.stringify(P.socks[P.socks.length - 1].sent[0]) === '{"t":"join","code":"CCCC","name":"Chris"}',
          'under the name this phone plays  got ' + JSON.stringify(P.socks[P.socks.length - 1].sent[0]));
 
-      ok(P.pick('#join-here').hidden === true, 'and the code box is gone: a code reaches this server alone');
-      ok(P.pick('#join-title').textContent === "Join another phone's table",
-         'what is left of that panel is the camera  got ' + P.pick('#join-title').textContent);
+      ok(P.pick('#join-panel').hidden === true,
+         'and the phone that runs the server is not asked for a code at all');
 
       // the table is this phone's to take away: it runs it
       P.dom.window.confirm = () => true;               // the fake DOM has no <dialog>
@@ -1735,6 +1734,7 @@ part('the front page, and the screen');
     Q.start();
     ok(none.length === 0, 'a player\'s phone does not ask: the listing is not its to read');
     ok(Q.pick('#server-panel').hidden === true, 'and is offered no such list');
+    ok(Q.pick('#join-panel').hidden !== true, 'a code is how it finds a table, so it is still asked for one');
   }
 
   {   /* In the Android app the front page carries the way back to the app's

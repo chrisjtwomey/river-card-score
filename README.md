@@ -128,8 +128,11 @@ table: **Take a seat** while it is still in the lobby, **Take my seat** when a
 seat carries this phone's name and nobody is behind it, and **Watch** — the
 screen a TV shows, which changes nothing at the table. So the phone that runs
 the server never types a code: a code reaches that server and no other, and
-every table on it is already named here. What is left of the join panel there
-is the camera, which reaches somebody else's phone. Each row reads the same way: the table's name, then the mark
+every table on it is already named here. The join panel is not offered there
+at all — joining somebody else's table from a phone that has just started a
+server would be running that server for a game played somewhere else, and the
+app's own chooser opens their address without starting one. A player's phone
+keeps it, code box and camera both. Each row reads the same way: the table's name, then the mark
 and the badge that end the line, the buttons on the line under it, and who is
 at the table under those — on one line, so a table of eight does not push the
 page about: the names that fit, then *and 2 more*. It is measured, so a wider
