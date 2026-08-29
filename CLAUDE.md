@@ -46,7 +46,7 @@ public/deal.js     The deal scene.   public/finale.js  The finish.   public/felt
                    table a phone plays a virtual round on; the deal hands it the stage.
 public/chat.js     Table talk.       public/accolades.js  Shared with the server (A.list/pick/bonus).
 public/host.js     THE HOST FLOW: connect, deal-hold policy, table panel, compose widgets.
-public/play.js     THE PHONE FLOW: connect, felt/deal policy, vote buttons, avatar, compose.
+public/play.js     THE PHONE FLOW: connect, felt/deal policy, vote buttons, who you are, compose.
 public/join.js, dev.js, history.js   The other pages.
 ```
 
@@ -84,7 +84,7 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
    `WATCH` or `$` from the page. Handlers read fresh state at tap time.
 8. **The flow files (`host.js`, `play.js`) own only what differs between screens:**
    how they connect, when a scene plays and how long it holds, the vote buttons,
-   the avatar picker, the table panel. If a block in one looks like a block in the
+   who you are on the settings page, the table panel. If a block in one looks like a block in the
    other, move it into a widget.
 9. **Scenes are state-agnostic.** `deal.js`, `finale.js`, `felt.js` take options.
    What those options are read off the state is `Table.dealOpts` / `finaleOpts`,

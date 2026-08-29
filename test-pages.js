@@ -1663,7 +1663,8 @@ part('bidding for a seat that is not there, and leaving');
                    keepAwake: () => ({ then: () => {} }) };
   const UI = new Proxy(uiReal, { get: (t, k) => (k in t ? t[k] : anything) });
 
-  function playPage(seed, search) {
+  function playPage(seed, search, o) {
+    o = o || {};
     const dom = makeDom(412, 860);
     Object.keys(seed || {}).forEach((k) => dom.localStorage.setItem(k, seed[k]));
     const els = {};
@@ -1681,13 +1682,16 @@ part('bidding for a seat that is not there, and leaving');
     WebSocket.prototype.close = function () { this.readyState = 3; };
     const Table = new Function('UI', 'Game', 'document',
       fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
-    const src = ['public/lobby.js', 'public/round.js', 'public/net.js', 'public/play.js']
+    const src = ['public/lobby.js', 'public/round.js'].concat(o.real || []).concat(['public/net.js', 'public/play.js'])
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
-    const stubs = ['Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt'];
+    const stubs = ['Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt']
+      .filter((n) => !(o.real || []).some((f) => f.toLowerCase().indexOf(n.toLowerCase() + '.js') >= 0));
+    const given = Object.assign({ Avatar: { saved: () => null, remember() {}, url: () => null,
+      picker: () => ({ el: new dom.El('div'), show() {}, say() {} }) } }, o.given || {});
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game, UI, Table,
-      { log() {}, info() {}, warn() {}, error() {} }, ...stubs.map(() => anything));
+      { log() {}, info() {}, warn() {}, error() {} }, ...stubs.map((n) => (n in given ? given[n] : anything)));
     dom.document.fire('DOMContentLoaded');
     if (socks[0]) {
       socks[0].onopen();
@@ -2155,6 +2159,56 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.Net.tables().length === 1,
        'and the table is still remembered, so the seat can be taken back');
   }
+
+  part('who you are, on the phone');
+
+  /* The name and the photo live on the settings page. At a table they are the
+     seat's: a change in the lobby goes to the table, a change during a game
+     goes with the next table. */
+  {
+    let kept = null, picked = null;
+    const El = makeDom(1, 1).El;
+    const Avatar = { saved: () => kept, remember: (d) => { kept = d; }, url: (code, s) => (s && s.av ? 'pic:' + s.av : null),
+      picker: (onPick) => { picked = onPick; return { el: new El('div'), show() {}, say() {} }; } };
+    const o = { real: ['public/settings.js'], given: { Avatar } };
+
+    const P = playPage(seed, '?c=TEST', o);
+    P.feed(table({ phase: 'lobby' }));
+    const page = P.dom.document.body.querySelector('.settings');
+    P.pick('#btn-settings').fire('click');
+    ok(!page.hidden, 'the ⚙ opens the settings page');
+    const inp = page.querySelector('.settings-name');
+    ok(inp.value === 'Ann', 'with the name this seat plays under  got ' + inp.value);
+    ok(page.querySelector('.settings-note').hidden, 'and nothing to add in the lobby');
+    inp.value = 'Zed';
+    page.querySelector('.settings-back').fire('click');
+    const sent = P.socks[0].sent.filter((m) => m.t === 'rename');
+    ok(sent.length === 1 && sent[0].name === 'Zed', 'a new name goes to the table  got ' + JSON.stringify(sent));
+    ok(P.Net.name() === 'Zed', 'and the phone keeps it for the next table');
+    picked('data:me');
+    const pics = P.socks[0].sent.filter((m) => m.t === 'avatar');
+    ok(pics.length === 1 && pics[0].data === 'data:me', 'a photo picked goes to the table at once  got ' + JSON.stringify(pics));
+    ok(kept === 'data:me', 'and the phone keeps that too');
+
+    const Q = playPage(seed, '?c=TEST', o);
+    Q.feed(table({}));                       // bidding: the game is on
+    const qp = Q.dom.document.body.querySelector('.settings');
+    Q.pick('#btn-settings').fire('click');
+    const note = qp.querySelector('.settings-note');
+    ok(!note.hidden && /next table/.test(note.textContent), 'during a game the page says the change goes with the next table');
+    qp.querySelector('.settings-name').value = 'Zed';
+    qp.querySelector('.settings-back').fire('click');
+    ok(!Q.socks[0].sent.some((m) => m.t === 'rename'), 'and sends the table no name');
+    ok(Q.Net.name() === 'Zed', 'but the phone keeps it');
+    picked('data:later');
+    ok(!Q.socks[0].sent.some((m) => m.t === 'avatar'), 'nor a photo');
+    ok(kept === 'data:later', 'which the phone keeps for the next table');
+
+    // a window that only watches a seat has no name to change
+    const W = playPage({ 'rcs:tables:v1': JSON.stringify([{ code: 'TEST', token: 'w0', role: 'watch', seatId: 's0' }]) }, '?c=TEST', o);
+    W.feed(table({ phase: 'lobby' }));
+    W.pick('#btn-settings').fire('click');
+    ok(!W.dom.document.body.querySelector('.settings').querySelector('.settings-you'), 'a watching window is offered no name');
 }
 
 /* ---- the deal, with motion on ----
@@ -2540,6 +2594,7 @@ part('tapping the deal away');
     const out = asked[asked.length - 1];
     ok(out && out.el === overlay && out.kf[1] && out.kf[1].opacity === 0, 'and it fades out');
   }
+}
 }
 
 

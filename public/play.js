@@ -244,38 +244,53 @@ function renderJoinBox() {
   if (img.getAttribute('src') !== src) img.src = src;
 }
 
-/* The picture, picked here or brought from the join page. It is built once and
-   kept: rebuilding it on every state would throw away a pick in flight. */
-let avPicker = null, avSent = false;
+/* Inside the dev previews every seat is a frame in one browser, so the
+   phone's remembered name and photo belong to nobody in particular. A frame
+   sets only what is picked in it, and neither keeps that pick nor helps
+   itself to one another frame made. */
+const framed = () => window.top !== window.self;
 
-function renderAvatar(me) {
-  const mount = $('#lobby-av');
-  if (!mount) return;
-  // Inside the dev previews every seat is a frame in one browser, so the
-  // phone's remembered photo belongs to nobody in particular. A frame sets
-  // only what is picked in it, and neither keeps that pick nor helps itself
-  // to one another frame made.
-  const framed = window.top !== window.self;
-  if (!avPicker) {
-    avPicker = Avatar.picker((d) => {
-      if (!framed) Avatar.remember(d);
-      avSent = true;
-      Net.send({ t: 'avatar', data: d });
-    });
-    mount.appendChild(avPicker.el);
-  }
+/* The picture picked before the seat existed -- on the front page -- is
+   handed over now, once. */
+let avSent = false;
+
+function handOverPhoto(me) {
   const seat = me >= 0 ? ST.seats[me] : null;
-  // A picture picked before the seat existed is handed over now, once.
-  if (!framed && seat && !seat.av && !avSent) {
-    const kept = Avatar.saved();
-    if (kept) { avSent = true; Net.send({ t: 'avatar', data: kept }); return; }
-  }
-  if (seat && seat.av) avSent = true;
-  avPicker.show(Avatar.url(ST.code, seat));
+  if (seat && seat.av) { avSent = true; return; }
+  if (framed() || !seat || avSent) return;
+  const kept = Avatar.saved();
+  if (kept) { avSent = true; Net.send({ t: 'avatar', data: kept }); }
+}
+
+/* Who you are lives on the settings page. At a table the name and the photo
+   are the seat's: a change in the lobby goes to the table, and a change
+   during a game goes with the next table, because the scorecard is a column
+   under the name it has. A watching window has no seat to change. */
+function wireSettings() {
+  const seat = () => (ST && mySeat() >= 0 ? ST.seats[mySeat()] : null);
+  const lobby = () => !!(ST && ST.phase === 'lobby');
+  Settings.wire('#btn-settings', {
+    items: UI.commonSettings({ motion: true, home: true }),
+    who: WATCH ? null : {
+      name: () => (seat() ? seat().name : Net.name()),
+      photo: () => (seat() ? Avatar.url(ST.code, seat()) : (framed() ? null : Avatar.saved())),
+      note: () => (lobby() ? ''
+        : 'At this table the name and the photo are set in the lobby. A change here goes with your next table.'),
+      onName: (n) => {
+        if (!framed()) Net.setName(n);
+        if (lobby()) Net.send({ t: 'rename', name: n });
+      },
+      onPhoto: (d) => {
+        if (!framed()) Avatar.remember(d);
+        avSent = true;
+        if (lobby()) Net.send({ t: 'avatar', data: d });
+      },
+    },
+  });
 }
 
 function renderLobby(me) {
-  renderAvatar(me);
+  handOverPhoto(me);
   const v = view();
   Lobby.seats($('#lobby-seats'), ST, v);
   Lobby.bots($('#bot-row'), ST, v);
@@ -399,7 +414,6 @@ function renderStandings(me) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  Settings.wire('#btn-settings', { items: UI.commonSettings({ motion: true, home: true }) });
   // A watching window reads the talk and does not join it, the same as every
   // other control on it.
   Chat.wire('#btn-chat', WATCH ? null : (text) => Net.send({ t: 'chat', text }));
@@ -416,4 +430,5 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-undo').addEventListener('click', () => Round.undo(view(), ST));
   $('#btn-reset').addEventListener('click', () => Round.newGame(view()));
   boot();
+  wireSettings();                   // after boot: it needs to know whether this window may act
 });

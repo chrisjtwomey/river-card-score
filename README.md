@@ -30,8 +30,12 @@ full screen, on the TV screen the text size, and on a phone the way back to
 the front page. The settings page lies over the page it was opened from, with
 a back arrow of its own, so a game underneath keeps its place and its socket.
 Rows that a browser cannot honour leave themselves out -- full screen is not
-offered on Safari on an iPhone. A table's screens have one other button, 💬
-for the talk, and nothing else.
+offered on Safari on an iPhone. On a phone the settings page also holds who
+you are: the name, and the photo that goes on the back of your cards. At a
+table they are the seat's, changed in the lobby; a change made during a game
+goes with the next table, because the scorecard is a column under the name it
+has. A table's screens have one other button, 💬 for the talk, and nothing
+else.
 
 The server builds the QR code itself, so nothing is sent to an outside service. It is always black on white, whatever the page theme is, because a camera cannot read an inverted code.
 
