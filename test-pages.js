@@ -1701,6 +1701,32 @@ part('the front page, and the screen');
       });
     }
 
+    {   /* A table of eight ran the names onto a second line and pushed
+           everything under it down the page. What will not fit is counted. */
+      const full = { tables: [{ code: 'EEEE', phase: 'bid', round: 1, rounds: 16,
+        seats: ['Ann', 'Otter', 'Heron', 'Pike', 'Reed', 'Willow', 'Bream', 'Perch']
+          .map((name, i) => ({ id: 'e' + i, name, bot: i > 0, left: false, online: true })) }] };
+      const F = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '',
+        { hostname: '127.0.0.1', real: ['public/ui.js'],
+          fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve(full) }) });
+      // A line as wide as its text, and a row as wide as the phone: the fake
+      // DOM measures nothing by itself, so this is what a browser would say.
+      Object.defineProperty(F.dom.El.prototype, 'scrollWidth',
+        { configurable: true, get() { return (this._text || '').length * 12; } });
+      const fbox = F.dom.document.createElement('div');
+      fbox.append(F.pick('#join-panel'), F.pick('#new-panel'));
+      F.start();
+      Promise.resolve().then(() => Promise.resolve()).then(() => {
+        const line = F.pick('#server-list').querySelector('small').textContent;
+        ok(/ and \d+ more$/.test(line), 'a list too long for the line is counted  got ' + line);
+        ok(line.length * 12 <= 412, 'and what is left fits it  got ' + line);
+        ok(line.indexOf('Ann, Otter') === 0, 'the names kept are the first of them  got ' + line);
+        const said = Number((/ and (\d+) more$/.exec(line) || [])[1]);
+        ok(said === 8 - line.split(' and ')[0].split(', ').length,
+           'and the count is what was dropped  got ' + said);
+      });
+    }
+
     // a browser that is not the phone running the server asks nothing
     const none = [];
     const Q = loadPage('join.js', seedOne, '',

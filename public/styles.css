@@ -889,7 +889,9 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 /* the mark and the badge belong together, at the end of the line */
 #server-list .trow-head .tmark{margin-left:auto}
 #server-list .trow-acts{display:flex;align-items:center;justify-content:flex-end;gap:8px}
-#server-list .seat-item small{opacity:.75;font-weight:600}
+/* One line, whatever the table holds: what will not fit is counted instead,
+   and the ellipsis is the last resort when even one name is too long. */
+#server-list .seat-item small{opacity:.75;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* What a running table is doing, in the space of a full stop. A game in play
    turns; a table waiting for people breathes; one that is over is still. */
 .tmark{flex:none;width:13px;height:13px;border-radius:50%;display:block}

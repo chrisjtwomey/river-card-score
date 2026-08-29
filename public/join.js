@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const box = $('#server-list');
         others.forEach((t) => box.appendChild(tableRow(t)));
         $('#server-panel').hidden = false;
+        fitEveryRow();                        // on the page now, so it can be measured
       })
       .catch(() => {});                       // no listing, no panel: the code box is still there
   }
@@ -155,9 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
       : t.round ? `round ${t.round} of ${t.rounds}` : 'in play';
     const who = document.createElement('small');
     who.className = 'hint';
-    who.textContent = t.seats.length
-      ? t.seats.map((s) => s.name).join(', ')
-      : 'nobody has sat down';
+    who._names = t.seats.map((s) => s.name);
+    who.textContent = who._names.length ? who._names.join(', ') : 'nobody has sat down';
     const go = document.createElement('button');
     go.className = 'btn';
     go.type = 'button';
@@ -212,6 +212,26 @@ document.addEventListener('DOMContentLoaded', () => {
     row.append(head, acts, who);
     return row;
   }
+
+  /* The names, on one line. A table of eight ran onto a second line and
+     pushed everything under it down the page, so what will not fit is counted
+     instead: the names that do, then "and 3 more". Measured rather than
+     guessed at -- a name is as long as it is and a phone is as wide as it is --
+     which is why it is done once the row is on the page and again when the
+     page changes width. */
+  function fitNames(el) {
+    const names = el._names || [];
+    if (names.length < 2) return;
+    el.textContent = names.join(', ');
+    for (let keep = names.length - 1; keep >= 1 && el.scrollWidth > el.clientWidth; keep--) {
+      el.textContent = names.slice(0, keep).join(', ') + ' and ' + (names.length - keep) + ' more';
+    }
+  }
+  function fitEveryRow() {
+    const box = $('#server-list');
+    if (box) box.querySelectorAll('small').forEach(fitNames);
+  }
+  window.addEventListener('resize', fitEveryRow);
 
   /* Sitting down at a table this phone is running. The same message the code
      box sends -- the table is named instead of typed, and the name is the one
