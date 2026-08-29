@@ -33,9 +33,10 @@ const Lobby = (function () {
       row.className = 'seat-item' + (mine ? ' me' : '') + (s.online ? '' : ' off') +
         (isFirst ? ' first-dealer' : '') + (s.bot ? ' bot' : '');
       row.innerHTML = `<span class="seat">${i + 1}</span><span class="nm"></span>` +
-        (isCap ? '<span class="badge">table host</span>' : '') +
-        (s.bot ? '<span class="badge soft">bot</span>' : '') +
-        (isFirst ? '<span class="badge soft">deals first</span>' : '') +
+        // One word each: the row is one line, and the name takes what is left.
+        (isCap ? '<span class="badge" title="runs the table">host</span>' : '') +
+        (s.bot ? '<span class="badge soft" title="a player the table provides">bot</span>' : '') +
+        (isFirst ? '<span class="badge soft" title="deals the first round">dealer</span>' : '') +
         `<span class="dotstat" title="${s.online ? 'connected' : 'not connected'}"></span>`;
       row.querySelector('.nm').textContent = s.name + (mine ? ' (you)' : '');
       if (view.boss) {

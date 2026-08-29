@@ -860,11 +860,16 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 .seat-item{
   display:flex;align-items:center;gap:10px;padding:8px 10px;
   background:var(--bg);border:1px solid var(--line);border-radius:11px;font-weight:600;
-  /* A seat with a badge for everything -- host, deals first, bot -- and four
-     buttons after them had nothing left for the name, and a row with no name on
-     it reads as an empty seat. The badges wrap; the name keeps its place. */
-  flex-wrap:wrap;
+  /* One line, always: the badges are one word each and never wrap, the ⋯
+     stays at the end of the row, and the name is what gives -- it shrinks to
+     an ellipsis, never to nothing. A row that wrapped put the ⋯ on a line of
+     its own under the name. */
+  flex-wrap:nowrap;
 }
+.seat-item .badge{flex:none;white-space:nowrap}
+/* The tables a browser is at, on the front page: a longer badge and two
+   buttons, so that list may still wrap. */
+#rejoin-list .seat-item{flex-wrap:wrap}
 .seat-item.me{border-color:var(--gold)}
 /* a seat the table plays itself */
 .seat-item.bot .nm{color:var(--ink-dim)}
@@ -880,7 +885,7 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 .btn.addbot:hover:not(:disabled){color:var(--ink);border-color:var(--gold);border-style:solid}
 .btn.addbot:disabled{opacity:.4}
 .botrow small{padding:0 2px}
-.seat-item .nm{flex:1 1 7ch;min-width:7ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat-item .nm{flex:1 1 auto;min-width:6ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seat-item .dotstat{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none}
 .seat-item.off{opacity:.55}
 .seat-item.off .dotstat{background:var(--ink-dim)}
