@@ -7,10 +7,20 @@ const fs = require('fs');
 const os = require('os');
 // The finished games are written to a folder of their own, thrown away after.
 const DATA_DIR = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-games-'));
-const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, NO_TLS: '1', TRICK_HOLD: '120', DATA_DIR, KEEP_GAMES: '3', CHAT_KEEP: '5',
-         // These clients are not phones and never say their table is up, so the
-         // bots' wait for one falls back at once. The wait itself is checked below.
-         BOT_DEAL_WAIT: '150' }, stdio: ['ignore', 'pipe', 'pipe'] });
+/* The three pauses a game is built around, turned down for the suite.
+
+   A bot waits a moment before it answers so that a table of them can be read;
+   a trick sits on the table before it is gathered; and a bot bidding a round
+   waits for the phones to say the deal has been watched. Every one of them is
+   seconds, on purpose, and none of them is what these checks are about -- the
+   clients here are not phones and never say their table is up, so the last one
+   would run its whole course every round. What the pauses actually are is
+   checked in test-rules.js, and that each is really waited out is checked on a
+   server of its own below. */
+const TUNED = { TRICK_HOLD: '120', BOT_DELAY: '120', BOT_DEAL_WAIT: '150' };
+const srv = spawn('node', [path + '/server.js'],
+  { env: { ...process.env, PORT, NO_TLS: '1', DATA_DIR, KEEP_GAMES: '3', CHAT_KEEP: '5', ...TUNED },
+    stdio: ['ignore', 'pipe', 'pipe'] });
 srv.stderr.on('data', d => process.stderr.write('[srv] ' + d));
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -33,7 +43,13 @@ const truthy = (pred) => { try { return !!pred(); } catch (e) { return false; } 
 async function until(pred, ms = 2000) {
   const end = Date.now() + ms;
   while (!truthy(pred)) {
-    if (Date.now() >= end) return false;
+    if (Date.now() >= end) {
+      /* A wait that gives up costs its whole length, and the check after it can
+         still pass for its own reasons -- so it is silent, and slow, and looks
+         like nothing at all. Say it. */
+      console.log(`  SLOW  waited ${ms}ms for nothing: ${String(pred).replace(/\s+/g, ' ').slice(0, 80)}`);
+      return false;
+    }
     await wait(2);
   }
   return true;
@@ -452,7 +468,7 @@ async function bidRound(P) {
   {
     const port3 = PORT + 2;
     const srv3 = spawn('node', [path + '/server.js'], {
-      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', TRICK_HOLD: '120', DATA_DIR, BOT_DEAL_WAIT: '150' }, stdio: 'ignore',
+      env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', DATA_DIR, ...TUNED }, stdio: 'ignore',
     });
     await upAt(port3);
     const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
@@ -645,8 +661,8 @@ async function bidRound(P) {
   {
     const port4 = PORT + 3;
     const srv4 = spawn('node', [path + '/server.js'], {
-      env: { ...process.env, PORT: port4, NO_TLS: '1', DEV: '1', TRICK_HOLD: '60',
-             DATA_DIR, KEEP_GAMES: '3', BOT_DEAL_WAIT: '150' }, stdio: 'ignore',
+      env: { ...process.env, PORT: port4, NO_TLS: '1', DEV: '1',
+             DATA_DIR, KEEP_GAMES: '3', ...TUNED }, stdio: 'ignore',
     });
     await upAt(port4);
     const d = client('gamefile', `ws://127.0.0.1:${port4}/ws`); await d.ready;
@@ -711,7 +727,7 @@ async function bidRound(P) {
      is on every screen, and that the pause between lines is a real pause on a
      real clock. This server keeps five (CHAT_KEEP above). */
   {
-    const { h, P: [ann, ben, cal] } = await tableOf(['Ann', 'Ben', 'Cal']);
+    const { h, P: [ann, ben, cal, dot] } = await tableOf(['Ann', 'Ben', 'Cal', 'Dot']);
 
     ann.send({ t: 'chat', text: '  who   dealt\n  that?  ' });
     await okBy(() => h.state.chat.length === 1, 'a line a player says reaches the table');
@@ -731,11 +747,15 @@ async function bidRound(P) {
     ann.send({ t: 'chat', text: 'said after a moment' });
     await okBy(() => h.state.chat.length === 3, 'and a moment later the same socket may speak again');
 
-    // one line each, so no socket is asked to speak twice, to run past the cap
-    for (const c of [ben, cal, h]) {
-      const was = h.state.chat.length;
+    /* One line each, from sockets that have not spoken, so nothing here waits
+       out the pause between two lines from the same phone. Past the cap the
+       list stops growing, so what is watched is the number on the newest line:
+       every line is numbered, and the numbering runs on past the ones let go. */
+    const newest = () => h.state.chat[h.state.chat.length - 1].n;
+    for (const c of [ben, cal, dot]) {
+      const was = newest();
       c.send({ t: 'chat', text: 'line' });
-      await until(() => h.state.chat.length > was);
+      await until(() => newest() > was);
     }
     await okBy(() => h.state.chat.length === 5, 'the table keeps only the last few  got ' + h.state.chat.length);
     ok(!h.state.chat.some((l) => /dealt/.test(l.text)), 'and the oldest have gone');
@@ -889,7 +909,9 @@ async function bidRound(P) {
     console.log('\n-- a bot waits for the deal to be watched --');
     const port6 = PORT + 4;
     const srv6 = spawn('node', [path + '/server.js'], {
-      env: { ...process.env, PORT: port6, NO_TLS: '1', DATA_DIR, BOT_DEAL_WAIT: '6000' }, stdio: 'ignore',
+      // this one keeps the real wait: it is the thing being checked
+      env: { ...process.env, PORT: port6, NO_TLS: '1', DATA_DIR, BOT_DELAY: '120', BOT_DEAL_WAIT: '6000' },
+      stdio: 'ignore',
     });
     await upAt(port6);
     const url = `ws://127.0.0.1:${port6}/ws`;
@@ -924,7 +946,7 @@ async function bidRound(P) {
     console.log('\n-- a table that outlives its server --');
     const port7 = PORT + 5;
     const dir = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-tables-'));
-    const env = { ...process.env, PORT: port7, NO_TLS: '1', DATA_DIR: dir, BOT_DEAL_WAIT: '150' };
+    const env = { ...process.env, PORT: port7, NO_TLS: '1', DATA_DIR: dir, ...TUNED };
     const url = `ws://127.0.0.1:${port7}/ws`;
     let srv7 = spawn('node', [path + '/server.js'], { env, stdio: 'ignore' });
     await upAt(port7);

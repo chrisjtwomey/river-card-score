@@ -123,12 +123,16 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
     no socket, no clock: the whole file runs in well under a second.
   - `test.js` — whole games over real WebSockets, ports 8899–8906. **What a
     socket adds goes here**: a refusal reaching the phone that earned it, a
-    change reaching every screen, presence, reconnect, a table outliving its
-    server, and the timings that are real (the trick hold, the bot delay, the
-    pause between two lines of talk). Nothing else waits on the clock:
-    `okBy(pred, msg)` polls until the table has made it true, `until(pred)` waits
-    for a step with nothing to assert, and `c.rt()` is a ping and its pong.
-    `tableOf(names, cfg, url)` makes a table and sits everybody at it.
+    change reaching every screen, presence, reconnect, and a table outliving its
+    server. Nothing waits on the clock: `okBy(pred, msg)` polls until the table
+    has made it true, `until(pred)` waits for a step with nothing to assert, and
+    `c.rt()` is a ping and its pong. `tableOf(names, cfg, url)` makes a table and
+    sits everybody at it. The game's own pauses are turned down by `TUNED` at the
+    top — a bot's think, the trick hold, the wait on the phones — so a check
+    never sits through one; what they are is checked in `test-rules.js`, and one
+    server of its own proves each is really waited out.
+    A `SLOW` line in the output means a wait gave up: something is wrong with the
+    check, even if the check passed.
   - `test-pages.js` — the pages and the scenes in a fake DOM, with
     `playPage`/`loadPage` for screens. It never sleeps either: where a screen
     arms a timer, the test catches it and lets it off by hand.

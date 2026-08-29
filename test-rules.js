@@ -760,6 +760,48 @@ part('table talk');
   ok(t.room.chat[2].n === 4, 'and the numbering runs on past the ones let go');
 }
 
+part('the pauses a game is built around');
+
+/* Three waits are what makes a game readable rather than a flicker: a bot
+   thinks before it answers, a finished trick lies on the table before it is
+   gathered, and a bot bidding a round waits until the phones say the deal has
+   been watched. Each can be turned down for a test, and each has a floor, so
+   turning it down cannot turn it off. */
+{
+  const bots = (env) => {
+    const was = { BOT_DELAY: process.env.BOT_DELAY, BOT_DEAL_WAIT: process.env.BOT_DEAL_WAIT };
+    Object.keys(env).forEach((k) => { process.env[k] = env[k]; });
+    delete require.cache[require.resolve('./lib/bots.js')];
+    const B = require('./lib/bots.js')({ G, curRound: () => null, broadcast: () => {},
+                                         seatBid: () => {}, playCard: () => {}, bumDeal: () => {} });
+    Object.keys(was).forEach((k) => { if (was[k] === undefined) delete process.env[k]; else process.env[k] = was[k]; });
+    return B;
+  };
+  const deck = (env) => {
+    const was = process.env.TRICK_HOLD;
+    if (env.TRICK_HOLD === undefined) delete process.env.TRICK_HOLD; else process.env.TRICK_HOLD = env.TRICK_HOLD;
+    delete require.cache[require.resolve('./lib/deck.js')];
+    const D = require('./lib/deck.js')({ G, curRound: () => null, scoreRound: () => {} });
+    if (was === undefined) delete process.env.TRICK_HOLD; else process.env.TRICK_HOLD = was;
+    return D;
+  };
+
+  ok(bots({}).DELAY === 1250, 'a bot thinks for a moment before it answers  got ' + bots({}).DELAY);
+  ok(bots({ BOT_DELAY: '400' }).DELAY === 400, 'and the moment can be turned down');
+  ok(bots({ BOT_DELAY: '1' }).DELAY === 120, 'but not to nothing: there is a floor under it');
+  ok(bots({}).DEAL_WAIT === 9000, 'a bot waits on the phones for as long as a deal takes to watch');
+  ok(bots({ BOT_DEAL_WAIT: '150' }).DEAL_WAIT === 150, 'and that wait can be turned down too');
+  ok(deck({}).TRICK_HOLD === 2300, 'a finished trick lies on the table for a moment  got ' + deck({}).TRICK_HOLD);
+  ok(deck({ TRICK_HOLD: '120' }).TRICK_HOLD === 120, 'and that moment can be turned down');
+  // The felt names who took the trick and gathers it in over TOOK_HOLD; a lead
+  // landing while that is still on screen would cut it short.
+  const felt = require('fs').readFileSync('./public/felt.js', 'utf8');
+  const took = /TOOK_HOLD\s*=\s*(\d+)/.exec(felt);
+  ok(took && Number(took[1]) < deck({}).TRICK_HOLD,
+     'the table holds the trick longer than the phones take to gather it  got '
+     + (took && took[1]) + ' against ' + deck({}).TRICK_HOLD);
+}
+
 part('what every screen is told');
 
 {
