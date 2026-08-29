@@ -284,8 +284,9 @@ without moving anybody.
 
 - **Text size** under ⚙ scales the page from 100% to 200%, so the table can read
   it from across the room. The size is remembered in that browser.
-- **Fix this game** under ⚙ opens the dev page on this table, to put a game in
-  play right. See [Fixing a real game](#fixing-a-real-game).
+- **Dev controls** under ⚙, on a server started with `DEV=1`, opens the dev
+  page on this table, to put a game in play right. See
+  [Fixing a real game](#fixing-a-real-game).
 - The TV screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
 
 ### Keeping phone screens on
@@ -723,7 +724,7 @@ The filled bids keep the screw-the-dealer rule, the filled tricks always total t
 
 #### Fixing a real game
 
-The TV screen always offers **Fix this game** under ⚙, on any server. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
+On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
 
 A real table gets the state editor and nothing else. **Force**, **Round** and **State** work. Everything that invents data — new table, jump to, fill scorecard, randomise — is hidden, and the server refuses it even with `DEV=1`. The top bar turns red, and the page says the game is real.
 
@@ -739,7 +740,7 @@ The server decides this, not the page:
 
 On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
-Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, says so, and points at **Fix this game** under ⚙ on the TV screen, which is the way in to a real table.
+Making a table of stand-ins needs `DEV=1`. On a normal server the page loads and says so. **Dev controls** under ⚙ on the TV screen, the way in to a real table, is offered only with `DEV=1` as well.
 
 ## Test
 

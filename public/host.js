@@ -382,9 +382,11 @@ document.addEventListener('DOMContentLoaded', () => {
      right, and a new game. */
   menu = UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true, zoom: true }).concat([
     { kind: 'group', label: 'This screen' },
-    // Not inside a dev preview, where it would only open the page it sits in.
-    { kind: 'link', label: () => (ST && ST.dev ? 'Dev controls' : 'Fix this game'), blank: true,
-      hidden: () => window.top !== window,
+    // Only on a server run with DEV=1: a player found "Fix this game" and
+    // landed on a page built for the developer. Not inside a dev preview
+    // either, where it would only open the page it sits in.
+    { kind: 'link', label: 'Dev controls', blank: true,
+      hidden: () => window.top !== window || !(ST && ST.dev),
       href: devLink() },
     { kind: 'action', label: 'New game', danger: true,
       hidden: () => !ST || ST.phase === 'lobby',
