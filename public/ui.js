@@ -172,123 +172,9 @@ const UI = (function () {
 
   /* ---------- the settings menu ---------- */
 
-  /* One button in the top bar, and everything that is a setting behind it. The
-     bar had a button for each, which on a phone left no room for anything else
-     and told a first-time player nothing: a glyph is not a label.
-
-     items: what the menu holds, in order. Each is one of
-
-       { kind: 'choice', label, options: [{ v, label }], get(), set(v) }
-       { kind: 'toggle', label, get(), set() }        -- a tick, or nothing
-       { kind: 'action', label, run(), danger }       -- does it and shuts
-       { kind: 'link',   label, href }
-       { kind: 'group',  label }                      -- a line and a heading
-
-     Any item may carry hidden() to leave itself out. A choice stays open, so
-     two of them can be compared; everything else shuts the menu.
-
-     Returns { refresh } for a page whose items change as the game moves on. */
-  function settingsMenu(button, items) {
-    const btn = typeof button === 'string' ? document.querySelector(button) : button;
-    if (!btn) return { refresh() {} };
-    const menu = document.createElement('div');
-    menu.className = 'menu';
-    menu.hidden = true;
-    menu.setAttribute('role', 'menu');
-    (btn.parentNode || document.body).appendChild(menu);
-
-    const shown = () => items.filter((it) => !(it.hidden && it.hidden()));
-    // A label may be a function, for a row whose name changes with the game.
-    const words = (it) => (typeof it.label === 'function' ? it.label() : it.label);
-
-    function draw() {
-      menu.innerHTML = '';
-      shown().forEach((it) => {
-        if (it.kind === 'group') {
-          if (menu.children.length) menu.appendChild(document.createElement('hr'));
-          const h = document.createElement('p');
-          h.className = 'menu-group';
-          h.textContent = words(it);
-          menu.appendChild(h);
-          return;
-        }
-        if (it.kind === 'choice') {
-          const row = document.createElement('div');
-          row.className = 'menu-row';
-          const name = document.createElement('span');
-          name.className = 'menu-label';
-          name.textContent = words(it);
-          const seg = document.createElement('span');
-          seg.className = 'seg';
-          const now = String(it.get());
-          it.options.forEach((o) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.textContent = o.label;
-            b.className = String(o.v) === now ? 'on' : '';
-            b.addEventListener('click', () => { it.set(o.v); draw(); });
-            seg.appendChild(b);
-          });
-          row.append(name, seg);
-          menu.appendChild(row);
-          return;
-        }
-        if (it.kind === 'link') {
-          const a = document.createElement('a');
-          a.className = 'menu-row menu-tap';
-          a.href = it.href;
-          if (it.blank) { a.target = '_blank'; a.rel = 'noopener'; }
-          a.textContent = words(it);
-          a.addEventListener('click', shut);
-          menu.appendChild(a);
-          return;
-        }
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'menu-row menu-tap' + (it.danger ? ' danger' : '');
-        const name = document.createElement('span');
-        name.className = 'menu-label';
-        name.textContent = words(it);
-        b.appendChild(name);
-        if (it.kind === 'toggle') {
-          b.setAttribute('role', 'menuitemcheckbox');
-          const on = !!it.get();
-          b.setAttribute('aria-checked', String(on));
-          const tick = document.createElement('span');
-          tick.className = 'menu-tick';
-          tick.textContent = on ? '✓' : '';
-          b.appendChild(tick);
-        }
-        b.addEventListener('click', () => {
-          if (it.kind === 'toggle') it.set(!it.get()); else it.run();
-          shut();
-        });
-        menu.appendChild(b);
-      });
-    }
-
-    let open = false;
-    function show() { open = true; draw(); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
-    function shut() { open = false; menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
-
-    btn.setAttribute('aria-haspopup', 'true');
-    btn.setAttribute('aria-expanded', 'false');
-    btn.addEventListener('click', (e) => { e.stopPropagation(); if (open) shut(); else show(); });
-    /* A tap anywhere else is the way out that needs no button.
-
-       `contains`, not `===`: the button holds a drawn icon, so a tap on it
-       lands on the svg inside and not on the button itself. Read as a tap
-       outside, this shut the menu on the way down and the button's own click
-       opened it again on the way up -- so the button that opened the menu could
-       not close it. */
-    document.addEventListener('pointerdown', (e) => {
-      if (open && !menu.contains(e.target) && !btn.contains(e.target)) shut();
-    });
-    document.addEventListener('keydown', (e) => { if (open && e.key === 'Escape') shut(); });
-    return { refresh: () => { if (open) draw(); } };
-  }
-
-  /* The settings every screen has. A page adds its own to the end.
+  /* The settings every screen has, as rows for the settings page
+     (Settings.wire draws them). A page adds its own to the end: a row with no
+     group before it joins the last one.
      opts: { motion: true } for a page that plays the deal, { zoom: true } for
      one read from across a room, { home: true } for a page that is not the
      front page -- the way back used to be the ♠ in the corner, which on a
@@ -296,6 +182,7 @@ const UI = (function () {
   function commonSettings(opts) {
     const o = opts || {};
     const list = [
+      { kind: 'group', label: 'Look' },
       { kind: 'choice',
         label: 'Theme',
         options: [{ v: '', label: 'System' }, { v: 'light', label: 'Light' }, { v: 'dark', label: 'Dark' }],
@@ -316,6 +203,7 @@ const UI = (function () {
         get: motion,
         set: setMotion });
     }
+    list.push({ kind: 'group', label: 'This screen' });
     // Safari on an iPhone has no full screen at all, so the row is not offered.
     list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
                 get: isFull, set: () => { try { toggleFullscreen(); } catch (e) {} } });
@@ -737,6 +625,6 @@ const UI = (function () {
   return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask,
-           settingsMenu, commonSettings, startZoom, zoomNow, setZoom,
+           commonSettings, startZoom, zoomNow, setZoom,
            wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
 })();

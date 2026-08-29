@@ -24,12 +24,14 @@ page, so the button is there over `https` (`npm run cert`) and in the Android
 app, and it hides itself where the browser offers no camera -- plain `http` to
 another machine, or Safari, which cannot read a code.
 
-Every page carries one **⚙** button in the top bar, and every setting is behind
-it: the theme (system, light or dark), the animations (full, short or off), full
-screen, on the TV screen the text size, and on a phone the way back to the
-front page. Rows that a browser cannot honour
-leave themselves out -- full screen is not offered on Safari on an iPhone. A
-table's screens have one other button, 💬 for the talk, and nothing else.
+Every page carries one **⚙** button in the top bar, and it opens the settings
+page: the theme (system, light or dark), the animations (full, short or off),
+full screen, on the TV screen the text size, and on a phone the way back to
+the front page. The settings page lies over the page it was opened from, with
+a back arrow of its own, so a game underneath keeps its place and its socket.
+Rows that a browser cannot honour leave themselves out -- full screen is not
+offered on Safari on an iPhone. A table's screens have one other button, 💬
+for the talk, and nothing else.
 
 The server builds the QR code itself, so nothing is sent to an outside service. It is always black on white, whatever the page theme is, because a camera cannot read an inverted code.
 
@@ -812,7 +814,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the TV screen, the table host's phone and the dev page.
 - `public/round.js` — the round in play: the round line, the bids as they land, the count of tricks taken, the pads for a seat with nobody behind it, and the winner. Each widget takes the element it draws into and a view of who is looking.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
-- `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
+- `public/ui.js` also lists the settings every page has, as rows. `public/settings.js` draws them: the page behind the ⚙, laid over the page that opened it.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring, whose turn it is, which seats the table plays itself. Used by the server and by every client.
 - `test-rules.js` — the rules, checked where they live: no server, no browser, no clock.

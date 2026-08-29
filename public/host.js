@@ -12,7 +12,7 @@ let lastTotals = null;  // seat id -> score, to show what a round paid
 let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addr = null;        // the address shown in the QR code
 
-let menu = null;         // the settings menu, once the page is wired
+let menu = null;         // the settings page, once the page is wired
 let SHOW = false;        // this screen shows a table it does not run
 let CODE = null;         // the table this screen belongs to
 let seenWho = null;      // who was at the table on the state before
@@ -186,8 +186,8 @@ function render() {
   });
   const over = ST.phase === 'done';
   if (over) Games.keep(ST, -1);
-  // The settings menu holds the screen's own rows, and they read the state
-  // themselves. An open menu is redrawn so it keeps up with the game.
+  // The settings page holds the screen's own rows, and they read the state
+  // themselves. An open page is redrawn so it keeps up with the game.
   if (menu) menu.refresh();
 
   $('#lobby').hidden = !lobby;
@@ -383,17 +383,16 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAddresses();
   UI.startZoom();
   /* A host screen is read from across the room, so text size belongs here.
-     The menu holds settings and nothing else: a new game is a button on the
+     The page holds settings and nothing else: a new game is a button on the
      page, where the game-over line says it is. */
-  menu = UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true, zoom: true }).concat([
-    { kind: 'group', label: 'This screen' },
+  menu = Settings.wire('#btn-settings', { items: UI.commonSettings({ motion: true, zoom: true }).concat([
     // Only on a server run with DEV=1: a player found "Fix this game" and
     // landed on a page built for the developer. Not inside a dev preview
     // either, where it would only open the page it sits in.
     { kind: 'link', label: 'Dev controls', blank: true,
       hidden: () => window.top !== window || !(ST && ST.dev),
       href: devLink() },
-  ]));
+  ]) });
   $('#btn-reset').addEventListener('click', newGame);
   // playDeal() in the console replays it for the current table.
   window.playDeal = (mode) => playDealNow(mode || 'full');

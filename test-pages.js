@@ -1133,18 +1133,26 @@ function tookTrick(motion) {
   ok(t.stage.querySelectorAll('.dcard.took').length === 1, 'and the trick lies there as it always did');
 }
 
-part('the settings menu');
+part('the settings page');
 
-/* The ⚙ menu, and the one thing about it that is easy to get wrong: the button
-   that opens it holds a drawn icon, so a tap on it lands on the icon and not on
-   the button. */
+/* The ⚙ opens a page laid over this one. The button holds a drawn icon, so a
+   tap on it lands on the icon and not on the button; the page is a dialog
+   with a back arrow, and Escape is the same way out. */
 {
   const dom = makeDom(412, 860);
   dom.localStorage.setItem('river-card-score:motion:v1', 'off');
-  const src = fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8');
-  const UI = new Function('window', 'document', 'localStorage', 'console',
-    src + '\n; return UI;')(dom.window, dom.document, dom.localStorage,
-    { log() {}, info() {}, warn() {}, error() {} });
+  const src = ['public/ui.js', 'public/settings.js']
+    .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
+  const quiet = { log() {}, info() {}, warn() {}, error() {} };
+  let shown = 'unset';
+  const Avatar = { picker: (onPick) => {
+    const el = dom.document.createElement('div');
+    el.className = 'avrow';
+    el.pick = onPick;
+    return { el, show: (src) => { shown = src; }, say() {} };
+  } };
+  const { UI, Settings } = new Function('window', 'document', 'localStorage', 'console', 'Avatar',
+    src + '\n; return { UI, Settings };')(dom.window, dom.document, dom.localStorage, quiet, Avatar);
 
   const bar = dom.document.createElement('div');
   dom.document.body.appendChild(bar);
@@ -1153,32 +1161,99 @@ part('the settings menu');
   btn.appendChild(icon);
   bar.appendChild(btn);
 
-  let ran = 0;
-  const menu = UI.settingsMenu(btn, [
+  let ran = 0, tog = false, pick = 'a';
+  const page = Settings.wire(btn, { items: [
+    { kind: 'group', label: 'Look' },
+    { kind: 'choice', label: 'Pick', options: [{ v: 'a', label: 'A' }, { v: 'b', label: 'B' }],
+      get: () => pick, set: (v) => { pick = v; } },
+    { kind: 'toggle', label: 'Switch', get: () => tog, set: (v) => { tog = v; } },
+    { kind: 'group', label: 'This screen' },
     { kind: 'action', label: 'Do the thing', run: () => { ran += 1; } },
-  ]);
-  const box = () => bar.querySelector('.menu');
-  ok(!!box() && box().hidden, 'the menu starts shut');
+    { kind: 'link', label: 'Front page', href: 'index.html' },
+    { kind: 'action', label: 'Never', hidden: () => true, run: () => { ran += 100; } },
+  ] });
+  const box = page.el;
+  ok(dom.document.body.querySelector('.settings') === box && box.hidden, 'the page is there, shut');
 
   btn.fire('click');
-  ok(!box().hidden, 'the button opens it');
+  ok(!box.hidden, 'the button opens it');
   ok(btn.getAttribute('aria-expanded') === 'true', 'and says so');
-
-  // the tap that opens it lands on the icon, and the page hears it too
-  dom.document.fire('pointerdown', { target: icon });
-  btn.fire('click');
-  ok(box().hidden, 'and the same button closes it, tapped on its icon');
-  ok(btn.getAttribute('aria-expanded') === 'false', 'and says that too');
-
-  btn.fire('click');
-  ok(!box().hidden, 'it opens again');
-  dom.document.fire('pointerdown', { target: dom.document.body });
-  ok(box().hidden, 'a tap anywhere else closes it');
+  ok(box.querySelector('h1').textContent === 'Settings', 'it is the settings page');
+  const panels = box.querySelector('.settings-main').children;
+  ok(panels.length === 2, 'a group is a panel of its own  got ' + panels.length);
+  ok(panels[0].querySelector('h2').textContent === 'Look'
+     && panels[1].querySelector('h2').textContent === 'This screen', 'each with its heading');
+  ok(panels[1].querySelectorAll('.menu-row').length === 2, 'a hidden row leaves itself out  got '
+     + panels[1].querySelectorAll('.menu-row').length);
 
   btn.fire('click');
-  box().querySelector('.menu-row').fire('click');
-  ok(ran === 1 && box().hidden, 'and a row does its thing and closes it');
-  ok(typeof menu.refresh === 'function', 'the page can ask it to redraw');
+  ok(box.hidden && btn.getAttribute('aria-expanded') === 'false', 'the same button shuts it');
+
+  btn.fire('click');
+  box.querySelector('.settings-back').fire('click');
+  ok(box.hidden, 'so does the back arrow');
+  btn.fire('click');
+  dom.document.fire('keydown', { key: 'Escape' });
+  ok(box.hidden, 'and Escape');
+
+  btn.fire('click');
+  const seg = box.querySelector('.seg');
+  ok(seg.children[0].classList.contains('on') && !seg.children[1].classList.contains('on'), 'a choice shows what is set');
+  seg.children[1].fire('click');
+  ok(pick === 'b' && !box.hidden, 'a tap sets it and the page stays open');
+  ok(box.querySelector('.seg').children[1].classList.contains('on'), 'redrawn with the new choice');
+  const sw = box.querySelectorAll('.menu-tap')[0];
+  ok(sw.getAttribute('role') === 'switch' && sw.querySelector('.menu-tick').textContent === '', 'a toggle is a switch, off');
+  sw.fire('click');
+  ok(tog === true && !box.hidden, 'a tap turns it on and the page stays open');
+  ok(box.querySelectorAll('.menu-tap')[0].querySelector('.menu-tick').textContent === '✓', 'and it shows the tick');
+  box.querySelectorAll('.menu-tap')[1].fire('click');
+  ok(ran === 1 && box.hidden, 'an action does its thing and shuts the page');
+  ok(typeof page.refresh === 'function', 'the page can ask it to redraw');
+
+  // A screen with a player behind it: the name and the photo are at the top.
+  let name = 'Ann', named = [], photos = [];
+  const phone = Settings.wire(null, { items: [{ kind: 'group', label: 'Look' }],
+    who: { name: () => name, photo: () => 'pic:' + name, note: () => 'A line about now',
+           onName: (n) => { name = n; named.push(n); }, onPhoto: (d) => photos.push(d) } });
+  const you = () => phone.el.querySelector('.settings-you');
+  phone.open();
+  ok(!!you() && phone.el.querySelector('.settings-main').children[0] === you(), 'the player comes first');
+  ok(you().querySelector('.settings-name').value === 'Ann', 'with the name this phone plays under');
+  ok(shown === 'pic:Ann', 'and the photo it has');
+  ok(you().querySelector('.settings-note').textContent === 'A line about now', 'and the page\'s line about it');
+  ok(!phone.el.querySelector('.settings-done'), 'no Done: the back arrow is the way out');
+  you().querySelector('.avrow').pick('data:new');
+  ok(photos[0] === 'data:new', 'a photo picked goes to the page at once');
+  phone.close();
+  ok(named.length === 0, 'a name left as it was is not sent again');
+  phone.open();
+  you().querySelector('.settings-name').value = '  Bea ';
+  phone.close();
+  ok(named[0] === 'Bea' && name === 'Bea', 'a new name goes to the page when the page shuts  got ' + named[0]);
+  phone.open();
+  you().querySelector('.settings-name').value = '';
+  phone.close();
+  ok(named.length === 1 && name === 'Bea', 'a name rubbed out is not a name: the old one stays');
+
+  // The first time: the name alone, and no way out without one.
+  name = '';
+  phone.open({ first: true });
+  ok(!phone.el.hidden && phone.el.querySelector('h1').textContent === 'Who are you?', 'the first ask says what it is');
+  ok(phone.el.querySelector('.settings-back').hidden, 'with no back arrow');
+  ok(phone.el.querySelector('.settings-main').children.length === 2, 'the player and Done, nothing else');
+  const done = phone.el.querySelector('.settings-done');
+  ok(done.disabled === true, 'Done waits for a name');
+  dom.document.fire('keydown', { key: 'Escape' });
+  ok(!phone.el.hidden, 'Escape is no way out');
+  phone.close();
+  ok(!phone.el.hidden, 'nor is closing it');
+  const inp = phone.el.querySelector('.settings-name');
+  inp.value = 'Cal';
+  inp.fire('input');
+  ok(done.disabled === false, 'a name typed frees Done');
+  done.fire('click');
+  ok(phone.el.hidden && named[1] === 'Cal', 'and Done keeps it and shuts the page  got ' + named[1]);
 }
 
 function done() {
@@ -1420,7 +1495,7 @@ part('the front page, and the screen');
     WebSocket.prototype.close = function () { this.readyState = 3; };
     const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8') + '\n;\n'
               + fs.readFileSync(path.join(ROOT, 'public/' + file), 'utf8');
-    const names = ['UI', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round'];
+    const names = ['UI', 'Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round'];
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'console', ...names, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
@@ -1586,7 +1661,7 @@ part('bidding for a seat that is not there, and leaving');
       fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
     const src = ['public/lobby.js', 'public/round.js', 'public/net.js', 'public/play.js']
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
-    const stubs = ['Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt'];
+    const stubs = ['Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt'];
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game, UI, Table,
@@ -1623,7 +1698,7 @@ part('bidding for a seat that is not there, and leaving');
       fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
     const src = ['public/lobby.js', 'public/round.js', 'public/net.js', 'public/host.js']
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
-    const stubs = ['Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage'];
+    const stubs = ['Settings', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage'];
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game, UI, Table,

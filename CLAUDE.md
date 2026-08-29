@@ -27,8 +27,10 @@ server.js          Wiring only: http/ws servers, the rooms map, the entry messag
                    (create/join/resume/screen/watch/avatar), presence, broadcast, the trick
                    hold timer, upkeep.
 
-public/ui.js       Page chrome shared by every page: settings menu, theme, zoom, wake lock,
+public/ui.js       Page chrome shared by every page: the settings rows, theme, zoom, wake lock,
                    full screen, the ask() dialog, the motion setting, the small effects (fx).
+public/settings.js The settings page behind the ⚙: laid over the page that opened it, draws
+                   the rows a page hands it (`UI.commonSettings` plus its own).
 public/net.js      The socket client: reconnect, sessions, one table per page address.
 public/table.js    The scorecard, standings, winner, vote line, presence and bid toasts, and
                    what the scenes read off the state (roundKey, dealOpts, finaleOpts).
@@ -107,7 +109,7 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
 - **A screen control that acts for the table**: a widget in `round.js` gated on
   `view.boss`, using `Game.awaySeat`/`onTurn` for who it is about.
 - **A page setting**: a row from `UI.commonSettings(opts)` or a page-specific item in
-  its `UI.settingsMenu` call.
+  its `Settings.wire` call.
 - **A behaviour that differs by mode** (real cards vs dealt on the phones): a `deck`
   guard on the message row, or `Game.virtual(state)` at the one seam in the Room verb
   (`openRound`, `closeBidding`). Not an `if` in a screen.
