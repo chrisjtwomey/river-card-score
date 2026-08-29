@@ -421,7 +421,22 @@ const Deal = (function () {
         settled = true;
         anims.forEach((a) => { try { a.finish(); } catch (e) {} });
         deckEls.forEach((d) => { d.style.zIndex = ''; });
+        landed();
         handover();
+      }
+      /* The cards are down: the player to act peeks, and the bids that
+         landed while the cards were in the air are stamped now, one after
+         another. A bot bids as soon as the phones are ready, and a TV's
+         deal is longer than a phone's, so on the TV the first bids of a
+         round with bots used to land before the piles did, and were lost. */
+      function landed() {
+        if (!S.live || S.live.finish !== finish || S.live.settled) return;
+        const live = S.live;
+        live.settled = true;
+        applyTurn();
+        live.pending.splice(0).forEach(([p, v], i) => {
+          timers.push(setTimeout(() => { if (S.live === live) stamp(p, v); }, i * 350));
+        });
       }
       /* The stage, and everything the deal left standing on it, given to
          whoever asked to keep it. Once only: a tap can land the deal before
@@ -462,7 +477,7 @@ const Deal = (function () {
       function arm() {
         timers.push(setTimeout(() => {
           settled = true;
-          if (S.live) { S.live.settled = true; applyTurn(); }   // now the cards have landed
+          landed();
           handover();
         }, landedAtEnd));
         if (!hold && !keep) timers.push(setTimeout(finish, naturalEnd));
@@ -473,6 +488,7 @@ const Deal = (function () {
         kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
         key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
         bids: null,                       // what was on the table at the last update
+        pending: [],                      // stamps asked for before the cards were down
         trumpSet,                         // repaints the suit if the host corrects it
       };
       if (hold && last && last.key === S.live.key) update(last);   // re-opened: catch up
@@ -507,7 +523,8 @@ const Deal = (function () {
   // A bid lands: it is stamped onto that player's card (Stage.stamp). The
   // name below the card keeps it from then on.
   function stamp(p, value) {
-    if (!S.live || S.live.calm || !S.live.settled) return;
+    if (!S.live || S.live.calm) return;
+    if (!S.live.settled) { S.live.pending.push([p, value]); return; }   // once the cards are down
     Stage.stamp(S.live.stage, S.live.cards[p], S.live.landedAt[p], S.live.labels[p], value);
   }
 

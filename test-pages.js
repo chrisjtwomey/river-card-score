@@ -2359,6 +2359,32 @@ part('tapping the deal away');
     p.then(() => ok(true, 'the scene\'s promise settles'));
   }
 
+  {   // a bid that lands while the cards are in the air is stamped once they are down
+    const L = load(1280, 720, 'full');
+    const asked = record(L);
+    const overlay = L.Stage.parts().overlay;
+    const stage = () => L.dom.document.querySelector('.deal-stage');
+    L.Deal.play({ names: ['Ann', 'Ben', 'Cal'], dealer: 0, cards: 3, round: 1,
+                  deck: 'virtual', mine: -1, hand: [], upcard: 'TH', trump: 'H', hold: true, key: '0:0' });
+    L.Deal.update({ key: '0:0', bids: [null, null, null], turn: 1, text: '' });   // the TV fills in the bids it opens with
+    L.Deal.update({ key: '0:0', bids: [null, 1, null], turn: 2, text: 'Waiting for Cal to bid' });
+    ok(stage().querySelectorAll('.dstamp').length === 0, 'nothing is stamped onto a pile that has not landed');
+    ok(overlay.querySelectorAll('.dname').map((el) => el.textContent).indexOf('Ben · 1') >= 0, 'but the name has the bid');
+    const timers = [];
+    const realSet = setTimeout;
+    global.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return realSet(() => {}, 0); };
+    try { overlay.fire('pointerdown', { target: overlay, clientX: 200, clientY: 400, pointerId: 1 }); }   // lands it
+    finally { global.setTimeout = realSet; }
+    ok(L.Stage.S.live && L.Stage.S.live.settled, 'a tap lands the cards');
+    timers.filter((t) => t.ms < 1000).forEach((t) => t.fn());
+    const stamps = stage().querySelectorAll('.dstamp').map((el) => el.textContent);
+    ok(stamps.length === 1 && stamps[0] === '1', 'and the bid that came first is stamped then  got ' + stamps.join(','));
+    L.Deal.update({ key: '0:0', bids: [null, 1, 2], turn: 0, text: 'Waiting for Ann to bid' });
+    ok(stage().querySelectorAll('.dstamp').length === 2, 'the next one is stamped as it lands');
+    ok(asked.some((a) => /\bdstamp\b/.test(a.el.className)), 'stamps move');
+    L.Deal.close('deal');
+  }
+
   {   // and left alone, it goes by itself
     const L = load(412, 860, 'full');
     record(L);
