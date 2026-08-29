@@ -766,21 +766,32 @@ Making a table of stand-ins needs `DEV=1`. On a normal server the page loads and
 npm test
 ```
 
-Two suites, and `npm test` runs both.
+Three suites, and `npm test` runs all three. Together they take about twenty
+seconds, and nearly all of that is the games played over real sockets.
 
-`test.js` starts the server on port 8899 and plays whole games over WebSockets:
-joining, the bid order, the screw-the-dealer block, dealer-only trick entry,
-scoring, undo, reconnect, late joins, table talk, the addresses, and a table
-with bots at it playing itself. It also checks the static routes and compares
-the QR image with the encoder, module by module. It uses ports 8899 to 8903, so
-stop anything of your own on those first.
+`test-rules.js` needs no server and no browser. It builds a table in its own
+process and calls the game on it: whose turn it is, what a round pays, one bid
+at a time, the rules of a trick with the cards stacked on purpose, a hand thrown
+in, a step back, and who may send what and when. A rule of the game is checked
+here. Run it alone with `npm run test:rules`.
+
+`test.js` starts the server on port 8899 and plays whole games over WebSockets.
+It proves what only a socket can: a refusal comes back to the phone that earned
+it, a bid made on one phone is on every screen a moment later, a phone that
+drops out is waited for and let back in, a table outlives the server it was on,
+and the pauses that are meant to be felt — the trick held up, the bots thinking,
+the moment between two lines of talk — are real pauses on a real clock. It also
+checks the static routes and compares the QR image with the encoder, module by
+module. It uses ports 8899 to 8906, so stop anything of your own on those first.
 
 `test-pages.js` needs no server and no browser. It draws into a document just
 big enough to hold a page and drives real events at it: where every card on the
 felt lies at five screen sizes and every legal hand size, the thumb along the
 fan, the push that plays a card and the one that does not, the card that
 refuses, the trick taken and gathered, the bid numbers, the round held up, and
-the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
+the ⚙ menu opening and closing. Where a screen arms a timer, the test catches it
+and lets it off by hand rather than waiting. Run it alone with
+`npm run test:pages`.
 
 ## Files
 
@@ -804,7 +815,8 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
 - `game.js` — the rules: schedule, bid order, forbidden bid, scoring, whose turn it is, which seats the table plays itself. Used by the server and by every client.
-- `test.js` — end-to-end test. `test-pages.js` — the pages, checked without a browser.
+- `test-rules.js` — the rules, checked where they live: no server, no browser, no clock.
+- `test.js` — end-to-end test, over real sockets. `test-pages.js` — the pages, checked without a browser.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
 - `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, and live previews of every screen.

@@ -14,27 +14,104 @@ const srv = spawn('node', [path + '/server.js'], { env: { ...process.env, PORT, 
 srv.stderr.on('data', d => process.stderr.write('[srv] ' + d));
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
-let fails = 0;
+let fails = 0, done = false;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) fails++; };
+
+/* The table answers in a millisecond or two, so sleeping a fixed tenth of a
+   second after every message was this file spending most of a minute doing
+   nothing -- and, on a machine that was busy, still not always long enough.
+
+   So nothing here waits by the clock. It waits for the answer: `until` polls
+   until what it is watching for is true and gives up after a couple of
+   seconds, so a rule that really is broken still fails, and fails with its own
+   line. Where there is nothing to watch for -- a message that changes nothing,
+   or a step that only sets the table up -- `c.rt()` sends a ping and waits for
+   the pong, which proves the server has dealt with everything that socket sent
+   before it. The waits that are left are the ones being measured: a trick held
+   up, a bot thinking, a phone timed out. */
+const truthy = (pred) => { try { return !!pred(); } catch (e) { return false; } };
+async function until(pred, ms = 2000) {
+  const end = Date.now() + ms;
+  while (!truthy(pred)) {
+    if (Date.now() >= end) return false;
+    await wait(2);
+  }
+  return true;
+}
+// A check, once the table has had its chance to make it true.
+const okBy = async (pred, m) => { await until(pred); ok(truthy(pred), m); };
+// And a server, once it is answering.
+async function upAt(port, ms = 8000) {
+  const end = Date.now() + ms;
+  for (;;) {
+    try { if ((await fetch(`http://127.0.0.1:${port}/net.json`)).ok) return true; } catch (e) {}
+    if (Date.now() >= end) return false;
+    await wait(10);
+  }
+}
 
 function client(name, url) {
   const ws = new WebSocket(url || `ws://127.0.0.1:${PORT}/ws`);
-  const c = { ws, name, state: null, hello: null, errors: [], seatId: null };
+  const c = { ws, name, state: null, hello: null, errors: [], seatId: null, pongs: 0 };
   ws.on('message', d => {
     const m = JSON.parse(d);
     if (m.t === 'state') c.state = m;
     else if (m.t === 'hello') { c.hello = m; c.seatId = m.seatId; }
     else if (m.t === 'error') c.errors.push(m.msg);
+    else if (m.t === 'pong') c.pongs++;
     else if (m.t === 'kicked') c.kicked = true;
     else if (m.t === 'left') c.left = true;
   });
   c.send = o => ws.send(JSON.stringify(o));
   c.ready = new Promise(r => ws.on('open', r));
+  // Sent, and answered: everything before it has been dealt with.
+  c.rt = () => { const n = c.pongs; c.send({ t: 'ping' }); return until(() => c.pongs > n); };
+  // The line this socket was last told it could not do.
+  c.last = () => c.errors[c.errors.length - 1] || '';
   return c;
 }
 
+/* A table, made and sat at. Nearly every block below opens with one, and the
+   dance is the same each time: a screen makes it, the phones join it, the
+   rules are set on it. */
+async function tableOf(names, cfg, url) {
+  const h = client('screen', url); await h.ready;
+  h.send({ t: 'create' }); await until(() => h.hello);
+  const code = h.hello.code;
+  const P = [];
+  for (const nm of names) {
+    const c = client(nm, url); await c.ready;
+    c.send({ t: 'join', code, name: nm });
+    await until(() => c.hello && c.hello.seatId);
+    P.push(c);
+  }
+  await until(() => h.state && h.state.seats.length === names.length);
+  if (cfg) { h.send({ t: 'config', patch: cfg }); await h.rt(); }
+  return { h, P, code };
+}
+
+// Bid the round through, in turn, never the number the dealer may not say.
+async function bidRound(P) {
+  for (let g = 0; g < P.length; g++) {
+    const st = P[0].state, r = st.rounds[st.idx], turn = st.turn;
+    if (turn === null || turn === undefined) break;
+    const sum = r.bids.reduce((a, b) => a + (b || 0), 0);
+    const no = (st.cfg.screw && turn === r.dealer) ? r.cards - sum : -1;
+    P[turn].send({ t: 'bid', v: no === 1 ? 0 : 1 });
+    await until(() => P[0].state.rounds[P[0].state.idx].bids[turn] !== null
+                   || P[0].state.idx !== st.idx || P[0].state.phase !== 'bid');
+  }
+}
+
 (async () => {
-  await wait(600);
+  /* A server left behind by a run that was stopped part way still holds this
+     port, and the one spawned above quietly fails to bind. Every check then
+     runs against yesterday's table and passes for the wrong reason, so say so
+     and stop. */
+  srv.on('exit', (code) => {
+    if (!done) { console.log(`\n  FAIL the server on port ${PORT} stopped (${code}) -- is one already running?`); process.exit(1); }
+  });
+  await upAt(PORT);
 
   // static files
   const res = await fetch(`http://127.0.0.1:${PORT}/`);
@@ -70,264 +147,189 @@ function client(name, url) {
   ok(qrBad.status === 400, '/qr.svg without data is refused');
 
   const host = client('host'); await host.ready;
-  host.send({ t: 'create' }); await wait(150);
+  host.send({ t: 'create' }); await until(() => host.hello);
   const code = host.hello.code;
   ok(!!code && code.length === 4, 'host created table ' + code);
 
   const P = [];
   for (const nm of ['Amy', 'Hugh', 'Joe']) {
-    const c = client(nm); await c.ready; c.send({ t: 'join', code, name: nm }); await wait(120); P.push(c);
+    const c = client(nm); await c.ready; c.send({ t: 'join', code, name: nm });
+    await until(() => c.hello); P.push(c);
   }
-  ok(host.state.seats.length === 3, '3 seats taken');
+  await okBy(() => host.state.seats.length === 3, '3 seats taken');
   ok(host.state.cfg.ones === 3, 'ones follows the player count');
 
-  const dupe = client('dupe'); await dupe.ready; dupe.send({ t: 'join', code, name: 'amy' }); await wait(120);
-  ok(dupe.errors.some(e => /taken/.test(e)), 'duplicate name is refused');
+  const dupe = client('dupe'); await dupe.ready; dupe.send({ t: 'join', code, name: 'amy' });
+  await okBy(() => /taken/.test(dupe.last()), 'duplicate name is refused');
   ok(dupe.errors.every(e => /^[A-Z].*\.$/.test(e)), 'and a refusal is a sentence, like everything a page says  got ' + JSON.stringify(dupe.errors));
 
   // rules: 2 cards down to 1, three 1-card rounds => 2,1,1,1
-  P[0].send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 3 } }); await wait(120);
-  ok(JSON.stringify(Game_schedule(host.state.cfg)) === '[2,1,1,1]', 'schedule is 2,1,1,1');
+  P[0].send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 3 } });
+  await okBy(() => JSON.stringify(Game_schedule(host.state.cfg)) === '[2,1,1,1]', 'schedule is 2,1,1,1');
 
   // the first player to sit down runs the table
   ok(host.state.captainId === P[0].seatId, 'the first player to sit down is the table host');
-  P[1].send({ t: 'start' }); await wait(120);
-  ok(P[1].errors.some(e => /only the table host/i.test(e)), 'another player cannot start the game');
-  P[1].errors.length = 0;
-  P[1].send({ t: 'config', patch: { max: 9 } }); await wait(100);
-  ok(P[1].errors.some(e => /only the table host/i.test(e)), 'and cannot change the rules');
+  P[1].send({ t: 'start' });
+  await okBy(() => /only the table host/i.test(P[1].last()), 'another player cannot start the game');
+  P[1].send({ t: 'config', patch: { max: 9 } });
+  await okBy(() => P[1].errors.length === 2, 'and cannot change the rules');
 
-  P[0].send({ t: 'captain', id: P[2].seatId }); await wait(120);
-  ok(host.state.captainId === P[2].seatId, 'the table host can pass it on');
-  P[1].send({ t: 'captain', id: P[1].seatId }); await wait(100);
+  P[0].send({ t: 'captain', id: P[2].seatId });
+  await okBy(() => host.state.captainId === P[2].seatId, 'the table host can pass it on');
+  P[1].send({ t: 'captain', id: P[1].seatId }); await P[1].rt();
   ok(host.state.captainId === P[2].seatId, 'a player cannot take it for themselves');
-  host.send({ t: 'captain', id: P[0].seatId }); await wait(120);
-  ok(host.state.captainId === P[0].seatId, 'the host screen can hand it back');
+  host.send({ t: 'captain', id: P[0].seatId });
+  await okBy(() => host.state.captainId === P[0].seatId, 'the host screen can hand it back');
 
-  P[0].send({ t: 'config', patch: { max: 2 } }); await wait(100);
-  ok(host.state.cfg.max === 2, 'the table host can change the rules');
+  P[0].send({ t: 'config', patch: { max: 2 } });
+  await okBy(() => host.state.cfg.max === 2, 'the table host can change the rules');
 
   // pick who deals the first round, then put it back for the rest of this game
-  host.send({ t: 'config', patch: { firstDealer: P[2].seatId } }); await wait(120);
-  ok(host.state.firstDealerId === P[2].seatId, 'the host can choose the first dealer');
+  host.send({ t: 'config', patch: { firstDealer: P[2].seatId } });
+  await okBy(() => host.state.firstDealerId === P[2].seatId, 'the host can choose the first dealer');
   // a seat dragged to a new place lands there, and the rest close up
-  host.send({ t: 'seatMove', id: P[2].seatId, to: 0 }); await wait(120);
-  ok(host.state.seats.map((s) => s.name).join(',') === 'Joe,Amy,Hugh',
+  host.send({ t: 'seatMove', id: P[2].seatId, to: 0 });
+  await okBy(() => host.state.seats.map((s) => s.name).join(',') === 'Joe,Amy,Hugh',
      'a seat dragged to the top lands there  got ' + host.state.seats.map((s) => s.name).join(','));
-  host.send({ t: 'seatMove', id: P[2].seatId, to: 2 }); await wait(120);
-  ok(host.state.seats.map((s) => s.name).join(',') === 'Amy,Hugh,Joe', 'and dragged back');
-  host.send({ t: 'config', patch: { firstDealer: null } }); await wait(120);
-  ok(host.state.firstDealerId === null, 'and can clear it again');
+  host.send({ t: 'seatMove', id: P[2].seatId, to: 2 });
+  await okBy(() => host.state.seats.map((s) => s.name).join(',') === 'Amy,Hugh,Joe', 'and dragged back');
+  host.send({ t: 'config', patch: { firstDealer: null } });
+  await okBy(() => host.state.firstDealerId === null, 'and can clear it again');
 
-  host.send({ t: 'start' }); await wait(150);
-  ok(host.state.phase === 'bid' && host.state.rounds.length === 4, 'game started, 4 rounds');
+  host.send({ t: 'start' });
+  await okBy(() => host.state.phase === 'bid' && host.state.rounds.length === 4, 'game started, 4 rounds');
   ok(host.state.turn === 1, 'round 1: seat 1 bids first (dealer is seat 0)');
 
-  P[1].errors.length = 0;
-  P[1].send({ t: 'dealt' }); await wait(100);
-  ok(P[1].errors.some(e => /real cards/.test(e)),
+  P[1].send({ t: 'dealt' });
+  await okBy(() => /real cards/.test(P[1].last()),
      'a table with real cards deals nothing on the phones, so it is told nothing');
 
-  // ---- bidding order is enforced ----
-  P[0].send({ t: 'bid', v: 1 }); await wait(100);
-  ok(P[0].errors.some(e => /turn to bid/.test(e)), 'out-of-turn bid is refused');
-  P[2].send({ t: 'bid', v: 1 }); await wait(100);
-  ok(P[2].errors.some(e => /turn to bid/.test(e)), 'skipping ahead is refused');
+  /* ---- a whole round, over real sockets ----
+     Every rule the bidding and the counting obey is settled in test-rules.js,
+     against the room itself. What a socket adds is what is checked here: a
+     refusal comes back to the phone that earned it, and a bid landing on one
+     phone is on every screen at the table a moment later. */
+  P[0].send({ t: 'bid', v: 1 });
+  await okBy(() => /turn to bid/.test(P[0].last()), 'a bid out of turn is refused, and the phone is told why');
 
-  P[1].send({ t: 'bid', v: 1 }); await wait(100);
-  ok(host.state.turn === 2, 'turn moved to seat 2');
+  P[1].send({ t: 'bid', v: 1 });
+  await okBy(() => host.state.turn === 2, 'a bid made on a phone moves the turn on every screen');
+  await okBy(() => P[2].state.rounds[0].bids[1] === 1, 'and the number is on the other phones too');
 
-  // the last bidder may change, until the next player bids
-  P[1].send({ t: 'bid', v: 2 }); await wait(100);
-  ok(host.state.rounds[0].bids[1] === 2, 'the last bidder can change their bid');
-  ok(host.state.turn === 2, 'changing a bid does not move the turn');
-  P[1].send({ t: 'bid', v: 1 }); await wait(100);
-  ok(host.state.rounds[0].bids[1] === 1, 'and can change it back');
+  P[2].send({ t: 'bid', v: 1 });
+  await okBy(() => host.state.turn === 0, 'the dealer bids last');
+  P[0].send({ t: 'bid', v: 1 });
+  await okBy(() => host.state.phase === 'tricks', 'the last bid in starts the play');
+  ok(host.state.play && host.state.play.won.join() === '0,0,0',
+     'and the table opens the count with nobody having taken a trick');
 
-  P[2].send({ t: 'bid', v: 1 }); await wait(100);
-  ok(host.state.turn === 0, 'dealer bids last');
-  P[1].errors.length = 0;
-  P[1].send({ t: 'bid', v: 0 }); await wait(100);
-  ok(P[1].errors.some(e => /too late to change/i.test(e)), 'too late once the next player has bid');
-  ok(host.state.rounds[0].bids[1] === 1, 'the late change did not land');
-
-  P[0].send({ t: 'bid', v: 5 }); await wait(100);
-  ok(P[0].errors.some(e => /out of range/.test(e)), 'bid above the hand size is refused');
-  P[0].send({ t: 'bid', v: 0 }); await wait(100);
-  ok(P[0].errors.some(e => /must not total 2/.test(e)), 'screw the dealer blocks the equalising bid');
-  P[0].send({ t: 'bid', v: 1 }); await wait(120);
-  ok(host.state.phase === 'tricks', 'all bids in, phase is tricks');
-  P[0].errors.length = 0;
-  P[0].send({ t: 'bid', v: 2 }); await wait(100);
-  ok(P[0].errors.some(e => /not bidding now/i.test(e)), 'no changes once every bid is in');
-
-  // ---- tricks: counted one at a time, by anybody at the table ----
-  ok(host.state.play && host.state.play.log && host.state.play.won.join() === '0,0,0',
-     'the count opens with the cards: nobody has taken a trick  got ' + JSON.stringify(host.state.play));
-  P[1].errors.length = 0;
-  P[1].send({ t: 'trick', p: 7 }); await wait(100);
-  ok(P[1].errors.some(e => /no such seat/i.test(e)), 'a trick goes to a seat at the table');
-  P[1].send({ t: 'trick', p: 0 }); await wait(100);
-  ok(host.state.play.won.join() === '1,0,0' && host.state.play.last.winner === 0,
-     'a player who is not the dealer counts a trick  got ' + host.state.play.won.join());
-  P[2].errors.length = 0;
-  P[2].send({ t: 'trickback' }); await wait(100);
-  ok(host.state.play.won.join() === '0,0,0' && host.state.play.last === null, 'and another takes it back');
-  P[2].send({ t: 'trickback' }); await wait(100);
-  ok(P[2].errors.some(e => /no trick to take back/i.test(e)), 'once only');
-  host.send({ t: 'trick', p: 0 }); await wait(100);
-  ok(host.state.play.won.join() === '1,0,0', 'the host screen counts one too');
-  ok(host.state.idx === 0 && host.state.phase === 'tricks', 'and the round waits for the rest');
-  P[0].send({ t: 'trick', p: 1 }); await wait(150);
-  ok(host.state.idx === 1 && host.state.phase === 'bid', 'the last trick scores the round: round 2 bidding');
+  // ---- the tricks are counted by whoever saw one taken ----
+  P[1].send({ t: 'trick', p: 0 });
+  await okBy(() => host.state.play.won.join() === '1,0,0', 'a player counts a trick');
+  P[2].send({ t: 'trickback' });
+  await okBy(() => host.state.play.won.join() === '0,0,0', 'and another takes it back');
+  host.send({ t: 'trick', p: 0 });
+  await okBy(() => P[0].state.play.won.join() === '1,0,0', 'the host screen counts one too, and the phones see it');
+  P[0].send({ t: 'trick', p: 1 });
+  await okBy(() => host.state.idx === 1 && host.state.phase === 'bid',
+     'the last trick scores the round, and the next one opens');
   ok(JSON.stringify(host.state.rounds[0].tricks) === '[1,1,0]',
      'with the tricks as counted  got ' + JSON.stringify(host.state.rounds[0].tricks));
-  ok(host.state.play === null, 'and the count is over');
-  ok(JSON.stringify(host.state.totals) === '[11,11,0]', 'scores: 11 / 11 / 0  got ' + JSON.stringify(host.state.totals));
-
+  ok(JSON.stringify(host.state.totals) === '[11,11,0]', 'and the scores worked out  got ' + JSON.stringify(host.state.totals));
   const r2 = host.state.rounds[1];
   ok(r2.cards === 1 && r2.dealer === 1, 'round 2: 1 card, dealer is seat 1');
-  ok(host.state.turn === 2, 'round 2 starts with seat 2');
 
-  // ---- trump ----
-  // The real card is lying on the real table for everybody to see, so there
-  // is nothing for a phone to say about it.
-  P[1].send({ t: 'trump', k: 'H' }); await wait(100);
-  ok(host.state.rounds[1].trump === null, 'nobody sets a trump by hand  got ' + host.state.rounds[1].trump);
+  // ---- a step back, and a hand thrown in ----
+  host.send({ t: 'undo' });
+  await okBy(() => host.state.idx === 0 && host.state.phase === 'tricks', 'the host screen takes a step back');
+  P[0].send({ t: 'trick', p: 1 }); await P[0].rt();
+  P[0].send({ t: 'trick', p: 2 });
+  await okBy(() => JSON.stringify(host.state.totals) === '[0,11,11]',
+     'and the round is counted again  got ' + JSON.stringify(host.state.totals));
 
-  // ---- undo ----
-  host.send({ t: 'undo' }); await wait(120);
-  ok(host.state.idx === 0 && host.state.phase === 'tricks', 'undo reopens the tricks of round 1');
-  ok(host.state.play && host.state.play.won.join() === '0,0,0', 'to be counted again from nothing');
-  P[0].send({ t: 'trick', p: 1 }); await wait(80);
-  P[0].send({ t: 'trick', p: 2 }); await wait(120);
-  ok(JSON.stringify(host.state.totals) === '[0,11,11]', 'rescored after undo  got ' + JSON.stringify(host.state.totals));
-
-  // ---- bum deal ----
-  // a fresh round to work on: round 2, dealer is seat 1
-  P[2].send({ t: 'bid', v: 1 }); await wait(80);
-  ok(host.state.rounds[1].bids[2] === 1, 'a bid is in on round 2');
-  P[2].errors.length = 0;
-  P[2].send({ t: 'bumdeal' }); await wait(120);
-  ok(host.state.vote && host.state.vote.by === 2, 'a player calling a bum deal opens a vote');
-  ok(host.state.rounds[1].bids[2] === 1, 'the hand is not thrown in on one voice');
-  P[0].send({ t: 'vote', agree: true }); await wait(100);
-  ok(host.state.vote.yes.length === 2, 'a second player agrees');
-  P[1].send({ t: 'vote', agree: false }); await wait(100);
-  ok(host.state.vote === null, 'one "no" ends the vote');
-  ok(host.state.rounds[1].bids[2] === 1, 'and the hand stands');
-
-  P[2].send({ t: 'bumdeal' }); await wait(100);
-  P[0].send({ t: 'vote', agree: true }); await wait(100);
-  P[1].send({ t: 'vote', agree: true }); await wait(120);
-  ok(host.state.vote === null && host.state.rounds[1].bids.every(b => b === null),
+  P[2].send({ t: 'bid', v: 1 }); await P[2].rt();
+  P[2].send({ t: 'bumdeal' });
+  await okBy(() => host.state.vote && host.state.vote.by === 2, 'a player calling a bum deal opens a vote');
+  ok(host.state.rounds[1].bids[2] === 1, 'and the hand is not thrown in on one voice');
+  P[0].send({ t: 'vote', agree: true }); await P[0].rt();
+  P[1].send({ t: 'vote', agree: true });
+  await okBy(() => host.state.vote === null && host.state.rounds[1].bids.every(b => b === null),
      'every player agreeing throws the hand in');
-  ok(host.state.rounds[1].dealer === 1 && host.state.rounds[1].cards === 1, 'same dealer and hand size');
-  ok(host.state.rounds[1].redeals === 1, 'the re-deal is counted');
-  ok(host.state.idx === 1 && host.state.phase === 'bid', 'and bidding starts again on the same round');
-
-  P[2].send({ t: 'bid', v: 1 }); await wait(80);
-  P[1].send({ t: 'bumdeal' }); await wait(120);            // seat 1 deals round 2
-  ok(host.state.rounds[1].bids.every(b => b === null) && host.state.rounds[1].redeals === 2,
-     'the dealer can call a bum deal alone');
-  P[2].send({ t: 'bid', v: 1 }); await wait(80);
-  host.send({ t: 'bumdeal' }); await wait(120);
-  ok(host.state.rounds[1].redeals === 3, 'the host can call a bum deal alone');
+  ok(host.state.rounds[1].redeals === 1 && host.state.idx === 1 && host.state.phase === 'bid',
+     'the re-deal is counted, and the same round opens again');
 
   // ---- reconnect ----
   const tok = P[2].hello.token;
-  P[2].ws.close(); await wait(250);
-  ok(host.state.seats[2].online === false, 'seat 2 shows as offline');
+  P[2].ws.close();
+  await okBy(() => host.state.seats[2].online === false, 'seat 2 shows as offline');
   const back = client('Joe2'); await back.ready;
-  back.send({ t: 'resume', code, token: tok }); await wait(150);
-  ok(back.hello && back.hello.seatId === P[2].seatId, 'resume returns the same seat');
-  ok(host.state.seats[2].online === true, 'seat 2 is back online');
+  back.send({ t: 'resume', code, token: tok });
+  await okBy(() => back.hello && back.hello.seatId === P[2].seatId, 'resume returns the same seat');
+  await okBy(() => host.state.seats[2].online === true, 'seat 2 is back online');
 
   // ---- late join is refused ----
   const late = client('late'); await late.ready;
-  late.send({ t: 'join', code, name: 'Zoe' }); await wait(120);
-  ok(late.errors.some(e => /already started/.test(e)), 'joining after the start is refused');
+  late.send({ t: 'join', code, name: 'Zoe' });
+  await okBy(() => /already started/.test(late.last()), 'joining after the start is refused');
 
   // ---- a second table, to check the chosen first dealer ----
   {
-    const h2 = client('host2'); await h2.ready;
-    h2.send({ t: 'create' }); await wait(120);
-    const c2 = h2.hello.code;
-    const seats = [];
-    for (const nm of ['Ann', 'Bob', 'Cal']) {
-      const c = client(nm); await c.ready; c.send({ t: 'join', code: c2, name: nm }); await wait(110); seats.push(c);
-    }
-    h2.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 3, firstDealer: seats[1].seatId } }); await wait(120);
-    h2.send({ t: 'start' }); await wait(150);
+    const { h: h2, P: seats } = await tableOf(['Ann', 'Bob', 'Cal'], { max: 2, pattern: 'down', ones: 3 });
+    h2.send({ t: 'config', patch: { firstDealer: seats[1].seatId } });
+    await okBy(() => h2.state.firstDealerId === seats[1].seatId, 'the host picks who deals the first round');
+    h2.send({ t: 'start' });
+    await okBy(() => h2.state.rounds.length === 4, 'the game starts');
     ok(h2.state.rounds.map(r => r.dealer).join(',') === '1,2,0,1', 'the deal starts with the chosen player');
     ok(h2.state.turn === 2, 'and bidding starts left of that dealer');
     // removing that player clears the choice
-    h2.send({ t: 'reset' }); await wait(100);
-    h2.send({ t: 'kick', id: seats[1].seatId }); await wait(120);
-    ok(h2.state.firstDealerId === null, 'removing the chosen dealer clears the choice');
+    h2.send({ t: 'reset' }); await h2.rt();
+    h2.send({ t: 'kick', id: seats[1].seatId });
+    await okBy(() => h2.state.firstDealerId === null, 'removing the chosen dealer clears the choice');
   }
 
   // ---- a table with no host screen at all ----
   {
-    const seats = [];
-    let code3 = null;
-    for (const nm of ['Dot', 'Eve']) {
-      const c = client(nm); await c.ready;
-      if (!code3) {                                   // the first one needs a room
-        const h3 = client('host3'); await h3.ready;
-        h3.send({ t: 'create' }); await wait(120);
-        code3 = h3.hello.code;
-        h3.ws.close(); await wait(120);               // the host screen walks away
-      }
-      c.send({ t: 'join', code: code3, name: nm }); await wait(120);
-      seats.push(c);
-    }
-    seats[0].send({ t: 'config', patch: { max: 1, pattern: 'down', ones: 2 } }); await wait(120);
-    seats[0].send({ t: 'start' }); await wait(150);
-    ok(seats[0].state.phase === 'bid' && seats[0].state.rounds.length === 2,
+    const { h: h3, P: seats } = await tableOf(['Dot', 'Eve'], { max: 1, pattern: 'down', ones: 2 });
+    h3.ws.close();                                    // the host screen walks away
+    await okBy(() => !seats[0].state.tv, 'the host screen goes, and the table knows it is on no wall');
+    seats[0].send({ t: 'start' });
+    await okBy(() => seats[0].state.phase === 'bid' && seats[0].state.rounds.length === 2,
        'the table host starts a game with no host screen');
     const r = seats[0].state.rounds[0];
-    const first = seats[0].state.turn;
-    seats[first].send({ t: 'bid', v: 1 }); await wait(110);
-    // one card, one bid of 1: screw the dealer leaves the dealer only 1
-    seats[seats[0].state.turn].send({ t: 'bid', v: 1 }); await wait(120);
-    ok(seats[0].state.phase === 'tricks', 'and the bidding runs without one');
-    seats[1 - r.dealer].send({ t: 'trick', p: 0 }); await wait(140);     // whoever saw it
-    ok(seats[0].state.idx === 1, 'and the round scores');
-    seats[0].send({ t: 'undo' }); await wait(120);
-    ok(seats[0].state.idx === 0 && seats[0].state.phase === 'tricks', 'the table host can go back');
-    seats[0].send({ t: 'reset' }); await wait(120);
-    ok(seats[0].state.phase === 'lobby', 'and can call a new game');
+    await bidRound(seats);
+    await okBy(() => seats[0].state.phase === 'tricks', 'and the bidding runs without one');
+    seats[1 - r.dealer].send({ t: 'trick', p: 0 });   // whoever saw it
+    await okBy(() => seats[0].state.idx === 1, 'and the round scores');
+    seats[0].send({ t: 'undo' });
+    await okBy(() => seats[0].state.idx === 0 && seats[0].state.phase === 'tricks', 'the table host can go back');
+    seats[0].send({ t: 'reset' });
+    await okBy(() => seats[0].state.phase === 'lobby', 'and can call a new game');
   }
 
   // ---- start a table and take a seat, from one phone ----
   {
     const solo = client('solo'); await solo.ready;
-    solo.send({ t: 'create' }); await wait(120);
+    solo.send({ t: 'create' }); await until(() => solo.hello);
     const code4 = solo.hello.code;
-    solo.send({ t: 'join', code: code4, name: 'Solo' }); await wait(150);
-    ok(solo.hello.role === 'player' && !!solo.hello.seatId, 'one socket can make a table and take a seat');
+    solo.send({ t: 'join', code: code4, name: 'Solo' });
+    await okBy(() => solo.hello.role === 'player' && !!solo.hello.seatId,
+       'one socket can make a table and take a seat');
     ok(solo.state.seats.length === 1 && solo.state.seats[0].name === 'Solo', 'the seat is at the new table');
     ok(solo.state.captainId === solo.hello.seatId, 'and that player runs the table');
     ok(solo.state.code === code4, 'the code is the one the QR shows');
   }
 
-  // ---- a table that plays with a virtual deck ----
+  /* ---- a table that plays with a virtual deck ----
+     One whole round, dealt by the server and played card by card over real
+     sockets. Which card may go is the deck's business and is settled in
+     test-rules.js; what is proved here is that the hands reach the phones that
+     hold them and nobody else, that a trick played out moves every screen on,
+     and that a hand comes back to a phone that comes back. */
   {
-    const vh = client('vhost'); await vh.ready;
-    vh.send({ t: 'create' }); await wait(120);
-    const code = vh.hello.code;
-    const P = [];
-    for (const nm of ['Ann', 'Bob', 'Cal']) {
-      const c = client('v' + nm); await c.ready;
-      c.send({ t: 'join', code, name: nm }); await wait(110);
-      P.push(c);
-    }
-    vh.send({ t: 'config', patch: { deck: 'virtual', max: 3, pattern: 'down', ones: 1 } }); await wait(120);
-    vh.send({ t: 'start' }); await wait(200);
-
-    // ---- the deal ----
-    ok(P.every((c) => c.state.hand && c.state.hand.length === 3), 'every player is dealt a hand');
+    const { h: vh, P, code } = await tableOf(['Ann', 'Bob', 'Cal'],
+                                             { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+    vh.send({ t: 'start' });
+    await okBy(() => P.every((c) => c.state.hand && c.state.hand.length === 3), 'every player is dealt a hand');
     ok(!vh.state.hand, 'the host screen is dealt none');
     const dealt = P.flatMap((c) => c.state.hand);
     ok(new Set(dealt).size === 9, 'and no card is dealt twice');
@@ -336,68 +338,29 @@ function client(name, url) {
     const up = P[0].state.play.upcard;
     ok(!!up && dealt.indexOf(up) < 0, 'the trump is turned from the rest of the deck');
     ok(P[0].state.rounds[0].trump === up.slice(-1), 'and it sets the trump suit');
-    P[0].errors.length = 0;
-    P[0].send({ t: 'trump', k: 'S' }); await wait(120);
-    ok(P[0].state.rounds[0].trump === up.slice(-1) && P[0].errors.length === 1,
-       'and nobody may change it by hand');
 
-    // ---- the bidding, as usual ----
     const r0 = P[0].state.rounds[0];
-    for (let i = 0; i < 3; i++) {
-      const st = P[0].state, rr = st.rounds[st.idx], turn = st.turn;
-      const sum = rr.bids.reduce((a, b) => a + (b || 0), 0);
-      const forbidden = (st.cfg.screw && turn === rr.dealer) ? rr.cards - sum : -1;
-      P[turn].send({ t: 'bid', v: forbidden === 1 ? 0 : 1 }); await wait(120);
-    }
-    ok(P[0].state.phase === 'tricks', 'the last bid starts the play');
+    await bidRound(P);
+    await okBy(() => P[0].state.phase === 'tricks', 'the last bid starts the play');
     ok(P[0].state.play.turn === (r0.dealer + 1) % 3, 'and the player left of the dealer leads');
 
     // ---- one card at a time ----
     const suit = (c) => c.slice(-1);
-    const legalFor = (hand, led) => {
-      const same = hand.filter((c) => suit(c) === led);
-      return led && same.length ? same : hand;
-    };
     async function playOne() {
       const st = P[0].state;
       const p = st.play.turn;
       const led = st.play.trick.length ? suit(st.play.trick[0].card) : null;
-      const can = legalFor(P[p].state.hand, led);
-      P[p].send({ t: 'play', card: can[0] });
-      await wait(140);
-      if (P[0].state.play && P[0].state.play.turn === null) await wait(260);   // a trick is held up
-      return { p, card: can[0] };
+      const same = P[p].state.hand.filter((c) => suit(c) === led);
+      const card = (led && same.length ? same : P[p].state.hand)[0];
+      const held = P[p].state.hand.length;
+      P[p].send({ t: 'play', card });
+      // the card leaves the hand, and then, if that finished the trick, the
+      // table waits out the moment it is held up for before anybody leads
+      await until(() => P[p].state.hand.length < held || P[0].state.phase !== 'tricks');
+      await until(() => P[0].state.phase !== 'tricks' || P[0].state.play.turn !== null, 4000);
+      return { p, card };
     }
 
-    // out of turn, and a card nobody holds
-    const onPlay = P[0].state.play.turn;
-    const off = P[(onPlay + 1) % 3];
-    off.errors.length = 0;
-    off.send({ t: 'play', card: off.state.hand[0] }); await wait(140);
-    ok(off.errors.some((e) => /not your turn/i.test(e)), 'a card out of turn is refused');
-    P[onPlay].errors.length = 0;
-    P[onPlay].send({ t: 'play', card: 'AS' + 'X' }); await wait(140);
-    ok(P[onPlay].errors.some((e) => /do not hold/.test(e)), 'and a card you do not hold');
-
-    const first = await playOne();
-    const led = suit(first.card);
-    // somebody who holds the suit led must follow it
-    let tested = false;
-    for (let k = 1; k < 3 && !tested; k++) {
-      const p = (first.p + k) % 3;
-      if (P[0].state.play.turn !== p) continue;
-      const hand = P[p].state.hand;
-      const hasLed = hand.some((c) => suit(c) === led);
-      const other = hand.find((c) => suit(c) !== led);
-      if (!hasLed || !other) continue;
-      P[p].errors.length = 0;
-      P[p].send({ t: 'play', card: other }); await wait(140);
-      ok(P[p].errors.some((e) => /must follow/.test(e)), 'a player holding the suit led must follow it');
-      tested = true;
-    }
-    if (!tested) ok(true, 'a player holding the suit led must follow it (no such hand this deal)');
-
-    // play the rest of the hand out
     let guard = 40;
     while (P[0].state.phase === 'tricks' && guard-- > 0) await playOne();
     const done = P[0].state.rounds[0];
@@ -406,62 +369,54 @@ function client(name, url) {
     ok(P[0].state.idx === 1 && P[0].state.phase === 'bid', 'and the round scores and moves on');
     ok(P[0].state.hand.length === P[0].state.rounds[1].cards, 'the next hand is dealt at once');
 
-    vh.errors.length = 0;
-    vh.send({ t: 'trick', p: 0 }); await wait(140);
-    ok(vh.errors.some((e) => /count themselves/.test(e)), 'nobody may count a trick by hand');
+    vh.send({ t: 'trick', p: 0 });
+    await okBy(() => /count themselves/.test(vh.last()), 'nobody may count a trick by hand');
 
     // ---- a hand survives a phone going away and coming back ----
     const held = P[2].state.hand.join(',');
     const seatTok = P[2].hello.token;
-    P[2].ws.close(); await wait(200);
+    P[2].ws.close();
+    await until(() => vh.state.seats[2].online === false);
     const back = client('vCal2'); await back.ready;
-    back.send({ t: 'resume', code, token: seatTok }); await wait(200);
-    ok(back.state.hand.join(',') === held, 'a phone that comes back gets its own hand again');
+    back.send({ t: 'resume', code, token: seatTok });
+    await okBy(() => back.state && back.state.hand.join(',') === held,
+       'a phone that comes back gets its own hand again');
     ok(back.state.seats[2].online === true, 'and the seat is at the table again');
   }
 
   // ---- the dev controls are refused unless DEV=1 ----
   {
     const d = client('devprobe'); await d.ready;
-    d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(150);
-    ok(d.errors.some((e) => /DEV=1/.test(e)), 'the dev controls are refused on a normal server');
+    d.send({ t: 'dev', action: 'setup', players: 4 });
+    await okBy(() => /DEV=1/.test(d.last()), 'the dev controls are refused on a normal server');
     ok(!d.state, 'and no table is made');
     ok(host.state.dev === false, 'and the state says tables of stand-ins are off');
   }
 
   // ---- but the host of a real table can fix that table, on any server ----
   {
-    const h = client('fixhost'); await h.ready;
-    h.send({ t: 'create' }); await wait(120);
-    const code = h.hello.code;
-    const p1 = client('fixp1'); await p1.ready;
-    const p2 = client('fixp2'); await p2.ready;
-    p1.send({ t: 'join', code, name: 'Ann' }); await wait(110);
-    p2.send({ t: 'join', code, name: 'Bob' }); await wait(110);
-    h.send({ t: 'config', patch: { max: 1, pattern: 'down', ones: 2 } }); await wait(110);
-    h.send({ t: 'start' }); await wait(150);
+    const { h, P: [p1, p2], code } = await tableOf(['Ann', 'Bob'], { max: 1, pattern: 'down', ones: 2 });
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid');
 
     h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, bids: [1, 0], tricks: [1, 0] } } });
-    await wait(150);
-    ok(JSON.stringify(h.state.rounds[0].bids) === '[1,0]', 'the host of a real table can force a round');
+    await okBy(() => JSON.stringify(h.state.rounds[0].bids) === '[1,0]', 'the host of a real table can force a round');
     ok(h.hello.stand === false, 'and is told it is not a table of stand-ins');
     ok(h.hello.seats.every((x) => !x.token), 'and gets no seat tokens back');
 
-    h.errors.length = 0;
-    h.send({ t: 'dev', action: 'randomise' }); await wait(140);
-    ok(h.errors.some((e) => /stand-ins/.test(e)), 'but nothing on the page may invent data for it');
-    h.send({ t: 'dev', action: 'endGame' }); await wait(140);
+    h.send({ t: 'dev', action: 'randomise' });
+    await okBy(() => /stand-ins/.test(h.last()), 'but nothing on the page may invent data for it');
+    h.send({ t: 'dev', action: 'endGame' }); await h.rt();
     ok(h.state.phase === 'bid', 'and it cannot be played out with made-up rounds');
 
-    p2.errors.length = 0;
-    p2.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
-    ok(p2.errors.some((e) => /only the host/i.test(e)) && h.state.phase === 'bid',
+    p2.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
+    await okBy(() => /only the host/i.test(p2.last()) && h.state.phase === 'bid',
        'a player who does not run the table cannot use the dev controls');
 
-    h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: ['x', 9] } } }); await wait(140);
-    ok(h.state.rounds[0].tricks === null, 'junk tricks are dropped, not stored');
-    h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: [5, 0] } } }); await wait(140);
-    ok(JSON.stringify(h.state.rounds[0].tricks) === '[1,0]', 'and a count above the hand size is clamped');
+    h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: ['x', 9] } } });
+    await okBy(() => h.state.rounds[0].tricks === null, 'junk tricks are dropped, not stored');
+    h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: [5, 0] } } });
+    await okBy(() => JSON.stringify(h.state.rounds[0].tricks) === '[1,0]', 'and a count above the hand size is clamped');
 
     // ---- the seats come back as watching windows, not as seats ----
     const seats = h.hello.seats;
@@ -469,27 +424,27 @@ function client(name, url) {
        'a real table gives the dev page a watch token a seat, never the seat itself');
 
     const bobWatch = seats.find((x) => x.name === 'Bob').watch;
-    p2.ws.close(); await wait(200);                       // Bob puts his phone down
-    ok(h.state.seats[1].online === false, 'Bob is offline once his phone goes');
+    p2.ws.close();                                        // Bob puts his phone down
+    await okBy(() => h.state.seats[1].online === false, 'Bob is offline once his phone goes');
 
     const eye = client('watcher'); await eye.ready;
-    eye.send({ t: 'watch', code, token: bobWatch }); await wait(160);
-    ok(eye.hello.role === 'watch' && eye.hello.seatId === h.state.seats[1].id,
+    eye.send({ t: 'watch', code, token: bobWatch });
+    await okBy(() => eye.hello && eye.hello.role === 'watch' && eye.hello.seatId === h.state.seats[1].id,
        'a watch token opens that seat and says which one it is');
-    ok(eye.state && eye.state.code === code, 'and the window gets the same state the phone gets');
+    await okBy(() => eye.state && eye.state.code === code, 'and the window gets the same state the phone gets');
     ok(h.state.seats[1].online === false, 'and watching does not put the player back at the table');
 
-    eye.errors.length = 0;
-    eye.send({ t: 'bid', v: 1 }); await wait(140);
-    eye.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
-    eye.send({ t: 'chat', text: 'hello from the sofa' }); await wait(140);
-    ok(eye.errors.filter((e) => /only watching/.test(e)).length === 3, 'and it can do nothing at all');
+    eye.send({ t: 'bid', v: 1 });
+    eye.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
+    eye.send({ t: 'chat', text: 'hello from the sofa' });
+    await okBy(() => eye.errors.filter((e) => /only watching/.test(e)).length === 3,
+       'and it can do nothing at all');
     ok(h.state.phase === 'bid', 'so the game is untouched');
     ok(!(h.state.chat || []).length, 'and it has said nothing');
 
     const fake = client('faker'); await fake.ready;
-    fake.send({ t: 'resume', code, token: bobWatch }); await wait(150);
-    ok(fake.errors.some((e) => /seat is gone/.test(e)) && !fake.state,
+    fake.send({ t: 'resume', code, token: bobWatch });
+    await okBy(() => /seat is gone/.test(fake.last()) && !fake.state,
        'a watch token cannot be used to take the seat');
   }
 
@@ -499,19 +454,21 @@ function client(name, url) {
     const srv3 = spawn('node', [path + '/server.js'], {
       env: { ...process.env, PORT: port3, NO_TLS: '1', DEV: '1', TRICK_HOLD: '120', DATA_DIR, BOT_DEAL_WAIT: '150' }, stdio: 'ignore',
     });
-    await wait(700);
+    await upAt(port3);
     const d = client('dev', `ws://127.0.0.1:${port3}/ws`); await d.ready;
-    d.send({ t: 'dev', action: 'setup', players: 4 }); await wait(200);
-    ok(d.hello && d.hello.dev && d.hello.seats.length === 4, 'dev setup makes 4 stand-in seats with tokens');
+    d.send({ t: 'dev', action: 'setup', players: 4 });
+    await okBy(() => d.hello && d.hello.dev && d.hello.seats.length === 4,
+       'dev setup makes 4 stand-in seats with tokens');
     ok(d.state.dev === true, 'and the state says tables of stand-ins are on');
-    d.send({ t: 'dev', action: 'startGame' }); await wait(150);
-    d.send({ t: 'dev', action: 'fillBids' }); await wait(150);
+    d.send({ t: 'dev', action: 'startGame' }); await d.rt();
+    d.send({ t: 'dev', action: 'fillBids' });
+    await okBy(() => d.state.phase === 'tricks' && d.state.rounds[0].bids.every((b) => b !== null),
+       'fillBids fills every bid');
     const r0 = d.state.rounds[0];
     const bidSum = r0.bids.reduce((a, b) => a + b, 0);
-    ok(d.state.phase === 'tricks' && r0.bids.every((b) => b !== null), 'fillBids fills every bid');
     ok(!d.state.cfg.screw || bidSum !== r0.cards, 'and keeps the screw-the-dealer rule');
-    d.send({ t: 'dev', action: 'endGame' }); await wait(600);
-    ok(d.state.phase === 'done', 'endGame plays every round');
+    d.send({ t: 'dev', action: 'endGame' });
+    await okBy(() => d.state.phase === 'done', 'endGame plays every round');
 
     // ---- the accolades are drawn and paid before anybody wins ----
     {
@@ -526,16 +483,17 @@ function client(name, url) {
          'the totals everybody is ranked by carry what the accolades paid');
       const owed = aw.reduce((sum, a) => sum + a.who.length * pay, 0);
       ok(d.state.bonus.reduce((a, b) => a + b, 0) === owed, 'and every winner is paid ' + pay);
-      d.send({ t: 'undo' }); await wait(150);
-      ok(!d.state.awards && d.state.bonus.every((b) => !b), 'going back puts the accolades away');
-      d.send({ t: 'dev', action: 'endGame' }); await wait(600);
-      ok((d.state.awards || []).length > 0, 'and ending it again draws them afresh');
+      d.send({ t: 'undo' });
+      await okBy(() => !d.state.awards && d.state.bonus.every((b) => !b), 'going back puts the accolades away');
+      d.send({ t: 'dev', action: 'endGame' });
+      await okBy(() => (d.state.awards || []).length > 0, 'and ending it again draws them afresh');
 
       // how many are drawn is a rule of the table
       const again = async (patch) => {
-        d.send({ t: 'dev', action: 'patch', patch: { phase: 'tricks' } }); await wait(120);
-        if (patch) { d.send({ t: 'config', patch }); await wait(120); }
-        d.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(150);
+        d.send({ t: 'dev', action: 'patch', patch: { phase: 'tricks' } }); await d.rt();
+        if (patch) { d.send({ t: 'config', patch }); await d.rt(); }
+        d.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
+        await until(() => d.state.phase === 'done');
         return d.state.awards || [];
       };
       ok((await again({ accoladeCount: 1 })).length === 1, 'a table can ask for one accolade');
@@ -549,30 +507,29 @@ function client(name, url) {
       ok(d.state.bonus.reduce((a, b) => a + b, 0) === owed20,
          'paying 20 each  got ' + d.state.bonus.join(',') + ' for ' +
          three.map((a) => a.who.length).join('+') + ' holders');
-      d.send({ t: 'config', patch: { accoladeCount: 99, accoladePay: 7 } }); await wait(120);
+      d.send({ t: 'config', patch: { accoladeCount: 99, accoladePay: 7 } }); await d.rt();
       ok(d.state.cfg.accoladeCount === 3 && d.state.cfg.accoladePay === 20,
          'values outside the rules are refused  got ' + d.state.cfg.accoladeCount + '/' + d.state.cfg.accoladePay);
     }
-    d.send({ t: 'dev', action: 'patch', patch: { idx: 1, phase: 'bid' } }); await wait(150);
-    ok(d.state.idx === 1 && d.state.phase === 'bid', 'patch forces the round and the phase');
+    d.send({ t: 'dev', action: 'patch', patch: { idx: 1, phase: 'bid' } });
+    await okBy(() => d.state.idx === 1 && d.state.phase === 'bid', 'patch forces the round and the phase');
     d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, bids: [1, 0, 2, 1], tricks: [1, 1, 1, 1] } } });
-    await wait(150);
-    ok(JSON.stringify(d.state.rounds[0].bids) === '[1,0,2,1]' && d.state.totals.some((t) => t !== 0),
+    await okBy(() => JSON.stringify(d.state.rounds[0].bids) === '[1,0,2,1]' && d.state.totals.some((t) => t !== 0),
        'patch forces a round, and the totals follow');
 
     // ---- a random scorecard ----
-    d.send({ t: 'dev', action: 'fillCard', rounds: 3 }); await wait(300);
     const full = (r) => r.bids && r.bids.every((b) => b !== null) && Array.isArray(r.tricks);
-    const played = d.state.rounds.filter(full);
-    ok(played.length === 3 && d.state.idx === 3 && d.state.phase === 'bid',
+    d.send({ t: 'dev', action: 'fillCard', rounds: 3 });
+    await okBy(() => d.state.rounds.filter(full).length === 3 && d.state.idx === 3 && d.state.phase === 'bid',
        'fillCard plays the number of rounds asked for');
+    const played = d.state.rounds.filter(full);
     ok(played.every((r) => r.tricks.reduce((a, b) => a + b, 0) === r.cards),
        'and every filled hand has all of its tricks');
     ok(played.every((r) => !d.state.cfg.screw || r.bids.reduce((a, b) => a + b, 0) !== r.cards),
        'and every filled round keeps the screw-the-dealer rule');
     ok(played.every((r) => !d.state.cfg.trump || r.trump), 'and every filled round has a trump');
     ok(d.state.rounds.slice(3).every((r) => !full(r)), 'and the rounds after it are still empty');
-    d.send({ t: 'dev', action: 'fillCard' }); await wait(400);
+    d.send({ t: 'dev', action: 'fillCard' }); await d.rt();
     const many = d.state.rounds.filter(full).length;
     ok(many >= 1 && many <= d.state.rounds.length, 'fillCard with no number plays a random number of rounds');
 
@@ -582,11 +539,13 @@ function client(name, url) {
        of stand-ins reach the phones that resume into it, and a card the rules
        refuse comes back as a refusal to the one socket that played it. */
     {
-      d.send({ t: 'dev', action: 'setup', players: 3 }); await wait(200);
+      d.send({ t: 'dev', action: 'setup', players: 3 });
+      await until(() => d.hello.seats.length === 3);
       const seats = d.hello.seats;
       d.send({ t: 'config', patch: { deck: 'virtual', max: 3, pattern: 'down', ones: 1, screw: false } });
-      await wait(150);
-      d.send({ t: 'dev', action: 'startGame' }); await wait(200);
+      await d.rt();
+      d.send({ t: 'dev', action: 'startGame' });
+      await until(() => d.state.phase === 'bid' && d.state.play);
 
       // The lead holds hearts. The next player holds a heart and two diamonds,
       // so they must follow.
@@ -596,23 +555,26 @@ function client(name, url) {
       stack[lead] = ['KH', '3S', '4C'];
       stack[second] = ['9H', 'AD', 'KD'];
       stack[third] = ['AS', '2C', 'QD'];
-      d.send({ t: 'dev', action: 'patch', patch: { hands: stack } }); await wait(150);
-      d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, trump: 'D' } } }); await wait(150);
+      d.send({ t: 'dev', action: 'patch', patch: { hands: stack } }); await d.rt();
+      d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, trump: 'D' } } });
+      await until(() => d.state.rounds[0].trump === 'D');
 
       const at = [];
       for (const st of seats) {
         const c = client('stack-' + st.name, `ws://127.0.0.1:${port3}/ws`); await c.ready;
-        c.send({ t: 'resume', code: d.state.code, token: st.token }); await wait(150);
+        c.send({ t: 'resume', code: d.state.code, token: st.token });
+        await until(() => c.state && c.state.hand);
         at.push(c);
       }
       ok(at[second].state.hand.join(',') === '9H,AD,KD', 'a stand-in table can have its hands stacked');
-      for (let i = 0; i < 3; i++) { at[at[0].state.turn].send({ t: 'bid', v: 1 }); await wait(120); }
-      ok(at[0].state.play.turn === lead, 'the player left of the dealer leads');
+      await bidRound(at);
+      await okBy(() => at[0].state.play && at[0].state.play.turn === lead,
+         'the player left of the dealer leads');
 
-      at[lead].send({ t: 'play', card: 'KH' }); await wait(150);
-      at[second].errors.length = 0;
-      at[second].send({ t: 'play', card: 'AD' }); await wait(150);
-      ok(at[second].errors.some((e) => /must follow/.test(e)),
+      at[lead].send({ t: 'play', card: 'KH' });
+      await until(() => at[0].state.play.trick.length === 1);
+      at[second].send({ t: 'play', card: 'AD' });
+      await okBy(() => /must follow/.test(at[second].last()),
          'a card the rules refuse comes back to the socket that played it');
       ok(at[0].state.play.trick.length === 1, 'and the refused card stays in the hand');
       at.forEach((c) => c.ws.close());
@@ -620,21 +582,18 @@ function client(name, url) {
 
     // a real table on a dev server is still not a table of stand-ins
     const real = client('devreal', `ws://127.0.0.1:${port3}/ws`); await real.ready;
-    real.send({ t: 'create' }); await wait(140);
-    real.send({ t: 'dev', action: 'randomise' }); await wait(140);
-    ok(real.errors.some((e) => /stand-ins/.test(e)),
+    real.send({ t: 'create' }); await until(() => real.hello);
+    real.send({ t: 'dev', action: 'randomise' });
+    await okBy(() => /stand-ins/.test(real.last()),
        'even with DEV=1, a real table cannot have data invented on it');
-    real.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
-    ok(real.state.phase === 'done', 'but its state can still be forced');
+    real.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
+    await okBy(() => real.state.phase === 'done', 'but its state can still be forced');
     srv3.kill();
   }
 
   // ---- a player's picture ----
   {
-    const h = client('avhost'); await h.ready; h.send({ t: 'create' }); await wait(150);
-    const code = h.hello.code;
-    const a = client('ava'); await a.ready; a.send({ t: 'join', code, name: 'Ava' }); await wait(150);
-    const b = client('bob'); await b.ready; b.send({ t: 'join', code, name: 'Bob' }); await wait(150);
+    const { h, P: [a, b] } = await tableOf(['Ava', 'Bob']);
 
     const seatOf = (st, id) => st.seats.find((x) => x.id === id);
     ok(seatOf(h.state, a.seatId).av === null, 'a new seat has no picture');
@@ -643,7 +602,8 @@ function client(name, url) {
 
     // a one-pixel PNG is enough: the bytes only have to come back whole
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-    a.send({ t: 'avatar', data: 'data:image/png;base64,' + png }); await wait(150);
+    a.send({ t: 'avatar', data: 'data:image/png;base64,' + png });
+    await okBy(() => seatOf(h.state, a.seatId).av !== null, 'a picture is taken');
     const ver = seatOf(h.state, a.seatId).av;
     ok(typeof ver === 'string' && ver.length === 8, 'the state carries a version, not the picture');
     ok(JSON.stringify(h.state).indexOf(png.slice(0, 24)) < 0, 'and the picture itself never rides in the state');
@@ -660,21 +620,21 @@ function client(name, url) {
     ok(!/immutable/.test(stale.headers.get('cache-control') || ''),
        'a guess at the version may not');
 
-    a.errors.length = 0;
-    a.send({ t: 'avatar', data: 'data:text/html;base64,' + png }); await wait(120);
-    ok(a.errors.some((e) => /WebP/.test(e)), 'only a WebP, a JPEG or a PNG is taken');
-    a.send({ t: 'avatar', data: 'data:image/png;base64,' + 'A'.repeat(80000) }); await wait(150);
-    ok(a.errors.some((e) => /too big/.test(e)), 'an oversized picture is refused');
+    a.send({ t: 'avatar', data: 'data:text/html;base64,' + png });
+    await okBy(() => /WebP/.test(a.last()), 'only a WebP, a JPEG or a PNG is taken');
+    a.send({ t: 'avatar', data: 'data:image/png;base64,' + 'A'.repeat(80000) });
+    await okBy(() => /too big/.test(a.last()), 'an oversized picture is refused');
     ok(seatOf(h.state, a.seatId).av === ver, 'and a refused picture leaves the old one alone');
 
-    a.send({ t: 'avatar', data: null }); await wait(150);
-    ok(seatOf(h.state, a.seatId).av === null, 'a player can take their picture down');
+    a.send({ t: 'avatar', data: null });
+    await okBy(() => seatOf(h.state, a.seatId).av === null, 'a player can take their picture down');
 
-    b.send({ t: 'avatar', data: 'data:image/png;base64,' + png }); await wait(150);
-    h.send({ t: 'start' }); await wait(200);
-    b.errors.length = 0;
-    b.send({ t: 'avatar', data: 'data:image/png;base64,' + png }); await wait(120);
-    ok(b.errors.some((e) => /before the game starts/.test(e)),
+    b.send({ t: 'avatar', data: 'data:image/png;base64,' + png });
+    await until(() => seatOf(h.state, b.seatId).av !== null);
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid');
+    b.send({ t: 'avatar', data: 'data:image/png;base64,' + png });
+    await okBy(() => /before the game starts/.test(b.last()),
        'the pictures are set in the lobby, not mid-game');
     ok(seatOf(h.state, b.seatId).av !== null, 'and the one already set stays up');
 
@@ -688,11 +648,18 @@ function client(name, url) {
       env: { ...process.env, PORT: port4, NO_TLS: '1', DEV: '1', TRICK_HOLD: '60',
              DATA_DIR, KEEP_GAMES: '3', BOT_DEAL_WAIT: '150' }, stdio: 'ignore',
     });
-    await wait(800);
+    await upAt(port4);
     const d = client('gamefile', `ws://127.0.0.1:${port4}/ws`); await d.ready;
-    d.send({ t: 'dev', action: 'setup', players: 3 }); await wait(300);
-    d.send({ t: 'dev', action: 'startGame' }); await wait(200);
-    d.send({ t: 'dev', action: 'endGame' }); await wait(900);
+    // A whole game played out on a table of stand-ins, from the lobby up.
+    const playOut = async () => {
+      d.send({ t: 'dev', action: 'startGame' });
+      await until(() => d.state.phase === 'bid' && d.state.idx === 0);
+      d.send({ t: 'dev', action: 'endGame' });
+      await until(() => d.state.phase === 'done' && d.state.gameId, 6000);
+    };
+    d.send({ t: 'dev', action: 'setup', players: 3 });
+    await until(() => d.state && d.state.seats.length === 3);
+    await playOut();
     ok(d.state.phase === 'done', 'the stand-in table plays a game out');
     const id = d.state.gameId;
     ok(typeof id === 'string' && id.length === 12, 'a finished game gets an id in the state');
@@ -718,9 +685,8 @@ function client(name, url) {
        'an id that is not a game is a 404');
 
     // a second game on the same table is a second record
-    d.send({ t: 'dev', action: 'lobby' }); await wait(200);
-    d.send({ t: 'dev', action: 'startGame' }); await wait(200);
-    d.send({ t: 'dev', action: 'endGame' }); await wait(900);
+    d.send({ t: 'dev', action: 'lobby' }); await until(() => d.state.phase === 'lobby');
+    await playOut();
     ok(d.state.gameId !== id, 'a new game on the same table gets a new id');
     const two = await fetch(`http://127.0.0.1:${port4}/games.json?code=${d.state.code}`).then((r) => r.json());
     ok(two.games.length === 2 && two.games[0].id === d.state.gameId,
@@ -728,9 +694,8 @@ function client(name, url) {
 
     // past the cap the oldest go
     for (let i = 0; i < 3; i++) {
-      d.send({ t: 'dev', action: 'lobby' }); await wait(150);
-      d.send({ t: 'dev', action: 'startGame' }); await wait(150);
-      d.send({ t: 'dev', action: 'endGame' }); await wait(900);
+      d.send({ t: 'dev', action: 'lobby' }); await until(() => d.state.phase === 'lobby');
+      await playOut();
     }
     ok(fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length === 3,
        'the table keeps no more than the cap  got ' +
@@ -741,48 +706,43 @@ function client(name, url) {
   }
 
   /* ---- table talk ----
-     It rides in the state, so a line said by anybody is a line everybody has.
-     This server keeps five (CHAT_KEEP above), so the cap can be watched. */
+     What a line is made of, and how many a table keeps, are settled in
+     test-rules.js. Over the wire what matters is that a line said on one phone
+     is on every screen, and that the pause between lines is a real pause on a
+     real clock. This server keeps five (CHAT_KEEP above). */
   {
-    const h = client('talk'); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.hello.code;
-    const ann = client('Ann'); await ann.ready;
-    ann.send({ t: 'join', code, name: 'Ann' }); await wait(130);
-    const ben = client('Ben'); await ben.ready;
-    ben.send({ t: 'join', code, name: 'Ben' }); await wait(130);
+    const { h, P: [ann, ben, cal] } = await tableOf(['Ann', 'Ben', 'Cal']);
 
-    ann.send({ t: 'chat', text: '  who   dealt\n  that?  ' }); await wait(150);
-    ok(h.state.chat.length === 1, 'a line a player says reaches the table');
+    ann.send({ t: 'chat', text: '  who   dealt\n  that?  ' });
+    await okBy(() => h.state.chat.length === 1, 'a line a player says reaches the table');
     ok(h.state.chat[0].text === 'who dealt that?', 'as one line, however it was typed');
     ok(h.state.chat[0].name === 'Ann' && h.state.chat[0].who === ann.seatId,
        'and it says which seat said it');
-    ok(ben.state.chat.length === 1, 'every other player has it too');
+    await okBy(() => ben.state.chat.length === 1, 'every other player has it too');
 
-    h.send({ t: 'chat', text: 'no talking at the table' }); await wait(150);
-    ok(h.state.chat[1].who === 'host' && h.state.chat[1].name === 'Table',
+    h.send({ t: 'chat', text: 'no talking at the table' });
+    await okBy(() => h.state.chat.length === 2 && h.state.chat[1].name === 'Table',
        'the host screen speaks as the table');
 
-    ann.errors.length = 0;
-    ann.send({ t: 'chat', text: 'and again' }); await wait(150);
-    ok(ann.errors.some((e) => /one line at a time/i.test(e)), 'one socket cannot flood the table');
+    ann.send({ t: 'chat', text: 'and again' });
+    await okBy(() => /one line at a time/i.test(ann.last()), 'one socket cannot flood the table');
     ok(h.state.chat.length === 2, 'so the flooded line never lands');
+    await wait(520);                              // the pause a socket must leave, on a real clock
+    ann.send({ t: 'chat', text: 'said after a moment' });
+    await okBy(() => h.state.chat.length === 3, 'and a moment later the same socket may speak again');
 
-    await wait(520);
-    ann.send({ t: 'chat', text: '   ' }); await wait(150);
-    ok(h.state.chat.length === 2, 'a blank line is not a line');
-    ann.send({ t: 'chat', text: 'x'.repeat(400) }); await wait(150);
-    ok(h.state.chat[2].text.length === 200, 'a long line is cut, not refused');
-
-    // six more, round-robin so no socket is rate-limited, to run past the cap
-    for (const c of [ben, h, ann, ben, h, ann]) { c.send({ t: 'chat', text: 'line' }); await wait(210); }
-    ok(h.state.chat.length === 5, 'the table keeps only the last few  got ' + h.state.chat.length);
+    // one line each, so no socket is asked to speak twice, to run past the cap
+    for (const c of [ben, cal, h]) {
+      const was = h.state.chat.length;
+      c.send({ t: 'chat', text: 'line' });
+      await until(() => h.state.chat.length > was);
+    }
+    await okBy(() => h.state.chat.length === 5, 'the table keeps only the last few  got ' + h.state.chat.length);
     ok(!h.state.chat.some((l) => /dealt/.test(l.text)), 'and the oldest have gone');
 
     // the talk belongs to the table, not to the game on it
-    await wait(520);
-    ann.send({ t: 'start' }); await wait(200);
-    ok(h.state.phase === 'bid', 'a game starts on that table');
+    ann.send({ t: 'start' });
+    await okBy(() => h.state.phase === 'bid', 'a game starts on that table');
     ok(h.state.chat.length === 5, 'and the talk carries over into it');
 
     h.ws.close(); ann.ws.close(); ben.ws.close();
@@ -846,42 +806,39 @@ function client(name, url) {
     }
 
     // a table with a bot in it plays itself
-    const h = client('bothost'); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.state.code;
-    const you = client('botmate'); await you.ready;
-    you.send({ t: 'join', code, name: 'You' }); await wait(150);
+    const { h, P: [you] } = await tableOf(['You']);
 
-    h.send({ t: 'addbot' }); await wait(150);
-    ok(h.state.seats.length === 2 && h.state.seats[1] && h.state.seats[1].bot === true,
+    h.send({ t: 'addbot' });
+    await okBy(() => h.state.seats.length === 2 && h.state.seats[1] && h.state.seats[1].bot === true,
        'the host can add a bot  got ' + JSON.stringify(h.state.seats.map((x) => x.name + (x.bot ? '(bot)' : ''))));
     ok(h.state.cfg.deck === 'virtual', 'and asking for one asks for cards on the phones');
     ok(h.state.seats[1].online === true, 'and it is always at the table');
     ok(h.state.captainId === h.state.seats[0].id, 'the table is not handed to it');
     ok(/^[A-Z][a-z]+$/.test(h.state.seats[1].name), 'it has a name  got ' + h.state.seats[1].name);
-    h.send({ t: 'addbot' }); await wait(150);
-    ok(h.state.seats[2] && h.state.seats[2].name !== h.state.seats[1].name,
+    h.send({ t: 'addbot' });
+    await okBy(() => h.state.seats[2] && h.state.seats[2].name !== h.state.seats[1].name,
        'and the next one is not called the same thing');
 
-    h.errors.length = 0;
-    h.send({ t: 'config', patch: { deck: 'physical' } }); await wait(150);
-    ok(h.errors.some((e) => /take the bots off/i.test(e)),
+    h.send({ t: 'config', patch: { deck: 'physical' } });
+    await okBy(() => /take the bots off/i.test(h.last()),
        'a table with bots at it cannot switch to real cards');
     ok(h.state.cfg.deck === 'virtual', 'and the setting does not change');
 
-    you.errors.length = 0;
-    you.send({ t: 'addbot' }); await wait(120);
-    ok(you.errors.length === 0, 'the table host may add one from their phone too');
+    you.send({ t: 'addbot' });
+    await okBy(() => h.state.seats.length === 4 && you.errors.length === 0,
+       'the table host may add one from their phone too');
 
-    h.send({ t: 'kick', id: h.state.seats[3].id }); await wait(150);
-    ok(h.state.seats.length === 3, 'a bot is removed like any other seat');
+    h.send({ t: 'kick', id: h.state.seats[3].id });
+    await okBy(() => h.state.seats.length === 3, 'a bot is removed like any other seat');
 
-    h.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 1 } }); await wait(150);
-    h.send({ t: 'start' }); await wait(400);
+    h.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 1 } }); await h.rt();
+    h.send({ t: 'start' });
+    await okBy(() => you.state.phase === 'bid', 'the game starts');
     const mine = you.state.seats.findIndex((x) => x.id === you.seatId);
-    ok(you.state.phase === 'bid', 'the game starts');
-    // the bots bid on their own, and stop when it is the person's turn
-    await wait(1200 + 900 * 3);
+    // the bots bid on their own, in their own time, and stop when it is the
+    // person's turn: the pause between them is what makes it readable, and it
+    // is a real pause on a real clock (BOT_DELAY above)
+    await until(() => you.state.turn === mine, 8000);
     const r0 = you.state.rounds[0];
     ok(you.state.seats.every((x, i) => x.bot === false || r0.bids[i] !== null),
        'every bot has bid without being asked  got ' + JSON.stringify(r0.bids));
@@ -889,16 +846,18 @@ function client(name, url) {
 
     // the person bids last, so screw the dealer may rule one number out
     const forbidden = G.forbiddenBid(you.state.rounds[0], mine, you.state.cfg, you.state.seats.length);
-    you.send({ t: 'bid', v: forbidden === 0 ? 1 : 0 }); await wait(400);
-    ok(you.state.phase === 'tricks', 'the last bid puts the cards in play');
+    you.send({ t: 'bid', v: forbidden === 0 ? 1 : 0 });
+    await okBy(() => you.state.phase === 'tricks', 'the last bid puts the cards in play');
 
     // and then the round plays itself, apart from the person's own cards
     for (let step = 0; step < 30 && you.state.phase === 'tricks'; step++) {
-      await wait(400);
+      await until(() => you.state.phase !== 'tricks'
+                     || (you.state.play && you.state.play.turn === mine), 8000);
       const p = you.state.play;
       if (!p || p.turn !== mine) continue;
       const led = p.trick.length ? G.suitOf(p.trick[0].card) : null;
       you.send({ t: 'play', card: G.legalPlays(you.state.hand, led)[0] });
+      await until(() => !you.state.play || you.state.play.turn !== mine, 4000);
     }
     ok(you.state.idx === 1 || you.state.phase === 'done',
        'the round is played out and scored  got idx ' + you.state.idx + ' ' + you.state.phase);
@@ -908,12 +867,12 @@ function client(name, url) {
     ok(you.errors.length === 0, 'and nobody had to play for anybody  got ' + JSON.stringify(you.errors));
 
     // a bot has no opinion about a bum deal, so it agrees
-    await wait(1200);
     if (you.state.phase === 'bid' || you.state.phase === 'tricks') {
-      const at = you.state.idx;
-      you.send({ t: 'bumdeal' }); await wait(1400);
-      ok(you.state.idx === at, 'a bum deal called against bots stays in the same round');
-      ok(!you.state.vote, 'and the bots agreed to it, so the vote is over');
+      const at = you.state.idx, r = you.state.rounds[at], was = r.redeals || 0;
+      you.send({ t: 'bumdeal' });
+      await okBy(() => (you.state.rounds[at].redeals || 0) > was && !you.state.vote,
+         'a bum deal called against bots is agreed to, and the hand is thrown in');
+      ok(you.state.idx === at, 'and the table stays in the same round');
     }
 
     h.ws.close(); you.ws.close();
@@ -932,25 +891,24 @@ function client(name, url) {
     const srv6 = spawn('node', [path + '/server.js'], {
       env: { ...process.env, PORT: port6, NO_TLS: '1', DATA_DIR, BOT_DEAL_WAIT: '6000' }, stdio: 'ignore',
     });
-    await wait(700);
+    await upAt(port6);
     const url = `ws://127.0.0.1:${port6}/ws`;
-    const h = client('waitscreen', url); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.state.code;
-    const you = client('waitphone', url); await you.ready;
-    you.send({ t: 'join', code, name: 'You' }); await wait(150);
-    you.send({ t: 'addbot' }); await wait(150);
-    you.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 1 } }); await wait(150);
-    you.send({ t: 'start' }); await wait(1600);
+    const { h, P: [you] } = await tableOf(['You'], null, url);
+    you.send({ t: 'addbot' }); await until(() => you.state.seats.length === 2);
+    you.send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 1 } }); await you.rt();
+    you.send({ t: 'start' });
+    await until(() => you.state.phase === 'bid');
 
     const bids = () => you.state.rounds[you.state.idx].bids;
+    // long enough that a bot which was not waiting would have bid by now
+    await wait(1600);
     ok(you.state.phase === 'bid' && you.state.turn === 1,
        'the bot bids first  got turn ' + you.state.turn);
     ok(bids().every((b) => b === null || b === undefined),
        'and nothing is bid while the phone is still watching the deal  got ' + JSON.stringify(bids()));
 
-    you.send({ t: 'dealt' }); await wait(1400);
-    ok(bids()[1] !== null && bids()[1] !== undefined,
+    you.send({ t: 'dealt' });
+    await okBy(() => bids()[1] !== null && bids()[1] !== undefined,
        'the phone says its table is up, and the bot bids  got ' + JSON.stringify(bids()));
 
     h.ws.close(); you.ws.close();
@@ -969,40 +927,39 @@ function client(name, url) {
     const env = { ...process.env, PORT: port7, NO_TLS: '1', DATA_DIR: dir, BOT_DEAL_WAIT: '150' };
     const url = `ws://127.0.0.1:${port7}/ws`;
     let srv7 = spawn('node', [path + '/server.js'], { env, stdio: 'ignore' });
-    await wait(700);
+    await upAt(port7);
 
-    const h = client('keepscreen', url); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.state.code;
-    const ann = client('keepann', url); await ann.ready;
-    ann.send({ t: 'join', code, name: 'Ann' }); await wait(150);
-    const ben = client('keepben', url); await ben.ready;
-    ben.send({ t: 'join', code, name: 'Ben' }); await wait(150);
-    const annToken = ann.hello.token;
     // Dealt on the phones, so the hands are the table's to keep and the test
     // can ask for one back.
-    ann.send({ t: 'config', patch: { deck: 'virtual', max: 2, pattern: 'down', ones: 1 } }); await wait(150);
-    ann.send({ t: 'start' }); await wait(200);
+    const { h, P: [ann, ben], code } = await tableOf(['Ann', 'Ben'],
+      { deck: 'virtual', max: 2, pattern: 'down', ones: 1 }, url);
+    const annToken = ann.hello.token;
+    ann.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid' && h.state.turn !== null);
     const first = h.state.turn;
     const bidder = first === 0 ? ann : ben;
-    bidder.send({ t: 'bid', v: 1 }); await wait(150);
-    ok(h.state.rounds[0].bids[first] === 1, 'a game is under way  got ' + JSON.stringify(h.state.rounds[0].bids));
+    bidder.send({ t: 'bid', v: 1 });
+    await okBy(() => h.state.rounds[0].bids[first] === 1,
+       'a game is under way  got ' + JSON.stringify(h.state.rounds[0].bids));
 
     /* A burst of changes is written down once, when it is over, and what is
        written is the newest of them -- not whichever one the gap fell on. */
     h.send({ t: 'chat', text: 'one' });
     ann.send({ t: 'chat', text: 'two' });
     ben.send({ t: 'chat', text: 'three' });
-    await wait(400);
+    await until(() => h.state.chat.length === 3);
+    await wait(400);                          // the gap a burst is written down after
 
     // the phone hosting it is stopped, and started again
     h.ws.close(); ann.ws.close(); ben.ws.close();
-    srv7.kill(); await wait(400);
+    srv7.kill();
+    await until(() => new Promise((r) => srv7.once('exit', () => r(true))), 4000);
     srv7 = spawn('node', [path + '/server.js'], { env, stdio: 'ignore' });
-    await wait(800);
+    await upAt(port7);
 
     const back = client('keepback', url); await back.ready;
-    back.send({ t: 'resume', code, token: annToken }); await wait(250);
+    back.send({ t: 'resume', code, token: annToken });
+    await until(() => back.state || back.errors.length);
     ok(!back.errors.length, 'the seat is still there to come back to  got ' + JSON.stringify(back.errors));
     ok(!!back.state && back.state.code === code, 'and it is the same table  got ' + (back.state && back.state.code));
     ok(!!back.state && back.state.phase === 'bid' && back.state.rounds[0].bids[first] === 1,
@@ -1039,22 +996,21 @@ function client(name, url) {
     const srv8 = spawn('node', [path + '/server.js'],
       { env: { ...process.env, PORT: port8, NO_TLS: '1', DATA_DIR: dir, BUSY_FILE: busy, BUSY_QUIET_MS: '500' },
         stdio: 'ignore' });
-    await wait(700);
+    await upAt(port8);
     const says = () => { try { return fs.readFileSync(busy, 'utf8'); } catch (e) { return '(nothing)'; } };
 
-    ok(says() === '0', 'a server with no table on it is not in use  got ' + says());
+    await okBy(() => says() === '0', 'a server with no table on it is not in use  got ' + says());
     const one = client('busyone', url); await one.ready;
-    one.send({ t: 'create' }); await wait(200);
-    ok(says() === '1', 'a screen at a table is  got ' + says());
+    one.send({ t: 'create' }); await until(() => one.hello);
+    await okBy(() => says() === '1', 'a screen at a table is  got ' + says());
 
-    one.ws.close(); await wait(250);
+    one.ws.close(); await wait(250);          // less than the quiet time above
     ok(says() === '1', 'a phone that has just gone does not put the table to sleep  got ' + says());
-    await wait(700);
-    ok(says() === '0', 'but a table nobody comes back to falls quiet  got ' + says());
+    await okBy(() => says() === '0', 'but a table nobody comes back to falls quiet  got ' + says());
 
     const two = client('busytwo', url); await two.ready;
-    two.send({ t: 'create' }); await wait(200);
-    ok(says() === '1', 'and a table somebody comes to is in use again  got ' + says());
+    two.send({ t: 'create' }); await until(() => two.hello);
+    await okBy(() => says() === '1', 'and a table somebody comes to is in use again  got ' + says());
     two.ws.close();
     srv8.kill();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -1071,68 +1027,62 @@ function client(name, url) {
      Each of those is answered here. */
   {
     console.log('\n-- a seat that goes away, and comes back --');
-    const h = client('goneho'); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.state.code;
-
-    const ann = client('ann'); await ann.ready;
-    ann.send({ t: 'join', code, name: 'Ann' }); await wait(120);
-    const ben = client('ben'); await ben.ready;
-    ben.send({ t: 'join', code, name: 'Ben' }); await wait(120);
-    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await wait(120);
-    h.send({ t: 'start' }); await wait(300);
-    ok(h.state.phase === 'bid', 'the game starts  got ' + h.state.phase);
+    const { h, P: [ann, ben], code } = await tableOf(['Ann', 'Ben'], { deck: 'virtual', max: 2 });
+    h.send({ t: 'start' });
+    await okBy(() => h.state.phase === 'bid', 'the game starts  got ' + h.state.phase);
     const onTurn = h.state.turn;                       // whoever bids first
     const away = h.state.seats[onTurn].name;
     const other = h.state.seats[1 - onTurn].name;
 
     // the seat the table is waiting on drops out
-    (away === 'Ann' ? ann : ben).ws.close(); await wait(250);
-    ok(h.state.seats[onTurn].online === false, 'the table sees the phone go  got ' + away);
+    (away === 'Ann' ? ann : ben).ws.close();
+    await okBy(() => h.state.seats[onTurn].online === false, 'the table sees the phone go  got ' + away);
     ok(h.state.turn === onTurn, 'and it waits there, because nobody may bid out of turn');
 
     // a name is not enough to sit in a seat somebody is in
     const imp = client('imp'); await imp.ready;
-    imp.send({ t: 'join', code, name: other.toUpperCase() }); await wait(150);
-    ok(imp.errors.some((e) => /already at the table/.test(e)),
+    imp.send({ t: 'join', code, name: other.toUpperCase() });
+    await okBy(() => /already at the table/.test(imp.last()),
        'a seat somebody is sitting in is never handed over  got ' + JSON.stringify(imp.errors));
     ok(!imp.hello, 'and nothing is handed to them');
     imp.ws.close();
 
     // but the phone that lost its seat comes back to it with the name it used
     const back = client('back'); await back.ready;
-    back.send({ t: 'join', code, name: away.toLowerCase() }); await wait(200);
-    ok(back.hello && back.hello.seatId === h.state.seats[onTurn].id,
+    back.send({ t: 'join', code, name: away.toLowerCase() });
+    await okBy(() => back.hello && back.hello.seatId === h.state.seats[onTurn].id,
        'the phone that lost its seat comes back with the name it played under');
-    ok(h.state.seats[onTurn].online === true, 'and the table has it back');
+    await okBy(() => h.state.seats[onTurn].online === true, 'and the table has it back');
     ok(Array.isArray(back.state.hand) && back.state.hand.length === h.state.rounds[0].cards,
        'with the hand it was dealt  got ' + JSON.stringify(back.state && back.state.hand));
 
     // while it is there, nobody bids for it
-    h.errors.length = 0;
-    h.send({ t: 'bidfor' }); await wait(150);
-    ok(h.errors.some((e) => /can bid/.test(e)),
+    h.send({ t: 'bidfor' });
+    await okBy(() => /can bid/.test(h.last()),
        'nobody bids for a seat that is at the table  got ' + JSON.stringify(h.errors));
 
     // it bids, the turn moves on, and now the table has gone on without it
-    back.send({ t: 'bid', v: 0 }); await wait(200);
-    back.ws.close(); await wait(250);
+    back.send({ t: 'bid', v: 0 });
+    await until(() => h.state.turn !== onTurn);
+    back.ws.close();
+    await until(() => h.state.seats[onTurn].online === false);
     const late = client('late'); await late.ready;
-    late.send({ t: 'join', code, name: away }); await wait(200);
-    ok(late.errors.some((e) => /gone on without/.test(e)),
+    late.send({ t: 'join', code, name: away });
+    await okBy(() => /gone on without/.test(late.last()),
        'once the table has moved on, a name is not enough  got ' + JSON.stringify(late.errors));
     ok(!late.hello, 'and no seat is handed over');
     late.ws.close();
 
     // the last seat drops out too, and now the table cannot move at all
     const last = (other === 'Ann' ? ann : ben);
-    last.ws.close(); await wait(250);
+    last.ws.close();
+    await until(() => h.state.seats.every((x) => !x.online));
     const stuck = h.state.turn;
     ok(stuck !== null && h.state.seats[stuck].online === false,
        'the table is stopped on an empty seat  got turn ' + stuck);
-    h.errors.length = 0;
-    h.send({ t: 'bidfor' }); await wait(250);
-    ok(h.errors.length === 0, 'the host bids for it  got ' + JSON.stringify(h.errors));
+    h.send({ t: 'bidfor' });
+    await okBy(() => h.state.rounds[0].bids[stuck] !== null,
+       'the host bids for it  got ' + JSON.stringify(h.errors));
     ok(h.state.rounds[0].bids[stuck] !== null,
        'and the bid is in  got ' + JSON.stringify(h.state.rounds[0].bids));
     ok(h.state.phase === 'tricks', 'so the hand goes into play  got ' + h.state.phase);
@@ -1142,107 +1092,91 @@ function client(name, url) {
   /* ---- a screen that only shows a table ---- */
   {
     console.log('\n-- a screen pointed at a table --');
-    const h = client('tvhost'); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.state.code;
-    const ann = client('tvann'); await ann.ready;
-    ann.send({ t: 'join', code, name: 'Ann' }); await wait(150);
+    const { h, P: [ann], code } = await tableOf(['Ann']);
 
     const tv = client('tv'); await tv.ready;
-    tv.send({ t: 'screen', code: code.toLowerCase() }); await wait(150);
-    ok(tv.hello && tv.hello.role === 'screen', 'a screen can be pointed at a table that is running');
-    ok(tv.state && tv.state.code === code, 'and it is given the table  got ' + (tv.state || {}).code);
+    tv.send({ t: 'screen', code: code.toLowerCase() });
+    await okBy(() => tv.hello && tv.hello.role === 'screen', 'a screen can be pointed at a table that is running');
+    await okBy(() => tv.state && tv.state.code === code, 'and it is given the table  got ' + (tv.state || {}).code);
     ok(tv.state.hand === undefined, 'with nobody\'s cards in it');
     ok(tv.state.seats.length === 1 && tv.state.seats[0].online === true,
        'and it changes nothing about who is at the table');
-    tv.errors.length = 0;
-    tv.send({ t: 'reset' }); await wait(150);
-    ok(tv.errors.some((e) => /only shows the table/.test(e)),
+    tv.send({ t: 'reset' });
+    await okBy(() => /only shows the table/.test(tv.last()),
        'it cannot touch the game  got ' + JSON.stringify(tv.errors));
     ok(ann.state.phase === 'lobby', 'and the game is where it was');
 
     const nowhere = client('nowhere'); await nowhere.ready;
-    nowhere.send({ t: 'screen', code: 'ZZZZ' }); await wait(150);
-    ok(nowhere.errors.some((e) => /no table with that code/i.test(e)), 'a screen needs a table that exists');
+    nowhere.send({ t: 'screen', code: 'ZZZZ' });
+    await okBy(() => /no table with that code/i.test(nowhere.last()), 'a screen needs a table that exists');
 
     // the phones are told when a TV screen runs the table, and only then
     ok(ann.state.tv === true, 'a phone knows a TV screen runs this table');
-    h.ws.close(); await wait(150);
-    ok(ann.state.tv === false, 'and knows when it has gone; a screen that only shows the table does not count');
+    h.ws.close();
+    await okBy(() => ann.state.tv === false,
+       'and knows when it has gone; a screen that only shows the table does not count');
     nowhere.ws.close(); tv.ws.close(); ann.ws.close();
   }
 
   /* ---- leaving on purpose, which is not the same as dropping out ---- */
   {
     console.log('\n-- leaving the game --');
-    const h = client('leaveho'); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.state.code;
-    const ann = client('lann'); await ann.ready;
-    ann.send({ t: 'join', code, name: 'Ann' }); await wait(120);
-    const ben = client('lben'); await ben.ready;
-    ben.send({ t: 'join', code, name: 'Ben' }); await wait(120);
-    const cal = client('lcal'); await cal.ready;
-    cal.send({ t: 'join', code, name: 'Cal' }); await wait(120);
+    const { h, P: [ann, ben, cal], code } = await tableOf(['Ann', 'Ben', 'Cal']);
 
     // before the cards go out, a seat simply goes
-    cal.send({ t: 'leave' }); await wait(150);
-    ok(h.state.seats.length === 2, 'in the lobby, leaving gives the seat up  got ' + h.state.seats.length);
-    ok(cal.left === true, 'and the phone that left is told  got ' + cal.left);
+    cal.send({ t: 'leave' });
+    await okBy(() => h.state.seats.length === 2,
+       'in the lobby, leaving gives the seat up  got ' + h.state.seats.length);
+    await okBy(() => cal.left === true, 'and the phone that left is told  got ' + cal.left);
     cal.ws.close();
 
-    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await wait(120);
-    h.send({ t: 'start' }); await wait(300);
+    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await h.rt();
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid' && h.state.turn !== null);
     const turn = h.state.turn;
     const goer = h.state.seats[turn].name === 'Ann' ? ann : ben;
-    goer.errors.length = 0;
-    goer.send({ t: 'leave' }); await wait(200);
-    ok(h.state.seats[turn].left === true, 'in a game, the seat stays and is marked gone');
+    goer.send({ t: 'leave' });
+    await okBy(() => h.state.seats[turn].left === true, 'in a game, the seat stays and is marked gone');
     ok(h.state.seats[turn].online === false, 'and nobody is behind it');
     ok(h.state.seats.length === 2, 'the scorecard keeps its column  got ' + h.state.seats.length);
 
     // a seat that was given up is not handed to a name
     const grab = client('grab'); await grab.ready;
-    grab.send({ t: 'join', code, name: h.state.seats[turn].name }); await wait(150);
-    ok(grab.errors.some((e) => /left the game/.test(e)),
+    grab.send({ t: 'join', code, name: h.state.seats[turn].name });
+    await okBy(() => /left the game/.test(grab.last()),
        'and a name does not take it back  got ' + JSON.stringify(grab.errors));
     grab.ws.close();
 
     // the table plays that hand rather than waiting for a phone that has gone
-    await wait(1600);
-    ok(h.state.rounds[0].bids[turn] !== null,
+    await okBy(() => h.state.rounds[0].bids[turn] !== null,
        'the table bids the hand it was left  got ' + JSON.stringify(h.state.rounds[0].bids));
 
     // and the phone that left can still come back to its own seat
     const rejoin = client('rejoin'); await rejoin.ready;
-    rejoin.send({ t: 'resume', code, token: goer.hello.token }); await wait(200);
-    ok(rejoin.hello && rejoin.hello.seatId === h.state.seats[turn].id,
+    rejoin.send({ t: 'resume', code, token: goer.hello.token });
+    await okBy(() => rejoin.hello && rejoin.hello.seatId === h.state.seats[turn].id,
        'the phone that left comes back with its own token');
-    ok(h.state.seats[turn].left === false, 'and the seat is a player\'s again');
+    await okBy(() => h.state.seats[turn].left === false, 'and the seat is a player\'s again');
     rejoin.ws.close(); ann.ws.close(); ben.ws.close(); h.ws.close();
   }
 
   /* ---- a phone that is not coming back at all ---- */
   {
     console.log('\n-- handing a seat to the table --');
-    const h = client('handho'); await h.ready;
-    h.send({ t: 'create' }); await wait(150);
-    const code = h.state.code;
-    const ann = client('hann'); await ann.ready;
-    ann.send({ t: 'join', code, name: 'Ann' }); await wait(120);
-    const ben = client('hben'); await ben.ready;
-    ben.send({ t: 'join', code, name: 'Ben' }); await wait(120);
+    const { h, P: [ann, ben], code } = await tableOf(['Ann', 'Ben']);
 
     // with real cards there is no hand for the table to play
-    h.send({ t: 'start' }); await wait(250);
-    h.errors.length = 0;
-    h.send({ t: 'playout' }); await wait(150);
-    ok(h.errors.some((e) => /no cards to hold/.test(e)),
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid');
+    h.send({ t: 'playout' });
+    await okBy(() => /no cards to hold/.test(h.last()),
        'a table with real cards cannot hand a seat over  got ' + JSON.stringify(h.errors));
-    h.send({ t: 'reset' }); await wait(150);
+    h.send({ t: 'reset' });
+    await until(() => h.state.phase === 'lobby');
 
-    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await wait(120);
-    h.send({ t: 'start' }); await wait(350);
+    h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await h.rt();
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid' && h.state.turn !== null);
     const p = h.state.turn;
     const who = h.state.seats[p].name;
     const gone = who === 'Ann' ? ann : ben;
@@ -1250,35 +1184,32 @@ function client(name, url) {
     const stay = who === 'Ann' ? ben : ann;
 
     // not while that phone is there
-    h.errors.length = 0;
-    h.send({ t: 'playout' }); await wait(150);
-    ok(h.errors.some((e) => /is at the table/.test(e)),
+    h.send({ t: 'playout' });
+    await okBy(() => /is at the table/.test(h.last()),
        'a seat somebody is at is not handed over  got ' + JSON.stringify(h.errors));
 
-    gone.ws.close(); await wait(300);
-    h.errors.length = 0;
-    h.send({ t: 'playout' }); await wait(250);
-    ok(h.errors.length === 0, 'an empty seat is handed to the table  ' + JSON.stringify(h.errors));
-    ok(h.state.seats[p].left === true, 'and it is marked gone');
+    gone.ws.close();
+    await until(() => h.state.seats[p].online === false);
+    h.send({ t: 'playout' });
+    await okBy(() => h.state.seats[p].left === true, 'an empty seat is handed to the table  ' + JSON.stringify(h.errors));
     ok(h.state.seats.length === 2, 'the scorecard keeps its column');
-    ok(stay.state.seats[p].left === true, 'and every phone is told');
+    await okBy(() => stay.state.seats[p].left === true, 'and every phone is told');
 
-    await wait(1500);
-    ok(h.state.rounds[0].bids[p] !== null,
+    await okBy(() => h.state.rounds[0].bids[p] !== null,
        'the table bids that hand without being asked again  ' + JSON.stringify(h.state.rounds[0].bids));
 
-    h.errors.length = 0;
-    h.send({ t: 'playout' }); await wait(150);
+    h.send({ t: 'playout' });
     // by now the turn has moved to the seat that is present, so either guard
     // answers: the seat on play is at the table, or the hand is already played
-    ok(h.errors.some((e) => /already playing|is at the table/.test(e)),
+    await okBy(() => /already playing|is at the table/.test(h.last()),
        'and it is not handed over twice  got ' + JSON.stringify(h.errors));
 
     // the phone it belongs to takes it back
     const back = client('hback'); await back.ready;
-    back.send({ t: 'resume', code, token }); await wait(250);
-    ok(back.hello && back.hello.seatId === h.state.seats[p].id, 'the phone that holds the seat takes it back');
-    ok(h.state.seats[p].left === false, 'and it is a player\'s again');
+    back.send({ t: 'resume', code, token });
+    await okBy(() => back.hello && back.hello.seatId === h.state.seats[p].id,
+       'the phone that holds the seat takes it back');
+    await okBy(() => h.state.seats[p].left === false, 'and it is a player\'s again');
     back.ws.close(); stay.ws.close(); h.ws.close();
   }
 
@@ -1289,7 +1220,7 @@ function client(name, url) {
       env: { ...process.env, PORT: port2, NO_TLS: '1', PUBLIC_URL: 'https://table.example.com/', DATA_DIR },
       stdio: 'ignore',
     });
-    await wait(700);
+    await upAt(port2);
     const net2 = await fetch(`http://127.0.0.1:${port2}/net.json`).then((r) => r.json());
     ok(JSON.stringify(net2.urls) === '["https://table.example.com"]',
        'PUBLIC_URL is the only address offered, with no private ones  got ' + JSON.stringify(net2.urls));
@@ -1301,13 +1232,13 @@ function client(name, url) {
      answer over, and a player who arrives brings one more. Both have to reach
      /net.json, or the host's QR code carries an address nobody can use. */
   {
-    const port5 = PORT + 4;
+    const port5 = PORT + 7;
     const listed = 'http://127.0.0.1:' + port5;
     const srv5 = spawn('node', [path + '/server.js'], {
       env: { ...process.env, PORT: port5, NO_TLS: '1', LAN_ADDRS: '192.168.99.9,not-an-address', DATA_DIR },
       stdio: 'ignore',
     });
-    await wait(700);
+    await upAt(port5);
     const urls = async () => (await fetch(`${listed}/net.json`).then((r) => r.json())).urls;
 
     let now = await urls();
@@ -1340,9 +1271,14 @@ function client(name, url) {
     srv5.kill();
   }
 
+  done = true;
   try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch (e) {}
   console.log(fails ? `\n${fails} FAILURES` : '\nall integration checks passed');
-  srv.kill(); process.exit(fails ? 1 : 0);
+  // Wait for the server to actually go before this process does, or the next
+  // run of this file starts while the old one still holds the port.
+  srv.kill();
+  await until(() => new Promise((r) => srv.once('exit', () => r(true))), 4000);
+  process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); srv.kill(); process.exit(1); });
 
 function Game_schedule(cfg) {

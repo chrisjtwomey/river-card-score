@@ -1000,6 +1000,10 @@ part('off the table, and on to the next round');
 
 /* A round is scored and the next dealt in the same breath, so what the round
    paid is held up over the trick that ended it. */
+/* The moment a scored round is held up for is a real second and a bit on a
+   phone. Waiting it out here would be the whole of this file's running time
+   spent asleep, so the timer the felt arms is caught instead and let off by
+   hand -- which is what the clock would have done. */
 function scored(motion) {
   const n = 4, cards = 5, me = 1;
   const first = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: [1, 2, 1, 1] });
@@ -1009,9 +1013,14 @@ function scored(motion) {
   next.idx = 1;
   next.rounds = [{ cards, dealer: 0, trump: 'H', bids: [1, 2, 1, 1], tricks: [1, 0, 2, 2] },
                  next.rounds[0]];
-  L.Felt.sync(next, me, { send: () => {} });
+  const armed = [];
+  const realSet = setTimeout;
+  global.setTimeout = (fn, ms) => { armed.push({ fn, ms }); return realSet(() => {}, 0); };
+  try { L.Felt.sync(next, me, { send: () => {} }); } finally { global.setTimeout = realSet; }
   const overlay = L.dom.document.getElementById('deal');
-  return { L, overlay, beat: () => overlay.querySelector('.felt-beat') };
+  // let the moment pass, however long the felt asked for
+  const passes = () => armed.filter((t) => t.ms > 1000).forEach((t) => t.fn());
+  return { L, overlay, armed, passes, beat: () => overlay.querySelector('.felt-beat') };
 }
 {
   const t = scored('off');
@@ -1038,12 +1047,16 @@ function scored(motion) {
   ok(!t.beat().hidden && stage.querySelectorAll('.dcard').length === cards0,
     'and the table it was played on stays until the moment is over');
   // and it comes to an end
-  setTimeout(() => {
-    ok(t.beat().hidden, 'then the moment passes');
+  ok(t.armed.some((x) => x.ms > 1000), 'the moment is armed to end by itself  got '
+    + t.armed.map((x) => x.ms).join(','));
+  t.passes();
+  ok(t.beat().hidden, 'then the moment passes');
+  // The felt then deals the next round, and the cards land when the scene says
+  // so rather than in this turn, so the hand is looked for in the next one.
+  setImmediate(() => {
     ok(t.overlay.querySelector('.deal-stage').querySelectorAll('.dcard.mine').length === 4,
       'and the next hand is on the table');
-    done();
-  }, 2400);
+  });
 }
 
 // a made bid says so
@@ -2465,3 +2478,7 @@ part('the pages and the stylesheet agree');
     });
   });
 }
+
+// Every check above is made in this turn, bar the one the felt hands to the
+// next; the tally waits for that.
+setImmediate(done);

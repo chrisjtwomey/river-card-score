@@ -101,7 +101,7 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
 
 - **A rule** (e.g. a new scoring option): `game.js` + the `config` row in
   `messages.js` that accepts it + `Lobby.rulesForm`'s `RULES` list + the `<select>`
-  in `host.html`, `play.html`, `dev.html` + a check in `test.js`.
+  in `host.html`, `play.html`, `dev.html` + a check in `test-rules.js`.
 - **A step in the game** (a new phase or transition): a Room verb, called from a
   message row; `publicState` if screens need to see it; then the widget that draws it.
 - **A screen control that acts for the table**: a widget in `round.js` gated on
@@ -114,10 +114,26 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
 
 ## Working and testing
 
-- `npm test` runs `test.js` (whole games over WebSockets, ports 8899–8905) and
-  `test-pages.js` (pages and scenes in a fake DOM). **Both must be green after every
-  change.** Add a check for every rule you add or fix; `test.js` has a pure-rules
-  section near the top, `test-pages.js` has `playPage`/`loadPage` for screens.
+- `npm test` runs three suites, in the order a failure is most useful in.
+  **All three must be green after every change.**
+  - `test-rules.js` — the rules, in this process: `game.js`, `lib/room.js`,
+    `lib/deck.js` and `lib/messages.js` called directly. `table()` builds a room
+    with stand-in sockets; `t.say(who, msg)` sends one message as the server
+    would and returns the line said back, or null. **A rule goes here.** No port,
+    no socket, no clock: the whole file runs in well under a second.
+  - `test.js` — whole games over real WebSockets, ports 8899–8906. **What a
+    socket adds goes here**: a refusal reaching the phone that earned it, a
+    change reaching every screen, presence, reconnect, a table outliving its
+    server, and the timings that are real (the trick hold, the bot delay, the
+    pause between two lines of talk). Nothing else waits on the clock:
+    `okBy(pred, msg)` polls until the table has made it true, `until(pred)` waits
+    for a step with nothing to assert, and `c.rt()` is a ping and its pong.
+    `tableOf(names, cfg, url)` makes a table and sits everybody at it.
+  - `test-pages.js` — the pages and the scenes in a fake DOM, with
+    `playPage`/`loadPage` for screens. It never sleeps either: where a screen
+    arms a timer, the test catches it and lets it off by hand.
+- If a check in `test.js` fails and the same rule passes in `test-rules.js`, the
+  wiring is wrong, not the rule.
 - The fake DOM parses `innerHTML` only for `div|span|p` with a class; build widget
   innards with `createElement`, and assert on `pick('#container').querySelector('.btn')`,
   not on inner ids.
