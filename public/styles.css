@@ -128,11 +128,14 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 .selbox::after{position:absolute;right:15px;top:50%;margin-top:-7px;pointer-events:none;transform:rotate(45deg)}
 .field small{font-weight:500;white-space:pre-line}
 .toggles{display:flex;flex-direction:column;gap:14px}
-.switch{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
-.switch input{width:18px;height:18px;accent-color:var(--felt)}
+/* The box and the space beside it are named once, so the line under a switch
+   starts exactly where its words do. A tick box carries a margin of the
+   browser's own, which is why the two did not line up. */
+.switchrow,.switch{--box:18px;--gap:10px}
+.switch{display:flex;align-items:center;gap:var(--gap);font-size:14px;cursor:pointer}
+.switch input{width:var(--box);height:var(--box);margin:0;flex:none;accent-color:var(--felt)}
 .switchrow{display:flex;flex-direction:column;gap:3px}
-/* the line under a switch sits under its words, not under its box */
-.switchrow small{font-size:13px;font-weight:500;color:var(--ink-dim);padding-left:28px}
+.switchrow small{font-size:13px;font-weight:500;color:var(--ink-dim);padding-left:calc(var(--box) + var(--gap))}
 
 /* The rules, whoever is reading them: one column with room between one rule
    and the next, and a hairline where one kind of rule gives way to another --
