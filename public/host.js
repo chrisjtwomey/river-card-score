@@ -377,9 +377,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadAddresses();
   UI.startZoom();
-  /* A host screen is read from across the room, so text size belongs here, and
-     so do the screen's own two: the dev page for a game that needs putting
-     right, and a new game. */
+  /* A host screen is read from across the room, so text size belongs here.
+     The menu holds settings and nothing else: a new game is a button on the
+     page, where the game-over line says it is. */
   menu = UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true, zoom: true }).concat([
     { kind: 'group', label: 'This screen' },
     // Only on a server run with DEV=1: a player found "Fix this game" and
@@ -388,10 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { kind: 'link', label: 'Dev controls', blank: true,
       hidden: () => window.top !== window || !(ST && ST.dev),
       href: devLink() },
-    { kind: 'action', label: 'New game', danger: true,
-      hidden: () => !ST || ST.phase === 'lobby',
-      run: newGame },
   ]));
+  $('#btn-reset').addEventListener('click', newGame);
   $('#btn-bum').addEventListener('click', () => Round.bumDeal(view(), true));
   $('#btn-vote-do').addEventListener('click', () => Round.bumDeal(view(), true));   // asked first, like the other
   $('#btn-vote-cancel').addEventListener('click', () => Net.send({ t: 'votecancel' }));
