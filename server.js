@@ -55,11 +55,27 @@ const Tables = TablesOf({ DATA, KEEP_HOURS });
 // The pages, the QR code, the addresses, a finished game, a picture. It reads
 // the rooms for a picture and knows nothing else about a game.
 const { handler, lanUrls, hiddenNets, refreshLanAddress } = Http({
-  PORT, SCHEME, DEV, ROOT, PUB, pictureOf, readGame, listGames, listTables,
+  PORT, SCHEME, DEV, ROOT, PUB, pictureOf, readGame, listGames, listTables, endTable,
 });
 
 // The socket server rides on this one, so both answer on the same port.
 const server = tls ? https.createServer(tls, handler) : http.createServer(handler);
+
+/* A table the machine that runs the server has done with. Not a game ending --
+   nothing is scored and nothing is filed -- the table itself is taken away:
+   every screen at it is told so and lets it go, the bots stop, and the file it
+   would have come back from is removed. */
+function endTable(code) {
+  const room = rooms.get(String(code || '').toUpperCase().trim());
+  if (!room) return false;
+  Bots.stop(room);
+  // The line every page already knows: it forgets the table and walks away.
+  room.sockets.forEach((ws) => { if (ws.readyState === 1) fail(ws, 'that table is gone'); });
+  rooms.delete(room.code);
+  Tables.forget(room.code);
+  sayBusy();
+  return true;
+}
 
 /* Every table this server is running, newest first, for the machine it runs
    on. The phone that hosts has one page for all of them: a seat it holds is

@@ -701,6 +701,14 @@ async function bidRound(P) {
     ok(mine.phase === d.state.phase, 'and where each has got to');
     ok(JSON.stringify(here).indexOf('token') < 0, 'and no seat token in the listing');
 
+    /* A table taken away by the machine that runs it: not a game ending, the
+       table itself going. Asked for with POST, so no link and no page fetching
+       ahead of itself can end a game. */
+    ok((await fetch(`http://127.0.0.1:${port4}/table/end?c=${d.state.code}`)).status === 405,
+       'GET /table/end will not end a table');
+    ok((await fetch(`http://127.0.0.1:${port4}/table/end?c=ZZZZ`, { method: 'POST' })).status === 404,
+       'and a code that is no table is a 404');
+
     const list = await fetch(`http://127.0.0.1:${port4}/games.json?code=${d.state.code}`).then((r) => r.json());
     ok(list.games.length === 1 && list.games[0].id === id, 'GET /games.json finds it by table code');
     ok(!list.games[0].rounds, 'the listing is the headline only');

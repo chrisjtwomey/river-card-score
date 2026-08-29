@@ -13,6 +13,7 @@ let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addr = null;        // the address shown in the QR code
 
 let menu = null;         // the settings page, once the page is wired
+let ending = false;      // this screen has asked for the table to be taken away
 let SHOW = false;        // this screen shows a table it does not run
 let CODE = null;         // the table this screen belongs to
 let seenWho = null;      // who was at the table on the state before
@@ -95,6 +96,7 @@ function enter(mode, code) {
     },
     onState: (m) => { ST = m; render(); },
     onError: (msg) => {
+      if (ending) return;                             // it is going because this screen said so
       if (!CODE) { pickErr(msg); return; }            // still choosing: say it there
       if (/table is gone|no table/i.test(msg)) {
         Net.forget(CODE);
@@ -390,7 +392,26 @@ document.addEventListener('DOMContentLoaded', () => {
   /* A host screen is read from across the room, so text size belongs here.
      The page holds settings and nothing else: a new game is a button on the
      page, where the game-over line says it is. */
+  /* The table is the phone's to take away when the phone is the one running
+     it -- watching a table is otherwise a screen with no way to put it down.
+     Never on a TV or a laptop across the room: they only show what is there. */
+  const canEnd = () => !!(CODE && UI.servedHere());
   menu = Settings.wire('#btn-settings', { items: UI.commonSettings({ motion: true, zoom: true }).concat([
+    { kind: 'group', label: 'This table', hidden: () => !canEnd() },
+    { kind: 'action', label: 'End this table', danger: true, hidden: () => !canEnd(),
+      run: () => {
+        const code = CODE;
+        UI.ask(`End table ${code}?`,
+          'Every phone at it is put off, and the game is not kept: nothing is scored and '
+          + 'nothing goes to Past games. The table cannot be started again.',
+          'End the table', true).then((yes) => {
+            if (!yes) return;
+            ending = true;
+            fetch('/table/end?c=' + encodeURIComponent(code), { method: 'POST' })
+              .catch(() => {})
+              .then(() => { Net.forget(code); location.href = 'index.html'; });
+          });
+      } },
     // Only on a server run with DEV=1: a player found "Fix this game" and
     // landed on a page built for the developer. Not inside a dev preview
     // either, where it would only open the page it sits in.

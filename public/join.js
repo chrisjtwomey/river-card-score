@@ -25,13 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   showWho();
   $('#btn-who').addEventListener('click', () => settings.open());
-  // This page is being read on the phone that serves it.
-  const mineToRun = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
-
   /* The phone that runs the server reads this page from 127.0.0.1. That phone
      already chose to host, so it wants a table of its own first. Every other
      browser came to join one that exists. Same page, two orders. */
-  if (mineToRun) {
+  if (UI.servedHere()) {
     const mine = $('#new-panel');
     mine.parentNode.insertBefore(mine, $('#join-panel'));
     $('.brand .sub').textContent = 'Your table';
@@ -44,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
      put the table down again. Only on the phone that runs it: another phone's
      table is not this one's to stop. The app is asked by following a link
      only it knows, and it comes back to its Host-or-Join screen. */
-  if (UI.inApp() && mineToRun) {
+  if (UI.inApp() && UI.servedHere()) {
     $('#app-row').hidden = false;
     $('#btn-stop-host').addEventListener('click', () => {
       UI.ask('Stop hosting the table?',
@@ -113,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
      A seat this browser holds is offered above, under Rejoin. What is left is
      watched: the same screen a TV shows, which changes nothing at the table. */
-  if (mineToRun) {
+  if (UI.servedHere()) {
     const held = new Set(Net.tables().map((t) => String(t.code || '').toUpperCase()));
     fetch('/tables.json', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : { tables: [] }))
@@ -157,8 +154,33 @@ document.addEventListener('DOMContentLoaded', () => {
     go.addEventListener('click', () => {
       location.href = 'host.html?c=' + encodeURIComponent(t.code);
     });
-    row.append(mark, nm, badge, who, go);
+    /* The table is this phone's to take away: it runs it. Nothing else can --
+       a table has no other end but the hours running out. */
+    const drop = document.createElement('button');
+    drop.className = 'mini x';
+    drop.type = 'button';
+    drop.title = `End table ${t.code}`;
+    drop.textContent = '×';
+    drop.addEventListener('click', () => {
+      UI.ask(`End table ${t.code}?`,
+        'Every phone at it is put off, and the game is not kept: nothing is scored and '
+        + 'nothing goes to Past games. The table cannot be started again.',
+        'End the table', true).then((yes) => {
+          if (!yes) return;
+          endTable(t.code).then(() => {
+            row.remove();
+            if (!$('#server-list').children.length) $('#server-panel').hidden = true;
+          });
+        });
+    });
+    row.append(mark, nm, badge, who, go, drop);
     return row;
+  }
+
+  // Asked of the server, which is this phone. POST: never a link to wander into.
+  function endTable(code) {
+    return fetch('/table/end?c=' + encodeURIComponent(code), { method: 'POST' })
+      .catch(() => {});
   }
 
   /* The camera reads the QR code the table shows. The button is here only if

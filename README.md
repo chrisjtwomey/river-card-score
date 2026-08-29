@@ -129,7 +129,15 @@ in play turns, a table waiting for players breathes, a game that is over is
 still. With reduce motion on, the marks are the same shapes and do not move. `GET /tables.json` answers that, and only to the machine the server
 runs on: a table's four characters are the only door it has, and a listing
 handed to every browser on the network would open every table to anybody who
-could reach the page. A table that has ended says so on the
+could reach the page.
+
+A table is also that machine's to **end**: the × beside it in the list, or
+**End this table** on the settings page while watching one. It asks first.
+Every phone at the table is told it is gone, the bots stop, and the file the
+table would have come back from is removed — nothing is scored and nothing
+goes to Past games. `POST /table/end?c=CODE`, local only and never a GET, so
+no link followed by mistake and no page fetching ahead of itself can end a
+game. A table that has ended says so on the
 front page rather than sending the player back with nothing said.
 
 ### A table outlives the server it is on

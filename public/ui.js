@@ -10,6 +10,11 @@ const UI = (function () {
      never sees it. */
   const inApp = () => /UpTheRiverApp/.test(((window.navigator || {}).userAgent) || '');
 
+  /* Whether this page is being read on the machine that serves it. That
+     machine runs the tables, so it is offered what no other browser is: the
+     list of them, and the way to take one away. */
+  const servedHere = () => /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname || '');
+
   function toggleFullscreen() {
     if (isFull()) {
       (document.exitFullscreen || document.webkitExitFullscreen).call(document);
@@ -627,7 +632,8 @@ const UI = (function () {
   // runs as the file loads, which is as early as any of them could.
   startTheme();
 
-  return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, keepAwake, measureTopbar,
+  return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
+           keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask,
            commonSettings, startZoom, zoomNow, setZoom,

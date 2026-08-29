@@ -1492,6 +1492,7 @@ part('the front page, and the screen');
                        search: search || '', hash: '',
                        get href() { return this._h; }, set href(v) { this._h = v; gone.push(v); } };
     const history = { replaceState: (a, b, u) => { history.url = u; } };
+    dom.window.location = location;              // as in a browser: one address, two names
     const socks = [];
     function WebSocket(url) { this.url = url; this.readyState = 1; this.sent = []; socks.push(this); }
     WebSocket.prototype.send = function (raw) { this.sent.push(JSON.parse(raw)); };
@@ -1500,10 +1501,23 @@ part('the front page, and the screen');
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
     const names = ['UI', 'Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round']
       .filter((n) => !(o.real || []).some((f) => f.toLowerCase().indexOf(n.toLowerCase() + '.js') >= 0));
-    // A page reads the photo off Avatar as a string, which a stand-in that
-    // answers everything cannot be; so this one answers "no photo".
-    const given = Object.assign({ Avatar: { saved: () => null, remember() {}, url: () => null,
-      picker: () => ({ el: new dom.El('div'), show() {}, say() {} }) } }, o.given || {});
+    /* Two stand-ins that cannot simply answer everything. A page reads the
+       photo off Avatar as a string, so this one answers "no photo"; and it
+       asks UI where it is being read, where yes-to-everything would have every
+       page believe it was the machine serving it. Those two answer off the
+       fake page's own address; the rest of UI is the usual stand-in. */
+    const where = {
+      servedHere: () => /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname || ''),
+      inApp: () => /UpTheRiverApp/.test(((dom.window.navigator || {}).userAgent) || ''),
+    };
+    const UIstub = new Proxy(function () {}, {
+      get: (t, k) => (k === 'then' ? undefined : (k in where ? where[k] : anything)),
+      apply: () => anything,
+      construct: () => anything,
+    });
+    const given = Object.assign({ UI: UIstub,
+      Avatar: { saved: () => null, remember() {}, url: () => null,
+                picker: () => ({ el: new dom.El('div'), show() {}, say() {} }) } }, o.given || {});
     const fetch = o.fetch || (() => Promise.reject(new Error('the fake DOM reaches no server')));
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'console', 'fetch', ...names, src + '\n; return { Net };');
@@ -1584,9 +1598,11 @@ part('the front page, and the screen');
       { code: 'CCCC', phase: 'lobby', round: null, rounds: null, seats: [{ id: 'sc', name: 'Cal' }] },
     ] };
     const seedOne = { 'rcs:tables:v1': JSON.stringify([{ code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' }]) };
-    const asked = [];
-    const answer = (u) => { asked.push(u); return Promise.resolve({ ok: true, json: () => Promise.resolve(running) }); };
-    const P = loadPage('join.js', seedOne, '', { hostname: '127.0.0.1', fetch: answer });
+    const asked = [], sent = [];
+    const answer = (u, o) => { asked.push(u); sent.push((o || {}).method || 'GET');
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(running) }); };
+    const P = loadPage('join.js', seedOne, '',
+      { hostname: '127.0.0.1', fetch: answer, real: ['public/ui.js'] });
     P.pick('#server-panel').hidden = true;
     const box = P.dom.document.createElement('div');       // Start goes above Join, on this phone
     box.append(P.pick('#join-panel'), P.pick('#new-panel'));
@@ -1601,7 +1617,8 @@ part('the front page, and the screen');
       ok(rows[0].querySelector('.tmark').classList.contains('open'),
          'a table waiting for players is marked as waiting');
       running.tables[1].phase = 'bid';                      // and one in play turns
-      const R = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', { hostname: '127.0.0.1', fetch: answer });
+      const R = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '',
+        { hostname: '127.0.0.1', fetch: answer, real: ['public/ui.js'] });
       const rbox = R.dom.document.createElement('div');
       rbox.append(R.pick('#join-panel'), R.pick('#new-panel'));
       R.start();
@@ -1615,6 +1632,15 @@ part('the front page, and the screen');
       btn.fire('click');
       ok(P.gone[P.gone.length - 1] === 'host.html?c=CCCC',
          'on the screen a TV would show  got ' + P.gone[P.gone.length - 1]);
+
+      // the table is this phone's to take away: it runs it
+      P.dom.window.confirm = () => true;               // the fake DOM has no <dialog>
+      rows[0].querySelector('.x').fire('click');
+      Promise.resolve().then(() => {
+        const post = asked[asked.length - 1];
+        ok(post === '/table/end?c=CCCC', 'the × ends the table on the server  got ' + post);
+        ok(sent[sent.length - 1] === 'POST', 'asked for, never a link to wander into');
+      });
     });
 
     // a browser that is not the phone running the server asks nothing
@@ -1751,8 +1777,16 @@ part('bidding for a seat that is not there, and leaving');
   // ask() answers yes, and answers it now, so the tap can be followed
   const asked = [];
   const uiReal = { fx, ask: (t, b, l) => { asked.push({ t, b, l }); return { then: (f) => f(true) }; },
-                   keepAwake: () => ({ then: () => {} }) };
+                   keepAwake: () => ({ then: () => {} }),
+                   // a real list, so a page can add its own rows to it
+                   commonSettings: () => [] };
   const UI = new Proxy(uiReal, { get: (t, k) => (k in t ? t[k] : anything) });
+  /* The same stand-in, for one page, answering where that page is read: yes to
+     everything would have every screen believe it was the machine serving it,
+     and offer what only that machine may do. */
+  const uiFor = (loc) => new Proxy(
+    Object.assign({ servedHere: () => /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(loc.hostname || '') }, uiReal),
+    { get: (t, k) => (k in t ? t[k] : anything) });
 
   function playPage(seed, search, o) {
     o = o || {};
@@ -1767,6 +1801,7 @@ part('bidding for a seat that is not there, and leaving');
                        search: search || '', hash: '',
                        get href() { return this._h; }, set href(v) { this._h = v; gone.push(v); } };
     const history = { replaceState: (a, b, u) => { history.url = u; } };
+    dom.window.location = location;              // as in a browser: one address, two names
     const socks = [];
     function WebSocket(url) { this.readyState = 1; this.sent = []; socks.push(this); }
     WebSocket.prototype.send = function (raw) { this.sent.push(JSON.parse(raw)); };
@@ -1796,7 +1831,8 @@ part('bidding for a seat that is not there, and leaving');
   /* The TV screen on the same footing: the page as it comes, the widgets it
      draws, and a socket that hands it a hello and a state. `role` is what the
      screen is to the table: 'host' runs it, 'screen' only shows it. */
-  function hostPage(role) {
+  function hostPage(role, o) {
+    o = o || {};
     const dom = makeDom(1280, 720);
     dom.localStorage.setItem('rcs:tables:v1',
       JSON.stringify([{ code: 'TEST', token: role === 'host' ? 'th' : null, role }]));
@@ -1804,9 +1840,12 @@ part('bidding for a seat that is not there, and leaving');
     const pick = (sel) => (els[sel] || (els[sel] = new dom.El('div')));
     dom.document.querySelector = pick;
     dom.document.getElementById = (id) => pick('#' + id);
-    const location = { protocol: 'http:', host: 'table', hostname: 'table', pathname: '/host.html',
-                       search: '?c=TEST', hash: '', href: '' };
+    const gone = [];
+    const location = { protocol: 'http:', host: 'table', hostname: o.hostname || 'table',
+                       pathname: '/host.html', search: '?c=TEST', hash: '',
+                       get href() { return this._h; }, set href(v) { this._h = v; gone.push(v); } };
     const history = { replaceState() {} };
+    dom.window.location = location;              // as in a browser: one address, two names
     const socks = [];
     function WebSocket(url) { this.readyState = 1; this.sent = []; socks.push(this); }
     WebSocket.prototype.send = function (raw) { this.sent.push(JSON.parse(raw)); };
@@ -1816,14 +1855,18 @@ part('bidding for a seat that is not there, and leaving');
     const src = ['public/lobby.js', 'public/round.js', 'public/net.js', 'public/host.js']
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
     const stubs = ['Settings', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage'];
+    const given = o.given || {};
+    const asked = [];
+    const fetch = (u, opt) => { asked.push({ u, method: (opt || {}).method || 'GET' }); return Promise.resolve({ ok: true }); };
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
-      'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
-    const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game, UI, Table,
-      { log() {}, info() {}, warn() {}, error() {} }, ...stubs.map(() => anything));
+      'Game', 'UI', 'Table', 'console', 'fetch', ...stubs, src + '\n; return { Net };');
+    const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
+      uiFor(location), Table, { log() {}, info() {}, warn() {}, error() {} }, fetch,
+      ...stubs.map((n) => (n in given ? given[n] : anything)));
     dom.document.fire('DOMContentLoaded');
     socks[0].onopen();
     socks[0].onmessage({ data: JSON.stringify({ t: 'hello', role, code: 'TEST', token: role === 'host' ? 'th' : null }) });
-    return Object.assign(out, { dom, pick, socks, said,
+    return Object.assign(out, { dom, pick, socks, said, gone, asked,
       feed: (st) => { try { socks[0].onmessage({ data: JSON.stringify(st) }); }
                       catch (e) { console.log('  (the screen threw: ' + e.message + ')'); throw e; } } });
   }
@@ -1969,6 +2012,35 @@ part('bidding for a seat that is not there, and leaving');
        'and the seat that already deals first is not offered the deal  got ' + dealer.join(' | '));
     P.feed(table({ phase: 'lobby', boss: false }));
     ok(!P.pick('#lobby-seats').children[1].querySelector('.more'), 'a player who does not run the table has no menu');
+  }
+
+  {   /* A table watched on the machine that runs it can be put down: a screen
+         showing a table has no other way out of it. Never on a TV or a laptop
+         across the room -- they only show what is there. */
+    const seen = [];
+    const Settings = { wire: (btn, o) => { seen.push(o); return { refresh() {}, open() {}, close() {} }; } };
+    const rowsOf = (page) => seen[seen.length - 1].items
+      .filter((it) => !(it.hidden && it.hidden()))
+      .map((it) => (typeof it.label === 'function' ? it.label() : it.label));
+
+    const H = hostPage('screen', { hostname: '127.0.0.1', given: { Settings } });
+    const mine = rowsOf(H);
+    ok(mine.indexOf('End this table') >= 0,
+       'the machine that runs the table is offered the way to end it  got ' + mine.join(' | '));
+    ok(mine.indexOf('This table') >= 0, 'under a heading of its own');
+    const end = seen[seen.length - 1].items.find((it) => it.label === 'End this table');
+    ok(end.danger === true, 'and it is not offered lightly');
+    end.run();                                    // the stand-in answers the question yes
+    ok(JSON.stringify(H.asked[0]) === '{"u":"/table/end?c=TEST","method":"POST"}',
+       'the table is ended on the server  got ' + JSON.stringify(H.asked[0]));
+    Promise.resolve().then(() => Promise.resolve()).then(() => {
+      ok(H.gone[H.gone.length - 1] === 'index.html', 'and the screen goes back to the front page');
+      ok(!H.Net.tables().some((t) => t.code === 'TEST'), 'with the table forgotten');
+    });
+
+    const away = hostPage('screen', { given: { Settings } });
+    ok(rowsOf(away).indexOf('End this table') < 0,
+       'a screen across the room is offered no such thing  got ' + rowsOf(away).join(' | '));
   }
 
   {   // a vote that was cast says so, and can still be changed
