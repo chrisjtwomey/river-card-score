@@ -252,8 +252,8 @@ that band.
   again to call. Your own bid stays lit and can be changed until the next player bids.
   The number screw the dealer forbids is struck through.
 - What is said in passing -- a bid landing, a phone dropping out, a refusal
-  -- comes up from the foot of the felt, above its own line, and never over
-  the round line at the top.
+  -- comes up in the band under the round line, clear of the piles and the
+  hand, and never over the round line itself.
 - The corner buttons are the way off the table: **Scores** drops the felt to
   the page underneath, and **Back to your cards** brings it back. That page is
   the scorecard and nothing else -- the round, the bids (won against bid once

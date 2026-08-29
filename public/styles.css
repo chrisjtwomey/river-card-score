@@ -391,8 +391,10 @@ body.host .seatcount .left{font-size:16px}
 body.host .toast{font-size:24px;padding:12px 22px}
 body.host .toast .note{font-size:19px}
 /* With the felt up the round line is at the top, and a toast landed on it.
-   They come up from the foot instead, just above the felt's own line. */
-body.felt-up .toaster{top:auto;bottom:calc(46px + env(safe-area-inset-bottom));flex-direction:column-reverse}
+   They come up in the band under it instead -- between the round line and
+   the piles, where the vote box also sits -- and never over the hand at the
+   foot. */
+body.felt-up .toaster{top:calc(clamp(48px, 8vh, 78px) + 84px + env(safe-area-inset-top))}
 
 /* ---------- deal animation ---------- */
 .deal{
