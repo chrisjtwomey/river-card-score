@@ -504,44 +504,11 @@ const Deal = (function () {
      final scores, with what the accolades paid already in them.
      A tap lands it; the next one closes it. */
 
-  // A bid lands: the number slams down onto that player's card, holds, then
-  // lifts away. The name below the card keeps it from then on.
+  // A bid lands: it is stamped onto that player's card (Stage.stamp). The
+  // name below the card keeps it from then on.
   function stamp(p, value) {
     if (!S.live || S.live.calm || !S.live.settled) return;
-    const card = S.live.cards[p], at = S.live.landedAt[p];
-    if (!card || !at || !S.live.stage.animate) return;
-    // The pile lies face down, and a stamp that inherits its rotateY(180)
-    // prints the number in a mirror. The stamp lies flat; the card stays as
-    // it is.
-    const flat = at.replace('rotateY(180deg)', 'rotateY(0deg)');
-
-    const el = document.createElement('div');
-    el.className = 'dstamp';
-    el.textContent = String(value);
-    S.live.stage.appendChild(el);
-    const a = el.animate(
-      [{ transform: `${flat} scale(2.7) rotate(-15deg)`, opacity: 0, offset: 0,
-         easing: 'cubic-bezier(.2,.9,.3,1.5)' },
-       { transform: `${flat} scale(.9) rotate(5deg)`, opacity: 1, offset: .16 },
-       { transform: `${flat} scale(1.08) rotate(-1deg)`, opacity: 1, offset: .26 },
-       { transform: `${flat} scale(1) rotate(0deg)`, opacity: 1, offset: .74 },
-       { transform: `${flat} scale(1.6) rotate(0deg)`, opacity: 0, offset: 1 }],
-      { duration: 1200, fill: 'both' });
-    a.onfinish = () => el.remove();
-
-    // the card takes the hit, and the name below it pops
-    card.animate(
-      [{ transform: at }, { transform: `${at} scale(1.13)`, offset: .3 },
-       { transform: `${at} scale(.98)`, offset: .55 }, { transform: at }],
-      { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
-    const name = S.live.labels[p];
-    if (name) {
-      name.animate(
-        [{ transform: 'translate(-50%,0) scale(1)' },
-         { transform: 'translate(-50%,0) scale(1.22)', offset: .35 },
-         { transform: 'translate(-50%,0) scale(1)' }],
-        { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
-    }
+    Stage.stamp(S.live.stage, S.live.cards[p], S.live.landedAt[p], S.live.labels[p], value);
   }
 
   // While the scene is held, show the bids as they arrive.

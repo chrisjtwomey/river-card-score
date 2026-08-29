@@ -2121,7 +2121,8 @@ part('the seat the table waits on peeks');
   const W = 412, H = 860, n = 3, cards = 5, me = 1;
   const L = load(W, H, 'full');
   const asked = stub(L);
-  const piles = () => asked.filter((a) => /\bdcard\b/.test(a.el.className) && !/\b(mine|hero|deck)\b/.test(a.el.className));
+  // a peek is 1050 ms; a bid landing hits the pile too, and that is not one
+  const piles = () => asked.filter((a) => /\bdcard\b/.test(a.el.className) && !/\b(mine|hero|deck)\b/.test(a.el.className) && a.opts.duration === 1050);
   const live = () => piles().filter((a) => !a.off);
   const seatOf = (a) => {
     const at = spotOf(a.el);
@@ -2188,6 +2189,57 @@ part('the seat the table waits on peeks');
       && a.opts.duration === 1050 && !a.off);
     ok(on.length === 1, 'and one peek is on the table: the felt\'s own  got ' + on.length);
   }
+}
+
+/* ---- a bid landing on the felt ----
+
+   The TV screen stamps every bid onto the pile it belongs to, in gold. The
+   deal did that on a phone while it held the stage, and the felt did not
+   once it had taken over: a bid was a name changing under a pile. The felt
+   stamps now, the same way; only bids that land after the table is stood
+   up, and never your own. */
+part('a bid landing on the felt is stamped');
+{
+  const stub = (L) => {
+    const asked = [];
+    L.dom.El.prototype.animate = function (kf, opts) {
+      const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {}, play() {},
+                  finish() {}, finished: Promise.resolve(), onfinish: null };
+      asked.push(a);
+      return a;
+    };
+    L.dom.El.prototype.getAnimations = () => [];
+    return asked;
+  };
+  const n = 3, cards = 5, me = 1;
+  const L = load(412, 860, 'full');
+  const asked = stub(L);
+  const stage = () => L.dom.document.querySelector('.deal-stage');
+  const stamps = () => stage().querySelectorAll('.dstamp');
+  const hits = () => asked.filter((a) => /\bdcard\b/.test(a.el.className) && a.kf[1] && /scale\(1\.13\)/.test(a.kf[1].transform));
+  const st = (bids, o) => stateFor(n, cards, me, Object.assign({ phase: 'bid', turn: 2, bids }, o)).ST;
+  L.Felt.sync(st([0, null, null], { turn: 1 }), me, { send() {}, watch: false, onView() {} });
+  ok(stamps().length === 0, 'a table stood up with a bid on it stamps nothing');
+  L.Felt.sync(st([0, 1, null]), me, {});
+  ok(stamps().length === 0, 'your own bid is the lit number on the rail: not stamped');
+  L.Felt.sync(st([0, 1, 2], { turn: null }), me, {});
+  ok(stamps().length === 1 && stamps()[0].textContent === '2', 'a bid landing is stamped, in its number  got ' + stamps().length);
+  ok(hits().length === 1 && hits()[0].el.style.zIndex === String(cards - 1), 'and the top card of that pile takes the hit');
+  ok(asked.some((a) => /\bdname\b/.test(a.el.className) && a.kf[1] && /scale\(1\.22\)/.test(a.kf[1].transform)),
+     'and the name under it pops');
+  L.Felt.sync(st([0, 1, 2], { turn: null }), me, {});
+  ok(stamps().length === 1, 'the same bids again stamp nothing more');
+  L.Felt.sync(st([3, 1, 2], { turn: null }), me, {});
+  ok(stamps().length === 1, 'a bid changed is not stamped again, as on the TV screen');
+  stamps().forEach((el) => el.remove());
+  L.Felt.hide(); L.Felt.show();
+  ok(stamps().length === 0, 'the felt dropped and brought back stamps nothing');
+
+  const L2 = load(412, 860, 'reduced');
+  stub(L2);
+  L2.Felt.sync(st([0, null, null], { turn: 1 }), me, { send() {}, watch: false, onView() {} });
+  L2.Felt.sync(st([0, 1, 2], { turn: null }), me, {});
+  ok(L2.dom.document.querySelector('.deal-stage').querySelectorAll('.dstamp').length === 0, 'with reduced motion nothing is stamped');
 }
 
 /* ---- the seat the table waits on, in the trick ----

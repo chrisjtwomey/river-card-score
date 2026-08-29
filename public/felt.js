@@ -56,6 +56,7 @@ const Felt = (function () {
   let sent = null;                 // a card played, until the table says so
   let ready = null;                // the round this screen has said it can see
   let peeking = null;              // the pile the table waits on: { q, el, at, off }
+  let stamped = null;              // the bids on the table at the last paint, or null before the first
   let told = null;                 // the finished trick this screen has announced
   let swept = null;                // and the one it has gathered in
 
@@ -297,6 +298,7 @@ const Felt = (function () {
   function build(r) {
     const { stage } = mount();
     unpeek();
+    stamped = null;
     stage.innerHTML = '';
     const p = ST.play;
     T = { stage, piles: [], labels: [], hero: null, hand: new Map(), table: new Map(),
@@ -345,6 +347,7 @@ const Felt = (function () {
   // What the deal left standing, taken over as it stands.
   function adopt(ctx, r) {
     unpeek();
+    stamped = null;
     T = { stage: ctx.stage, piles: (ctx.piles || []).map((a) => (a || []).slice()),
           labels: ctx.labels || [], hero: ctx.hero, hand: new Map(), table: new Map(),
           slots: [], places: [], won: [], heldWinner: null };
@@ -564,6 +567,18 @@ const Felt = (function () {
   function paint(r) {
     const p = ST.play;
     const bidding = ST.phase === 'bid';
+    // A bid landing is stamped onto that seat's pile, as on the deal and on
+    // the TV screen. What was already on the table when it was stood up is
+    // not: there is nothing to compare it with.
+    const bids = r.bids || [];
+    if (stamped) {
+      bids.forEach((b, q) => {
+        const had = stamped[q];
+        if (b === null || b === undefined || (had !== null && had !== undefined)) return;
+        stampBid(q, b, r);
+      });
+    }
+    stamped = bids.slice();
     T.labels.forEach((el, q) => {
       if (!el) return;
       const bid = r.bids ? r.bids[q] : null;
@@ -607,6 +622,15 @@ const Felt = (function () {
     if (!el || !UI.fx.on()) return;
     const off = Stage.peek(el, at);
     if (off) peeking = { q, el, at, off };
+  }
+
+  // Another seat's bid lands on the top card of their pile. Your own is the
+  // lit number on the rail, in your own hand: nothing to stamp.
+  function stampBid(q, b, r) {
+    const pile = (T && q !== me) ? T.piles[q] : null;
+    const el = pile && pile.length ? pile[pile.length - 1] : null;
+    if (!el || !UI.fx.on()) return;
+    Stage.stamp(T.stage, el, pileAt(geom(), q, pile.length - 1, r.cards), T.labels[q], b);
   }
 
   function unpeek() {

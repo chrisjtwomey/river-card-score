@@ -273,6 +273,44 @@ const Stage = (function () {
     return { cancel: () => { off = true; clearTimeout(timer); drop(); } };
   }
 
+  /* A bid lands: the number slams down in gold onto that seat's card, holds,
+     and lifts away; the card takes the hit and the name under it pops. The
+     deal stamps the bids that land while it holds the stage, and the felt
+     the ones that land after it. `at` is the transform the card lies at. */
+  function stamp(stage, card, at, label, value) {
+    if (!stage || !card || !at || !card.animate) return;
+    // The pile lies face down, and a stamp that inherits its rotateY(180)
+    // prints the number in a mirror. The stamp lies flat; the card stays as
+    // it is.
+    const flat = at.replace('rotateY(180deg)', 'rotateY(0deg)');
+
+    const el = document.createElement('div');
+    el.className = 'dstamp';
+    el.textContent = String(value);
+    stage.appendChild(el);
+    const a = el.animate(
+      [{ transform: `${flat} scale(2.7) rotate(-15deg)`, opacity: 0, offset: 0,
+         easing: 'cubic-bezier(.2,.9,.3,1.5)' },
+       { transform: `${flat} scale(.9) rotate(5deg)`, opacity: 1, offset: .16 },
+       { transform: `${flat} scale(1.08) rotate(-1deg)`, opacity: 1, offset: .26 },
+       { transform: `${flat} scale(1) rotate(0deg)`, opacity: 1, offset: .74 },
+       { transform: `${flat} scale(1.6) rotate(0deg)`, opacity: 0, offset: 1 }],
+      { duration: 1200, fill: 'both' });
+    a.onfinish = () => el.remove();
+
+    card.animate(
+      [{ transform: at }, { transform: `${at} scale(1.13)`, offset: .3 },
+       { transform: `${at} scale(.98)`, offset: .55 }, { transform: at }],
+      { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
+    if (label && label.animate) {
+      label.animate(
+        [{ transform: 'translate(-50%,0) scale(1)' },
+         { transform: 'translate(-50%,0) scale(1.22)', offset: .35 },
+         { transform: 'translate(-50%,0) scale(1)' }],
+        { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
+    }
+  }
+
   function overlayEl() {
     let el = document.getElementById('deal');
     if (el) return el;
@@ -350,5 +388,5 @@ const Stage = (function () {
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
   return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen,
-           ring, fan, pile, seatScale, cardSize, nameAt, bidRow, settle, peek };
+           ring, fan, pile, seatScale, cardSize, nameAt, bidRow, settle, peek, stamp };
 })();

@@ -253,7 +253,9 @@ that band.
 - **Bidding** happens on the felt too: the numbers arc above your hand, under
   a heading of their own, and are picked up the same way -- touch to lift, tap
   again to call. Your own bid stays lit and can be changed until the next player bids.
-  The number screw the dealer forbids is struck through.
+  The number screw the dealer forbids is struck through. Another player's bid
+  lands the way it does on the TV screen: the number slams onto their pile in
+  gold, the pile takes the hit, and the name under it keeps the bid.
 - **The seat the table waits on peeks.** The top card of that player's pile
   tips up on its edge and shivers, every few seconds -- the same peek the TV
   screen gives the player to bid -- through the bidding and whenever a card
