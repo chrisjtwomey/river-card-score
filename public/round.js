@@ -1,7 +1,7 @@
 'use strict';
 /* The round in play, drawn the same on the host screen and the phone: the
-   round line, the bids as they land, the dealer's trick pad, the pads for a
-   seat with nobody behind it, and the winner.
+   round line, the bids as they land, the count of tricks taken, the pads for
+   a seat with nobody behind it, and the winner.
 
    Every widget takes the element it draws into, the state, and a view:
      me     this screen's seat, or -1 for a screen that belongs to nobody
@@ -95,47 +95,38 @@ const Round = (function () {
       : `Bids total ${sum} · ${r.cards} tricks`;
   }
 
-  /* ---------- the dealer's trick pad ----------
-     One row a seat, a chip for every count. Everybody starts on 0, so only
-     the winners need a tap, and the chips that would take the total past the
-     hand are refused. The draft is the pad's own, and it starts again when
-     the round, its re-deal or the phase changes. It is the dealer's to fill,
-     or a screen that belongs to nobody and runs the table. */
-  let draft = [], draftKey = '';
-
-  function trickPad(root, ST, r, view) {
+  /* ---------- the tricks, counted as they are taken ----------
+     With real cards the table counts: whoever saw the trick taken taps who
+     took it, on any phone or on the screen that runs the table. One row a
+     seat, the row a button; the last tap scores the round, and a wrong one
+     is taken back. A screen that may not count sees none of it: the pills
+     carry the count for everybody. */
+  function trickCount(root, ST, r, view) {
     if (!root) return;
-    const may = !!r && (r.dealer === view.me || (view.me < 0 && view.boss));
-    const on = may && ST.phase === 'tricks' && !Game.virtual(ST);
+    const p = ST.play;
+    const may = view.me >= 0 || view.boss;
+    const on = may && !!r && ST.phase === 'tricks' && !Game.virtual(ST) && !!p && !!p.log;
     root.hidden = !on;
     if (!on) return;
-    const key = `${Table.roundKey(ST)}:${ST.phase}`;
-    if (draftKey !== key) { draftKey = key; draft = ST.seats.map(() => 0); }
-
-    const rows = part(root, '.entry-rows', () => make('div', 'entry-rows'));
-    const btn = part(root, '.btn', () => button('btn primary big', 'Score the round'));
+    const rows = part(root, '.count-rows', () => make('div', 'count-rows'));
+    const foot = part(root, '.count-foot', () => make('div', 'count-foot'));
     rows.innerHTML = '';
-    ST.seats.forEach((s, p) => {
-      const row = make('div', 'entry-row' + (p === r.dealer ? ' dealer' : ''));
-      const who = make('div', 'who');
-      who.appendChild(make('span', '', s.name + (p === view.me ? ' (you)' : '')));
-      who.appendChild(make('span', 'badge soft', `bid ${r.bids[p]}`));
-      row.appendChild(who);
-      const chips = make('div', 'chips');
-      const others = draft.reduce((a, v, i) => a + (i === p ? 0 : (v || 0)), 0);
-      for (let v = 0; v <= r.cards; v++) {
-        const c = chip(v, draft[p] === v, others + v > r.cards ? `Only ${r.cards - others} tricks are left` : null);
-        c.addEventListener('click', () => { draft[p] = draft[p] === v ? 0 : v; trickPad(root, ST, r, view); });
-        chips.appendChild(c);
-      }
-      row.appendChild(chips);
-      rows.appendChild(row);
+    ST.seats.forEach((s, i) => {
+      const b = button('countrow' + (p.last && p.last.winner === i ? ' took' : ''));
+      b.append(make('span', 'nm', s.name + (i === view.me ? ' (you)' : '') + (i === r.dealer ? ' (D)' : '')),
+               make('span', 'badge soft', `bid ${r.bids[i]}`),
+               make('span', 'won', `won ${p.won[i]}`));
+      b.addEventListener('click', () => view.send({ t: 'trick', p: i }));
+      rows.appendChild(b);
     });
-    const sum = draft.reduce((a, v) => a + (v || 0), 0);
-    const ready = sum === r.cards;
-    btn.disabled = !ready;
-    btn.textContent = ready ? 'Score the round' : `${r.cards - sum} of ${r.cards} tricks still to give`;
-    onClick(btn, () => view.send({ t: 'tricks', values: draft }));
+    foot.innerHTML = '';
+    const taken = p.log.length;
+    foot.appendChild(make('span', 'hint', `Trick ${Math.min(taken + 1, r.cards)} of ${r.cards}`));
+    if (taken > 0) {
+      const back = button('btn ghost', 'Take back the last trick');
+      back.addEventListener('click', () => view.send({ t: 'trickback' }));
+      foot.appendChild(back);
+    }
   }
 
   /* ---------- a seat with nobody behind it ----------
@@ -297,7 +288,7 @@ const Round = (function () {
       ? `Round ${back + 1} is dealt again and bid again.`
       : ST.phase === 'tricks'
         ? `The bids of round ${back + 1} are cleared, and it is bid again.`
-        : `Round ${back + 1} is unscored, and its tricks are entered again.`;
+        : `Round ${back + 1} is unscored, and its tricks are counted again.`;
     UI.ask('Undo the last step?', body, 'Undo', true).then((yes) => { if (yes) view.send({ t: 'undo' }); });
   }
 
@@ -315,5 +306,5 @@ const Round = (function () {
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
-  return { header, bidStrip, tally, trickPad, bidFor, playFor, playout, winner, bum, vote, newGame, bumDeal, undo };
+  return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, winner, bum, vote, newGame, bumDeal, undo };
 })();

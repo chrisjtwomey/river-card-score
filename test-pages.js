@@ -1791,14 +1791,19 @@ part('bidding for a seat that is not there, and leaving');
   }
 
   {   // a screen that only shows a table offers nothing it cannot do
-    const tricks = () => { const st = table({ away: false, phase: 'tricks' }); st.cfg.deck = 'physical'; st.turn = null; return st; };
+    const tricks = () => {
+      const st = table({ away: false, phase: 'tricks' }); st.cfg.deck = 'physical'; st.turn = null;
+      st.rounds[0].bids = [1, 1, 0];
+      st.play = { turn: null, trick: [], won: [0, 0, 0], last: null, upcard: null, counts: [2, 2, 2], log: [] };
+      return st;
+    };
     const S = hostPage('screen');
     S.feed(tricks());
     ok(S.dom.document.body.classList.contains('showing'), 'the screen knows it only shows the table');
     ok(S.pick('#btn-bum').hidden === true && S.pick('#btn-undo').hidden === true && S.pick('#btn-reset').hidden === true,
        'no bum deal, undo or new game on a screen that only shows the table');
-    ok(S.pick('#host-tricks').hidden === true, 'and no trick pad');
-    ok(!/enter them here/.test(S.pick('#turn-hint').textContent),
+    ok(S.pick('#host-count').hidden === true, 'and no count of the tricks');
+    ok(!/here or on any phone/.test(S.pick('#turn-hint').textContent),
        'nor a hint that says there is one  got ' + S.pick('#turn-hint').textContent);
     const voting = tricks(); voting.vote = { kind: 'bumdeal', by: 1, round: 0, yes: [1], no: [] };
     S.feed(voting);
@@ -1813,8 +1818,8 @@ part('bidding for a seat that is not there, and leaving');
     H.feed(tricks());
     ok(H.pick('#btn-bum').hidden === false && H.pick('#btn-undo').hidden === false && H.pick('#btn-reset').hidden === false,
        'the screen that runs the table has them all');
-    ok(H.pick('#host-tricks').hidden === false, 'and the trick pad');
-    ok(/enter them here/.test(H.pick('#turn-hint').textContent), 'and says so');
+    ok(H.pick('#host-count').hidden === false, 'and the count of the tricks');
+    ok(/here or on any phone/.test(H.pick('#turn-hint').textContent), 'and says so');
     H.feed(voting);
     const vb = H.pick('#votebox').querySelectorAll('button');
     ok(vb.length === 2 && vb[0].textContent === 'Throw it in now',
@@ -1853,6 +1858,56 @@ part('bidding for a seat that is not there, and leaving');
     said.length = 0;
     H.feed(after);
     ok(said.some((s) => /^Ann \+11 · Ben 0 · Cal \+1/.test(s)), 'and the TV screen is told what everybody got  got ' + said.join(' | '));
+  }
+
+  {   // with real cards the tricks are counted as they are taken, by anybody
+    const counting = (log) => {
+      const st = table({ away: false, phase: 'tricks' }); st.cfg.deck = 'physical'; st.turn = null;
+      st.rounds[0].bids = [1, 1, 0];
+      const won = [0, 0, 0]; log.forEach((p) => { won[p] += 1; });
+      const left = 2 - log.length;
+      st.play = { turn: null, trick: [], won, last: log.length ? { trick: [], winner: log[log.length - 1] } : null,
+                  upcard: null, counts: [left, left, left], log };
+      return st;
+    };
+    const P = playPage(seed, '?c=TEST');
+    said.length = 0;
+    P.feed(counting([]));
+    const pad = P.pick('#trick-count');
+    ok(pad.hidden === false, 'a phone at a table with real cards is offered the count');
+    const rows = pad.querySelectorAll('.countrow');
+    ok(rows.length === 3, 'one row a seat  got ' + rows.length);
+    ok(/Tap who takes it/.test(P.pick('#turn-text').textContent), 'and told what to do  got ' + P.pick('#turn-text').textContent);
+    P.socks[0].sent.length = 0;
+    rows[1].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"trick","p":1}',
+       'a tap on a row says who took the trick  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(!pad.querySelector('.count-foot').querySelector('button'), 'nothing to take back yet');
+    P.feed(counting([1]));
+    ok(pad.querySelectorAll('.countrow')[1].classList.contains('took'), 'the row that took it is marked');
+    ok(said.some((s) => /^Ben took the trick · trick 1 of 2/.test(s)), 'and it is said  got ' + said.join(' | '));
+    ok(/Trick 2 of 2/.test(P.pick('#turn-text').textContent), 'the next trick is asked for  got ' + P.pick('#turn-text').textContent);
+    ok(P.pick('#bid-tally').textContent === '1 of 2 tricks played', 'the tally counts the tricks played  got ' + P.pick('#bid-tally').textContent);
+    const pills = P.pick('#bidstrip').children;
+    ok(pills.some((el) => el.querySelector('.v') && el.querySelector('.v').textContent === '1/1'), 'and the pills carry won against bid');
+    P.socks[0].sent.length = 0;
+    const back = pad.querySelector('.count-foot').querySelector('button');
+    ok(!!back, 'and the last trick can be taken back');
+    back.fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"trickback"}', 'which says so  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.feed(counting([]));
+    ok(said.some((s) => /taken back/.test(s)), 'a trick taken back is said too  got ' + said.join(' | '));
+
+    const H = hostPage('host');
+    H.feed(counting([]));
+    ok(H.pick('#host-count').hidden === false && H.pick('#host-count').querySelectorAll('.countrow').length === 3,
+       'the TV screen counts too');
+    H.socks[0].sent.length = 0;
+    H.pick('#host-count').querySelectorAll('.countrow')[2].fire('click');
+    ok(JSON.stringify(H.socks[0].sent[0]) === '{"t":"trick","p":2}', 'with the same tap  got ' + JSON.stringify(H.socks[0].sent[0]));
+    const S = hostPage('screen');
+    S.feed(counting([]));
+    ok(S.pick('#host-count').hidden === true, 'a screen that only shows the table does not');
   }
 
   {   // the end of the game is said once on the page

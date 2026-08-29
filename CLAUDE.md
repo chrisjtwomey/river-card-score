@@ -33,7 +33,7 @@ public/net.js      The socket client: reconnect, sessions, one table per page ad
 public/table.js    The scorecard, standings, winner, vote line, presence and bid toasts, and
                    what the scenes read off the state (roundKey, dealOpts, finaleOpts).
 public/lobby.js    Widgets for the lobby: seats, bots, rulesForm, startButton.
-public/round.js    Widgets for a round in play: header, bidStrip, trickPad, bidFor, playFor,
+public/round.js    Widgets for a round in play: header, bidStrip, trickCount, bidFor, playFor,
                    playout, winner, and the two dialogs (newGame, bumDeal).
 public/stage.js    The overlay both scenes play on, its parts, the round line (head), cards
                    drawn off Game, the seat ring and the fan geometry.
@@ -150,8 +150,7 @@ When you do run it:
   phone side by side, and its *Jump to* and *Force* controls reach any state a
   real game can. A second phone is a second browser profile or a private window;
   a seat is one browser, so two tabs of `play.html` share it.
-- **What to play through.** Real cards: lobby → bid in turn → the dealer types
-  the tricks → a round scores → go back → new game. Dealt on the phones: add a
+- **What to play through.** Real cards: lobby → bid in turn → anybody taps who takes each trick → a round scores → go back → new game. Dealt on the phones: add a
   bot, the deal lands on the felt, bid on the felt, play a trick, a bum deal,
   finish → finale. Then the odd paths: a phone goes quiet at its turn (bid for /
   play for / hand the seat over), *Show a table* on a second host screen, a

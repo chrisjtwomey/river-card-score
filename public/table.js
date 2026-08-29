@@ -319,6 +319,20 @@ const Table = (function () {
     return done;
   }
 
+  /* A trick counted at a table with real cards, said as it lands: the phone
+     that tapped it knows, the rest do not. `last` is how many were counted
+     on the state before. A table dealt on the phones has no count to say. */
+  function sayTrick(ST, last) {
+    const p = ST.play;
+    const k = (p && p.log) ? p.log.length : 0;
+    if (last === null || last === undefined || !p || !p.log) return k;
+    const r = ST.rounds[ST.idx];
+    if (!r) return k;
+    if (k === last + 1) UI.fx.toast(`${ST.seats[p.last.winner].name} took the trick`, { note: `trick ${k} of ${r.cards}` });
+    else if (k === last - 1) UI.fx.toast('A trick was taken back', { note: `trick ${k + 1} of ${r.cards} again` });
+    return k;
+  }
+
   function standings(box, ST, opts) {
     const o = opts || {};
     const me = o.me === undefined ? -1 : o.me;
@@ -387,7 +401,7 @@ const Table = (function () {
   const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
 
   return { scorecardHTML, scorecard, followCurrent, esc, roundKey, dealOpts, finaleOpts,
-           bidsAfter, sayBids, sayPresence, sayRound, cardEl, trickEl,
+           bidsAfter, sayBids, sayPresence, sayRound, sayTrick, cardEl, trickEl,
            sweepTrick, sweepOut, trickIn,
            standings, winner, voteText, justFinished };
 })();

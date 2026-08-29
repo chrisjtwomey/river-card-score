@@ -47,7 +47,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 6. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
 7. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
 8. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
-9. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The TV screen can enter them too, if the dealer's phone is not handy.
+9. **Tricks.** The table counts them as they are taken: after each trick, anybody taps who took it, on their own phone or on the TV screen. Every screen follows — the pills show won against bid, the tally counts the tricks played, a line says who took it — and the last trick scores the round. A wrong tap is undone with **Take back the last trick**.
 10. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
 11. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
 
@@ -180,7 +180,7 @@ The table can play without real cards. In the lobby set **Cards** to *Deal on th
 
 The rules are held on the server, so a phone cannot renege, play out of turn, or play a card it does not hold. What changes on a virtual table:
 
-- The dealer's trick pad is gone, and typing the tricks in is refused.
+- Nobody counts the tricks: the cards count themselves, and a tap that says who took one is refused.
 - Nobody picks the trump. The deck turns it.
 - **Undo last step** deals that hand again, because those cards are gone.
 - The empty seats can be played by bots: see **Bots**.
@@ -789,7 +789,7 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
 - `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a TV screen and a phone; and what the deal and the finish read off the state.
 - `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the TV screen, the table host's phone and the dev page.
-- `public/round.js` — the round in play: the round line, the bids as they land, the dealer's trick pad, the pads for a seat with nobody behind it, and the winner. Each widget takes the element it draws into and a view of who is looking.
+- `public/round.js` — the round in play: the round line, the bids as they land, the count of tricks taken, the pads for a seat with nobody behind it, and the winner. Each widget takes the element it draws into and a view of who is looking.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
 - `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
 - `public/accolades.js` — what each player is remembered for, worked out from the scorecard.
@@ -806,7 +806,7 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `android/tools/build-local.sh` — the same build on this machine, no runner.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
-- `public/play.html`, `play.js` — player phone: your bid pad, the trick pad when you deal, standings, and the scorecard.
+- `public/play.html`, `play.js` — player phone: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
 - `public/styles.css` — shared styles, light and dark.
 

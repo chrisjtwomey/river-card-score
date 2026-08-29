@@ -124,12 +124,8 @@
       <div class="row-actions" id="playout-row" hidden>
         <button class="btn ghost danger" type="button">Auto-play that hand</button>
       </div>
-      <div id="host-tricks" hidden>
-        <div class="entry-rows"></div>
-        <div class="entry-actions">
-          <button class="btn primary" type="button" disabled>Score the round</button>
-        </div>
-      </div>
+      <!-- with real cards the table counts: a row a seat, tap who took the trick -->
+      <div id="host-count" hidden></div>
       <div class="entry-actions">
         <button class="btn ghost" id="btn-bum" type="button" title="Throw the hand in and deal it again">Bum deal</button>
         <button class="btn ghost" id="btn-undo" type="button">Undo last step</button>

@@ -200,13 +200,28 @@ function client(name, url) {
   P[0].send({ t: 'bid', v: 2 }); await wait(100);
   ok(P[0].errors.some(e => /not bidding now/i.test(e)), 'no changes once every bid is in');
 
-  // ---- tricks: dealer only ----
-  P[1].send({ t: 'tricks', values: [1, 1, 0] }); await wait(100);
-  ok(P[1].errors.some(e => /dealer enters/.test(e)), 'a non-dealer cannot enter the tricks');
-  P[0].send({ t: 'tricks', values: [2, 1, 0] }); await wait(100);
-  ok(P[0].errors.some(e => /must total 2/.test(e)), 'tricks that do not total the hand are refused');
-  P[0].send({ t: 'tricks', values: [1, 1, 0] }); await wait(150);
-  ok(host.state.idx === 1 && host.state.phase === 'bid', 'round 1 scored, round 2 bidding');
+  // ---- tricks: counted one at a time, by anybody at the table ----
+  ok(host.state.play && host.state.play.log && host.state.play.won.join() === '0,0,0',
+     'the count opens with the cards: nobody has taken a trick  got ' + JSON.stringify(host.state.play));
+  P[1].errors.length = 0;
+  P[1].send({ t: 'trick', p: 7 }); await wait(100);
+  ok(P[1].errors.some(e => /no such seat/i.test(e)), 'a trick goes to a seat at the table');
+  P[1].send({ t: 'trick', p: 0 }); await wait(100);
+  ok(host.state.play.won.join() === '1,0,0' && host.state.play.last.winner === 0,
+     'a player who is not the dealer counts a trick  got ' + host.state.play.won.join());
+  P[2].errors.length = 0;
+  P[2].send({ t: 'trickback' }); await wait(100);
+  ok(host.state.play.won.join() === '0,0,0' && host.state.play.last === null, 'and another takes it back');
+  P[2].send({ t: 'trickback' }); await wait(100);
+  ok(P[2].errors.some(e => /no trick to take back/i.test(e)), 'once only');
+  host.send({ t: 'trick', p: 0 }); await wait(100);
+  ok(host.state.play.won.join() === '1,0,0', 'the host screen counts one too');
+  ok(host.state.idx === 0 && host.state.phase === 'tricks', 'and the round waits for the rest');
+  P[0].send({ t: 'trick', p: 1 }); await wait(150);
+  ok(host.state.idx === 1 && host.state.phase === 'bid', 'the last trick scores the round: round 2 bidding');
+  ok(JSON.stringify(host.state.rounds[0].tricks) === '[1,1,0]',
+     'with the tricks as counted  got ' + JSON.stringify(host.state.rounds[0].tricks));
+  ok(host.state.play === null, 'and the count is over');
   ok(JSON.stringify(host.state.totals) === '[11,11,0]', 'scores: 11 / 11 / 0  got ' + JSON.stringify(host.state.totals));
 
   const r2 = host.state.rounds[1];
@@ -222,7 +237,9 @@ function client(name, url) {
   // ---- undo ----
   host.send({ t: 'undo' }); await wait(120);
   ok(host.state.idx === 0 && host.state.phase === 'tricks', 'undo reopens the tricks of round 1');
-  P[0].send({ t: 'tricks', values: [0, 1, 1] }); await wait(120);
+  ok(host.state.play && host.state.play.won.join() === '0,0,0', 'to be counted again from nothing');
+  P[0].send({ t: 'trick', p: 1 }); await wait(80);
+  P[0].send({ t: 'trick', p: 2 }); await wait(120);
   ok(JSON.stringify(host.state.totals) === '[0,11,11]', 'rescored after undo  got ' + JSON.stringify(host.state.totals));
 
   // ---- bum deal ----
@@ -314,7 +331,7 @@ function client(name, url) {
     // one card, one bid of 1: screw the dealer leaves the dealer only 1
     seats[seats[0].state.turn].send({ t: 'bid', v: 1 }); await wait(120);
     ok(seats[0].state.phase === 'tricks', 'and the bidding runs without one');
-    seats[r.dealer].send({ t: 'tricks', values: [1, 0] }); await wait(140);
+    seats[1 - r.dealer].send({ t: 'trick', p: 0 }); await wait(140);     // whoever saw it
     ok(seats[0].state.idx === 1, 'and the round scores');
     seats[0].send({ t: 'undo' }); await wait(120);
     ok(seats[0].state.idx === 0 && seats[0].state.phase === 'tricks', 'the table host can go back');
@@ -473,8 +490,8 @@ function client(name, url) {
     ok(P[0].state.hand.length === P[0].state.rounds[1].cards, 'the next hand is dealt at once');
 
     vh.errors.length = 0;
-    vh.send({ t: 'tricks', values: [1, 1, 1] }); await wait(140);
-    ok(vh.errors.some((e) => /count themselves/.test(e)), 'nobody may type the tricks in');
+    vh.send({ t: 'trick', p: 0 }); await wait(140);
+    ok(vh.errors.some((e) => /count themselves/.test(e)), 'nobody may count a trick by hand');
 
     // ---- a hand survives a phone going away and coming back ----
     const held = P[2].state.hand.join(',');

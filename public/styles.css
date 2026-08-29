@@ -220,10 +220,20 @@ body.host .acc-note{font-size:17px}
 .tally{font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--ink-dim)}
 .tally.ok{background:rgba(31,122,77,.16);color:var(--good)}
 .tally.bad{background:rgba(179,38,30,.14);color:var(--red)}
-.entry-rows{display:flex;flex-direction:column;gap:10px}
-.entry-row{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
-.entry-row.dealer{border-color:var(--gold)}
-.entry-row .who{display:flex;align-items:center;gap:8px;font-weight:650;font-size:15px}
+/* the tricks, counted as they are taken: a row a seat, the row a button */
+.count-rows{display:flex;flex-direction:column;gap:8px}
+.countrow{
+  display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;
+  font:inherit;color:var(--ink);text-align:left;cursor:pointer;
+  background:var(--bg);border:1px solid var(--line);border-radius:12px;
+}
+.countrow .nm{flex:1;font-weight:700;font-size:16px}
+.countrow .won{font-weight:800;font-variant-numeric:tabular-nums}
+.countrow.took{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+.countrow.took .won{color:var(--gold)}
+.count-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+body.host .countrow{font-size:20px;padding:14px 18px}
+body.host .countrow .nm{font-size:20px}
 .badge{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--gold);color:#1c1a12}
 .badge.soft{background:var(--chip);color:var(--ink-dim)}
 .chips{display:flex;gap:6px;flex-wrap:wrap}

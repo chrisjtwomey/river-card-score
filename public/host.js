@@ -7,6 +7,7 @@ let ST = null;          // last state from the server
 let dealtKey = null;    // the round already dealt on screen
 let lastPhase = null;   // to catch the moment the game ends
 let lastDone = null;    // rounds scored, to catch a round landing
+let lastTrick = null;   // tricks counted, to catch one landing
 let lastTotals = null;  // seat id -> score, to show what a round paid
 let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addr = null;        // the address shown in the QR code
@@ -197,7 +198,7 @@ function render() {
   $('#subtitle').textContent = (SHOW ? 'Showing ' : '') + (lobby
     ? `Table ${ST.code} · waiting to start`
     : `Table ${ST.code} · ${ST.seats.length} players`);
-  if (lobby) { Deal.close(); dealtKey = null; lastTotals = lastBids = lastDone = null; renderLobby(); }
+  if (lobby) { Deal.close(); dealtKey = null; lastTotals = lastBids = lastDone = lastTrick = null; renderLobby(); }
   else renderGame();
 }
 
@@ -251,6 +252,7 @@ function renderGame() {
   Round.playFor($('#playfor-row'), ST, view());
   renderStandings();
   lastDone = Table.sayRound(ST, -1, lastDone);    // what the round paid everybody
+  lastTrick = Table.sayTrick(ST, lastTrick);      // a trick counted, with real cards
   renderScorecard();
   Round.winner($('#winner-panel'), ST);
 }
@@ -271,7 +273,7 @@ function renderTurn(r, n) {
   const vw = view();
   Round.bidFor($('#bidfor-pad'), ST, r, vw);
   Round.playout($('#playout-row'), ST, vw);
-  Round.trickPad($('#host-tricks'), ST, r, vw);
+  Round.trickCount($('#host-count'), ST, r, vw);
   lastBids = Round.bidStrip($('#bidstrip'), ST, r, vw, lastBids);
   // While the deal is up, the bid stamps onto that player's card instead.
   if (lastBids && !Deal.isOpen('deal')) Table.sayBids(ST, r, lastBids.landed, -1);
@@ -308,8 +310,9 @@ function renderTurn(r, n) {
     return;
   }
   $('#turn-title').textContent = 'Tricks won';
-  $('#turn-hint').textContent = `${leader} leads the first trick. ${ST.seats[r.dealer].name} enters the tricks` + (SHOW ? '.'
-    : ', or you can enter them here. Everybody starts on 0, so only tap the players who won tricks.');
+  $('#turn-hint').textContent = `${leader} leads the first trick. ` + (SHOW
+    ? 'The table taps who takes each trick.'
+    : 'Tap who takes each trick, here or on any phone. The last one scores the round.');
 }
 
 // The table, when the deck is virtual: the trick in the middle, and what each

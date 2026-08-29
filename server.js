@@ -138,7 +138,9 @@ function broadcast(room) {
   const shared = JSON.stringify(base);
   room.sockets.forEach((ws) => {
     if (ws.readyState !== 1) return;
-    const seat = (room.play && ws.ctx && ws.ctx.seatId) ? seatIndex(room, ws.ctx.seatId) : -1;
+    // Only a deck dealt on the phones has hands to give; the count a table
+    // with real cards keeps in the same place has none.
+    const seat = (room.play && room.play.hands && ws.ctx && ws.ctx.seatId) ? seatIndex(room, ws.ctx.seatId) : -1;
     if (seat < 0) { ws.send(shared); return; }
     base.hand = room.play.hands[seat];
     ws.send(JSON.stringify(base));
@@ -168,7 +170,7 @@ function restore() {
     /* A trick was being held up for the table to read when the server stopped.
        It has been read by now, so the table moves on rather than sitting on a
        hold that nothing is left to end. */
-    if (room.phase === 'tricks' && room.play && room.play.turn === null && room.play.last) {
+    if (G.virtual(room) && room.phase === 'tricks' && room.play && room.play.turn === null && room.play.last) {
       Deck.settleTrick(room, room.play.last.winner);
     }
     rooms.set(room.code, room);

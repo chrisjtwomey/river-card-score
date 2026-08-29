@@ -1,5 +1,5 @@
 'use strict';
-/* Player view: your bid pad, and the trick pad when you are the dealer. */
+/* Player view: your bid pad, and the count of tricks as they are taken. */
 
 const $ = (s) => document.querySelector(s);
 
@@ -10,6 +10,7 @@ let lastBids = null;           // { key, bids, turn }, to catch a bid landing
 let dealtKey = null;           // the round already dealt on this phone
 let lastPhase = null;          // to catch the moment the game ends
 let lastDone = null;           // rounds scored, to catch a round landing
+let lastTrick = null;          // tricks counted, to catch one landing
 let joinAddr = null;           // the address the others should open
 let seenWho = null;            // who was at the table on the state before
 
@@ -78,7 +79,7 @@ function render() {
   $('#lobby').hidden = !lobby;
   $('#game').hidden = lobby;
   renderCaptain(lobby);
-  if (lobby) { lastTotals = lastBids = lastDone = null; return renderLobby(me); }
+  if (lobby) { lastTotals = lastBids = lastDone = lastTrick = null; return renderLobby(me); }
 
   const r = ST.rounds[ST.idx] || null;
   tableWatch(r);
@@ -106,6 +107,7 @@ function render() {
   renderStandings(me);
   // What the round paid, unless the felt is up and saying it itself.
   lastDone = Table.sayRound(ST, me, lastDone, virtual && Felt.shown());
+  lastTrick = Table.sayTrick(ST, lastTrick);      // a trick counted, with real cards
   UI.measureSticky();
   Table.scorecard('#scorecard', ST, me);
 }
@@ -306,7 +308,7 @@ function renderTurn(r, me) {
   const panel = $('#turn-panel');
   const bidPad = $('#bid-pad');
   bidPad.hidden = true;
-  Round.trickPad($('#trick-pad'), ST, r, view());
+  Round.trickCount($('#trick-count'), ST, r, view());
   panel.classList.remove('mine', 'amend');
 
   if (ST.phase === 'bid') {
@@ -371,12 +373,13 @@ function renderTurn(r, me) {
     if (p && p.turn === me) panel.classList.add('mine');
     return;
   }
-  if (r.dealer !== me) {
-    $('#turn-text').textContent = `${leads} the first trick. ${ST.seats[r.dealer].name} enters the tricks.`;
-    return;
-  }
+  // With real cards the table counts, and that is everybody's job, so the
+  // panel is lit for everybody.
+  const taken = ST.play && ST.play.log ? ST.play.log.length : 0;
   panel.classList.add('mine');
-  $('#turn-text').textContent = `${leads} the first trick. Enter the tricks each player won.`;
+  $('#turn-text').textContent = taken === 0
+    ? `${leads} the first trick. Tap who takes it.`
+    : `Trick ${Math.min(taken + 1, r.cards)} of ${r.cards}. Tap who takes it.`;
 }
 
 function renderBidStrip(r) {
