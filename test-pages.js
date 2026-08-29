@@ -2037,6 +2037,17 @@ part('bidding for a seat that is not there, and leaving');
     ok(miss && miss.children.length === 5, 'with every choice of a rule  got ' + (miss && miss.children.length));
     ok(form.querySelector('#cfg-trump-row') && form.querySelector('#cfg-trump-row').hidden === false,
        'and the trump switch, since this table deals the cards');
+    /* The order is what a table sets first: the cards before anything, then
+       the shape of the game, what a bid pays, the variants, and last the
+       prizes, which change no play at all. Each kind in a group of its own. */
+    const groups = form.children.filter((g) => g.classList.contains('rules-group'));
+    ok(groups.length === 5, 'the rules stand in groups, not one long form  got ' + groups.length);
+    ok(!!groups[0].querySelector('#cfg-deck'), 'what the cards are comes first');
+    ok(!!groups[1].querySelector('#cfg-max') && !!groups[1].querySelector('#cfg-pattern'),
+       'then the shape of the game');
+    ok(!!groups[2].querySelector('#cfg-miss'), 'then what a bid pays');
+    ok(!!groups[3].querySelector('#cfg-screw'), 'then the variants');
+    ok(!!groups[4].querySelector('#cfg-accolade-count'), 'and the prizes last');
     P.socks[0].sent.length = 0;
     max.value = '6'; max.fire('change');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"max":"6"}}',

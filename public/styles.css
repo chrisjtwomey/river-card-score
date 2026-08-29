@@ -115,10 +115,23 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
   font:inherit;font-weight:500;color:var(--ink);background:var(--bg);
   border:1px solid var(--line);border-radius:10px;padding:10px 11px;width:100%;
 }
-.field small{font-weight:500}
-.toggles{display:flex;flex-direction:column;gap:8px}
+.field small{font-weight:500;white-space:pre-line}
+.toggles{display:flex;flex-direction:column;gap:14px}
 .switch{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
 .switch input{width:18px;height:18px;accent-color:var(--felt)}
+.switchrow{display:flex;flex-direction:column;gap:3px}
+/* the line under a switch sits under its words, not under its box */
+.switchrow small{font-size:13px;font-weight:500;color:var(--ink-dim);padding-left:28px}
+
+/* The rules, whoever is reading them: one column with room between one rule
+   and the next, and a hairline where one kind of rule gives way to another --
+   the cards, the shape of the game, what a bid pays, the variants, the prizes.
+   They used to stack with no space at all, which read as one long form. */
+.rules-form{display:flex;flex-direction:column}
+.rules-group{display:flex;flex-direction:column;gap:16px;padding:16px 0}
+.rules-group:first-child{padding-top:0}
+.rules-group:last-child{padding-bottom:0}
+.rules-group + .rules-group{border-top:1px solid var(--line)}
 
 /* ---------- setup players ---------- */
 .player-list{display:flex;flex-direction:column;gap:8px}

@@ -214,23 +214,32 @@ const Lobby = (function () {
   // fixed line under it. The lines that depend on the rules are written in
   // rulesForm, into `<id>-hint`.
   const RULES = [
-    { id: 'cfg-max', key: 'max', kind: 'number', label: 'Biggest hand (cards)', min: 1 },
+    { id: 'cfg-deck', key: 'deck', kind: 'select', label: 'Cards' },
+    { id: 'cfg-max', key: 'max', kind: 'number', label: 'Biggest hand', min: 1 },
     { id: 'cfg-ones', key: 'ones', kind: 'number', label: 'Rounds of 1 card', min: 1, max: 8,
       hint: 'One per player, so everybody deals it.' },
     { id: 'cfg-pattern', key: 'pattern', kind: 'select', label: 'Round pattern' },
     { id: 'cfg-bonus', key: 'bonus', kind: 'select', label: 'Exact bid pays' },
     { id: 'cfg-miss', key: 'miss', kind: 'select', label: 'Missed bid pays' },
-    { id: 'cfg-screw', key: 'screw', kind: 'check', label: 'Screw the dealer (bids must not total the tricks)' },
+    { id: 'cfg-screw', key: 'screw', kind: 'check', label: 'Screw the dealer',
+      hint: 'The dealer may not bid the number that would make the bids total the tricks.' },
     { id: 'cfg-trump', key: 'trump', kind: 'check', label: 'Turn a card for trumps' },
-    { id: 'cfg-deck', key: 'deck', kind: 'select', label: 'Cards' },
     { id: 'cfg-accolade-count', key: 'accoladeCount', kind: 'select', label: 'Accolades drawn',
       hint: 'Prizes for how you played, drawn at random when the game ends.' },
-    { id: 'cfg-accolade-pay', key: 'accoladePay', kind: 'select', label: 'Each one pays',
-      hint: 'Added before the winner is known.' },
+    { id: 'cfg-accolade-pay', key: 'accoladePay', kind: 'select', label: 'Each one pays' },
   ];
-  // How the fields sit: two abreast where they read as a pair.
-  const LAYOUT = [['cfg-max', 'cfg-ones'], 'cfg-pattern', ['cfg-bonus', 'cfg-miss'],
-                  { toggles: ['cfg-screw', 'cfg-trump'] }, 'cfg-deck', ['cfg-accolade-count', 'cfg-accolade-pay']];
+  /* How the fields sit: groups, a hairline between one and the next, and two
+     abreast inside a group where they read as a pair. What kind of cards are
+     being played comes first -- it decides what everybody at the table will
+     be doing -- then the shape of the game, what a bid pays, the two
+     variants, and last the prizes at the end, which change no play at all. */
+  const LAYOUT = [
+    ['cfg-deck'],
+    [['cfg-max', 'cfg-ones'], 'cfg-pattern'],
+    [['cfg-bonus', 'cfg-miss']],
+    [{ toggles: ['cfg-screw', 'cfg-trump'] }],
+    [['cfg-accolade-count', 'cfg-accolade-pay']],
+  ];
   const MISS_SAID = {
     atleast: 'Over the bid pays the tricks won; short of it pays 0.',
     atleastdiff: 'Over the bid pays the tricks won; short of it pays minus 1 a trick.',
@@ -250,13 +259,16 @@ const Lobby = (function () {
 
   function field(r) {
     if (r.kind === 'check') {
+      const row = make('div', 'switchrow');
+      row.id = r.id + '-row';               // the row is what a rule hides itself by
       const lab = make('label', 'switch');
-      lab.id = r.id + '-row';
       const el = make('input');
       el.type = 'checkbox';
       el.id = r.id;
       lab.append(el, make('span', '', r.label));
-      return lab;
+      row.appendChild(lab);
+      if (r.hint) row.appendChild(make('small', '', r.hint));
+      return row;
     }
     const lab = make('label', 'field');
     lab.appendChild(make('span', '', r.label));
@@ -282,11 +294,16 @@ const Lobby = (function () {
   }
 
   function buildRules(root) {
-    LAYOUT.forEach((row) => {
-      if (typeof row === 'string') { root.appendChild(field(byId(row))); return; }
-      const box = make('div', Array.isArray(row) ? 'grid2' : 'toggles');
-      (Array.isArray(row) ? row : row.toggles).forEach((id) => box.appendChild(field(byId(id))));
-      root.appendChild(box);
+    root.classList.add('rules-form');
+    LAYOUT.forEach((rows) => {
+      const group = make('div', 'rules-group');
+      rows.forEach((row) => {
+        if (typeof row === 'string') { group.appendChild(field(byId(row))); return; }
+        const box = make('div', Array.isArray(row) ? 'grid2' : 'toggles');
+        (Array.isArray(row) ? row : row.toggles).forEach((id) => box.appendChild(field(byId(id))));
+        group.appendChild(box);
+      });
+      root.appendChild(group);
     });
   }
 
@@ -324,7 +341,9 @@ const Lobby = (function () {
     const cards = Game.schedule(c.max, c.pattern, c.ones);
     text(root, '#cfg-pattern-hint', `${cards.length} rounds: ${cards.join(' ')}`);
     const ex = (w) => Game.roundScore(2, w, c);
-    text(root, '#cfg-miss-hint', `${MISS_SAID[c.miss] || ''} Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`);
+    // The rule, then the same rule counted out: two lines, not one long one.
+    text(root, '#cfg-miss-hint',
+      `${MISS_SAID[c.miss] || ''}\nBid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`);
   }
 
   return { seats, bots, startButton, rulesForm };
