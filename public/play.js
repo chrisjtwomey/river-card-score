@@ -103,9 +103,6 @@ function render() {
   renderBidStrip(r);
   renderStandings(me);
   UI.measureSticky();
-  const sc = document.querySelector('.scorecard-panel');
-  sc.classList.toggle('pinned', virtual);  // the card is the page here: never folded
-  if (virtual) sc.open = true;
   Table.scorecard('#scorecard', ST, me);
 }
 

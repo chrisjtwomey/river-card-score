@@ -818,7 +818,6 @@ body.player .turn-panel.mine{box-shadow:0 0 0 2px rgba(184,134,43,.22)}
 body.player .winner-panel{box-shadow:0 0 0 2px rgba(184,134,43,.2)}
 body.player .standings-panel{box-shadow:var(--shadow)}
 /* On a virtual table the scorecard is the page: it is never folded away. */
-.scorecard-panel.pinned>summary{display:none}
 
 .code-input{font-size:28px;font-weight:800;letter-spacing:.32em;text-align:center;text-transform:uppercase}
 
@@ -923,14 +922,6 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 .vote-text{font-size:15px;font-weight:650}
 .bum-row{justify-content:flex-end}
 
-/* player scorecard drawer */
-.scorepanel > summary{
-  cursor:pointer;font-size:15px;font-weight:650;text-transform:uppercase;
-  letter-spacing:.08em;color:var(--ink-dim);list-style:none;
-}
-.scorepanel > summary::-webkit-details-marker{display:none}
-.scorepanel > summary::after{content:' ▾';color:var(--ink-dim)}
-.scorepanel[open] > summary::after{content:' ▴'}
 td.mecol,th.mecol{background:rgba(184,134,43,.10)}
 th.mecol{color:var(--gold)}
 

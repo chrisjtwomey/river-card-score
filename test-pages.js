@@ -1547,9 +1547,7 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.pick('#turn-panel').hidden === true, 'no turn panel: the felt asks for the bid');
     ok(P.pick('#bids-panel').hidden === true, 'no bids strip: the felt stamps them');
     ok(P.pick('#leave-row').hidden === false, 'leaving is at the top of the page');
-    const sc = P.dom.document.querySelector('.scorecard-panel');
-    ok(sc && sc.classList.contains('pinned') && sc.open === true,
-       'and the scorecard is open, not folded away');
+    ok(P.pick('#scorecard').hidden !== true, 'and the scorecard is drawn on a plain panel, never folded away');
   }
 
   {   // the rules form is built from one list, and a change goes back as one rule
