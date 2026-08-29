@@ -658,7 +658,13 @@ part('who may send what, and when');
   ok(/count themselves/.test(t.say(1, { t: 'trickback' }) || ''), 'and takes them back itself');
   ok(/no hand in play/.test(t.say(1, { t: 'play', card: 'AS' }) || ''), 'no card goes down before the bids are in');
   t.bidAll(1);
-  ok(/not bidding now/.test(t.say(1, { t: 'dealt' }) || ''), 'and no phone is dealt to once they are');
+  /* A phone says its deal has been watched. It can arrive after the bidding
+     has closed -- the table bid that seat's hand while the cards were still in
+     the air, or the phone is coming back to a round that moved on -- and it is
+     nothing to record then, not something to tell a player off for. */
+  t.casts.n = 0;
+  ok(t.say(1, { t: 'dealt' }) === null, 'a deal watched after the bids are in is quiet, not a refusal');
+  ok(t.casts.n === 0, 'and says nothing to the table either');
 }
 
 {
