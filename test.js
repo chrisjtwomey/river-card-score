@@ -42,45 +42,6 @@ function client(name, url) {
   const g = await fetch(`http://127.0.0.1:${PORT}/game.js`);
   ok(g.status === 200 && (await g.text()).includes('forbiddenBid'), 'GET /game.js serves the shared rules');
 
-  /* ---- the rules the server and every screen ask alike ----
-     Whose turn it is, which seats the table plays itself, and which one seat
-     the table is stopped on with nobody behind it. Each used to be worked out
-     again wherever it was needed, and the copies disagreed. */
-  {
-    const G = require(path + '/game.js');
-    const seats = (n) => Array.from({ length: n }, (_, i) => ({ id: 's' + i, name: 'P' + i, online: true }));
-    const v = { deck: 'virtual' }, real = { deck: 'physical' };
-    const round = (dealer, bids) => ({ cards: 3, dealer, trump: null, bids, tricks: null });
-    let st = { phase: 'bid', cfg: v, seats: seats(3), rounds: [round(0, [null, null, null])], idx: 0, play: null };
-    ok(G.onTurn(st) === 1, 'bidding: the seat left of the dealer is on turn');
-    st.rounds[0].bids = [null, 2, 0];
-    ok(G.onTurn(st) === 0, 'and the dealer bids last');
-    st = { phase: 'tricks', cfg: v, seats: seats(3), rounds: [round(0, [1, 1, 0])], idx: 0, play: { turn: 2 } };
-    ok(G.onTurn(st) === 2, 'playing: the seat on play is on turn');
-    st.play.turn = null;
-    ok(G.onTurn(st) === null, 'and nobody is, while a trick is held up');
-    st = { phase: 'tricks', cfg: real, seats: seats(3), rounds: [round(0, [1, 1, 0])], idx: 0, play: null };
-    ok(G.onTurn(st) === null, 'with real cards nobody is on turn: typing the tricks in is not a turn');
-    ok(G.onTurn({ phase: 'lobby', cfg: v, seats: seats(2), rounds: [], idx: 0 }) === null, 'nor is anybody in the lobby');
-    ok(G.tablePlays({ bot: true }, real) && G.tablePlays({ bot: true }, v), 'the table plays a bot at either kind of table');
-    ok(G.tablePlays({ left: true }, v), 'and a seat that left, where it deals the cards');
-    ok(!G.tablePlays({ left: true }, real), 'but not where the cards are real: nobody can hold that hand');
-    ok(!G.tablePlays({ online: false }, v), 'a phone that went quiet is waited for');
-    st = { phase: 'bid', cfg: real, seats: seats(3), rounds: [round(0, [null, null, null])], idx: 0, play: null };
-    ok(G.awaySeat(st) === -1, 'everybody here: no seat is away');
-    st.seats[1].online = false;
-    ok(G.awaySeat(st) === 1, 'the seat on turn with nobody behind it is the away seat');
-    st.seats[1].left = true;
-    ok(G.awaySeat(st) === 1, 'a seat that left a real-cards table still needs somebody to bid for it');
-    st.cfg = v;
-    ok(G.awaySeat(st) === -1, 'where the table can play that hand, it is not away');
-    st.seats[1] = { id: 's1', name: 'Bot', online: true, bot: true };
-    ok(G.awaySeat(st) === -1, 'and a bot is never away');
-    ok(G.firstLeader(round(2, null), 3) === 0, 'the seat left of the dealer leads');
-    ok(G.totalsWithBonus({ bonus: 10, miss: 'atleast' },
-                         [{ cards: 1, dealer: 0, bids: [1, 0], tricks: [1, 0] }], 2, [5, 0]).join() === '16,10',
-       'the accolades are paid into the totals');
-  }
   const bad = await fetch(`http://127.0.0.1:${PORT}/../server.js`);
   ok(bad.status !== 200, 'path traversal is blocked (' + bad.status + ')');
 
@@ -351,50 +312,6 @@ function client(name, url) {
     ok(solo.state.code === code4, 'the code is the one the QR shows');
   }
 
-  // ---- the accolades, worked out from a scorecard alone ----
-  {
-    const G = require(path + '/game.js');
-    global.document = { createElement: () => ({ append() {} }) };
-    eval(require('fs').readFileSync(path + '/public/accolades.js', 'utf8') + '\nglobal.Accolades = Accolades;');
-    const cfg = { bonus: 10, miss: 'atleast' };
-    const card = (cards, bids, tricks) => ({ cards, dealer: 0, trump: null, bids, tricks });
-    const rounds = [
-      card(2, [2, 0, 1, 0], [2, 0, 0, 0]),
-      card(2, [1, 1, 0, 0], [0, 1, 1, 0]),
-      card(1, [0, 1, 0, 0], [0, 1, 0, 0]),
-      card(1, [1, 0, 0, 0], [1, 0, 0, 0]),
-    ];
-    const got = Accolades.list(rounds, 4, (b, w) => G.roundScore(b, w, cfg));
-    const find = (k) => got.find((a) => a.key === k);
-    const who = (k) => (find(k) ? find(k).who.join(',') : 'none');
-    ok(who('fearless') === '0', 'the biggest total bid is the most fearless  got ' + who('fearless'));
-    ok(who('careful') === '3', 'and the smallest is the most careful  got ' + who('careful'));
-    ok(who('tricks') === '0', 'the most tricks won is its own accolade  got ' + who('tricks'));
-    ok(who('zeros') === '3', 'a player who bids nothing and takes nothing is the zero hero');
-    ok(who('steady') === '1,3', 'an accolade two players earn names them both  got ' + who('steady'));
-    ok(find('steady').note === 'never missed a bid', 'and it says what they did  got ' + find('steady').note);
-    ok(!got.some((a) => a.key === 'made'), 'bang on is not an accolade any more');
-
-    // three of them are drawn, and each pays whoever earned it
-    const three = Accolades.pick(got, 3);
-    ok(three.length === 3 && three.every((a) => got.indexOf(a) >= 0), 'three are drawn from the ones earned');
-    ok(new Set(three.map((a) => a.key)).size === 3, 'and never the same one twice');
-    const seen = new Set();
-    for (let i = 0; i < 40; i++) Accolades.pick(got, 3).forEach((a) => seen.add(a.key));
-    ok(seen.size > 3, 'the draw is not always the same three  got ' + seen.size + ' different');
-    ok(Accolades.pick(got.slice(0, 2), 3).length === 2, 'a table that earned two gets two');
-    const paid = Accolades.bonus([{ who: [0] }, { who: [1, 3] }], 4, 10);
-    ok(paid.join(',') === '10,10,0,10', 'each seat is paid for what it was given  got ' + paid.join(','));
-    ok(Accolades.bonus([{ who: [0] }], 4, 0).join(',') === '0,0,0,0', 'and nothing when they pay nothing');
-    ok(Accolades.list(rounds.slice(0, 2), 4, (b, w) => G.roundScore(b, w, cfg)).length === 0,
-       'a game too short to judge gets none');
-    const level = [card(1, [0, 0, 0, 0], [1, 0, 0, 0]), card(1, [0, 0, 0, 0], [0, 1, 0, 0]),
-                   card(1, [0, 0, 0, 0], [0, 0, 1, 0])];
-    ok(!Accolades.list(level, 4, (b, w) => G.roundScore(b, w, cfg)).some((a) => a.key === 'fearless'),
-       'and nothing is awarded where every seat is level');
-    delete global.document;
-  }
-
   // ---- a table that plays with a virtual deck ----
   {
     const vh = client('vhost'); await vh.ready;
@@ -659,7 +576,11 @@ function client(name, url) {
     const many = d.state.rounds.filter(full).length;
     ok(many >= 1 && many <= d.state.rounds.length, 'fillCard with no number plays a random number of rounds');
 
-    // ---- the rules of a trick, with the cards stacked on purpose ----
+    /* ---- a hand stacked on purpose, played over real sockets ----
+       What the rules of a trick are is settled in test-rules.js, against the
+       deck itself. What is proved here is the wire: hands forced onto a table
+       of stand-ins reach the phones that resume into it, and a card the rules
+       refuse comes back as a refusal to the one socket that played it. */
     {
       d.send({ t: 'dev', action: 'setup', players: 3 }); await wait(200);
       const seats = d.hello.seats;
@@ -668,7 +589,7 @@ function client(name, url) {
       d.send({ t: 'dev', action: 'startGame' }); await wait(200);
 
       // The lead holds hearts. The next player holds a heart and two diamonds,
-      // so they must follow. The last holds no heart, and a diamond is trump.
+      // so they must follow.
       const dealer = d.state.rounds[0].dealer;
       const lead = (dealer + 1) % 3, second = (lead + 1) % 3, third = (second + 1) % 3;
       const stack = [];
@@ -692,16 +613,8 @@ function client(name, url) {
       at[second].errors.length = 0;
       at[second].send({ t: 'play', card: 'AD' }); await wait(150);
       ok(at[second].errors.some((e) => /must follow/.test(e)),
-         'a player holding the suit led may not play another');
+         'a card the rules refuse comes back to the socket that played it');
       ok(at[0].state.play.trick.length === 1, 'and the refused card stays in the hand');
-      at[second].send({ t: 'play', card: '9H' }); await wait(150);
-      at[third].errors.length = 0;
-      at[third].send({ t: 'play', card: 'QD' }); await wait(500);
-      ok(at[third].errors.length === 0, 'a player with none of the suit led may play anything');
-      ok(at[0].state.play.won[third] === 1, 'a trump beats the highest card of the suit led');
-      ok(at[0].state.play.last && at[0].state.play.last.winner === third, 'the table is told who won it');
-      ok(at[0].state.play.turn === third, 'and the winner leads the next trick');
-      ok(at[0].state.play.counts.join(',') === '2,2,2', 'every hand is one card lighter');
       at.forEach((c) => c.ws.close());
     }
 
