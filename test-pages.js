@@ -1359,9 +1359,9 @@ part('the front page, and the screen');
       { 'rcs:tables:v1': JSON.stringify([{ code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' }]) },
       '?gone=AAAA');
     P.start();
-    ok(/AAAA is over/.test(P.pick('#join-err').textContent),
+    ok(/AAAA is over/.test(P.pick('#join-note').textContent),
        'a table that has ended says so, instead of a silent bounce  got '
-       + JSON.stringify(P.pick('#join-err').textContent));
+       + JSON.stringify(P.pick('#join-note').textContent));
     ok(!P.Net.tables().some((t) => t.code === 'AAAA'), 'and it is not offered again');
   }
 

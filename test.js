@@ -122,6 +122,7 @@ function client(name, url) {
 
   const dupe = client('dupe'); await dupe.ready; dupe.send({ t: 'join', code, name: 'amy' }); await wait(120);
   ok(dupe.errors.some(e => /taken/.test(e)), 'duplicate name is refused');
+  ok(dupe.errors.every(e => /^[A-Z].*\.$/.test(e)), 'and a refusal is a sentence, like everything a page says  got ' + JSON.stringify(dupe.errors));
 
   // rules: 2 cards down to 1, three 1-card rounds => 2,1,1,1
   P[0].send({ t: 'config', patch: { max: 2, pattern: 'down', ones: 3 } }); await wait(120);
@@ -130,10 +131,10 @@ function client(name, url) {
   // the first player to sit down runs the table
   ok(host.state.captainId === P[0].seatId, 'the first player to sit down is the table host');
   P[1].send({ t: 'start' }); await wait(120);
-  ok(P[1].errors.some(e => /only the table host/.test(e)), 'another player cannot start the game');
+  ok(P[1].errors.some(e => /only the table host/i.test(e)), 'another player cannot start the game');
   P[1].errors.length = 0;
   P[1].send({ t: 'config', patch: { max: 9 } }); await wait(100);
-  ok(P[1].errors.some(e => /only the table host/.test(e)), 'and cannot change the rules');
+  ok(P[1].errors.some(e => /only the table host/i.test(e)), 'and cannot change the rules');
 
   P[0].send({ t: 'captain', id: P[2].seatId }); await wait(120);
   ok(host.state.captainId === P[2].seatId, 'the table host can pass it on');
@@ -180,7 +181,7 @@ function client(name, url) {
   ok(host.state.turn === 0, 'dealer bids last');
   P[1].errors.length = 0;
   P[1].send({ t: 'bid', v: 0 }); await wait(100);
-  ok(P[1].errors.some(e => /too late to change/.test(e)), 'too late once the next player has bid');
+  ok(P[1].errors.some(e => /too late to change/i.test(e)), 'too late once the next player has bid');
   ok(host.state.rounds[0].bids[1] === 1, 'the late change did not land');
 
   P[0].send({ t: 'bid', v: 5 }); await wait(100);
@@ -191,7 +192,7 @@ function client(name, url) {
   ok(host.state.phase === 'tricks', 'all bids in, phase is tricks');
   P[0].errors.length = 0;
   P[0].send({ t: 'bid', v: 2 }); await wait(100);
-  ok(P[0].errors.some(e => /not bidding now/.test(e)), 'no changes once every bid is in');
+  ok(P[0].errors.some(e => /not bidding now/i.test(e)), 'no changes once every bid is in');
 
   // ---- tricks: dealer only ----
   P[1].send({ t: 'tricks', values: [1, 1, 0] }); await wait(100);
@@ -433,7 +434,7 @@ function client(name, url) {
     const off = P[(onPlay + 1) % 3];
     off.errors.length = 0;
     off.send({ t: 'play', card: off.state.hand[0] }); await wait(140);
-    ok(off.errors.some((e) => /not your turn/.test(e)), 'a card out of turn is refused');
+    ok(off.errors.some((e) => /not your turn/i.test(e)), 'a card out of turn is refused');
     P[onPlay].errors.length = 0;
     P[onPlay].send({ t: 'play', card: 'AS' + 'X' }); await wait(140);
     ok(P[onPlay].errors.some((e) => /do not hold/.test(e)), 'and a card you do not hold');
@@ -514,7 +515,7 @@ function client(name, url) {
 
     p2.errors.length = 0;
     p2.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } }); await wait(140);
-    ok(p2.errors.some((e) => /only the host/.test(e)) && h.state.phase === 'bid',
+    ok(p2.errors.some((e) => /only the host/i.test(e)) && h.state.phase === 'bid',
        'a player who does not run the table cannot use the dev controls');
 
     h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: ['x', 9] } } }); await wait(140);
@@ -828,7 +829,7 @@ function client(name, url) {
 
     ann.errors.length = 0;
     ann.send({ t: 'chat', text: 'and again' }); await wait(150);
-    ok(ann.errors.some((e) => /one line at a time/.test(e)), 'one socket cannot flood the table');
+    ok(ann.errors.some((e) => /one line at a time/i.test(e)), 'one socket cannot flood the table');
     ok(h.state.chat.length === 2, 'so the flooded line never lands');
 
     await wait(520);
@@ -928,7 +929,7 @@ function client(name, url) {
 
     h.errors.length = 0;
     h.send({ t: 'config', patch: { deck: 'physical' } }); await wait(150);
-    ok(h.errors.some((e) => /take the bots off/.test(e)),
+    ok(h.errors.some((e) => /take the bots off/i.test(e)),
        'a table with bots at it cannot switch to real cards');
     ok(h.state.cfg.deck === 'virtual', 'and the setting does not change');
 
@@ -1226,7 +1227,7 @@ function client(name, url) {
 
     const nowhere = client('nowhere'); await nowhere.ready;
     nowhere.send({ t: 'screen', code: 'ZZZZ' }); await wait(150);
-    ok(nowhere.errors.some((e) => /no table with that code/.test(e)), 'a screen needs a table that exists');
+    ok(nowhere.errors.some((e) => /no table with that code/i.test(e)), 'a screen needs a table that exists');
     nowhere.ws.close(); tv.ws.close(); ann.ws.close(); h.ws.close();
   }
 

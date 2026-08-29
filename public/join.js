@@ -101,13 +101,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return pk;
   });
   const err = (msg) => { $('#join-err').textContent = msg; $('#join-err').hidden = !msg; };
+  // News, not a fault: it is not written in red.
+  const note = (msg) => { $('#join-note').textContent = msg; $('#join-note').hidden = !msg; };
 
   /* Sent back here by a table that is not there any more. Without this the
      player taps Rejoin and lands on this page with nothing said. */
   const gone = new URLSearchParams(location.search).get('gone');
   if (gone) {
     Net.forget(gone);
-    err(`Table ${gone.toUpperCase().slice(0, 4)} is over. Join another, or start one.`);
+    note(`Table ${gone.toUpperCase().slice(0, 4)} is over. Join another, or start one.`);
   }
 
   $('#btn-join').addEventListener('click', () => {

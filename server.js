@@ -74,7 +74,15 @@ function pictureOf(code, seatId) {
 // declared before anything that could ask.
 function send(ws, obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 // A bot plays through the same door as a phone and has no socket to be told on.
-function fail(ws, msg) { if (ws) send(ws, { t: 'error', msg }); }
+/* Every refusal leaves here, so this is where it is made a sentence: a
+   capital and a full stop, the same voice the pages use, whichever file the
+   words came from. */
+function sentence(s) {
+  const t = String(s || '').trim();
+  if (!t) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? '' : '.');
+}
+function fail(ws, msg) { if (ws) send(ws, { t: 'error', msg: sentence(msg) }); }
 
 /* ---------------- rooms ---------------- */
 
