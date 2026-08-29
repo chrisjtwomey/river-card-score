@@ -236,7 +236,10 @@ const Stage = (function () {
 
     // The transform rides on the card, but the shadow has to ride on the
     // faces: a filter on the card itself would flatten its 3D, and a card
-    // lying face down would paint a blank front instead of its back.
+    // lying face down would paint a blank front instead of its back. A flat
+    // card with no faces of its own carries the shadow itself.
+    const faces = Array.prototype.slice.call(card.querySelectorAll('.face'));
+    const lit = faces.length ? faces : [card];
     const frames = [
       { transform: flat, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
       { transform: tip, offset: o(UP), easing: 'linear' },
@@ -263,8 +266,7 @@ const Stage = (function () {
       if (off) return;
       drop();
       set = [card.animate(frames, { duration: FLAT })];
-      Array.prototype.forEach.call(card.querySelectorAll('.face'),
-        (f) => set.push(f.animate(glow, { duration: FLAT })));
+      lit.forEach((f) => set.push(f.animate(glow, { duration: FLAT })));
       timer = setTimeout(once, EVERY);
     };
     once();

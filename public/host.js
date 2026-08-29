@@ -321,10 +321,11 @@ function renderTable(r) {
   const panel = $('#table-panel');
   const on = Game.virtual(ST) && ST.phase === 'tricks' && !!r && !!ST.play;
   panel.hidden = !on;
+  // Off, the box is emptied with it: nothing peeks behind a hidden panel.
+  Table.trickEl($('#trick'), on ? ST : Object.assign({}, ST, { play: null }), -1);
   if (!on) return;
   const p = ST.play;
 
-  Table.trickEl($('#trick'), ST, -1);
   $('#table-title').textContent = p.turn === null && p.last
     ? `${ST.seats[p.last.winner].name} wins the trick`
     : p.turn === null ? 'Dealing…' : `${ST.seats[p.turn].name} to play`;

@@ -45,8 +45,10 @@ function makeDom(W, H) {
       let m;
       while ((m = re.exec(String(v)))) { const e = new El(m[1]); e.className = m[2]; this.appendChild(e); }
     }
-    appendChild(c) { c.parentNode = this; this.children.push(c); return c; }
+    // a node has one place: appending one already in the tree moves it, as the DOM does
+    appendChild(c) { if (c.parentNode) c.remove(); c.parentNode = this; this.children.push(c); return c; }
     insertBefore(c, ref) {
+      if (c.parentNode) c.remove();
       c.parentNode = this;
       const i = ref ? this.children.indexOf(ref) : -1;
       if (i < 0) this.children.push(c); else this.children.splice(i, 0, c);
@@ -137,7 +139,7 @@ function load(W, H, motion) {
     wire() {}, update() {},
   };
   const fn = new Function('window', 'document', 'localStorage', 'Game', 'Avatar', 'Finale', 'Chat', 'console',
-    src + '\n; return { UI, Stage, Deal, Felt };');
+    src + '\n; return { UI, Stage, Deal, Felt, Table };');
   return Object.assign({ dom, talk }, fn(dom.window, dom.document, dom.localStorage, Game, Avatar, Finale, Chat,
     { log() {}, info() {}, warn() {}, error(...a) { throw new Error('console.error: ' + a.join(' ')); } }));
 }
@@ -1910,6 +1912,27 @@ part('bidding for a seat that is not there, and leaving');
     ok(S.pick('#host-count').hidden === true, 'a screen that only shows the table does not');
   }
 
+  {   // on a table dealt on the phones the TV waits on a seat with a card back in the trick
+    const H = hostPage('host');
+    const st = table({ away: false }); st.phase = 'tricks'; st.turn = null;
+    st.rounds[0].bids = [1, 1, 0]; st.play.turn = 2;
+    H.feed(st);
+    const box = H.pick('#trick');
+    ok(H.pick('#table-panel').hidden === false, 'the table panel is up in play');
+    const next = box.querySelector('.slot.next');
+    ok(!!next && next.querySelector('.who').textContent === 'Cal', 'and a card back stands for the seat to play  got '
+       + (next ? next.querySelector('.who').textContent : 'none'));
+    H.feed(st);
+    ok(box.querySelector('.slot.next') === next, 'the same seat again keeps its slot');
+    st.play.turn = 0;
+    H.feed(st);
+    ok(box.querySelector('.slot.next') !== next && box.querySelector('.slot.next').querySelector('.who').textContent === 'Ann',
+       'the turn moves, the card back moves with it');
+    const bid = table({ away: false });
+    H.feed(bid);
+    ok(H.pick('#table-panel').hidden === true && !box.querySelector('.slot.next'), 'the bidding: no panel, no card back');
+  }
+
   {   // the end of the game is said once on the page
     const P = playPage(seed, '?c=TEST');
     const st = table({ away: false }); st.cfg.deck = 'physical'; st.phase = 'done'; st.idx = 1; st.turn = null;
@@ -2165,6 +2188,61 @@ part('the seat the table waits on peeks');
       && a.opts.duration === 1050 && !a.off);
     ok(on.length === 1, 'and one peek is on the table: the felt\'s own  got ' + on.length);
   }
+}
+
+/* ---- the seat the table waits on, in the trick ----
+
+   The TV screen is dealt nothing, so during play it has no pile to peek. A
+   card back stands in the trick for the seat to play instead, and peeks the
+   same way. It stays put while the seat is the same, so a state coming in
+   does not start the peek over, and it goes with the turn. */
+part('the seat the table waits on peeks in the trick');
+{
+  const stub = (L) => {
+    const asked = [];
+    L.dom.El.prototype.animate = function (kf, opts) {
+      const a = { el: this, kf, opts: opts || {}, off: false, cancel() { this.off = true; },
+                  commitStyles() {}, pause() {}, play() {}, finish() {}, finished: Promise.resolve() };
+      asked.push(a);
+      return a;
+    };
+    L.dom.El.prototype.getAnimations = () => [];
+    return asked;
+  };
+  const L = load(1280, 720, 'full');
+  const asked = stub(L);
+  const backs = () => asked.filter((a) => /\bback\b/.test(a.el.className) && a.kf[0].transform !== undefined);
+  const live = () => backs().filter((a) => !a.off);
+  const made = stateFor(3, 5, -1, { phase: 'tricks', bids: [1, 1, 1], pturn: 2 });
+  const st = (o) => Object.assign({}, made.ST, { play: Object.assign({}, made.ST.play, o) });
+  const box = L.dom.document.createElement('div');
+  L.Table.trickEl(box, st({ turn: 2 }), -1);
+  const next = box.querySelector('.slot.next');
+  ok(!!next && next.querySelector('.pcard.back') && next.querySelector('.who').textContent === 'P3',
+     'a card back stands in the trick for the seat to play');
+  ok(live().length === 1 && live()[0].kf[0].transform === 'none', 'and it peeks, from flat  got ' + live().length);
+  L.Table.trickEl(box, st({ turn: 2 }), -1);
+  ok(box.querySelector('.slot.next') === next && backs().length === 1, 'the same seat again does not start it over');
+  const first = live()[0];
+  L.Table.trickEl(box, st({ turn: 0, trick: [{ p: 2, card: made.hands[2][0] }] }), -1);
+  ok(first.off, 'the turn moves on: the old back is let go');
+  const slots = box.querySelectorAll('.slot');
+  ok(slots.length === 2 && slots[1].classList.contains('next') && slots[1].querySelector('.who').textContent === 'P1',
+     'and the new seat\'s card back stands after the card played  got ' + slots.map((x) => x.className).join('|'));
+  ok(live().length === 1, 'peeking  got ' + live().length);
+  L.Table.trickEl(box, st({ turn: null, trick: [], last: { winner: 2, trick: [{ p: 2, card: made.hands[2][0] }] } }), -1);
+  ok(!box.querySelector('.slot.next') && live().length === 0, 'a trick taken lies there with nobody on play: no card back');
+  ok(box.querySelector('.slot.won'), 'the card that took it is marked');
+  L.Table.trickEl(box, st({ turn: 1 }), -1);
+  ok(live().length === 1, 'the winner leads: their card back peeks');
+  L.Table.trickEl(box, Object.assign({}, made.ST, { play: null }), -1);
+  ok(box.children.length === 0 && live().length === 0, 'no play, nothing in the box');
+
+  const L2 = load(1280, 720, 'reduced');
+  const asked2 = stub(L2);
+  const box2 = L2.dom.document.createElement('div');
+  L2.Table.trickEl(box2, st({ turn: 2 }), -1);
+  ok(!!box2.querySelector('.slot.next') && asked2.length === 0, 'with reduced motion the card back stands still');
 }
 
 /* ---- tapping the deal away ----

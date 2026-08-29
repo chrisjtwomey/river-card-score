@@ -100,15 +100,17 @@ const Table = (function () {
     return el;
   }
 
-  // The cards on the table: the trick being played, or the one just won.
-  // Only the slots are cleared, never the whole box: a pile on its way out
-  // lives in there too, and it has to see itself off.
+  // The cards on the table: the trick being played, or the one just won, and
+  // a card back where the next one will land, for the seat the table waits
+  // on. Only the slots are cleared, never the whole box: a pile on its way
+  // out lives in there too, and it has to see itself off.
   function trickEl(box, ST, me) {
     const p = ST.play;
-    Array.prototype.forEach.call(box.querySelectorAll(':scope > .slot'), (s) => s.remove());
-    if (!p) return;
-    const held = !p.trick.length && p.last;
-    const cards = held ? p.last.trick : p.trick;
+    Array.prototype.slice.call(box.children).forEach((s) => {
+      if (s.classList.contains('slot') && !s.classList.contains('next')) s.remove();
+    });
+    const held = !!p && !p.trick.length && !!p.last;
+    const cards = !p ? [] : held ? (p.last.trick || []) : p.trick;
     cards.forEach((x) => {
       const slot = document.createElement('div');
       slot.className = 'slot' + (held && p.last.winner === x.p ? ' won' : '');
@@ -119,6 +121,36 @@ const Table = (function () {
       slot.appendChild(who);
       box.appendChild(slot);
     });
+    nextSlot(box, ST, me, p && !held && typeof p.turn === 'number' ? p.turn : null);
+  }
+
+  /* The seat the table waits on: a card back stands where their card will
+     land, and it peeks (Stage.peek) the way that seat's pile peeks on the
+     deal and on the felt -- the one way a screen says who it is waiting on.
+     The slot stays across renders while it is the same seat's, so the peek
+     is not started over on every state that comes in; it goes with the
+     turn, and when nobody is on play. */
+  function nextSlot(box, ST, me, q) {
+    let slot = box.querySelector('.slot.next');
+    if (slot && (q === null || slot._q !== q)) {
+      if (slot._peek) slot._peek.cancel();
+      slot.remove();
+      slot = null;
+    }
+    if (q === null) return;
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.className = 'slot next';
+      slot._q = q;
+      const back = document.createElement('span');
+      back.className = 'pcard back';
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = ST.seats[q].name + (q === me ? ' (you)' : '');
+      slot.append(back, who);
+      slot._peek = (typeof Stage !== 'undefined' && UI.fx.on()) ? Stage.peek(back, '') : null;
+    }
+    box.appendChild(slot);       // after the cards played, wherever it stood
   }
 
   // The trick goes to whoever won it: the cards gather onto the winner's card

@@ -358,6 +358,15 @@ button.pcard:disabled{cursor:not-allowed}
 .trick .slot .who{font-size:12px;font-weight:700;color:var(--ink-dim);white-space:nowrap}
 .trick .slot.won .pcard{box-shadow:0 0 0 3px var(--gold), 0 8px 22px rgba(0,0,0,.3)}
 .trick .slot.won .who{color:var(--gold)}
+/* the seat the table waits on: a card back where theirs will land, peeking */
+.trick .slot.next{perspective:600px}
+.trick .slot.next .who{color:var(--gold)}
+.pcard.back{
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.10) 0 4px, transparent 4px 8px),
+    linear-gradient(160deg,#1c6b48,#0d3f2a);
+  border:2px solid #f0ead9;
+}
 .trick.big{min-height:130px;gap:18px}
 .trick.big .pcard{width:74px;height:104px;border-radius:11px}
 .trick.big .pcard b{font-size:26px}

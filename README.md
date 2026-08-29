@@ -174,7 +174,10 @@ The table can play without real cards. In the lobby set **Cards** to *Deal on th
 3. Bidding runs as it always does, in order, with screw the dealer if it is on.
 4. The player left of the dealer leads. On a phone the round is played on the
    felt -- see **The table** below. Cards you may not play are dimmed: you must
-   follow the suit led if you hold it.
+   follow the suit led if you hold it. On the TV screen the trick lies in the
+   middle, and a card back stands for the seat the table waits on -- peeking,
+   the way their pile does on the deal and on the felt -- until their card
+   lands on it.
 5. The highest trump takes the trick, or the highest card of the suit led. The trick stays on the table for a second and a half so everybody sees it, then the winner leads.
 6. When the last trick is played the round scores itself. Nobody types anything in.
 
@@ -789,7 +792,7 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `lib/tables.js` — a table still in play, on disk, so that stopping the server does not end it.
 - `lib/dev.js` — the dev portal, which a real game never touches.
 - `public/ui.js` — shared page bits: the full-screen button, the wake lock, the motion setting every scene and flourish asks.
-- `public/stage.js` — the overlay both scenes are played on, its parts, and the slot that says which one is open.
+- `public/stage.js` — the overlay both scenes are played on, its parts, the slot that says which one is open, and the peek: the one way a screen shows the seat it is waiting on.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
 - `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
 - `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a TV screen and a phone; and what the deal and the finish read off the state.
