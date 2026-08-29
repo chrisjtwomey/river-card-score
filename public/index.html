@@ -29,13 +29,16 @@
     <p class="hint">A table stays here until you forget it, so a second table never loses the first.</p>
   </section>
 
-  <!-- Who you are, once: the name and the photo go with whichever you do next. -->
-  <section class="panel" id="who-panel">
-    <label class="field">
-      <span>Your name</span>
-      <input type="text" id="in-name" maxlength="16" autocomplete="nickname" placeholder="Type your name">
-    </label>
-    <div id="in-av"></div>
+  <!-- Who you are: the name and the photo go with whichever you do next. Both
+       are set on the settings page, and the first visit asks for the name
+       before anything else. -->
+  <section class="panel whoami" id="who-panel">
+    <div class="avshot" id="who-shot"><span class="avhint">no photo</span></div>
+    <div class="whoside">
+      <span class="eyebrow">Playing as</span>
+      <b id="who-name">…</b>
+    </div>
+    <button class="btn ghost" id="btn-who" type="button">Change</button>
   </section>
 
   <section class="panel" id="join-panel">

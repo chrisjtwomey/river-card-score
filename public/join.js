@@ -2,9 +2,29 @@
 
 const $ = (s) => document.querySelector(s);
 
-/* The ⚙ settings page, the same one every page has. */
+/* The ⚙ settings page, the same one every page has. Here it also holds who
+   you are: the name and the photo go with whichever table you do next. */
 document.addEventListener('DOMContentLoaded', () => {
-  Settings.wire('#btn-settings', { items: UI.commonSettings() });
+  const settings = Settings.wire('#btn-settings', { items: UI.commonSettings(), who: {
+    name: () => Net.name(),
+    photo: () => Avatar.saved(),
+    onName: (n) => { Net.setName(n); showWho(); },
+    /* The picture is picked here but sent from the player page: this page
+       walks away the moment the seat exists, and a socket closing mid-send
+       would lose it. The phone keeps the copy, and the player page hands it
+       over. */
+    onPhoto: (d) => { Avatar.remember(d); showWho(); },
+  } });
+  // The line that says who this phone plays as.
+  function showWho() {
+    $('#who-name').textContent = Net.name() || '…';
+    const pic = Avatar.saved();
+    const shot = $('#who-shot');
+    shot.style.backgroundImage = pic ? `url("${pic}")` : '';
+    shot.classList.toggle('has', !!pic);
+  }
+  showWho();
+  $('#btn-who').addEventListener('click', () => settings.open());
   /* The phone that runs the server reads this page from 127.0.0.1. That phone
      already chose to host, so it wants a table of its own first. Every other
      browser came to join one that exists. Same page, two orders. */
@@ -20,10 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const code = new URLSearchParams(location.search).get('code');
   if (code) $('#in-code').value = code.toUpperCase().slice(0, 4);
 
-  /* The name this phone plays under is asked for once. Coming back to join
-     another table, it is already there. */
-  const knownName = Net.name();
-  if (knownName) $('#in-name').value = knownName;
+  /* The name this phone plays under is asked for once, before anything else:
+     a phone that has not said who it is sees the ask and nothing behind it.
+     Coming back to join another table, the name is already there. */
+  if (!Net.name()) settings.open({ first: true });
 
   /* Every table this browser holds a seat at, newest first. There used to be
      room for one, so a second table wrote over the first and the seat at it
@@ -80,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // A table on another machine: go to it, with the code already filled.
         if (found.url) { location.href = found.url; return; }
         $('#in-code').value = found.code;
-        $('#in-name').focus();
       });
     });
   }
@@ -89,12 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
   });
 
-  /* The picture is picked here but sent from the player page: this page walks
-     away the moment the seat exists, and a socket closing mid-send would lose
-     it. The phone keeps the copy, and the player page hands it over. */
-  const picker = Avatar.picker((d) => Avatar.remember(d));
-  $('#in-av').appendChild(picker.el);
-  picker.show(Avatar.saved());
   const err = (msg) => { $('#join-err').textContent = msg; $('#join-err').hidden = !msg; };
   // News, not a fault: it is not written in red.
   const note = (msg) => { $('#join-note').textContent = msg; $('#join-note').hidden = !msg; };
@@ -109,11 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('#btn-join').addEventListener('click', () => {
     const c = $('#in-code').value.trim();
-    const name = $('#in-name').value.trim();
+    const name = Net.name();
     if (c.length !== 4) return err('Type the 4-character table code.');
-    if (!name) return err('Type your name.');
+    if (!name) return settings.open({ first: true });
     err('');
-    Net.setName(name);
     $('#btn-join').disabled = true;
     Net.connect({
       onOpen: () => Net.send({ t: 'join', code: c, name }),
@@ -122,17 +134,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  $('#in-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-join').click(); });
+  $('#in-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-join').click(); });
 
   /* Start a table and take the first seat, in one tap. The socket makes the
      room, then joins it, so this phone ends up as a player who runs the table. */
   const newErr = (msg) => { $('#new-err').textContent = msg; $('#new-err').hidden = !msg; };
 
   $('#btn-new-table').addEventListener('click', () => {
-    const name = $('#in-name').value.trim();
-    if (!name) { $('#in-name').focus(); return newErr('Type your name.'); }
+    const name = Net.name();
+    if (!name) return settings.open({ first: true });
     newErr('');
-    Net.setName(name);
     $('#btn-new-table').disabled = true;
     $('#btn-join').disabled = true;
     let stage = 'create';

@@ -1477,7 +1477,10 @@ part('the front page, and the screen');
     construct: () => anything,
   });
 
-  function loadPage(file, seed, search) {
+  /* o.real lists modules loaded for real beside the page; o.given hands in a
+     stub of your own for a name the page reads a value off. */
+  function loadPage(file, seed, search, o) {
+    o = o || {};
     const dom = makeDom(412, 860);
     Object.keys(seed || {}).forEach((k) => dom.localStorage.setItem(k, seed[k]));
     const els = {};
@@ -1493,13 +1496,18 @@ part('the front page, and the screen');
     function WebSocket(url) { this.url = url; this.readyState = 1; this.sent = []; socks.push(this); }
     WebSocket.prototype.send = function (raw) { this.sent.push(JSON.parse(raw)); };
     WebSocket.prototype.close = function () { this.readyState = 3; };
-    const src = fs.readFileSync(path.join(ROOT, 'public/net.js'), 'utf8') + '\n;\n'
-              + fs.readFileSync(path.join(ROOT, 'public/' + file), 'utf8');
-    const names = ['UI', 'Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round'];
+    const src = ['public/net.js'].concat(o.real || []).concat(['public/' + file])
+      .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
+    const names = ['UI', 'Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round']
+      .filter((n) => !(o.real || []).some((f) => f.toLowerCase().indexOf(n.toLowerCase() + '.js') >= 0));
+    // A page reads the photo off Avatar as a string, which a stand-in that
+    // answers everything cannot be; so this one answers "no photo".
+    const given = Object.assign({ Avatar: { saved: () => null, remember() {}, url: () => null,
+      picker: () => ({ el: new dom.El('div'), show() {}, say() {} }) } }, o.given || {});
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'console', ...names, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
-      { log() {}, info() {}, warn() {}, error() {} }, ...names.map(() => anything));
+      { log() {}, info() {}, warn() {}, error() {} }, ...names.map((n) => (n in given ? given[n] : anything)));
     return Object.assign(out, { dom, pick, gone, socks,
       start: () => dom.document.fire('DOMContentLoaded') });
   }
@@ -1527,19 +1535,33 @@ part('the front page, and the screen');
     ok(P.Net.tables().length === 1 && P.Net.tables()[0].code === 'AAAA', 'and it is the one that goes');
   }
 
-  {   // the name this phone plays under is asked for once
-    const P = loadPage('join.js', { 'rcs:name:v1': 'Chris' });
+  {   // the name this phone plays under is asked for once, before anything else
+    const who = { real: ['public/ui.js', 'public/settings.js'] };
+    const P = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', who);
     P.start();
-    ok(P.pick('#in-name').value === 'Chris',
-       'the name this phone played under is already there  got ' + P.pick('#in-name').value);
-    const Q = loadPage('join.js', {});
+    const pageOf = (X) => X.dom.document.body.querySelector('.settings');
+    ok(P.pick('#who-name').textContent === 'Chris',
+       'the front page says who this phone plays as  got ' + P.pick('#who-name').textContent);
+    ok(pageOf(P).hidden, 'and asks nothing');
+    P.pick('#btn-who').fire('click');
+    ok(!pageOf(P).hidden && pageOf(P).querySelector('h1').textContent === 'Settings',
+       'Change opens the settings page, where the name lives');
+
+    const Q = loadPage('join.js', {}, '?code=ab2k', who);
     Q.start();
-    ok(Q.pick('#in-name').value === undefined || Q.pick('#in-name').value === '',
-       'and a phone that has not played is asked');
-    Q.pick('#in-code').value = 'AB2K';
-    Q.pick('#in-name').value = 'Ann';
+    ok(!pageOf(Q).hidden && pageOf(Q).querySelector('h1').textContent === 'Who are you?',
+       'a phone that has not said who it is is asked first');
+    const inp = pageOf(Q).querySelector('.settings-name');
+    inp.value = 'Ann';
+    inp.fire('input');
+    pageOf(Q).querySelector('.settings-done').fire('click');
+    ok(pageOf(Q).hidden && Q.Net.name() === 'Ann', 'the name is kept  got ' + Q.Net.name());
+    ok(Q.pick('#who-name').textContent === 'Ann', 'and the front page says so');
+    ok(Q.pick('#in-code').value === 'AB2K', 'with the code from the QR still there');
     Q.pick('#btn-join').fire('click');
-    ok(Q.Net.name() === 'Ann', 'the name a seat was taken under is kept  got ' + Q.Net.name());
+    Q.socks[0].onopen();
+    ok(JSON.stringify(Q.socks[0].sent[0]) === '{"t":"join","code":"AB2K","name":"Ann"}',
+       'and a seat is taken under it  got ' + JSON.stringify(Q.socks[0].sent[0]));
   }
 
   {   // a table that is not there any more says so

@@ -1098,6 +1098,12 @@ body.host .scorecard-panel .table-wrap{
 .avside{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .avside .row-actions{margin:0}
 .avside small{opacity:.7}
+/* The front page says who this phone plays as; the settings page changes it. */
+.whoami{flex-direction:row;align-items:center;gap:14px}
+.whoami .avshot{width:46px;height:64px;border-width:1.5px;box-shadow:0 3px 10px rgba(0,0,0,.22)}
+.whoami .avhint{font-size:8px;letter-spacing:.06em}
+.whoside{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.whoside b{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- past games, one to a screen ---------- */
 .deck-nav{

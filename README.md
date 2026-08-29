@@ -37,12 +37,12 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 ### How a game runs
 
-**One phone is enough.** On the landing page, type your name and press **Start a table**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A TV screen is optional.
+**One phone is enough.** On the landing page, press **Start a table**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A TV screen is optional.
 
 **The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, undo, and new game. They can hand that over from the ⋯ menu beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
 
 1. Someone starts the table, from a phone with **Start a table**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone — or, when a TV screen runs the table, on the TV screen alone, and the phone says the screen is there. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
-2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can drag a player by the handle at the left of the row to a new place in the order, or remove one, until the game starts.
+2. Each player opens the site on their phone, types the code, and takes a seat. The first visit asks for a name before anything else; after that the front page says who the phone plays as, and the name and the photo are changed on the settings page under ⚙. The seat order is the order of play. The host can drag a player by the handle at the left of the row to a new place in the order, or remove one, until the game starts.
 3. The ⋯ menu beside a player says who deals the first round, makes them the table host, or removes them. Without a choice, seat 1 deals. The deal then moves on one seat each round.
 4. The table host sets the rules and presses **Start game**. Every phone shows the rules in the lobby; only the table host's can change them. Nobody can join after that.
 5. **The deal.** Every round opens with the deal on every screen: the deck shuffled and dealt round the table. On the TV screen it stays up while the bids come in, each bid stamped onto that player's pile. On a phone with real cards only the shuffle plays, and the scene clears itself before any card goes out — a tap skips it.
@@ -103,7 +103,8 @@ table therefore cannot lose the seat at the first — which it used to, because
 there was one slot for a seat and every page wrote it on every reconnect.
 
 The name a phone plays under is kept with them, so coming back to join another
-table does not mean typing it again. A table that has ended says so on the
+table does not mean typing it again: the first visit asks for it before
+anything else, and after that it lives on the settings page with the photo. A table that has ended says so on the
 front page rather than sending the player back with nothing said.
 
 ### A table outlives the server it is on
@@ -278,7 +279,7 @@ that band.
 - **A table of many comes down in size.** Eight piles at full size do not go
   round a phone, so the piles, the stacks of tricks won and the names under
   them shrink as seats are added.
-- With **Animations** set to *Off* in the ⚙ menu the felt is drawn without the
+- With **Animations** set to *Off* on the settings page the felt is drawn without the
   deal and without any movement. Everything is still reachable.
 
 ### Bum deal
@@ -791,7 +792,7 @@ big enough to hold a page and drives real events at it: where every card on the
 felt lies at five screen sizes and every legal hand size, the thumb along the
 fan, the push that plays a card and the one that does not, the card that
 refuses, the trick taken and gathered, the bid numbers, the round held up, and
-the ⚙ menu opening and closing. Where a screen arms a timer, the test catches it
+the settings page opening and closing. Where a screen arms a timer, the test catches it
 and lets it off by hand rather than waiting. Run it alone with
 `npm run test:pages`.
 

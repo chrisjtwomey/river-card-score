@@ -30,7 +30,9 @@ server.js          Wiring only: http/ws servers, the rooms map, the entry messag
 public/ui.js       Page chrome shared by every page: the settings rows, theme, zoom, wake lock,
                    full screen, the ask() dialog, the motion setting, the small effects (fx).
 public/settings.js The settings page behind the ⚙: laid over the page that opened it, draws
-                   the rows a page hands it (`UI.commonSettings` plus its own).
+                   the rows a page hands it (`UI.commonSettings` plus its own) and, on a
+                   phone, who the player is (name, photo). The front page opens it first
+                   when there is no name.
 public/net.js      The socket client: reconnect, sessions, one table per page address.
 public/table.js    The scorecard, standings, winner, vote line, presence and bid toasts, and
                    what the scenes read off the state (roundKey, dealOpts, finaleOpts).
