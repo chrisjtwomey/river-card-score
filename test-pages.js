@@ -1575,6 +1575,26 @@ part('the front page, and the screen');
     ok(!P.Net.tables().some((t) => t.code === 'AAAA'), 'and it is not offered again');
   }
 
+  {   /* In the Android app the front page carries the way back to the app's
+         own screen. The app marks its WebView; a browser has no such mark and
+         no such button. */
+    const app = { real: ['public/ui.js', 'public/settings.js'] };
+    const P = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', app);
+    P.pick('#app-row').hidden = true;
+    P.dom.window.navigator = { userAgent: 'Mozilla/5.0 (Linux; Android 15) UpTheRiverApp/1' };
+    P.start();
+    ok(P.pick('#app-row').hidden === false, 'in the app the front page offers the way back to it');
+    P.pick('#btn-app-home').fire('click');
+    ok(P.gone[P.gone.length - 1] === 'uptheriver://home',
+       'and it asks the app, by the link only the app knows  got ' + P.gone[P.gone.length - 1]);
+
+    const Q = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', app);
+    Q.pick('#app-row').hidden = true;
+    Q.dom.window.navigator = { userAgent: 'Mozilla/5.0 (iPhone) Safari/605' };
+    Q.start();
+    ok(Q.pick('#app-row').hidden === true, 'a browser is offered nothing of the sort');
+  }
+
   {   // a browser at no table is offered nothing
     const P = loadPage('join.js', {});
     P.pick('#rejoin-panel').hidden = true;

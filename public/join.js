@@ -37,6 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#btn-join').classList.remove('primary');
   }
 
+  /* In the Android app this page is what Host opens, so it is also the way
+     back out of it: the app's own screen stops the table or picks it up
+     again. The app is asked by following a link only it knows. */
+  if (UI.inApp()) {
+    $('#app-row').hidden = false;
+    $('#btn-app-home').addEventListener('click', () => { location.href = 'uptheriver://home'; });
+  }
+
   const code = new URLSearchParams(location.search).get('code');
   if (code) $('#in-code').value = code.toUpperCase().slice(0, 4);
 

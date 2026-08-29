@@ -65,6 +65,13 @@
     <a class="btn" href="history.html">Past games</a>
     <a class="btn" href="host.html">TV screen</a>
   </div>
+
+  <!-- Only in the Android app: the way back to its own screen, where a table
+       this phone runs is stopped or picked up again. The table keeps running
+       either way. A browser never sees this. -->
+  <div class="row-actions leaverow" id="app-row" hidden>
+    <button class="btn ghost" id="btn-app-home" type="button">Back to the app</button>
+  </div>
 </main>
 
 <script src="net.js"></script>

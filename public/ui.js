@@ -5,6 +5,11 @@ const UI = (function () {
   const canFull = !!(root.requestFullscreen || root.webkitRequestFullscreen);
   const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 
+  /* Read in the Android app's WebView, which marks itself. A page that has a
+     way back into the app -- the front page -- shows it only here; a browser
+     never sees it. */
+  const inApp = () => /UpTheRiverApp/.test(((window.navigator || {}).userAgent) || '');
+
   function toggleFullscreen() {
     if (isFull()) {
       (document.exitFullscreen || document.webkitExitFullscreen).call(document);
@@ -622,7 +627,7 @@ const UI = (function () {
   // runs as the file loads, which is as early as any of them could.
   startTheme();
 
-  return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, keepAwake, measureTopbar,
+  return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask,
            commonSettings, startZoom, zoomNow, setZoom,

@@ -39,6 +39,10 @@ public class TableActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
+    // How a page knows it is in the app and not in a browser. The front page
+    // reads this and offers its way back to the app's own screen; nothing
+    // else about the pages changes.
+    s.setUserAgentString(s.getUserAgentString() + " UpTheRiverApp/1");
     // A WebView with nothing painted yet is a black rectangle. Clear it, and
     // what shows until the page paints is the window behind: the felt and the
     // mark, the same picture the phone put up when the icon was tapped. The
@@ -46,13 +50,9 @@ public class TableActivity extends Activity {
     web.setBackgroundColor(0x00000000);
     web.setWebViewClient(new WebViewClient() {
       @Override
-      public void onPageFinished(WebView view, String url) {
-        addTheWayBack(view);
-      }
-
-      @Override
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-        // The back arrow on the page asks for this, and nothing else does.
+        // The way back at the foot of the front page asks for this, and
+        // nothing else does.
         if ("uptheriver".equals(request.getUrl().getScheme())) { finish(); return true; }
         return false;
       }
@@ -102,34 +102,6 @@ public class TableActivity extends Activity {
     String url = from == null ? null : from.getStringExtra(EXTRA_URL);
     startUrl = url == null ? "http://127.0.0.1:" + NodeService.PORT + "/" : url;
     web.loadUrl(startUrl);
-  }
-
-  /**
-   * A tap on Host or Join by mistake must not be a dead end. The system back
-   * gesture leaves this screen, and this puts the same thing on the page, in
-   * the top bar beside the full-screen and theme buttons: the app's own back
-   * arrow, wearing the page's own button style. Nothing floats over the game.
-   *
-   * The server keeps running either way, and the chooser then offers to go
-   * back to the table or to stop it.
-   */
-  private void addTheWayBack(WebView view) {
-    view.evaluateJavascript(
-        "(function(){"
-        + "if(document.getElementById('app-back'))return;"
-        + "var bar=document.querySelector('.topbar-actions');if(!bar)return;"
-        + "var b=document.createElement('button');"
-        + "b.id='app-back';b.type='button';b.className='btn ghost';"
-        + "b.textContent='\\u2039';b.title='Back to the app';"
-        // A third button in the bar would wrap the title, so this one is
-        // narrower than the two beside it.
-        + "b.style.cssText='padding-left:9px;padding-right:9px;font-size:20px;line-height:1';"
-        + "b.setAttribute('aria-label','Back to the app');"
-        + "b.onclick=function(){location.href='uptheriver://home'};"
-        + "bar.insertBefore(b,bar.firstChild);"
-        // The long title fits on one line beside two buttons, not three.
-        + "var h=document.querySelector('.brand h1');if(h)h.style.fontSize='15px';"
-        + "})()", null);
   }
 
   /**
