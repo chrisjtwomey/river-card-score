@@ -145,7 +145,8 @@ function renderVote(r, me) {
 
   bumRow.hidden = !live || !!v;
   if (live) {
-    $('#btn-bum').textContent = r.dealer === me ? 'Bum deal — deal again' : 'Call a bum deal';
+    // The dealer and the table host throw the hand in themselves; anybody else asks.
+    $('#btn-bum').textContent = (r.dealer === me || amHost()) ? 'Bum deal' : 'Ask for a bum deal';
   }
 
   if (!v || !live) { box.hidden = true; return; }

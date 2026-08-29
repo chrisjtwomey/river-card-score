@@ -267,8 +267,8 @@ that band.
 
 If the cards were dealt wrong, throw the hand in and deal it again. The round keeps the same dealer and hand size, and the bids, tricks, and trump are cleared. The round label then shows `re-deal 1`.
 
-- The **dealer** or the **table host** re-deals on their own. They are asked to confirm first, so one stray tap cannot throw a hand in.
-- Any other player calls a bum deal and the table votes. Every player must agree. One "no" ends it, and the player who called it can take it back. The table host, or the TV screen, can also force the re-deal.
+- The **dealer** or the **table host** presses **Bum deal** and re-deals on their own. They are asked to confirm first, so one stray tap cannot throw a hand in.
+- Any other player presses **Ask for a bum deal** and the table votes. Every player must agree. One "no" ends it, and the player who asked can withdraw it. The table host, or the TV screen, can also throw the hand in without waiting for the vote.
 
 If the table host leaves the table, the badge moves to the first seat.
 

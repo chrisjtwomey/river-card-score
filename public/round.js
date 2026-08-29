@@ -246,8 +246,8 @@ const Round = (function () {
   // asked first. Anybody else is asking the table, which can still be taken back.
   function bumDeal(view, now) {
     const ask = now
-      ? UI.ask('Bum deal?', 'The hand is thrown in. The same dealer deals it again, and the bids so far are lost.', 'Deal again')
-      : UI.ask('Call a bum deal?', 'Every player has to agree before the hand is thrown in.', 'Ask the table');
+      ? UI.ask('Bum deal?', 'The hand is thrown in. The same dealer deals it again, and the bids so far are lost.', 'Throw the hand in')
+      : UI.ask('Ask for a bum deal?', 'Every player has to agree before the hand is thrown in.', 'Ask the table');
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
