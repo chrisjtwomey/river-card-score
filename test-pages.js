@@ -1105,6 +1105,50 @@ function done() {
   process.exit(fail ? 1 : 0);
 }
 
+/* ---- the sticky boxes are watched, not measured ----
+
+   The top bar and the standings both stick, and everything below them is
+   pushed down by their height, so the pages asked for that height on every
+   state. Asking reads two offsetHeights, which makes the browser lay the page
+   out on the spot, and it was the most expensive thing left on the host
+   screen -- 2.7 seconds of a six-minute game -- for an answer that only
+   changes when a seat joins. The boxes are watched now, and the asking is
+   free. */
+part('the sticky boxes are watched, not measured');
+{
+  const dom = makeDom(412, 860);
+  const seen = [];
+  dom.window.ResizeObserver = function () {
+    this.observe = (el) => seen.push(el);
+    this.disconnect = () => {};
+  };
+  const bar = dom.document.createElement('div');
+  bar.className = 'topbar';
+  const stand = dom.document.createElement('div');
+  stand.className = 'standings-panel';
+  dom.document.body.appendChild(bar);
+  dom.document.body.appendChild(stand);
+
+  // Reading this is what costs: it is the browser laying the page out.
+  let reads = 0;
+  Object.defineProperty(dom.El.prototype, 'offsetHeight',
+    { configurable: true, get() { reads += 1; return 20; } });
+
+  const src = fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8');
+  const UI = new Function('window', 'document', 'localStorage', 'console',
+    src + '\n; return UI;')(dom.window, dom.document, dom.localStorage,
+    { log() {}, info() {}, warn() {}, error() {} });
+
+  UI.measureSticky();                 // the first ask sets the watching up
+  ok(seen.length === 2, 'the top bar and the standings are both watched  got ' + seen.length);
+  reads = 0;
+  UI.measureSticky();
+  UI.measureSticky();
+  ok(reads === 0, 'and a page asking for the offset lays nothing out  got ' + reads + ' reads');
+  UI.measureTopbar();
+  ok(reads > 0, 'the measuring itself still measures, for whoever has no watcher  got ' + reads + ' reads');
+}
+
 /* ---- the tables this browser holds ----
 
    The bug: there was one slot for a seat, written by every page on every

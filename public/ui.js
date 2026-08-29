@@ -685,6 +685,40 @@ const UI = (function () {
     const stuck = st && st.offsetParent !== null;
     root.style.setProperty('--standings-h', (stuck ? st.offsetHeight + 14 : 0) + 'px');
   }
+  /* The pages ask for this on every state, because a seat arriving makes the
+     standings taller and the answer would otherwise be stale. Asking means
+     reading two offsetHeights, which makes the browser lay the page out then
+     and there, and it was the most expensive thing left on the host screen:
+     2.7 seconds of a six-minute game, for an answer that changes when a seat
+     joins and at no other time.
+
+     So the two boxes are watched instead. A ResizeObserver says when one of
+     them actually changes size, which is the only moment the answer is
+     different, and the asking becomes free. Where there is no observer to be
+     had, the pages go on asking as they did. */
+  let watched = false;
+  function watchTheStickyBoxes() {
+    const RO = typeof window !== 'undefined' && window.ResizeObserver;
+    if (watched || !RO) return;
+    const bar = document.querySelector('.topbar');
+    const st = document.querySelector('.standings-panel');
+    if (!bar && !st) return;                   // a page with neither: nothing to watch
+    const eye = new RO(() => measureTopbar());
+    if (bar) eye.observe(bar);
+    if (st) eye.observe(st);
+    watched = true;
+  }
+
+  /* What the pages call, on every state. The first ask sets the watching up
+     and measures once; after that there is nothing to ask, and the layout is
+     left alone. A page with neither box, or a browser with no observer, keeps
+     measuring the way it always did. */
+  function measureSticky() {
+    if (watched) return;
+    watchTheStickyBoxes();
+    measureTopbar();
+  }
+
   window.addEventListener('resize', measureTopbar);
   window.addEventListener('load', measureTopbar);
   startTheme();                       // before the first paint, so there is no flash
@@ -695,7 +729,7 @@ const UI = (function () {
   startTheme();
 
   return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, keepAwake, measureTopbar,
-           measureSticky: measureTopbar, serverAddresses, rememberAddress, isLocalUrl,
+           measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask,
            settingsMenu, commonSettings, startZoom, zoomNow, setZoom,
            wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
