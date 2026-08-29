@@ -130,7 +130,7 @@ function findOnTable() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  UI.settingsMenu('#btn-settings', UI.commonSettings());
+  UI.settingsMenu('#btn-settings', UI.commonSettings({ home: true }));
 
   show(Games.all());
 

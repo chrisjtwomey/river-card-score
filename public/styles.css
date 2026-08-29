@@ -71,10 +71,6 @@ p{margin:0}
   background:#f3efe2;color:#14181a;border-radius:9px;font-size:22px;
   box-shadow:0 2px 0 rgba(0,0,0,.25);
 }
-/* the pip doubles as the way back to the start */
-a.pip{text-decoration:none;cursor:pointer;transition:.12s transform,.12s box-shadow}
-a.pip:hover{transform:translateY(-1px);box-shadow:0 4px 0 rgba(0,0,0,.25)}
-a.pip:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
 /* with a photo set, the pip is the player */
 .pip.avpic{background:#f3efe2 center/cover no-repeat;color:transparent}
 .sub{font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

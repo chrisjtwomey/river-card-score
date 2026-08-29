@@ -427,7 +427,7 @@ function renderStandings(me) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true }));
+  UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true, home: true }));
   // A watching window reads the talk and does not join it, the same as every
   // other control on it.
   Chat.wire('#btn-chat', WATCH ? null : (text) => Net.send({ t: 'chat', text }));

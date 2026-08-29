@@ -26,7 +26,8 @@ another machine, or Safari, which cannot read a code.
 
 Every page carries one **⚙** button in the top bar, and every setting is behind
 it: the theme (system, light or dark), the animations (full, short or off), full
-screen, and on the TV screen the text size. Rows that a browser cannot honour
+screen, on the TV screen the text size, and on a phone the way back to the
+front page. Rows that a browser cannot honour
 leave themselves out -- full screen is not offered on Safari on an iPhone. A
 table's screens have one other button, 💬 for the talk, and nothing else.
 

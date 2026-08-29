@@ -290,7 +290,9 @@ const UI = (function () {
 
   /* The settings every screen has. A page adds its own to the end.
      opts: { motion: true } for a page that plays the deal, { zoom: true } for
-     one read from across a room. */
+     one read from across a room, { home: true } for a page that is not the
+     front page -- the way back used to be the ♠ in the corner, which on a
+     phone with a photo set was the player's own face. */
   function commonSettings(opts) {
     const o = opts || {};
     const list = [
@@ -317,6 +319,7 @@ const UI = (function () {
     // Safari on an iPhone has no full screen at all, so the row is not offered.
     list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
                 get: isFull, set: () => { try { toggleFullscreen(); } catch (e) {} } });
+    if (o.home) list.push({ kind: 'link', label: 'Front page', href: 'index.html' });
     return list;
   }
 
