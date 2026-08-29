@@ -93,9 +93,9 @@ const Lobby = (function () {
   const OPTIONS = {
     pattern: [['downup', 'Down then up'], ['updown', 'Up then down'], ['down', 'Down only'], ['up', 'Up only']],
     bonus: [[10, '10 + tricks won'], [5, '5 + tricks won'], [1, '1 + tricks won'], [0, 'tricks won only']],
-    miss: [['atleast', 'must make the bid: over pays tricks won, short pays 0'],
-           ['atleastdiff', 'must make the bid: over pays tricks won, short pays minus 1 each'],
-           ['zero', '0 points'], ['diff', 'minus 1 per trick off'], ['tricks', 'tricks won only']],
+    // Short enough for a phone's select; the line under the field says it in full.
+    miss: [['atleast', 'Must make it · short pays 0'], ['atleastdiff', 'Must make it · short pays −1 each'],
+           ['zero', '0 points'], ['diff', '−1 per trick off'], ['tricks', 'Tricks won only']],
     deck: [['physical', 'Real cards on the table'], ['virtual', 'Deal on the phones']],
     accoladeCount: [[0, 'none'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']],
     accoladePay: [[20, '20 points'], [10, '10 points'], [5, '5 points'], [0, 'nothing']],
@@ -121,6 +121,13 @@ const Lobby = (function () {
   // How the fields sit: two abreast where they read as a pair.
   const LAYOUT = [['cfg-max', 'cfg-ones'], 'cfg-pattern', ['cfg-bonus', 'cfg-miss'],
                   { toggles: ['cfg-screw', 'cfg-trump'] }, 'cfg-deck', ['cfg-accolade-count', 'cfg-accolade-pay']];
+  const MISS_SAID = {
+    atleast: 'Over the bid pays the tricks won; short of it pays 0.',
+    atleastdiff: 'Over the bid pays the tricks won; short of it pays minus 1 a trick.',
+    zero: 'A missed bid pays 0.',
+    diff: 'A missed bid pays minus 1 a trick, over or short.',
+    tricks: 'A missed bid pays the tricks won.',
+  };
   const DEFAULTS = { accoladePay: 10, accoladeCount: 3, deck: 'physical' };
   const byId = (id) => RULES.find((r) => r.id === id);
 
@@ -207,7 +214,7 @@ const Lobby = (function () {
     const cards = Game.schedule(c.max, c.pattern, c.ones);
     text(root, '#cfg-pattern-hint', `${cards.length} rounds: ${cards.join(' ')}`);
     const ex = (w) => Game.roundScore(2, w, c);
-    text(root, '#cfg-miss-hint', `Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`);
+    text(root, '#cfg-miss-hint', `${MISS_SAID[c.miss] || ''} Bid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`);
   }
 
   return { seats, bots, startButton, rulesForm };
