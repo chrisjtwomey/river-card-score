@@ -41,6 +41,15 @@
     <button class="btn ghost" id="btn-who" type="button">Change</button>
   </section>
 
+  <!-- Only on the phone that runs the server: every table it is running that
+       this browser holds no seat at. A seat it does hold is offered above,
+       under Rejoin. -->
+  <section class="panel" id="server-panel" hidden>
+    <h2>Tables on this phone</h2>
+    <p class="hint">This phone runs these. Watching one changes nothing at it.</p>
+    <div class="seatlist" id="server-list"></div>
+  </section>
+
   <section class="panel" id="join-panel">
     <h2>Join a table</h2>
     <p class="hint" id="join-note" hidden></p>

@@ -116,7 +116,18 @@ there was one slot for a seat and every page wrote it on every reconnect.
 
 The name a phone plays under is kept with them, so coming back to join another
 table does not mean typing it again: the first visit asks for it before
-anything else, and after that it lives on the settings page with the photo. A table that has ended says so on the
+anything else, and after that it lives on the settings page with the photo.
+
+**The phone that runs the server sees every table on it.** That list is the
+browser's own memory, and a server can be running tables it knows nothing
+about: one started from a TV screen, or one whose seat this browser has
+forgotten. So the front page, read on the machine that serves it, asks the
+server what it is running and offers the rest under **Tables on this phone**,
+each with **Watch** — the screen a TV shows, which changes nothing at the
+table. `GET /tables.json` answers that, and only to the machine the server
+runs on: a table's four characters are the only door it has, and a listing
+handed to every browser on the network would open every table to anybody who
+could reach the page. A table that has ended says so on the
 front page rather than sending the player back with nothing said.
 
 ### A table outlives the server it is on

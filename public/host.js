@@ -55,6 +55,11 @@ function boot() {
   const pinned = new URLSearchParams(location.search).get('c');
   const s = Net.session(pinned);
   if (s && s.code && (s.role === 'host' || s.role === 'screen')) { enter(null, s.code); return; }
+  // A table named in the address this screen holds nothing for is shown, not
+  // asked about: that is what the address says, and showing changes nothing at
+  // the table. It is how the front page watches a table this browser has no
+  // seat at.
+  if (pinned) { enter('show', pinned.toUpperCase().slice(0, 4)); return; }
   $('#pick-panel').hidden = false;
 }
 

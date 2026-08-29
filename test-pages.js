@@ -1504,10 +1504,12 @@ part('the front page, and the screen');
     // answers everything cannot be; so this one answers "no photo".
     const given = Object.assign({ Avatar: { saved: () => null, remember() {}, url: () => null,
       picker: () => ({ el: new dom.El('div'), show() {}, say() {} }) } }, o.given || {});
+    const fetch = o.fetch || (() => Promise.reject(new Error('the fake DOM reaches no server')));
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
-      'Game', 'console', ...names, src + '\n; return { Net };');
+      'Game', 'console', 'fetch', ...names, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
-      { log() {}, info() {}, warn() {}, error() {} }, ...names.map((n) => (n in given ? given[n] : anything)));
+      { log() {}, info() {}, warn() {}, error() {} }, fetch,
+      ...names.map((n) => (n in given ? given[n] : anything)));
     return Object.assign(out, { dom, pick, gone, socks, loc: location,
       start: () => dom.document.fire('DOMContentLoaded') });
   }
@@ -1573,6 +1575,44 @@ part('the front page, and the screen');
        'a table that has ended says so, instead of a silent bounce  got '
        + JSON.stringify(P.pick('#join-note').textContent));
     ok(!P.Net.tables().some((t) => t.code === 'AAAA'), 'and it is not offered again');
+  }
+
+  {   /* The tables this phone is running, asked of the server. A seat this
+         browser holds is offered above as Rejoin; what is left is watched. */
+    const running = { tables: [
+      { code: 'AAAA', phase: 'bid', round: 2, rounds: 16, seats: [{ id: 'sa', name: 'Ann' }, { id: 'sb', name: 'Otter' }] },
+      { code: 'CCCC', phase: 'lobby', round: null, rounds: null, seats: [{ id: 'sc', name: 'Cal' }] },
+    ] };
+    const seedOne = { 'rcs:tables:v1': JSON.stringify([{ code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' }]) };
+    const asked = [];
+    const answer = (u) => { asked.push(u); return Promise.resolve({ ok: true, json: () => Promise.resolve(running) }); };
+    const P = loadPage('join.js', seedOne, '', { hostname: '127.0.0.1', fetch: answer });
+    P.pick('#server-panel').hidden = true;
+    const box = P.dom.document.createElement('div');       // Start goes above Join, on this phone
+    box.append(P.pick('#join-panel'), P.pick('#new-panel'));
+    P.start();
+    ok(asked[0] === '/tables.json', 'the phone that runs the server asks it what it is running  got ' + asked[0]);
+    // the answer arrives in a microtask, and the list is built in the one after it
+    Promise.resolve().then(() => Promise.resolve()).then(() => {
+      ok(P.pick('#server-panel').hidden === false, 'and offers what it finds');
+      const rows = P.pick('#server-list').children;
+      ok(rows.length === 1, 'a table this browser holds a seat at is not repeated  got ' + rows.length);
+      ok(rows[0].children[0].textContent === 'Table CCCC', 'the other one is there');
+      const btn = rows[0].querySelector('.btn');
+      ok(btn.textContent === 'Watch', 'and it is watched, not joined');
+      btn.fire('click');
+      ok(P.gone[P.gone.length - 1] === 'host.html?c=CCCC',
+         'on the screen a TV would show  got ' + P.gone[P.gone.length - 1]);
+    });
+
+    // a browser that is not the phone running the server asks nothing
+    const none = [];
+    const Q = loadPage('join.js', seedOne, '',
+      { fetch: (u) => { none.push(u); return answer(u); } });
+    Q.pick('#server-panel').hidden = true;
+    Q.start();
+    ok(none.length === 0, 'a player\'s phone does not ask: the listing is not its to read');
+    ok(Q.pick('#server-panel').hidden === true, 'and is offered no such list');
   }
 
   {   /* In the Android app the front page carries the way back to the app's

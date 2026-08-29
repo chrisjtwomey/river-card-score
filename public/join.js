@@ -105,6 +105,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* Every table this phone is running, asked of the server itself. The list
+     above is what this browser remembers; this is what is actually there, and
+     the two are not the same: a table started from a TV screen on this server,
+     or one whose seat this browser has forgotten, is on the server and in no
+     browser. Answered to this machine alone -- a table code is a door key.
+
+     A seat this browser holds is offered above, under Rejoin. What is left is
+     watched: the same screen a TV shows, which changes nothing at the table. */
+  if (mineToRun) {
+    const held = new Set(Net.tables().map((t) => String(t.code || '').toUpperCase()));
+    fetch('/tables.json', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { tables: [] }))
+      .then((j) => {
+        const others = (j.tables || []).filter((t) => t.code && !held.has(t.code));
+        if (!others.length) return;
+        const box = $('#server-list');
+        others.forEach((t) => box.appendChild(tableRow(t)));
+        $('#server-panel').hidden = false;
+      })
+      .catch(() => {});                       // no listing, no panel: the code box is still there
+  }
+
+  // One table the server is running, and the way in to it.
+  function tableRow(t) {
+    const row = document.createElement('div');
+    row.className = 'seat-item';
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    nm.textContent = `Table ${t.code}`;
+    const badge = document.createElement('span');
+    badge.className = 'badge soft';
+    badge.textContent = t.phase === 'lobby' ? 'in the lobby'
+      : t.phase === 'done' ? 'over'
+      : t.round ? `round ${t.round} of ${t.rounds}` : 'in play';
+    const who = document.createElement('small');
+    who.className = 'hint';
+    who.textContent = t.seats.length
+      ? t.seats.map((s) => s.name).join(', ')
+      : 'nobody has sat down';
+    const go = document.createElement('button');
+    go.className = 'btn';
+    go.type = 'button';
+    go.textContent = 'Watch';
+    go.addEventListener('click', () => {
+      location.href = 'host.html?c=' + encodeURIComponent(t.code);
+    });
+    row.append(nm, badge, who, go);
+    return row;
+  }
+
   /* The camera reads the QR code the table shows. The button is here only if
      this browser has both a camera and a reader for the code. */
   if (Scan.can()) {

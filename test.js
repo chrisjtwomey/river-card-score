@@ -689,6 +689,18 @@ async function bidRound(P) {
        'the winner is named in the record');
     ok(JSON.stringify(rec).indexOf('token') < 0, 'and no token rides along with it');
 
+    /* The tables this server is running, for the machine it runs on: the
+       phone that hosts has no other way to find a table it holds no seat at. */
+    const here = await fetch(`http://127.0.0.1:${port4}/tables.json`).then((r) => r.json());
+    const mine = (here.tables || []).find((x) => x.code === d.state.code);
+    ok(!!mine, 'GET /tables.json says which tables this server is running  got '
+       + JSON.stringify((here.tables || []).map((x) => x.code)));
+    ok(here.tables[0].code === d.state.code, 'the one last played on first');
+    ok(mine.seats.length === 3 && mine.seats[0].name === d.state.seats[0].name,
+       'with who is at each of them');
+    ok(mine.phase === d.state.phase, 'and where each has got to');
+    ok(JSON.stringify(here).indexOf('token') < 0, 'and no seat token in the listing');
+
     const list = await fetch(`http://127.0.0.1:${port4}/games.json?code=${d.state.code}`).then((r) => r.json());
     ok(list.games.length === 1 && list.games[0].id === id, 'GET /games.json finds it by table code');
     ok(!list.games[0].rounds, 'the listing is the headline only');

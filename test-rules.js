@@ -781,6 +781,22 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   ok(!G.tablePlaysOn(t.room), 'and the bot does not play the game out on its own');
 }
 
+part('the tables this server is running');
+
+/* A table's four characters are the only door it has. A listing of them handed
+   to every browser on the network would open every table to anybody who could
+   reach the page, so it is answered to the machine the server runs on and
+   nowhere else. */
+{
+  const { isLocal } = require('./lib/http.js');
+  ok(isLocal('127.0.0.1'), 'the machine the server runs on may read the tables it is running');
+  ok(isLocal('::1') && isLocal('::ffff:127.0.0.1'), 'by whichever name the loopback goes under');
+  ok(isLocal('127.0.0.53'), 'the whole loopback range is that machine');
+  ok(!isLocal('192.168.1.5') && !isLocal('10.0.0.2') && !isLocal('::ffff:192.168.1.5'),
+     'a phone on the network may not: it has the code or it has nothing');
+  ok(!isLocal('') && !isLocal(undefined) && !isLocal(null), 'and neither may an address that is not one');
+}
+
 part('table talk');
 
 {

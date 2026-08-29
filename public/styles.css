@@ -867,9 +867,12 @@ body.player .standings-panel{box-shadow:var(--shadow)}
   flex-wrap:nowrap;
 }
 .seat-item .badge{flex:none;white-space:nowrap}
-/* The tables a browser is at, on the front page: a longer badge and two
-   buttons, so that list may still wrap. */
-#rejoin-list .seat-item{flex-wrap:wrap}
+/* The tables on the front page -- the ones this browser is at, and the ones
+   this phone runs -- carry longer badges, a line of names and two buttons, so
+   those lists may still wrap. */
+#rejoin-list .seat-item,#server-list .seat-item{flex-wrap:wrap}
+#server-list .seat-item small{flex:1 1 100%;order:3;opacity:.75;font-weight:600}
+#server-list .seat-item .btn{margin-left:auto}
 .seat-item.me{border-color:var(--gold)}
 /* a seat the table plays itself */
 .seat-item.bot .nm{color:var(--ink-dim)}

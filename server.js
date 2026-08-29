@@ -55,11 +55,29 @@ const Tables = TablesOf({ DATA, KEEP_HOURS });
 // The pages, the QR code, the addresses, a finished game, a picture. It reads
 // the rooms for a picture and knows nothing else about a game.
 const { handler, lanUrls, hiddenNets, refreshLanAddress } = Http({
-  PORT, SCHEME, DEV, ROOT, PUB, pictureOf, readGame, listGames,
+  PORT, SCHEME, DEV, ROOT, PUB, pictureOf, readGame, listGames, listTables,
 });
 
 // The socket server rides on this one, so both answer on the same port.
 const server = tls ? https.createServer(tls, handler) : http.createServer(handler);
+
+/* Every table this server is running, newest first, for the machine it runs
+   on. The phone that hosts has one page for all of them: a seat it holds is
+   rejoined, a table it holds no seat at is watched. Names and seat ids only --
+   the tokens that make a seat yours never leave the server. */
+function listTables() {
+  return Array.from(rooms.values())
+    .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0))
+    .map((room) => ({
+      code: room.code,
+      phase: room.phase,
+      cards: (curRound(room) || {}).cards || null,
+      round: room.phase === 'lobby' || room.phase === 'done' ? null : room.idx + 1,
+      rounds: room.rounds.length || null,
+      seats: room.seats.map((s) => ({ id: s.id, name: s.name, bot: !!s.bot,
+                                      left: !!s.left, online: !!s.online })),
+    }));
+}
 
 // The one thing the HTTP side needs of a room: a seat's picture, or nothing.
 function pictureOf(code, seatId) {
