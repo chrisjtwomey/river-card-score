@@ -2076,6 +2076,97 @@ part('the deal, with motion on');
      'nothing on the deal repeats for ever: a phone would draw it for ever');
 }
 
+/* ---- the seat the table waits on ----
+
+   The pile of the seat to act peeks on the felt the same as on the deal and
+   on the TV screen, so whose turn it is reads without the words. It rides on
+   the top card of that pile, moves with the turn, and stops when the turn is
+   this phone's own, when nobody is on play, and when the felt is dropped. */
+part('the seat the table waits on peeks');
+{
+  const stub = (L) => {
+    const asked = [];
+    L.dom.El.prototype.animate = function (kf, opts) {
+      const a = { el: this, kf, opts: opts || {}, off: false, cancel() { this.off = true; },
+                  commitStyles() {}, pause() {}, play() {}, finish() {}, finished: Promise.resolve() };
+      asked.push(a);
+      return a;
+    };
+    L.dom.El.prototype.getAnimations = () => [];
+    return asked;
+  };
+  const W = 412, H = 860, n = 3, cards = 5, me = 1;
+  const L = load(W, H, 'full');
+  const asked = stub(L);
+  const piles = () => asked.filter((a) => /\bdcard\b/.test(a.el.className) && !/\b(mine|hero|deck)\b/.test(a.el.className));
+  const live = () => piles().filter((a) => !a.off);
+  const seatOf = (a) => {
+    const at = spotOf(a.el);
+    const R = L.Stage.ring(n, me, W, H), F = L.Stage.fan(cards, W, H);
+    for (let q = 0; q < n; q++) {
+      const h = L.Stage.pile(R, F, q, cards - 1, n);
+      if (at && Math.abs(at.x - h.x) < 1 && Math.abs(at.y - h.y) < 1) return q;
+    }
+    return -1;
+  };
+  // a round with a bid in is built at once, so nothing but the peek moves
+  const touched = (o) => stateFor(n, cards, me, Object.assign({ bids: [null, 1, null] }, o)).ST;
+  L.Felt.sync(touched({ phase: 'bid', turn: 2 }), me, { send() {}, watch: false, onView() {} });
+  ok(live().length === 1, 'the pile of the seat to bid peeks  got ' + live().length);
+  ok(live().length && seatOf(live()[0]) === 2, 'and it is that seat\'s pile  got seat ' + (live().length ? seatOf(live()[0]) : '-'));
+  ok(live().length && live()[0].el.style.zIndex === String(cards - 1), 'on the top card of it');
+  ok(live().length && live()[0].kf[0].transform === live()[0].el.style.transform, 'from where the card lies');
+  ok(live().length && live()[0].opts.duration <= 1200 && live()[0].opts.iterations === undefined,
+     'one peek at a time: a phone would draw a repeat for ever');
+  const first = live()[0];
+  L.Felt.sync(touched({ phase: 'bid', turn: 2 }), me, {});
+  ok(piles().length === 1, 'the same turn again does not start it over  got ' + piles().length);
+  L.Felt.sync(touched({ phase: 'bid', turn: 0 }), me, {});
+  ok(first.off, 'the turn moves on: the old pile is let go');
+  ok(live().length === 1 && seatOf(live()[0]) === 0, 'and the new seat\'s pile peeks  got seat ' + (live().length ? seatOf(live()[0]) : '-'));
+  L.Felt.sync(touched({ phase: 'bid', turn: me }), me, {});
+  ok(live().length === 0, 'your own turn peeks nothing: the hand and the line say it');
+  L.Felt.sync(touched({ phase: 'tricks', turn: null, pturn: 2, bids: [1, 1, 1] }), me, {});
+  ok(live().length === 1 && seatOf(live()[0]) === 2, 'a card wanted from a seat peeks its pile  got ' + live().length);
+  L.Felt.sync(touched({ phase: 'tricks', turn: null, pturn: null, bids: [1, 1, 1] }), me, {});
+  ok(live().length === 0, 'nobody on play, nothing peeks');
+  L.Felt.sync(touched({ phase: 'tricks', turn: null, pturn: 0, bids: [1, 1, 1] }), me, {});
+  ok(live().length === 1, 'and it is back when somebody is');
+  L.Felt.hide();
+  ok(live().length === 0, 'the felt dropped, it stops');
+  L.Felt.show();
+  ok(live().length === 1, 'and starts again when the felt is back');
+  L.dom.window.fire('resize');
+  ok(live().length === 1 && live()[0].kf[0].transform === live()[0].el.style.transform,
+     'a resize places it where the pile lies now');
+  L.Felt.sync(Object.assign({}, touched({ phase: 'lobby' }), { rounds: [], play: null }), me, {});
+  ok(live().length === 0, 'the round over, it stops');
+
+  {   // with reduced motion the label is enough, as on the deal
+    const L2 = load(W, H, 'reduced');
+    const asked2 = stub(L2);
+    L2.Felt.sync(touched({ phase: 'bid', turn: 2 }), me, { send() {}, watch: false, onView() {} });
+    ok(asked2.filter((a) => /\bdcard\b/.test(a.el.className)).length === 0, 'with reduced motion no pile peeks');
+  }
+
+  {   // the deal hands the stage over, and its own peek with it
+    const L3 = load(W, H, 'full');
+    const asked3 = stub(L3);
+    const { ST } = stateFor(n, cards, me, { phase: 'bid', turn: 2 });
+    L3.Felt.sync(ST, me, { send() {}, watch: false, onView() {} });
+    L3.Stage.S.live.settled = true;
+    L3.Deal.update({ turn: 2, bids: [null, null, null] });
+    const dealPeek = L3.Stage.S.live.turnAnim;
+    ok(!!dealPeek, 'the deal peeks the player to bid while the cards are in the air');
+    const overlay = L3.dom.document.getElementById('deal');
+    overlay.fire('pointerdown', { target: overlay, clientX: 200, clientY: 700, pointerId: 1 });
+    ok(L3.Stage.S.live.turnAnim === null, 'the table takes the stage, and the deal lets its peek go');
+    const on = asked3.filter((a) => /\bdcard\b/.test(a.el.className) && !/\b(mine|hero|deck)\b/.test(a.el.className)
+      && a.opts.duration === 1050 && !a.off);
+    ok(on.length === 1, 'and one peek is on the table: the felt\'s own  got ' + on.length);
+  }
+}
+
 /* ---- tapping the deal away ----
 
    The tap that lands a deal, and the tap that closes one, both ran through a

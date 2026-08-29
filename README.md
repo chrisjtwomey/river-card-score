@@ -251,6 +251,11 @@ that band.
   a heading of their own, and are picked up the same way -- touch to lift, tap
   again to call. Your own bid stays lit and can be changed until the next player bids.
   The number screw the dealer forbids is struck through.
+- **The seat the table waits on peeks.** The top card of that player's pile
+  tips up on its edge and shivers, every few seconds -- the same peek the TV
+  screen gives the player to bid -- through the bidding and whenever a card
+  is wanted from them. Your own seat never peeks: your hand, and the line
+  under it, say when it is you.
 - What is said in passing -- a bid landing, a phone dropping out, a refusal
   -- comes up in the band under the round line, clear of the piles and the
   hand, and never over the round line itself.
@@ -312,7 +317,7 @@ npm start        # the console now says (https)
 
 Both screens play the deal animation at the start of every round: a card flies to each seat in dealing order, with the player names.
 
-- On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it.
+- On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows and their pile peeks -- the top card tips up and shivers every few seconds -- and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it.
 - On a **phone** it plays and then clears, so the bid pad is never blocked. A tap skips it. It does not replay when a phone reloads part way through a game.
 
 When somebody bids, every other screen says so: a line slides in under the top bar — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. Your own bid is not announced, because your own pad already shows it. A refusal from the table — a bid out of turn, a rule that cannot change with bots seated — is said the same way, in red, so it is seen over the felt and in the lobby alike. On the TV screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.

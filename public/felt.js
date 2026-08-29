@@ -55,6 +55,7 @@ const Felt = (function () {
   let bidSlots = [];               // where each number sits, to aim a thumb at
   let sent = null;                 // a card played, until the table says so
   let ready = null;                // the round this screen has said it can see
+  let peeking = null;              // the pile the table waits on: { q, el, at, off }
   let told = null;                 // the finished trick this screen has announced
   let swept = null;                // and the one it has gathered in
 
@@ -295,6 +296,7 @@ const Felt = (function () {
   // round has to draw it without one.
   function build(r) {
     const { stage } = mount();
+    unpeek();
     stage.innerHTML = '';
     const p = ST.play;
     T = { stage, piles: [], labels: [], hero: null, hand: new Map(), table: new Map(),
@@ -342,6 +344,7 @@ const Felt = (function () {
 
   // What the deal left standing, taken over as it stands.
   function adopt(ctx, r) {
+    unpeek();
     T = { stage: ctx.stage, piles: (ctx.piles || []).map((a) => (a || []).slice()),
           labels: ctx.labels || [], hero: ctx.hero, hand: new Map(), table: new Map(),
           slots: [], places: [], won: [], heldWinner: null };
@@ -529,6 +532,7 @@ const Felt = (function () {
       at(T.hero, heroAt(g));
     }
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
+    if (peeking) peekAt(peeking.q, r);   // the pile may lie somewhere else now
   }
 
   /* Where a hand was. A seat playing its last card leaves a hole in the table
@@ -573,6 +577,7 @@ const Felt = (function () {
       el.classList.toggle('turn', bidding ? ST.turn === q : !!(p && p.turn === q));
       el.classList.toggle('bidin', bid !== null && bid !== undefined);
     });
+    peekAt(bidding ? ST.turn : (p ? p.turn : null), r);
 
     // A card you may not play says so before you try: it is yours to see, so
     // it is dimmed and not hidden.
@@ -585,6 +590,29 @@ const Felt = (function () {
     bidRail(r);
     hint(r);
     voteBox();
+  }
+
+  /* The pile of the seat the table waits on peeks -- the top card tips up
+     and shivers, every few seconds -- the same as on the deal and on the TV
+     screen, so whose turn it is reads without the words. Your own seat is
+     your hand and the line under it, so it is never peeked. The peek rides
+     on the card lying where layout put it, so it is placed again whenever
+     that card, or where it lies, changes, and left alone otherwise. */
+  function peekAt(q, r) {
+    const pile = (T && q !== null && q !== undefined && q !== me) ? T.piles[q] : null;
+    const el = pile && pile.length ? pile[pile.length - 1] : null;
+    const at = el ? pileAt(geom(), q, pile.length - 1, r.cards) : null;
+    if (peeking && peeking.el === el && peeking.at === at) return;
+    unpeek();
+    if (!el || !UI.fx.on()) return;
+    const off = Stage.peek(el, at);
+    if (off) peeking = { q, el, at, off };
+  }
+
+  function unpeek() {
+    if (!peeking) return;
+    peeking.off.cancel();
+    peeking = null;
   }
 
   // The vote on a bum deal, the same widget the page under the felt draws. A
@@ -1123,6 +1151,7 @@ const Felt = (function () {
 
   function leave() {
     key = null;
+    unpeek();
     pausing = false;
     told = null; swept = null;
     endBeat();
@@ -1153,6 +1182,7 @@ const Felt = (function () {
     if (k !== key) {
       const was = key;
       key = k;
+      unpeek();
       T = null;
       dealing = false;
       sent = null;
@@ -1209,6 +1239,7 @@ const Felt = (function () {
 
   function hide() {
     want = false;
+    unpeek();
     drag = null; held = -1;
     if (pausing) { pausing = false; endBeat(); }
     const overlay = (parts(false) || {}).overlay;

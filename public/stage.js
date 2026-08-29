@@ -210,6 +210,67 @@ const Stage = (function () {
     return made;
   }
 
+  /* The card of the seat the table waits on tips up on its edge, shivers,
+     settles, and waits -- once every three seconds -- so whose turn it is can
+     be read from across the room. It is the one way a screen says "waiting
+     on you": the deal gives it to the player to bid, the felt to the seat a
+     bid or a card is wanted from. `at` is the transform the card lies at,
+     and the peek ends back on it. The landing used the Web Animations API,
+     and that owns the transform, so this has to be an animation too, not a
+     CSS class. Nothing fills forwards: whoever placed the card still owns it.
+     A repeating animation is drawn for its whole length, the two seconds in
+     which the card lies still included, and a whole core went on the
+     bidding; so the peek is the animation and the wait between peeks is a
+     timer. Returns a handle with cancel(), or null when nothing can move. */
+  function peek(card, at) {
+    if (!card || !card.animate) return null;
+    at = at || '';
+    // Written in milliseconds, because that is how it is judged.
+    const UP = 182, SHIVER_IN = 280, SHIVER_OUT = 784, SIDE = 84, DOWN_AT = 868, FLAT = 1050;
+    const EVERY = 3000;
+    const o = (ms) => Number((ms / FLAT).toFixed(4));
+    const rest = 'drop-shadow(0 5px 9px rgba(0,0,0,.45)) drop-shadow(0 0 5px rgba(255,255,255,.22))';
+    const up = 'drop-shadow(0 16px 18px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(255,255,255,.4))';
+    const tip = `${at} translateY(-11px) rotateX(-26deg)`.trim();
+    const flat = at || 'none';
+
+    // The transform rides on the card, but the shadow has to ride on the
+    // faces: a filter on the card itself would flatten its 3D, and a card
+    // lying face down would paint a blank front instead of its back.
+    const frames = [
+      { transform: flat, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
+      { transform: tip, offset: o(UP), easing: 'linear' },
+    ];
+    const glow = [
+      { filter: rest, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
+      { filter: up, offset: o(UP), easing: 'linear' },
+    ];
+    for (let ms = SHIVER_IN, i = 0; ms <= SHIVER_OUT; ms += SIDE, i++) {
+      const dir = i % 2 === 0 ? 1 : -1;
+      frames.push({
+        transform: `${tip} translateX(${dir * 3}px) rotate(${dir * 1.2}deg)`,
+        offset: o(ms), easing: 'linear',
+      });
+    }
+    frames.push({ transform: tip, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
+    frames.push({ transform: flat, offset: 1 });
+    glow.push({ filter: up, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
+    glow.push({ filter: rest, offset: 1 });
+
+    let set = [], timer = null, off = false;
+    const drop = () => set.forEach((a) => { try { a.cancel(); } catch (e) {} });
+    const once = () => {
+      if (off) return;
+      drop();
+      set = [card.animate(frames, { duration: FLAT })];
+      Array.prototype.forEach.call(card.querySelectorAll('.face'),
+        (f) => set.push(f.animate(glow, { duration: FLAT })));
+      timer = setTimeout(once, EVERY);
+    };
+    once();
+    return { cancel: () => { off = true; clearTimeout(timer); drop(); } };
+  }
+
   function overlayEl() {
     let el = document.getElementById('deal');
     if (el) return el;
@@ -287,5 +348,5 @@ const Stage = (function () {
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
   return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen,
-           ring, fan, pile, seatScale, cardSize, nameAt, bidRow, settle };
+           ring, fan, pile, seatScale, cardSize, nameAt, bidRow, settle, peek };
 })();

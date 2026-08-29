@@ -421,6 +421,8 @@ const Deal = (function () {
         if (handed || !keep) return;
         handed = true;
         deckEls.forEach((d) => { d.style.zIndex = ''; });
+        // The table peeks its own cards from here on.
+        if (S.live && S.live.turnAnim) { S.live.turnAnim.cancel(); S.live.turnAnim = null; }
         // Every tap from here on belongs to the table: a card being picked up,
         // not a scene being landed.
         overlay.removeEventListener('pointerdown', skip);
@@ -470,69 +472,16 @@ const Deal = (function () {
   // Closes a held scene, if one is open. With a kind, 'deal' or 'finale', it
   // closes only that one and leaves the other alone.
 
-  /* The card of the player to act breathes, so the table can see whose turn it
-     is from across the room. The landing used the Web Animations API, and that
-     owns the transform, so this has to be an animation too, not a CSS class.
-
-     The peek is a second of movement and then stillness until the next one.
-     The stillness is a timer, not part of the animation: written as one
-     three-second animation repeating for ever, the phone drew every frame of
-     the two seconds in which the card was already lying still, and a whole
-     core went on the bidding. Nothing is drawn between peeks now. */
+  /* The card of the player to act peeks (Stage.peek), so the table can see
+     whose turn it is from across the room. It moves with the turn, and it
+     waits for the cards to land. */
   function applyTurn() {
     if (!S.live || S.live.kind !== 'deal' || !S.live.settled) return;
-    if (S.live.turnAnim) { try { S.live.turnAnim.cancel(); } catch (e) {} S.live.turnAnim = null; }
+    if (S.live.turnAnim) { S.live.turnAnim.cancel(); S.live.turnAnim = null; }
     const p = S.live.turn;
     const card = (p === null || p === undefined) ? null : S.live.cards[p];
-    if (!card || S.live.calm || !card.animate) return;   // reduced motion: the label is enough
-    // The card tips up on its edge, shivers while it is up, settles, then
-    // waits. Written in milliseconds, because that is how it is judged.
-    const UP = 182, SHIVER_IN = 280, SHIVER_OUT = 784, SIDE = 84, DOWN_AT = 868, FLAT = 1050;
-    const EVERY = 3000;                             // one peek every three seconds
-    const at = S.live.landedAt[p];
-    const o = (ms) => Number((ms / FLAT).toFixed(4));
-    const rest = 'drop-shadow(0 5px 9px rgba(0,0,0,.45)) drop-shadow(0 0 5px rgba(255,255,255,.22))';
-    const up = 'drop-shadow(0 16px 18px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(255,255,255,.4))';
-    const tip = `${at} translateY(-11px) rotateX(-26deg)`;
-
-    // The transform rides on the card, but the shadow has to ride on the
-    // faces: a filter on the card itself would flatten its 3D, and a card
-    // lying face down would paint a blank front instead of its back.
-    const frames = [
-      { transform: at, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
-      { transform: tip, offset: o(UP), easing: 'linear' },
-    ];
-    const glow = [
-      { filter: rest, offset: 0, easing: 'cubic-bezier(.3,.7,.35,1)' },
-      { filter: up, offset: o(UP), easing: 'linear' },
-    ];
-    for (let ms = SHIVER_IN, i = 0; ms <= SHIVER_OUT; ms += SIDE, i++) {
-      const dir = i % 2 === 0 ? 1 : -1;
-      frames.push({
-        transform: `${tip} translateX(${dir * 3}px) rotate(${dir * 1.2}deg)`,
-        offset: o(ms), easing: 'linear',
-      });
-    }
-    frames.push({ transform: tip, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
-    frames.push({ transform: at, offset: 1 });
-    glow.push({ filter: up, offset: o(DOWN_AT), easing: 'cubic-bezier(.45,0,.55,1)' });
-    glow.push({ filter: rest, offset: 1 });
-
-    /* Nothing fills forwards: the peek ends and the card is left to the
-       landing, which still holds it where it came down. */
-    let set = [], timer = null;
-    const drop = () => set.forEach((a) => { try { a.cancel(); } catch (e) {} });
-    const mine = { cancel: () => { clearTimeout(timer); drop(); } };
-    const peek = () => {
-      // The scene may have gone, or the turn moved on, since this was set.
-      if (!S.live || S.live.turnAnim !== mine) return;
-      drop();
-      set = [card.animate(frames, { duration: FLAT })];
-      card.querySelectorAll('.face').forEach((f) => set.push(f.animate(glow, { duration: FLAT })));
-      timer = setTimeout(peek, EVERY);
-    };
-    S.live.turnAnim = mine;
-    peek();
+    if (!card || S.live.calm) return;   // reduced motion: the label is enough
+    S.live.turnAnim = Stage.peek(card, S.live.landedAt[p]);
   }
 
   /* The finish, in three moves:
