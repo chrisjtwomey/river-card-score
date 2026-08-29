@@ -1448,7 +1448,9 @@ part('bidding for a seat that is not there, and leaving');
     flip: (box, f) => { if (f) f(); }, on: () => false,
   };
   // ask() answers yes, and answers it now, so the tap can be followed
-  const uiReal = { fx, ask: () => ({ then: (f) => f(true) }), keepAwake: () => ({ then: () => {} }) };
+  const asked = [];
+  const uiReal = { fx, ask: (t, b, l) => { asked.push({ t, b, l }); return { then: (f) => f(true) }; },
+                   keepAwake: () => ({ then: () => {} }) };
   const UI = new Proxy(uiReal, { get: (t, k) => (k in t ? t[k] : anything) });
 
   function playPage(seed, search) {
@@ -1548,6 +1550,18 @@ part('bidding for a seat that is not there, and leaving');
     const sc = P.dom.document.querySelector('.scorecard-panel');
     ok(sc && sc.classList.contains('pinned') && sc.open === true,
        'and the scorecard is open, not folded away');
+  }
+
+  {   // a step back is asked about first, and told what it takes
+    const P = playPage(seed, '?c=TEST');
+    const st = table({ away: false }); st.phase = 'tricks'; st.turn = null;
+    P.feed(st);
+    asked.length = 0; P.socks[0].sent.length = 0;
+    P.pick('#btn-undo').fire('click');
+    ok(asked.length === 1 && /^Undo/.test(asked[0].t), 'undo asks first  got ' + JSON.stringify(asked[0]));
+    ok(/round 1/i.test(asked[0].b), 'and names the round it takes back  got ' + (asked[0] || {}).b);
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"undo"}',
+       'and the tap goes to the table once it is confirmed  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 
   {   // a refusal is said where it can be seen

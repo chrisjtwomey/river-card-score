@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
           + 'This phone can come back to it from the front page.',
       'Leave').then((yes) => { if (yes) Net.send({ t: 'leave' }); });
   });
-  $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
+  $('#btn-undo').addEventListener('click', () => Round.undo(view(), ST));
   $('#btn-reset').addEventListener('click', () => Round.newGame(view()));
   boot();
 });

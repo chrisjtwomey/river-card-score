@@ -36,7 +36,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 **One phone is enough.** On the landing page, type your name and press **Start a table and play**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A TV screen is optional.
 
-**The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, go back, and new game. They can hand that over with the ★ button beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
+**The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, undo, and new game. They can hand that over with the ★ button beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
 
 1. Someone starts the table, from a phone with **Start a table and play**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone and on the TV screen. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
 2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can move a player up or down, or remove one, until the game starts.
@@ -47,7 +47,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 7. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
 8. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The TV screen can enter them too, if the dealer's phone is not handy.
 9. The round scores, the next round opens, and the deal moves on one seat.
-10. The table host, or the TV screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
+10. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
 
 ### When a phone goes
 
@@ -180,7 +180,7 @@ The rules are held on the server, so a phone cannot renege, play out of turn, or
 
 - The dealer's trick pad is gone, and typing the tricks in is refused.
 - Nobody picks the trump. The deck turns it.
-- **Go back** deals that hand again, because those cards are gone.
+- **Undo last step** deals that hand again, because those cards are gone.
 - The empty seats can be played by bots: see **Bots**.
 - A phone that goes quiet would stop the table, so whoever runs the table gets **Play a card for them**. The server picks, and only from the cards the rules allow, so nobody chooses another player's card.
 

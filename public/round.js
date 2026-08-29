@@ -219,7 +219,23 @@ const Round = (function () {
     });
   }
 
-  /* ---------- the two things a table is asked twice about ---------- */
+  /* ---------- the three things a table is asked twice about ---------- */
+
+  /* A step back takes bids or a score with it, and on a table that deals the
+     cards it deals the round again, so it is asked first and told what goes.
+     The server decides what is undone; this says the same thing before the
+     tap lands. */
+  function undo(view, ST) {
+    if (!ST || ST.phase === 'lobby') return;
+    const back = ST.phase === 'tricks' ? ST.idx : ST.phase === 'done' ? ST.rounds.length - 1 : ST.idx - 1;
+    if (back < 0) { view.send({ t: 'undo' }); return; }   // nothing to undo: the table says so
+    const body = Game.virtual(ST)
+      ? `Round ${back + 1} is dealt again and bid again.`
+      : ST.phase === 'tricks'
+        ? `The bids of round ${back + 1} are cleared, and it is bid again.`
+        : `Round ${back + 1} is unscored, and its tricks are entered again.`;
+    UI.ask('Undo the last step?', body, 'Undo').then((yes) => { if (yes) view.send({ t: 'undo' }); });
+  }
 
   function newGame(view) {
     UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.', 'New game')
@@ -235,5 +251,5 @@ const Round = (function () {
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
-  return { header, bidStrip, trickPad, bidFor, playFor, playout, winner, newGame, bumDeal };
+  return { header, bidStrip, trickPad, bidFor, playFor, playout, winner, newGame, bumDeal, undo };
 })();

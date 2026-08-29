@@ -402,6 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // playFinale() in the console replays the result.
   window.playFinale = (mode) => playFinaleNow(mode || 'full');
 
-  $('#btn-undo').addEventListener('click', () => Net.send({ t: 'undo' }));
+  $('#btn-undo').addEventListener('click', () => Round.undo(view(), ST));
   boot();
 });
