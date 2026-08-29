@@ -1595,6 +1595,19 @@ part('bidding for a seat that is not there, and leaving');
     ok(!P.pick('#lobby-seats').children[1].querySelector('.more'), 'a player who does not run the table has no menu');
   }
 
+  {   // a vote that was cast says so, and can still be changed
+    const P = playPage(seed, '?c=TEST');
+    const st = table({ away: false }); st.cfg.deck = 'physical';
+    st.vote = { kind: 'bumdeal', by: 1, round: 0, yes: [1, 0], no: [] };   // Ben asked, and I agreed
+    P.feed(st);
+    const acts = P.pick('#vote-actions');
+    ok(P.pick('#votebox').hidden === false, 'the vote box is up');
+    ok(!!acts.querySelector('.hint') && /You agreed/.test(acts.querySelector('.hint').textContent),
+       'and it says my vote landed  got ' + (acts.querySelector('.hint') || {}).textContent);
+    const btns = acts.querySelectorAll('button');
+    ok(btns.length === 1 && btns[0].textContent === 'No, play on', 'with the other answer still there  got ' + btns.map((b) => b.textContent).join('|'));
+  }
+
   {   // the end of the game is said once on the page
     const P = playPage(seed, '?c=TEST');
     const st = table({ away: false }); st.cfg.deck = 'physical'; st.phase = 'done'; st.idx = 1; st.turn = null;

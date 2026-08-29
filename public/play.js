@@ -155,18 +155,27 @@ function renderVote(r, me) {
   box.hidden = false;
   $('#vote-text').textContent = Table.voteText(ST, me);
 
-  // Only a phone answers a vote, so the buttons live here.
-  const mine = v.yes.includes(me) || v.no.includes(me);
+  // Only a phone answers a vote, so the buttons live here. A vote cast is
+  // said, and the other button stays, so a mind can be changed: the table
+  // accepts a changed vote, and a box gone blank read as a tap that missed.
+  const agreed = v.yes.includes(me);
   acts.innerHTML = '';
-  if (!mine) {
-    const yes = document.createElement('button');
-    yes.className = 'btn primary'; yes.type = 'button'; yes.textContent = 'Agree, deal again';
-    yes.addEventListener('click', () => Net.send({ t: 'vote', agree: true }));
+  if (v.by !== me) {
+    if (agreed) {
+      const said = document.createElement('span');
+      said.className = 'hint'; said.textContent = 'You agreed. Waiting for the others.';
+      acts.appendChild(said);
+    } else {
+      const yes = document.createElement('button');
+      yes.className = 'btn primary'; yes.type = 'button'; yes.textContent = 'Agree, deal again';
+      yes.addEventListener('click', () => Net.send({ t: 'vote', agree: true }));
+      acts.appendChild(yes);
+    }
     const no = document.createElement('button');
     no.className = 'btn ghost'; no.type = 'button'; no.textContent = 'No, play on';
     no.addEventListener('click', () => Net.send({ t: 'vote', agree: false }));
-    acts.append(yes, no);
-  } else if (v.by === me) {
+    acts.appendChild(no);
+  } else {
     const c = document.createElement('button');
     c.className = 'btn ghost'; c.type = 'button'; c.textContent = 'Withdraw the vote';
     c.addEventListener('click', () => Net.send({ t: 'votecancel' }));
