@@ -227,6 +227,7 @@ const Lobby = (function () {
     { id: 'cfg-accolade-count', key: 'accoladeCount', kind: 'select', label: 'Accolades drawn',
       hint: 'Prizes for how you played, drawn at random when the game ends.' },
     { id: 'cfg-accolade-pay', key: 'accoladePay', kind: 'select', label: 'Each one pays' },
+    { id: 'cfg-accolade-which', key: 'accolades', kind: 'picks', label: 'Which ones' },
   ];
   /* How the fields sit: groups, a hairline between one and the next, and two
      abreast inside a group where they read as a pair. What kind of cards are
@@ -238,7 +239,7 @@ const Lobby = (function () {
     [['cfg-max', 'cfg-ones'], 'cfg-pattern'],
     [['cfg-bonus', 'cfg-miss']],
     [{ toggles: ['cfg-screw', 'cfg-trump'] }],
-    [['cfg-accolade-count', 'cfg-accolade-pay']],
+    [['cfg-accolade-count', 'cfg-accolade-pay'], 'cfg-accolade-which'],
   ];
   const MISS_SAID = {
     atleast: 'Over the bid pays the tricks won; short of it pays 0.',
@@ -250,6 +251,9 @@ const Lobby = (function () {
   const DEFAULTS = { accoladePay: 10, accoladeCount: 3, deck: 'physical' };
   const byId = (id) => RULES.find((r) => r.id === id);
 
+  // The accolades a game can hand out, named where they are worked out.
+  const ACC = () => (typeof Accolades === 'undefined' ? [] : Accolades.ALL);
+
   const make = (tag, cls, txt) => {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -258,6 +262,26 @@ const Lobby = (function () {
   };
 
   function field(r) {
+    /* A rule that is a list to tick through: which accolades this table hands
+       out. Folded away, because eleven switches would be the longest thing in
+       the rules by far and most tables never touch them. */
+    if (r.kind === 'picks') {
+      const box = make('details', 'capset accset');
+      box.id = r.id;
+      const sum = make('summary');
+      sum.append(make('span', 'capset-name', r.label), make('small', 'capset-sum'));
+      const list = make('div', 'toggles');
+      ACC().forEach((a) => {
+        const lab = make('label', 'switch');
+        const el = make('input');
+        el.type = 'checkbox';
+        el.id = 'acc-' + a.key;
+        lab.append(el, make('span', '', a.title));
+        list.appendChild(lab);
+      });
+      box.append(sum, list);
+      return box;
+    }
     if (r.kind === 'check') {
       const row = make('div', 'switchrow');
       row.id = r.id + '-row';               // the row is what a rule hides itself by
@@ -319,6 +343,7 @@ const Lobby = (function () {
     const max = q(root, '#cfg-max');
     if (max) max.max = String(cap);
     RULES.forEach((r) => {
+      if (r.kind === 'picks') return;              // a list of its own, below
       const el = q(root, '#' + r.id);
       if (!el) return;
       const v = c[r.key] === undefined ? DEFAULTS[r.key] : c[r.key];
@@ -341,9 +366,34 @@ const Lobby = (function () {
     const cards = Game.schedule(c.max, c.pattern, c.ones);
     text(root, '#cfg-pattern-hint', `${cards.length} rounds: ${cards.join(' ')}`);
     const ex = (w) => Game.roundScore(2, w, c);
+    accoladePicks(root, ST, view);
     // The rule, then the same rule counted out: two lines, not one long one.
     text(root, '#cfg-miss-hint',
       `${MISS_SAID[c.miss] || ''}\nBid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`);
+  }
+
+  /* Which accolades this table hands out. Nothing chosen is all of them, so
+     a table that has never been asked plays with the lot. Every change sends
+     the whole list: what is not on it is what was unticked. */
+  function accoladePicks(root, ST, view) {
+    const box = q(root, '#cfg-accolade-which');
+    if (!box) return;
+    const all = ACC();
+    // None drawn at all, nothing to choose between.
+    box.hidden = Number(ST.cfg.accoladeCount) === 0;
+    const chosen = Array.isArray(ST.cfg.accolades) ? ST.cfg.accolades : all.map((a) => a.key);
+    all.forEach((a) => {
+      const el = q(box, '#acc-' + a.key);
+      if (!el) return;
+      el.checked = chosen.indexOf(a.key) >= 0;
+      el.disabled = !view.boss;
+      if (!el._wired) {
+        el._wired = true;
+        el.addEventListener('change', () => view.send({ t: 'config',
+          patch: { accolades: all.map((x) => x.key).filter((k) => (q(box, '#acc-' + k) || {}).checked) } }));
+      }
+    });
+    text(box, '.capset-sum', all.length ? `${chosen.length} of ${all.length}` : '');
   }
 
   /* The rules in force, in a line: what a screen shows where the form itself

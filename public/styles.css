@@ -1147,6 +1147,10 @@ body.host .scorecard-panel .table-wrap{
 .capset[open] .capset-sum{display:none}          /* open, the form says it better */
 .capset[open] > summary{border-bottom:1px solid var(--line)}
 .capset > #rules-form{padding:14px 0}
+/* A rule that is a list to tick through, inside the rules themselves. */
+.accset{background:var(--bg2);padding:0 10px}
+.accset > summary{font-size:14px;font-weight:700;padding:10px 0}
+.accset > .toggles{padding:4px 0 12px}
 .captain-panel .seat-item .mini{width:34px;height:34px}
 .captain-panel .code-badge{font-size:46px;letter-spacing:.16em}
 .captain-panel .qrbox img{width:150px;height:150px}

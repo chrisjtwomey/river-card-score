@@ -188,6 +188,8 @@ needs no internet at all.
 
 When the last round is scored, some of the accolades the table earned are drawn at random. **Three** by default, and the rules take anything from none to five. Each one pays its holder **10 points** by default, or 20, 5, or nothing.
 
+**Which ones a table plays for** is the table's own choice: under *Which ones* in the rules, every accolade the game has can be turned off, and only the ones left are ever drawn. A table that has never been asked plays with all eleven, and so does every game played before the choice existed.
+
 The finish plays in three moves:
 
 1. **The places, as they stood before the accolades.** Every score is the one the scorecard shows. The screen holds there for five seconds, so the table can read them.
@@ -395,7 +397,7 @@ Phones reconnect on their own. A player who closes the page and comes back is of
   trumps. With real cards the deck on the table decides everything about
   trumps, so nothing on a phone or the TV screen asks about them.
 - Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
-- How many accolades are drawn at the end, from none to five, and what each one pays: 20, 10, 5, or nothing. See [Accolades](#accolades).
+- How many accolades are drawn at the end, from none to five, what each one pays -- 20, 10, 5, or nothing -- and which of the eleven the table plays for at all. See [Accolades](#accolades).
 
 ## Play with no internet
 

@@ -13,6 +13,8 @@
 const fs = require('fs');
 const path = require('path');
 const Game = require('./game.js');
+// The names of the accolades, which the rules form lists to be chosen from.
+const Accolades = require('./public/accolades.js');
 
 function makeDom(W, H) {
   const listeners = [];
@@ -1894,14 +1896,15 @@ part('bidding for a seat that is not there, and leaving');
       fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
     const src = ['public/lobby.js', 'public/round.js'].concat(o.real || []).concat(['public/net.js', 'public/play.js'])
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
-    const stubs = ['Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage', 'Felt']
+    const stubs = ['Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Finale', 'Stage', 'Felt']
       .filter((n) => !(o.real || []).some((f) => f.toLowerCase().indexOf(n.toLowerCase() + '.js') >= 0));
     const given = Object.assign({ Avatar: { saved: () => null, remember() {}, url: () => null,
       picker: () => ({ el: new dom.El('div'), show() {}, say() {} }) } }, o.given || {});
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
-      'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
+      'Game', 'UI', 'Table', 'Accolades', 'console', ...stubs, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game, UI, Table,
-      { log() {}, info() {}, warn() {}, error() {} }, ...stubs.map((n) => (n in given ? given[n] : anything)));
+      Accolades, { log() {}, info() {}, warn() {}, error() {} },
+      ...stubs.map((n) => (n in given ? given[n] : anything)));
     dom.document.fire('DOMContentLoaded');
     if (socks[0]) {
       socks[0].onopen();
@@ -2048,6 +2051,36 @@ part('bidding for a seat that is not there, and leaving');
     ok(!!groups[2].querySelector('#cfg-miss'), 'then what a bid pays');
     ok(!!groups[3].querySelector('#cfg-screw'), 'then the variants');
     ok(!!groups[4].querySelector('#cfg-accolade-count'), 'and the prizes last');
+
+    /* Which accolades this table hands out: eleven switches, folded away
+       because most tables never touch them, and every change sends the whole
+       list of what is still ticked. */
+    const which = form.querySelector('#cfg-accolade-which');
+    ok(!!which && which.querySelectorAll('.switch').length === Accolades.ALL.length,
+       'every accolade the game has can be turned off  got '
+       + (which ? which.querySelectorAll('.switch').length : 'no list'));
+    ok(which.querySelector('.capset-sum').textContent === '11 of 11',
+       'a table that has not been asked hands out all of them  got ' + which.querySelector('.capset-sum').textContent);
+    ok(which.querySelectorAll('input').every((i) => i.checked), 'with every one ticked');
+    P.socks[0].sent.length = 0;
+    const off = which.querySelector('#acc-steady');
+    off.checked = false;
+    off.fire('change');
+    const sent = P.socks[0].sent[0];
+    ok(sent && sent.t === 'config' && sent.patch.accolades.length === Accolades.ALL.length - 1
+       && sent.patch.accolades.indexOf('steady') < 0,
+       'unticking one sends the rest  got ' + JSON.stringify(sent));
+    const fewer = table({ phase: 'lobby' });
+    fewer.cfg.accolades = ['tricks', 'best'];
+    P.feed(fewer);
+    ok(which.querySelector('.capset-sum').textContent === '2 of 11',
+       'and the table says how many it hands out  got ' + which.querySelector('.capset-sum').textContent);
+    ok(which.querySelector('#acc-tricks').checked && !which.querySelector('#acc-steady').checked,
+       'with those two ticked and the rest not');
+    const none = table({ phase: 'lobby' });
+    none.cfg.accoladeCount = 0;
+    P.feed(none);
+    ok(which.hidden === true, 'a table that draws none is not asked which');
     P.socks[0].sent.length = 0;
     max.value = '6'; max.fire('change');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"max":"6"}}',

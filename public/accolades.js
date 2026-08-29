@@ -4,6 +4,34 @@
    every screen can show them. */
 const Accolades = (function () {
 
+  /* Every accolade this game can hand out, in the order they are worked out.
+     The titles live here and nowhere else: the rules form lists them to be
+     chosen from, and the awards below are named from the same list. */
+  const ALL = [
+    { key: 'fearless', title: 'Most fearless' },
+    { key: 'tricks', title: 'Most tricks won' },
+    { key: 'best', title: 'Best round' },
+    { key: 'steady', title: 'Steadiest hand' },
+    { key: 'climb', title: 'Best comeback' },
+    { key: 'zeros', title: 'Zero hero' },
+    { key: 'allin', title: 'All in' },
+    { key: 'under', title: 'Quiet achiever' },
+    { key: 'careful', title: 'Most careful' },
+    { key: 'over', title: 'Biggest eyes' },
+    { key: 'blank', title: 'Hardest luck' },
+  ];
+  const titleOf = (key) => (ALL.find((a) => a.key === key) || {}).title || key;
+
+  /* The ones a table hands out. Nothing chosen is all of them: a table that
+     has never said otherwise plays with the lot, and so does every game
+     played before the rule existed. */
+  function only(items, keys) {
+    if (!Array.isArray(keys)) return items || [];
+    const want = {};
+    keys.forEach((k) => { want[k] = true; });
+    return (items || []).filter((a) => want[a.key]);
+  }
+
   const done = (r) => !!r && Array.isArray(r.bids) && r.bids.every((b) => b !== null) && Array.isArray(r.tricks);
   const plural = (v, one, many) => `${v} ${v === 1 ? one : (many || one + 's')}`;
 
@@ -52,38 +80,38 @@ const Accolades = (function () {
     // dir 1 takes the biggest, dir -1 the smallest. `least` is the bar it must
     // clear, the other way round for dir -1. A tie shares the accolade, but
     // nothing is awarded when every seat is level: that says nothing.
-    const award = (key, title, values, dir, least, note) => {
+    const award = (key, values, dir, least, note) => {
       const best = dir > 0 ? Math.max.apply(null, values) : Math.min.apply(null, values);
       const who = [];
       values.forEach((v, i) => { if (v === best) who.push(i); });
       // An accolade half the table shares is not an accolade.
       if (who.length > Math.max(1, Math.floor(n / 2))) return;
       if (dir > 0 ? best < least : best > least) return;
-      out.push({ key, title, who, note: note(best, who) });
+      out.push({ key, title: titleOf(key), who, note: note(best, who) });
     };
     const by = (k) => st.map((s) => s[k]);
 
-    award('fearless', 'Most fearless', by('bid'), 1, 1,
+    award('fearless', by('bid'), 1, 1,
       (v) => `bid ${plural(v, 'trick')} in all`);
-    award('tricks', 'Most tricks won', by('tricks'), 1, 1,
+    award('tricks', by('tricks'), 1, 1,
       (v) => `took ${plural(v, 'trick')}`);
-    award('best', 'Best round', st.map((s) => s.best), 1, 1,
+    award('best', st.map((s) => s.best), 1, 1,
       (v, who) => `${plural(v, 'point')} in round ${st[who[0]].bestAt}`);
-    award('steady', 'Steadiest hand', by('off'), -1, Infinity,
+    award('steady', by('off'), -1, Infinity,
       (v) => (v === 0 ? 'never missed a bid' : `only ${plural(v, 'trick')} out all game`));
-    award('climb', 'Best comeback', climb, 1, 2,
+    award('climb', climb, 1, 2,
       (v) => `climbed ${plural(v, 'place')} in the second half`);
-    award('zeros', 'Zero hero', by('zeros'), 1, 2,
+    award('zeros', by('zeros'), 1, 2,
       (v) => `took nothing ${plural(v, 'time')}, on purpose`);
-    award('allin', 'All in', by('allin'), 1, 1,
+    award('allin', by('allin'), 1, 1,
       (v) => (v === 1 ? 'bid a whole hand and made it' : `bid the whole hand ${v} times, and made it`));
-    award('under', 'Quiet achiever', by('under'), 1, 2,
+    award('under', by('under'), 1, 2,
       (v) => `won ${plural(v, 'trick')} more than bid`);
-    award('careful', 'Most careful', by('bid'), -1, Infinity,
+    award('careful', by('bid'), -1, Infinity,
       (v) => `bid only ${plural(v, 'trick')} all game`);
-    award('over', 'Biggest eyes', by('over'), 1, 2,
+    award('over', by('over'), 1, 2,
       (v) => `bid ${plural(v, 'trick')} more than won`);
-    award('blank', 'Hardest luck', by('blank'), 1, 2,
+    award('blank', by('blank'), 1, 2,
       (v) => `${plural(v, 'round')} with nothing to show`);
 
     // Nobody is both the boldest and the most careful.
@@ -142,7 +170,7 @@ const Accolades = (function () {
     });
   }
 
-  const api = { list, pick, bonus, render };
+  const api = { ALL, only, list, pick, bonus, render };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;   // the server picks
   return api;
 })();

@@ -61,7 +61,7 @@ function table(o) {
                         seatBid: Room.seatBid, playCard, bumDeal: Room.bumDeal });
 
   const { handleTable } = Messages({
-    DEV: !!o.dev, CHAT_KEEP: o.chatKeep || 100, G, send, fail: bounce, broadcast, Room, playCard,
+    DEV: !!o.dev, CHAT_KEEP: o.chatKeep || 100, G, A, send, fail: bounce, broadcast, Room, playCard,
     markPresence: () => {},
     addBot: (r) => Room.addBot(r, Bots.botName(r)),
     bidValue: Bots.bidFor,
@@ -244,6 +244,19 @@ part('the accolades, worked out from a scorecard alone');
                  card(1, [0, 0, 0, 0], [0, 0, 1, 0])];
   ok(!A.list(level, 4, (b, w) => G.roundScore(b, w, cfg)).some((a) => a.key === 'fearless'),
      'and nothing is awarded where every seat is level');
+
+  /* A table says which of them it hands out. Every accolade the game has is
+     named in one place, and a table that has never said otherwise plays with
+     the lot -- as does every game played before the rule existed. */
+  ok(A.ALL.length === 11 && A.ALL.every((a) => a.key && a.title), 'every accolade is named in one list');
+  ok(A.ALL.some((a) => a.key === 'steady' && a.title === 'Steadiest hand'),
+     'and the name it is drawn under is the name it is chosen by');
+  ok(A.only(got, undefined).length === got.length, 'a table that chose none of them hands out all of them');
+  const two = A.only(got, ['steady', 'tricks']);
+  ok(two.length === 2 && two.every((a) => ['steady', 'tricks'].indexOf(a.key) >= 0),
+     'and one that chose two hands out those two  got ' + two.map((a) => a.key).join(','));
+  ok(A.only(got, []).length === 0, 'choosing none hands out none');
+  ok(A.only(got, ['nosuchthing']).length === 0, 'and a name the game does not know wins nothing');
 }
 
 part('a round opens in one place, whatever brought it there');
@@ -307,6 +320,20 @@ part('a round opens in one place, whatever brought it there');
   ok(t.room.phase === 'done', 'the last round scoring finishes the game');
   ok(!!t.room.gameId && t.saved[0] === t.room.gameId, 'and it is written to file, once');
   ok(Array.isArray(t.room.awards) && Array.isArray(t.room.bonus), 'the accolades are drawn and paid');
+}
+
+{
+  /* A game hands out only the accolades its table chose. A one-round game is
+     too short to earn any, so this one is played out long enough to. */
+  const t = started(['Ann', 'Bob', 'Cal', 'Dee'], { max: 2, pattern: 'downup', ones: 2 });
+  t.rules({ accolades: ['steady'] });
+  while (t.room.phase !== 'done') {
+    t.bidAll(0);
+    t.Room.scoreRound(t.room, [1, 0, 0, 1]);
+  }
+  ok(t.room.awards.every((a) => a.key === 'steady'),
+     'only the accolades the table chose are drawn  got ' + t.room.awards.map((a) => a.key).join(','));
+  ok(t.room.awards.length <= 1, 'and one that was not earned is not invented');
   t.Room.toLobby(t.room);
   ok(t.room.phase === 'lobby' && t.room.rounds.length === 0, 'back to the lobby: the same players, no scorecard');
   ok(t.room.awards === null && t.room.bonus === null, 'and nothing owing from the last game');
@@ -675,6 +702,17 @@ part('who may send what, and when');
   ok(t.room.cfg.max === 2 && t.room.cfg.ones === 3, 'and they land');
   ok(t.say(0, { t: 'config', patch: { max: 99 } }) === null && t.room.cfg.max === G.maxCardsFor(2),
      'a hand bigger than the deck is cut down to it');
+  // which accolades the table hands out, in the game's own order, its own names only
+  ok(t.room.cfg.accolades === undefined, 'a new table has not been asked which accolades it wants');
+  ok(t.say(0, { t: 'config', patch: { accolades: ['blank', 'tricks', 'nosuchthing'] } }) === null,
+     'the table host picks them');
+  ok(t.room.cfg.accolades.join(',') === 'tricks,blank',
+     'kept in the order the game works them out, and nothing it does not know  got '
+     + t.room.cfg.accolades.join(','));
+  ok(t.say(0, { t: 'config', patch: { accolades: 'all of them' } }) === null
+     && t.room.cfg.accolades.join(',') === 'tricks,blank', 'and a list that is not one changes nothing');
+  ok(t.say(0, { t: 'config', patch: { accolades: [] } }) === null && t.room.cfg.accolades.length === 0,
+     'a table can hand out none of them');
   ok(t.say(0, { t: 'seatMove', id: t.room.seats[1].id, to: 0 }) === null, 'a seat is dragged to a new place');
   ok(t.room.seats.map((s) => s.name).join() === 'Bob,Ann', 'and lands there');
   ok(t.room.captainId === t.room.seats[1].id, 'and dragging it does not change who runs the table');

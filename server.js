@@ -252,7 +252,7 @@ const { handleDev, devHello } = Dev({
 
 // Every message a seated socket may send, and who may send it, as a table.
 const { handleTable } = Messages({
-  DEV, CHAT_KEEP, G, send, fail, broadcast, Room, playCard, markPresence,
+  DEV, CHAT_KEEP, G, A, send, fail, broadcast, Room, playCard, markPresence,
   addBot: (room) => Room.addBot(room, Bots.botName(room)),
   bidValue: Bots.bidFor,
 });
