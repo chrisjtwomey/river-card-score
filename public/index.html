@@ -51,12 +51,17 @@
   </section>
 
   <section class="panel" id="join-panel">
-    <h2>Join a table</h2>
+    <h2 id="join-title">Join a table</h2>
     <p class="hint" id="join-note" hidden></p>
-    <label class="field">
-      <span>Table code</span>
-      <input type="text" id="in-code" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="4F2K" class="code-input">
-    </label>
+    <!-- A code reaches this server and no other, so on the phone that runs one
+         this part goes: every table here is listed above by name. What is left
+         is the camera, which reaches somebody else's table. -->
+    <div id="join-here">
+      <label class="field">
+        <span>Table code</span>
+        <input type="text" id="in-code" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="4F2K" class="code-input">
+      </label>
+    </div>
     <!-- Hidden until the browser is asked: no camera, no button. -->
     <button class="btn" id="btn-scan" type="button" hidden>📷 Scan the code</button>
     <button class="btn primary big" id="btn-join" type="button">Take a seat</button>

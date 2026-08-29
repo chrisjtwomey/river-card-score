@@ -102,6 +102,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* A code typed here reaches this server and no other, and every table on it
+     is listed above with a way in. So on the phone that runs the server that
+     part of the panel goes, and what is left is the camera: a QR code from
+     another phone opens that phone's table, which nothing here can do. */
+  if (UI.servedHere()) {
+    $('#join-here').hidden = true;
+    $('#btn-join').hidden = true;
+    $('#join-title').textContent = 'Join another phone\'s table';
+    if (!Scan.can()) $('#join-panel').hidden = true;      // no camera, nothing left to offer
+  }
+
   /* Every table this phone is running, asked of the server itself. The list
      above is what this browser remembers; this is what is actually there, and
      the two are not the same: a table started from a TV screen on this server,
@@ -154,6 +165,21 @@ document.addEventListener('DOMContentLoaded', () => {
     go.addEventListener('click', () => {
       location.href = 'host.html?c=' + encodeURIComponent(t.code);
     });
+    /* The way in, when there is one. A table still in the lobby has a seat for
+       anybody; a game already going has one only for the player it belongs to,
+       and this phone knows the name it plays under. Neither is a code to type:
+       the table is right here. */
+    const mine = t.seats.find((s) => !s.bot && !s.left && !s.online
+      && s.name.toLowerCase() === (Net.name() || '\u0000').toLowerCase());
+    const room = t.phase === 'lobby' && t.seats.length < 8;
+    let sit = null;
+    if (room || mine) {
+      sit = document.createElement('button');
+      sit.className = 'btn primary';
+      sit.type = 'button';
+      sit.textContent = room ? 'Take a seat' : 'Take my seat';
+      sit.addEventListener('click', () => { sit.disabled = true; takeSeat(t.code, sit); });
+    }
     /* The table is this phone's to take away: it runs it. Nothing else can --
        a table has no other end but the hours running out. */
     const drop = document.createElement('button');
@@ -173,8 +199,24 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
     });
-    row.append(mark, nm, badge, who, go, drop);
+    row.append(mark, nm, badge, who);
+    if (sit) row.appendChild(sit);
+    row.append(go, drop);
     return row;
+  }
+
+  /* Sitting down at a table this phone is running. The same message the code
+     box sends -- the table is named instead of typed, and the name is the one
+     this phone plays under, which is also how a seat in a game already going
+     is given back to the phone that holds it. */
+  function takeSeat(code, btn) {
+    const name = Net.name();
+    if (!name) { btn.disabled = false; settings.open({ first: true }); return; }
+    Net.connect({
+      onOpen: () => Net.send({ t: 'join', code, name }),
+      onHello: (m) => { location.href = 'play.html?c=' + encodeURIComponent(m.code); },
+      onError: (msg) => { btn.disabled = false; UI.fx.toast(msg, { err: true, ms: 4000 }); },
+    });
   }
 
   // Asked of the server, which is this phone. POST: never a link to wander into.

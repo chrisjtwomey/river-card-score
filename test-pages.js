@@ -1597,7 +1597,8 @@ part('the front page, and the screen');
       { code: 'AAAA', phase: 'bid', round: 2, rounds: 16, seats: [{ id: 'sa', name: 'Ann' }, { id: 'sb', name: 'Otter' }] },
       { code: 'CCCC', phase: 'lobby', round: null, rounds: null, seats: [{ id: 'sc', name: 'Cal' }] },
     ] };
-    const seedOne = { 'rcs:tables:v1': JSON.stringify([{ code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' }]) };
+    const seedOne = { 'rcs:tables:v1': JSON.stringify([{ code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' }]),
+                      'rcs:name:v1': 'Chris' };
     const asked = [], sent = [];
     const answer = (u, o) => { asked.push(u); sent.push((o || {}).method || 'GET');
       return Promise.resolve({ ok: true, json: () => Promise.resolve(running) }); };
@@ -1627,11 +1628,23 @@ part('the front page, and the screen');
         ok(marks.length === 2 && marks[0].classList.contains('play') && marks[1].classList.contains('play'),
            'a game in play is marked as turning  got ' + marks.map((m) => m.className).join(' | '));
       });
-      const btn = rows[0].querySelector('.btn');
-      ok(btn.textContent === 'Watch', 'and it is watched, not joined');
-      btn.fire('click');
+      const btns = rows[0].querySelectorAll('.btn').map((b) => b.textContent);
+      ok(btns.join(' | ') === 'Take a seat | Watch',
+         'a table in the lobby is sat down at, or watched  got ' + btns.join(' | '));
+      const watch = rows[0].querySelectorAll('.btn').find((b) => b.textContent === 'Watch');
+      watch.fire('click');
       ok(P.gone[P.gone.length - 1] === 'host.html?c=CCCC',
-         'on the screen a TV would show  got ' + P.gone[P.gone.length - 1]);
+         'watching is the screen a TV would show  got ' + P.gone[P.gone.length - 1]);
+
+      // and sitting down is the message the code box used to send
+      rows[0].querySelectorAll('.btn').find((b) => b.textContent === 'Take a seat').fire('click');
+      P.socks[P.socks.length - 1].onopen();
+      ok(JSON.stringify(P.socks[P.socks.length - 1].sent[0]) === '{"t":"join","code":"CCCC","name":"Chris"}',
+         'under the name this phone plays  got ' + JSON.stringify(P.socks[P.socks.length - 1].sent[0]));
+
+      ok(P.pick('#join-here').hidden === true, 'and the code box is gone: a code reaches this server alone');
+      ok(P.pick('#join-title').textContent === "Join another phone's table",
+         'what is left of that panel is the camera  got ' + P.pick('#join-title').textContent);
 
       // the table is this phone's to take away: it runs it
       P.dom.window.confirm = () => true;               // the fake DOM has no <dialog>
@@ -1642,6 +1655,42 @@ part('the front page, and the screen');
         ok(sent[sent.length - 1] === 'POST', 'asked for, never a link to wander into');
       });
     });
+
+    {   /* A game already going has a seat only for the player it belongs to.
+           The phone knows the name it plays under, so the row offers that seat
+           back instead of asking for a code and a name again. */
+      const started = { tables: [{ code: 'DDDD', phase: 'bid', round: 1, rounds: 16, seats: [
+        { id: 'd0', name: 'Chris', bot: false, left: false, online: false },
+        { id: 'd1', name: 'Otter', bot: true, left: false, online: true },
+      ] }] };
+      const S = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '',
+        { hostname: '127.0.0.1', real: ['public/ui.js'],
+          fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve(started) }) });
+      const sbox = S.dom.document.createElement('div');
+      sbox.append(S.pick('#join-panel'), S.pick('#new-panel'));
+      S.start();
+      Promise.resolve().then(() => Promise.resolve()).then(() => {
+        const b = S.pick('#server-list').querySelectorAll('.btn').map((x) => x.textContent);
+        ok(b.join(' | ') === 'Take my seat | Watch',
+           'the seat that is waiting for this phone is offered back  got ' + b.join(' | '));
+        ok(S.pick('#server-list').querySelector('.tmark').classList.contains('play'),
+           'and the table is marked as a game in play');
+      });
+
+      // once somebody is sitting in it, there is nothing to take
+      const taken = JSON.parse(JSON.stringify(started));
+      taken.tables[0].seats[0].online = true;
+      const T = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '',
+        { hostname: '127.0.0.1', real: ['public/ui.js'],
+          fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve(taken) }) });
+      const tbox = T.dom.document.createElement('div');
+      tbox.append(T.pick('#join-panel'), T.pick('#new-panel'));
+      T.start();
+      Promise.resolve().then(() => Promise.resolve()).then(() => {
+        const b = T.pick('#server-list').querySelectorAll('.btn').map((x) => x.textContent);
+        ok(b.join(' | ') === 'Watch', 'a seat somebody is sitting in is watched, not taken  got ' + b.join(' | '));
+      });
+    }
 
     // a browser that is not the phone running the server asks nothing
     const none = [];

@@ -872,7 +872,9 @@ body.player .standings-panel{box-shadow:var(--shadow)}
    those lists may still wrap. */
 #rejoin-list .seat-item,#server-list .seat-item{flex-wrap:wrap}
 #server-list .seat-item small{flex:1 1 100%;order:3;opacity:.75;font-weight:600}
-#server-list .seat-item .btn{margin-left:auto}
+#server-list .seat-item .btn.primary{margin-left:auto}
+#server-list .seat-item .btn:not(.primary){margin-left:auto}
+#server-list .seat-item .btn.primary ~ .btn{margin-left:0}
 /* What a running table is doing, in the space of a full stop. A game in play
    turns; a table waiting for people breathes; one that is over is still. */
 .tmark{flex:none;width:13px;height:13px;border-radius:50%;display:block}

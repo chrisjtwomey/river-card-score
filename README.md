@@ -123,8 +123,13 @@ browser's own memory, and a server can be running tables it knows nothing
 about: one started from a TV screen, or one whose seat this browser has
 forgotten. So the front page, read on the machine that serves it, asks the
 server what it is running and offers the rest under **Tables on this phone**,
-each under **Running tables**, with **Watch** — the screen a TV shows, which
-changes nothing at the table. A mark beside each says what it is doing: a game
+each under **Running tables**. Each row carries what can be done with that
+table: **Take a seat** while it is still in the lobby, **Take my seat** when a
+seat carries this phone's name and nobody is behind it, and **Watch** — the
+screen a TV shows, which changes nothing at the table. So the phone that runs
+the server never types a code: a code reaches that server and no other, and
+every table on it is already named here. What is left of the join panel there
+is the camera, which reaches somebody else's phone. A mark beside each says what it is doing: a game
 in play turns, a table waiting for players breathes, a game that is over is
 still. With reduce motion on, the marks are the same shapes and do not move. `GET /tables.json` answers that, and only to the machine the server
 runs on: a table's four characters are the only door it has, and a listing
