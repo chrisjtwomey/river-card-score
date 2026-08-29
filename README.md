@@ -47,7 +47,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 6. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
 7. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
 8. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The TV screen can enter them too, if the dealer's phone is not handy.
-9. The round scores, the next round opens, and the deal moves on one seat.
+9. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
 10. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
 
 ### When a phone goes

@@ -296,6 +296,29 @@ const Table = (function () {
     return now;
   }
 
+  /* What the round just scored paid, said once, as it lands. The felt holds
+     the same words up over the last trick; a phone at a table with real cards
+     and the TV screen had nothing but the figures moving. `last` is how many
+     rounds were scored on the state before -- the first state a page sees
+     says nothing, and a step back says nothing either. `me` is the seat
+     reading it, or -1 for a screen that belongs to nobody, which is told what
+     everybody got. `quiet` counts without saying: the felt is already saying it. */
+  function sayRound(ST, me, last, quiet) {
+    const done = ST.rounds.filter(Game.roundDone).length;
+    if (last === null || last === undefined || done !== last + 1 || quiet) return done;
+    const r = ST.rounds[done - 1];
+    const pts = (p) => Game.roundScore(r.bids[p], r.tricks[p], ST.cfg);
+    const signed = (v) => `${v > 0 ? '+' : ''}${v}`;
+    if (me >= 0) {
+      const v = pts(me);
+      UI.fx.toast(`${r.bids[me] === r.tricks[me] ? 'You made it' : 'You went down'} · ${signed(v)} point${Math.abs(v) === 1 ? '' : 's'}`,
+        { note: `bid ${r.bids[me]} · won ${r.tricks[me]}`, ms: 4000 });
+    } else {
+      UI.fx.toast(ST.seats.map((s, p) => `${s.name} ${signed(pts(p))}`).join(' · '), { note: `round ${done}`, ms: 4000 });
+    }
+    return done;
+  }
+
   function standings(box, ST, opts) {
     const o = opts || {};
     const me = o.me === undefined ? -1 : o.me;
@@ -364,7 +387,7 @@ const Table = (function () {
   const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
 
   return { scorecardHTML, scorecard, followCurrent, esc, roundKey, dealOpts, finaleOpts,
-           bidsAfter, sayBids, sayPresence, cardEl, trickEl,
+           bidsAfter, sayBids, sayPresence, sayRound, cardEl, trickEl,
            sweepTrick, sweepOut, trickIn,
            standings, winner, voteText, justFinished };
 })();

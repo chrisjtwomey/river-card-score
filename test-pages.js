@@ -1308,6 +1308,38 @@ part('who came, and who went');
   ok(/come back to their seat/.test(said[0]), 'and a seat nobody waits on says so  got ' + said[0]);
 }
 
+/* ---- what a round paid ---- */
+part('what a round paid');
+{
+  const said = [];
+  const UI = { fx: { toast: (t, o) => said.push(t + ((o && o.note) ? ' · ' + o.note : '')) } };
+  const src = fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8');
+  const Table = new Function('UI', 'Game', 'document', src + '\n; return Table;')(UI, Game, makeDom(412, 860).document);
+  const cfg = { bonus: 10, miss: 'atleast' };
+  const st = (rounds) => ({ cfg, rounds,
+    seats: [{ id: 's0', name: 'Ann' }, { id: 's1', name: 'Ben' }, { id: 's2', name: 'Cal' }] });
+  const played = { cards: 2, dealer: 0, bids: [1, 1, 0], tricks: [1, 0, 1] };
+  const open = { cards: 1, dealer: 1, bids: [null, null, null], tricks: null };
+
+  let k = Table.sayRound(st([Object.assign({}, played, { tricks: null }), open]), 0, null);
+  ok(said.length === 0 && k === 0, 'the first state a page sees says nothing');
+  k = Table.sayRound(st([played, open]), 0, k);
+  ok(k === 1 && said[0] === 'You made it · +11 points · bid 1 · won 1', 'a bid made is said with what it paid  got ' + said[0]);
+  said.length = 0;
+  Table.sayRound(st([played, open]), 1, 0);
+  ok(said[0] === 'You went down · 0 points · bid 1 · won 0', 'and a bid missed  got ' + said[0]);
+  said.length = 0;
+  Table.sayRound(st([played, open]), -1, 0);
+  ok(said[0] === 'Ann +11 · Ben 0 · Cal +1 · round 1', 'a screen that belongs to nobody is told what everybody got  got ' + said[0]);
+  said.length = 0;
+  Table.sayRound(st([played, open]), 0, 1);
+  ok(said.length === 0, 'and it is said once, not on every state after it');
+  Table.sayRound(st([Object.assign({}, played, { tricks: null }), open]), 0, 1);
+  ok(said.length === 0, 'a step back says nothing');
+  Table.sayRound(st([played, open]), 0, 0, true);
+  ok(said.length === 0, 'and nothing is said over the felt, which says it itself');
+}
+
 /* ---- the two pages that lost the game ----
 
    The front page offered one table and one only; the host screen made a new
@@ -1741,6 +1773,22 @@ part('bidding for a seat that is not there, and leaving');
     ok(vb.length === 2 && vb[0].textContent === 'Throw it in now',
        'and can end a vote either way  got ' + vb.map((b) => b.textContent).join('|'));
     ok(H.pick('#btn-bum').hidden === true, 'while the vote box carries the bum deal');
+  }
+
+  {   // what the round paid is said on the phone and on the TV screen
+    const before = table({ away: false, phase: 'tricks' }); before.cfg.deck = 'physical'; before.turn = null;
+    before.rounds[0].bids = [1, 1, 0];
+    const after = JSON.parse(JSON.stringify(before)); after.rounds[0].tricks = [1, 0, 1]; after.phase = 'done'; after.idx = 1;
+    const P = playPage(seed, '?c=TEST');
+    P.feed(before);
+    said.length = 0;
+    P.feed(after);
+    ok(said.some((s) => /^You made it · \+11 points/.test(s)), 'a phone at a table with real cards is told what the round paid it  got ' + said.join(' | '));
+    const H = hostPage('host');
+    H.feed(before);
+    said.length = 0;
+    H.feed(after);
+    ok(said.some((s) => /^Ann \+11 · Ben 0 · Cal \+1/.test(s)), 'and the TV screen is told what everybody got  got ' + said.join(' | '));
   }
 
   {   // the end of the game is said once on the page

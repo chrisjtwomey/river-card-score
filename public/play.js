@@ -9,6 +9,7 @@ let lastTotals = null;         // seat id -> score, to show what a round paid
 let lastBids = null;           // { key, bids, turn }, to catch a bid landing
 let dealtKey = null;           // the round already dealt on this phone
 let lastPhase = null;          // to catch the moment the game ends
+let lastDone = null;           // rounds scored, to catch a round landing
 let joinAddr = null;           // the address the others should open
 let seenWho = null;            // who was at the table on the state before
 
@@ -77,7 +78,7 @@ function render() {
   $('#lobby').hidden = !lobby;
   $('#game').hidden = lobby;
   renderCaptain(lobby);
-  if (lobby) { lastTotals = lastBids = null; return renderLobby(me); }
+  if (lobby) { lastTotals = lastBids = lastDone = null; return renderLobby(me); }
 
   const r = ST.rounds[ST.idx] || null;
   tableWatch(r);
@@ -102,6 +103,8 @@ function render() {
   renderAttention(r, me);
   renderBidStrip(r);
   renderStandings(me);
+  // What the round paid, unless the felt is up and saying it itself.
+  lastDone = Table.sayRound(ST, me, lastDone, virtual && Felt.shown());
   UI.measureSticky();
   Table.scorecard('#scorecard', ST, me);
 }

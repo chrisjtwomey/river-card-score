@@ -6,6 +6,7 @@ const $ = (s) => document.querySelector(s);
 let ST = null;          // last state from the server
 let dealtKey = null;    // the round already dealt on screen
 let lastPhase = null;   // to catch the moment the game ends
+let lastDone = null;    // rounds scored, to catch a round landing
 let lastTotals = null;  // seat id -> score, to show what a round paid
 let lastBids = null;    // { key, bids, turn }, to catch a bid landing
 let addr = null;        // the address shown in the QR code
@@ -196,7 +197,7 @@ function render() {
   $('#subtitle').textContent = (SHOW ? 'Showing ' : '') + (lobby
     ? `Table ${ST.code} · waiting to start`
     : `Table ${ST.code} · ${ST.seats.length} players`);
-  if (lobby) { Deal.close(); dealtKey = null; lastTotals = lastBids = null; renderLobby(); }
+  if (lobby) { Deal.close(); dealtKey = null; lastTotals = lastBids = lastDone = null; renderLobby(); }
   else renderGame();
 }
 
@@ -249,6 +250,7 @@ function renderGame() {
   renderTable(r);
   Round.playFor($('#playfor-row'), ST, view());
   renderStandings();
+  lastDone = Table.sayRound(ST, -1, lastDone);    // what the round paid everybody
   renderScorecard();
   Round.winner($('#winner-panel'), ST);
 }
