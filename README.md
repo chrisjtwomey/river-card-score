@@ -42,7 +42,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 ### How a game runs
 
-**One phone is enough.** On the landing page, press **Start a table**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A TV screen is optional.
+**One phone is enough.** On the landing page, press **Start a table**. That makes a table, takes the first seat, and hands you the controls. The lobby then reads in the order it happens: the code and a QR code for the others to scan at the top, the seats, the bots and the rules under them, and **Start game** across the foot. A TV screen is optional.
 
 **The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, undo, and new game. They can hand that over from the ⋯ menu beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
 

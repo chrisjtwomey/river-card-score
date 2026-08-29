@@ -207,24 +207,13 @@ function dealWatch(r) {
 
 // The table host runs the game from their phone: rules, seats, start, go
 // back, new game. No host screen needed.
+/* What the player who runs the table can do to a game already going. The
+   lobby's own controls are in the lobby, drawn with it. */
 function renderCaptain(lobby) {
-  const panel = $('#captain-panel');
-  panel.hidden = !amHost();
-  $('#cap-lobby').hidden = !lobby;
+  const boss = amHost();
+  $('#captain-panel').hidden = !boss || lobby;
   $('#cap-game').hidden = lobby;
-  if (!amHost()) return;
-
-  if (!lobby) {
-    $('#btn-undo').disabled = false;
-    return;
-  }
-
-  // A TV screen that runs the table has the code up already, and the same
-  // buttons: the phone keeps its buttons and says the screen is there.
-  $('#cap-join').hidden = !!ST.tv;
-  $('#cap-tv').hidden = !ST.tv;
-  if (!ST.tv) renderJoinBox();
-  Lobby.startButton($('#btn-start'), ST, view());
+  if (boss && !lobby) $('#btn-undo').disabled = false;
 }
 
 // The table host may be the only screen, so the code and the QR live here too.
@@ -305,9 +294,20 @@ function renderLobby(me) {
   }
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
   $('#lobby-title').textContent = v.boss ? 'Get the table ready' : 'Waiting for the table host';
-  $('#lobby-hint').textContent = ST.seats.length < 2
-    ? 'Waiting for more players…'
-    : (v.boss ? 'Start the game when everybody is seated.' : `${capName} starts the game when everybody is seated.`);
+  /* The way in at the top, and the button that ends the waiting at the foot:
+     both are the table host's, and both belong where the thing is done. A TV
+     screen that runs the table has the code up already, so the phone says the
+     screen is there instead of repeating it. */
+  $('#cap-join').hidden = !v.boss || !!ST.tv;
+  $('#cap-tv').hidden = !v.boss || !ST.tv;
+  if (v.boss && !ST.tv) renderJoinBox();
+  $('#btn-start').hidden = !v.boss;
+  Lobby.startButton($('#btn-start'), ST, v);
+  // The button says what the table is waiting for, so this line says what a
+  // seat can be done with instead of saying it twice.
+  $('#lobby-hint').textContent = v.boss
+    ? 'Drag a player by the handle to change the order of play. The ⋯ beside a player hands the table over, says who deals first, or takes them off it.'
+    : `${capName} starts the game when everybody is seated.`;
 }
 
 function renderRound(r) {

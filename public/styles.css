@@ -1165,10 +1165,14 @@ body.host .scorecard-panel .table-wrap{
 .accset{background:var(--bg2);padding:0 10px}
 .accset > summary{font-size:14px;font-weight:700;padding:10px 0}
 .accset > .toggles{padding:4px 0 12px}
-.captain-panel .seat-item .mini{width:34px;height:34px}
-.captain-panel .code-badge{font-size:46px;letter-spacing:.16em}
-.captain-panel .qrbox img{width:150px;height:150px}
-.captain-panel .joinrow{gap:14px}
+/* The way in, on the phone that runs the table: smaller than a TV's, and at
+   the head of the lobby where the others are waiting to be let in. */
+#lobby .code-badge{font-size:46px;letter-spacing:.16em}
+#lobby .qrbox img{width:150px;height:150px}
+#lobby .joinrow{gap:14px}
+#lobby #cap-join{display:flex;flex-direction:column;gap:10px}
+/* the one thing everything above it is waiting for */
+#lobby #btn-start{width:100%;margin-top:4px}
 
 /* ---------- a player's picture ---------- */
 .avrow{display:flex;gap:14px;align-items:flex-start;margin:10px 0 4px}

@@ -2125,18 +2125,38 @@ part('bidding for a seat that is not there, and leaving');
        'and reads them on the heading, with no rule that is off  got ' + Q.pick('#rules-sum').textContent);
   }
 
-  {   // with a TV screen running the table, the phone keeps its buttons and drops its copy of the code
+  {   /* The lobby is one thing, in the order it is done: the way in at the
+         top, the seats, the rules, and the button that ends the waiting at the
+         foot. Nothing of it is in a panel of its own any more. */
     const P = playPage(seed, '?c=TEST');
     const alone = table({ phase: 'lobby' });
     P.feed(alone);
     ok(P.pick('#cap-join').hidden === false && P.pick('#cap-tv').hidden === true,
        'with no TV screen the phone shows the code');
+    ok(P.pick('#btn-start').hidden === false, 'and carries the start button itself');
+    ok(P.pick('#captain-panel').hidden === true, 'with no second panel about running the table');
+    ok(/Drag a player/.test(P.pick('#lobby-hint').textContent),
+       'the line under the seats says what a seat can be done with  got ' + P.pick('#lobby-hint').textContent);
+
     const shared = table({ phase: 'lobby' }); shared.tv = true;
     P.feed(shared);
     ok(P.pick('#cap-join').hidden === true, 'with a TV screen at the table the phone does not repeat the code');
     ok(P.pick('#cap-tv').hidden === false, 'and says the screen is there');   // the words are the page's own
     ok(P.pick('#btn-start').disabled === false, 'and can still start the game');
-    ok(P.pick('#captain-panel').hidden === false, 'from its own panel');
+
+    // a player who does not run the table is offered none of it
+    const Q = playPage(seed, '?c=TEST');
+    Q.feed(table({ phase: 'lobby', boss: false }));
+    ok(Q.pick('#cap-join').hidden === true && Q.pick('#btn-start').hidden === true,
+       'a player who does not run the table is shown neither the code nor the button');
+    ok(/starts the game when everybody is seated/.test(Q.pick('#lobby-hint').textContent),
+       'and is told who will  got ' + Q.pick('#lobby-hint').textContent);
+
+    // in a game, the host's own panel is the two things it can still do
+    const R = playPage(seed, '?c=TEST');
+    R.feed(table({}));
+    ok(R.pick('#captain-panel').hidden === false && R.pick('#cap-game').hidden === false,
+       'in play it is undo and a new game, and nothing else');
   }
 
   {   // the seat controls are a menu with words on it, not a row of glyphs
