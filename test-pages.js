@@ -2435,6 +2435,17 @@ part('tapping the deal away');
 
 part('the pages and the stylesheet agree');
 
+/* The felt gives every card on the table a z-index of its own -- a pile card
+   its place in the pile, the card in the reader's fingers 30, a bid number
+   picked up 40 -- and a stamp with no z-index went under the pile it was
+   slammed onto. Every phone at a virtual table missed every golden number. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const rule = /\.dstamp\{([^}]*)\}/.exec(css);
+  const z = rule && /z-index:\s*(\d+)/.exec(rule[1]);
+  ok(!!z && Number(z[1]) > 40, 'the bid stamp lies over every card on the felt  got ' + (z ? z[1] : 'no z-index'));
+}
+
 /* A class on a <body> styles the whole page. One that already means something
    else in the stylesheet turns the page into that thing: `class="sheet"` made
    a page the sheet the table talk opens in -- fixed, over everything, and the

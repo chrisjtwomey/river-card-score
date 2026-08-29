@@ -501,10 +501,13 @@ body.felt-up .toaster{top:calc(clamp(48px, 8vh, 78px) + 84px + env(safe-area-ins
 /* your own cards, dealt face up into a fan you can read */
 .dcard.mine .face{box-shadow:0 8px 22px rgba(0,0,0,.55)}
 .dcard.mine .front{border-color:rgba(0,0,0,.3)}
-/* the bid, slammed onto the card it belongs to */
+/* the bid, slammed onto the card it belongs to. Over everything on the
+   table: the felt gives every card a z-index of its own, the lifted card 30
+   and a bid number picked up 40, and a stamp with none of its own went
+   under the pile it was meant for. */
 .dstamp{
   position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;
-  display:grid;place-items:center;pointer-events:none;
+  display:grid;place-items:center;pointer-events:none;z-index:45;
   font-size:48px;font-weight:900;line-height:1;color:#f6d488;
   /* the card face under it is white, so the number carries its own dark edge */
   text-shadow:
