@@ -2611,6 +2611,18 @@ part('the pages and the stylesheet agree');
   ok(!!z && Number(z[1]) > 40, 'the bid stamp lies over every card on the felt  got ' + (z ? z[1] : 'no z-index'));
 }
 
+/* The settings page lies over the felt and the deal, and under the toasts:
+   a refusal said while it is open -- a photo the table would not take -- has
+   to be seen over it. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const zOf = (sel) => { const r = new RegExp('\\n' + sel.replace('.', '\\.') + '\\{([^}]*)\\}').exec(css);
+    const z = r && /z-index:\s*(\d+)/.exec(r[1]); return z ? Number(z[1]) : null; };
+  const page = zOf('.settings'), toast = zOf('.toaster'), deal = zOf('.deal');   // the felt plays on the deal's overlay
+  ok(page !== null && toast !== null && page < toast, `the settings page lies under the toasts  got ${page} vs ${toast}`);
+  ok(deal !== null && page > deal, `and over the felt and the deal  got ${page} vs ${deal}`);
+}
+
 /* A class on a <body> styles the whole page. One that already means something
    else in the stylesheet turns the page into that thing: `class="sheet"` made
    a page the sheet the table talk opens in -- fixed, over everything, and the

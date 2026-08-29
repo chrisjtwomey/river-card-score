@@ -1204,9 +1204,10 @@ body.host .scorecard-panel .table-wrap{
 
 /* ---------- the settings page ---------- */
 /* Laid over the page it belongs to, so the game underneath keeps its place
-   and the socket stays up. Over the felt, the deal and the talk. */
+   and the socket stays up. Over the felt and the deal (60), under the toasts
+   (70): a refusal -- a photo the table would not take -- is said over it. */
 .settings{
-  position:fixed;inset:0;z-index:90;overflow:auto;-webkit-overflow-scrolling:touch;
+  position:fixed;inset:0;z-index:65;overflow:auto;-webkit-overflow-scrolling:touch;
   background:var(--bg);color:var(--ink);
 }
 .settings-bar h1{font-size:17px;flex:1;min-width:0}
