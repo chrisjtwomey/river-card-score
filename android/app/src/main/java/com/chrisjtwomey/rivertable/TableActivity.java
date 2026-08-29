@@ -51,10 +51,19 @@ public class TableActivity extends Activity {
     web.setWebViewClient(new WebViewClient() {
       @Override
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-        // The way back at the foot of the front page asks for this, and
-        // nothing else does.
-        if ("uptheriver".equals(request.getUrl().getScheme())) { finish(); return true; }
-        return false;
+        /* Stop hosting, at the foot of the front page, asks for this and
+           nothing else does. The stopping itself is the chooser's: it already
+           knows how, and it waits for the process to go before it says what is
+           true now. So this screen hands the job over and steps out of the
+           way. */
+        if (!"uptheriver".equals(request.getUrl().getScheme())) return false;
+        if ("stop".equals(request.getUrl().getHost())) {
+          startActivity(new Intent(TableActivity.this, MainActivity.class)
+              .putExtra(MainActivity.EXTRA_STOP, true)
+              .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+        }
+        finish();
+        return true;
       }
     });
     // A page asking for the camera -- the join page reading a QR code -- is

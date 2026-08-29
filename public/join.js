@@ -25,10 +25,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   showWho();
   $('#btn-who').addEventListener('click', () => settings.open());
+  // This page is being read on the phone that serves it.
+  const mineToRun = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
+
   /* The phone that runs the server reads this page from 127.0.0.1. That phone
      already chose to host, so it wants a table of its own first. Every other
      browser came to join one that exists. Same page, two orders. */
-  if (/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname)) {
+  if (mineToRun) {
     const mine = $('#new-panel');
     mine.parentNode.insertBefore(mine, $('#join-panel'));
     $('.brand .sub').textContent = 'Your table';
@@ -37,12 +40,20 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#btn-join').classList.remove('primary');
   }
 
-  /* In the Android app this page is what Host opens, so it is also the way
-     back out of it: the app's own screen stops the table or picks it up
-     again. The app is asked by following a link only it knows. */
-  if (UI.inApp()) {
+  /* In the Android app this page is what Host opens, so it is also the way to
+     put the table down again. Only on the phone that runs it: another phone's
+     table is not this one's to stop. The app is asked by following a link
+     only it knows, and it comes back to its Host-or-Join screen. */
+  if (UI.inApp() && mineToRun) {
     $('#app-row').hidden = false;
-    $('#btn-app-home').addEventListener('click', () => { location.href = 'uptheriver://home'; });
+    $('#btn-stop-host').addEventListener('click', () => {
+      UI.ask('Stop hosting the table?',
+        'The server on this phone stops and every phone at the table is put off it. '
+        + 'The table itself is kept, and comes back the next time you host.',
+        'Stop the table', true).then((yes) => {
+          if (yes) location.href = 'uptheriver://stop';
+        });
+    });
   }
 
   const code = new URLSearchParams(location.search).get('code');

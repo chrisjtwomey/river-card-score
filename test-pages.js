@@ -1488,7 +1488,7 @@ part('the front page, and the screen');
     dom.document.querySelector = pick;
     dom.document.getElementById = (id) => pick('#' + id);
     const gone = [];
-    const location = { protocol: 'http:', host: 'table', hostname: 'table', pathname: '/' + file,
+    const location = { protocol: 'http:', host: 'table', hostname: o.hostname || 'table', pathname: '/' + file,
                        search: search || '', hash: '',
                        get href() { return this._h; }, set href(v) { this._h = v; gone.push(v); } };
     const history = { replaceState: (a, b, u) => { history.url = u; } };
@@ -1508,7 +1508,7 @@ part('the front page, and the screen');
       'Game', 'console', ...names, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
       { log() {}, info() {}, warn() {}, error() {} }, ...names.map((n) => (n in given ? given[n] : anything)));
-    return Object.assign(out, { dom, pick, gone, socks,
+    return Object.assign(out, { dom, pick, gone, socks, loc: location,
       start: () => dom.document.fire('DOMContentLoaded') });
   }
 
@@ -1579,20 +1579,39 @@ part('the front page, and the screen');
          own screen. The app marks its WebView; a browser has no such mark and
          no such button. */
     const app = { real: ['public/ui.js', 'public/settings.js'] };
-    const P = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', app);
-    P.pick('#app-row').hidden = true;
-    P.dom.window.navigator = { userAgent: 'Mozilla/5.0 (Linux; Android 15) UpTheRiverApp/1' };
-    P.start();
-    ok(P.pick('#app-row').hidden === false, 'in the app the front page offers the way back to it');
-    P.pick('#btn-app-home').fire('click');
-    ok(P.gone[P.gone.length - 1] === 'uptheriver://home',
-       'and it asks the app, by the link only the app knows  got ' + P.gone[P.gone.length - 1]);
+    const APP_UA = 'Mozilla/5.0 (Linux; Android 15) UpTheRiverApp/1';
+    /* The app marks its WebView; the hostname says whether the phone reading
+       the page is the one serving it. The fake DOM has no <dialog>, so the
+       question falls back to window.confirm, which is answered here. */
+    const inApp = (ua, hostname) => {
+      const X = loadPage('join.js', { 'rcs:name:v1': 'Chris' },
+                         '', Object.assign({ hostname }, app));
+      X.pick('#app-row').hidden = true;
+      // on the phone that serves it, the page puts Start above Join: the two
+      // need a parent between them for that
+      const box = X.dom.document.createElement('div');
+      box.append(X.pick('#join-panel'), X.pick('#new-panel'));
+      X.dom.window.navigator = { userAgent: ua };
+      X.dom.window.confirm = () => { X.asked = true; return true; };
+      X.start();
+      return X;
+    };
 
-    const Q = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', app);
-    Q.pick('#app-row').hidden = true;
-    Q.dom.window.navigator = { userAgent: 'Mozilla/5.0 (iPhone) Safari/605' };
-    Q.start();
-    ok(Q.pick('#app-row').hidden === true, 'a browser is offered nothing of the sort');
+    const P = inApp(APP_UA, '127.0.0.1');
+    ok(P.pick('#app-row').hidden === false, 'the phone that hosts is offered the way to stop');
+    P.pick('#btn-stop-host').fire('click');
+    ok(P.asked === true, 'which asks first: every phone at the table is put off it');
+    // the answer arrives in a microtask, so the check waits one behind it
+    Promise.resolve().then(() => {
+      ok(P.gone[P.gone.length - 1] === 'uptheriver://stop',
+         'and then the app is asked to stop the table  got ' + P.gone[P.gone.length - 1]);
+    });
+
+    const R = inApp(APP_UA, '192.168.1.5');
+    ok(R.pick('#app-row').hidden === true, "another phone's table is not this one's to stop");
+
+    const Q = inApp('Mozilla/5.0 (iPhone) Safari/605', '127.0.0.1');
+    ok(Q.pick('#app-row').hidden === true, 'and a browser is offered nothing of the sort');
   }
 
   {   // a browser at no table is offered nothing

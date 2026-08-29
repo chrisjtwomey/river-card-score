@@ -30,6 +30,8 @@ import java.util.List;
  * following an uptheriver: link, which never leaves the WebView.
  */
 public class MainActivity extends Activity {
+  /** Set by the table screen when the page asked to stop hosting. */
+  public static final String EXTRA_STOP = "stop";
   private static final String LOCAL = "http://127.0.0.1:" + NodeService.PORT + "/";
   private static final String PAGE = "file:///android_asset/chooser.html";
   private WebView web;
@@ -69,6 +71,7 @@ public class MainActivity extends Activity {
     showChooser();
     askForPermissions();
     hostIfAsked(getIntent());
+    stopIfAsked(getIntent());
   }
 
   /**
@@ -81,11 +84,21 @@ public class MainActivity extends Activity {
     if (from != null && from.getBooleanExtra("host", false)) host();
   }
 
+  /* Stop hosting, asked for from the front page on the table screen. The extra
+     is taken off once it is acted on: the intent is kept, and a later return to
+     this screen must not stop a table the player has just started again. */
+  private void stopIfAsked(Intent from) {
+    if (from == null || !from.getBooleanExtra(EXTRA_STOP, false)) return;
+    from.removeExtra(EXTRA_STOP);
+    stopTable();
+  }
+
   @Override
   protected void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
     setIntent(intent);
     hostIfAsked(intent);
+    stopIfAsked(intent);
   }
 
   /* The splash plays once, on the way in. Coming back from the table loads the

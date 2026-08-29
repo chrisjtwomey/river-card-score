@@ -66,11 +66,11 @@
     <a class="btn" href="host.html">TV screen</a>
   </div>
 
-  <!-- Only in the Android app: the way back to its own screen, where a table
-       this phone runs is stopped or picked up again. The table keeps running
-       either way. A browser never sees this. -->
+  <!-- Only in the Android app, and only on the phone that runs the server:
+       the way to put the table down. It stops the server and comes back to
+       the app's own Host-or-Join screen. A browser never sees this. -->
   <div class="row-actions leaverow" id="app-row" hidden>
-    <button class="btn ghost" id="btn-app-home" type="button">Back to the app</button>
+    <button class="btn ghost danger" id="btn-stop-host" type="button">Stop hosting table</button>
   </div>
 </main>
 

@@ -430,12 +430,13 @@ in it. The others scan the QR code with a camera, or type the address. The
 app's own *Join a table* opens somebody else's address in the app instead of a
 browser, for anyone who prefers it.
 
-The way out of a table screen is at the foot of the landing page: **Back to the
-app**, under *Past games* and *TV screen*, where the player page has *Leave the
-game*. It comes back to the app's own screen, which offers *Back to the table*
-and *Stop the table*; the server keeps running either way. The system back
-gesture does the same. Only the app sees that button: it marks its WebView, and
-the page reads the mark.
+The way to put the table down is at the foot of the landing page: **Stop
+hosting table**, under *Past games* and *TV screen*, where the player page has
+*Leave the game*. It asks first, then stops the server and comes back to the
+app's Host-or-Join screen. The table itself is kept on disk, so hosting again
+picks it up where it was. The system back gesture still only leaves the screen
+and leaves the server running. Only the app sees that button, and only on the
+phone that serves the page: it marks its WebView, and the page reads the mark.
 
 While a table is open the app shows a notification, so Android leaves the server
 running with the screen off. **Stop** on that notification closes the table.
