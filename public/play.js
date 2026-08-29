@@ -92,9 +92,11 @@ function render() {
      stays beyond the three is the attention panel, and only while the table
      actually needs a decision from this phone. */
   const virtual = Game.virtual(ST);
-  $('#turn-panel').hidden = virtual;
+  // No turn panel once the game is over: the round line and the winner
+  // panel say so between them.
+  $('#turn-panel').hidden = virtual || !r;
   $('#bids-panel').hidden = virtual;
-  if (!virtual) renderTurn(r, me);
+  if (!virtual && r) renderTurn(r, me);
   renderWinner();
   renderVote(r, me);
   renderAttention(r, me);
@@ -325,12 +327,6 @@ function renderTurn(r, me) {
   bidPad.hidden = true;
   Round.trickPad($('#trick-pad'), ST, r, view());
   panel.classList.remove('mine', 'amend');
-
-  if (!r) {
-    $('#turn-eyebrow').textContent = 'Game over';
-    $('#turn-text').textContent = Table.winner(ST).title;
-    return;
-  }
 
   if (ST.phase === 'bid') {
     $('#turn-eyebrow').textContent = 'Bidding';

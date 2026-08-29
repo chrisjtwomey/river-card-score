@@ -1573,6 +1573,14 @@ part('bidding for a seat that is not there, and leaving');
     ok(max.disabled === true, 'a player who does not run the table reads the rules and cannot touch them');
   }
 
+  {   // the end of the game is said once on the page
+    const P = playPage(seed, '?c=TEST');
+    const st = table({ away: false }); st.cfg.deck = 'physical'; st.phase = 'done'; st.idx = 1; st.turn = null;
+    P.feed(st);
+    ok(P.pick('#turn-panel').hidden === true, 'the turn panel goes when the game is over');
+    ok(P.pick('#winner-panel').hidden === false, 'and the winner panel says who won');
+  }
+
   {   // a step back is asked about first, and told what it takes
     const P = playPage(seed, '?c=TEST');
     const st = table({ away: false }); st.phase = 'tricks'; st.turn = null;

@@ -276,10 +276,11 @@ function renderTurn(r, n) {
   // While the deal is up, the bid stamps onto that player's card instead.
   if (lastBids && !Deal.isOpen('deal')) Table.sayBids(ST, r, lastBids.landed, -1);
 
+  // The round line says the game is over, and the winner panel says who
+  // won; this panel keeps only the buttons and the line that names them.
+  $('#turn-head').hidden = !r;
   if (!r) {
-    $('#turn-title').textContent = 'Game over';
-    $('#turn-tally').textContent = '';
-    $('#turn-hint').textContent = 'Press "New game" to play again with the same table.';
+    $('#turn-hint').textContent = 'Press "New game" to play again with the same players.';
     return;
   }
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
