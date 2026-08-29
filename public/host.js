@@ -242,6 +242,10 @@ function renderGame() {
   renderTurn(r, n);
   Round.vote($('#votebox'), ST, view());
   Round.bum($('#btn-bum'), ST, view());
+  // A screen that only shows a table cannot go back or start over: the
+  // buttons were drawn anyway, and every tap on them was refused.
+  $('#btn-undo').hidden = SHOW;
+  $('#btn-reset').hidden = SHOW;
   renderTable(r);
   Round.playFor($('#playfor-row'), ST, view());
   renderStandings();
@@ -274,7 +278,9 @@ function renderTurn(r, n) {
   // won; this panel keeps only the buttons and the line that names them.
   $('#turn-head').hidden = !r;
   if (!r) {
-    $('#turn-hint').textContent = 'Press "New game" to play again with the same players.';
+    $('#turn-hint').textContent = SHOW
+      ? 'The table host starts a new game from their phone.'
+      : 'Press "New game" to play again with the same players.';
     return;
   }
   const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
@@ -301,8 +307,8 @@ function renderTurn(r, n) {
     return;
   }
   $('#turn-title').textContent = 'Tricks won';
-  $('#turn-hint').textContent = `${leader} leads the first trick. ${ST.seats[r.dealer].name} enters the tricks, ` +
-    'or you can enter them here. Everybody starts on 0, so only tap the players who won tricks.';
+  $('#turn-hint').textContent = `${leader} leads the first trick. ${ST.seats[r.dealer].name} enters the tricks` + (SHOW ? '.'
+    : ', or you can enter them here. Everybody starts on 0, so only tap the players who won tricks.');
 }
 
 // The table, when the deck is virtual: the trick in the middle, and what each

@@ -1522,6 +1522,41 @@ part('bidding for a seat that is not there, and leaving');
                       catch (e) { console.log('  (the page threw: ' + e.message + ')'); throw e; } } });
   }
 
+  /* The TV screen on the same footing: the page as it comes, the widgets it
+     draws, and a socket that hands it a hello and a state. `role` is what the
+     screen is to the table: 'host' runs it, 'screen' only shows it. */
+  function hostPage(role) {
+    const dom = makeDom(1280, 720);
+    dom.localStorage.setItem('rcs:tables:v1',
+      JSON.stringify([{ code: 'TEST', token: role === 'host' ? 'th' : null, role }]));
+    const els = {};
+    const pick = (sel) => (els[sel] || (els[sel] = new dom.El('div')));
+    dom.document.querySelector = pick;
+    dom.document.getElementById = (id) => pick('#' + id);
+    const location = { protocol: 'http:', host: 'table', hostname: 'table', pathname: '/host.html',
+                       search: '?c=TEST', hash: '', href: '' };
+    const history = { replaceState() {} };
+    const socks = [];
+    function WebSocket(url) { this.readyState = 1; this.sent = []; socks.push(this); }
+    WebSocket.prototype.send = function (raw) { this.sent.push(JSON.parse(raw)); };
+    WebSocket.prototype.close = function () { this.readyState = 3; };
+    const Table = new Function('UI', 'Game', 'document',
+      fs.readFileSync(path.join(ROOT, 'public/table.js'), 'utf8') + '\n; return Table;')(UI, Game, dom.document);
+    const src = ['public/lobby.js', 'public/round.js', 'public/net.js', 'public/host.js']
+      .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
+    const stubs = ['Avatar', 'Chat', 'Deal', 'Games', 'Accolades', 'Finale', 'Stage'];
+    const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
+      'Game', 'UI', 'Table', 'console', ...stubs, src + '\n; return { Net };');
+    const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game, UI, Table,
+      { log() {}, info() {}, warn() {}, error() {} }, ...stubs.map(() => anything));
+    dom.document.fire('DOMContentLoaded');
+    socks[0].onopen();
+    socks[0].onmessage({ data: JSON.stringify({ t: 'hello', role, code: 'TEST', token: role === 'host' ? 'th' : null }) });
+    return Object.assign(out, { dom, pick, socks, said,
+      feed: (st) => { try { socks[0].onmessage({ data: JSON.stringify(st) }); }
+                      catch (e) { console.log('  (the screen threw: ' + e.message + ')'); throw e; } } });
+  }
+
   const seed = { 'rcs:tables:v1': JSON.stringify([{ code: 'TEST', token: 't0', role: 'player', seatId: 's0' }]) };
   // three seats, two cards each, bidding, and the third seat is on turn
   const table = (o) => {
@@ -1674,6 +1709,38 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.socks[0].sent.length === 0, 'a seat put back where it was sends nothing');
     P.feed(table({ phase: 'lobby', boss: false }));
     ok(!list.children[0].querySelector('.grip'), 'a player who does not run the table cannot drag');
+  }
+
+  {   // a screen that only shows a table offers nothing it cannot do
+    const tricks = () => { const st = table({ away: false, phase: 'tricks' }); st.cfg.deck = 'physical'; st.turn = null; return st; };
+    const S = hostPage('screen');
+    S.feed(tricks());
+    ok(S.dom.document.body.classList.contains('showing'), 'the screen knows it only shows the table');
+    ok(S.pick('#btn-bum').hidden === true && S.pick('#btn-undo').hidden === true && S.pick('#btn-reset').hidden === true,
+       'no bum deal, undo or new game on a screen that only shows the table');
+    ok(S.pick('#host-tricks').hidden === true, 'and no trick pad');
+    ok(!/enter them here/.test(S.pick('#turn-hint').textContent),
+       'nor a hint that says there is one  got ' + S.pick('#turn-hint').textContent);
+    const voting = tricks(); voting.vote = { kind: 'bumdeal', by: 1, round: 0, yes: [1], no: [] };
+    S.feed(voting);
+    ok(S.pick('#votebox').hidden === false, 'a vote is shown');
+    ok(S.pick('#votebox').querySelectorAll('button').length === 0, 'and cannot be ended from here');
+    const over = table({ away: false, phase: 'done' }); over.cfg.deck = 'physical'; over.idx = 1; over.turn = null;
+    S.feed(over);
+    ok(!/New game/.test(S.pick('#turn-hint').textContent),
+       'the end of the game does not point at a button that is not there  got ' + S.pick('#turn-hint').textContent);
+
+    const H = hostPage('host');
+    H.feed(tricks());
+    ok(H.pick('#btn-bum').hidden === false && H.pick('#btn-undo').hidden === false && H.pick('#btn-reset').hidden === false,
+       'the screen that runs the table has them all');
+    ok(H.pick('#host-tricks').hidden === false, 'and the trick pad');
+    ok(/enter them here/.test(H.pick('#turn-hint').textContent), 'and says so');
+    H.feed(voting);
+    const vb = H.pick('#votebox').querySelectorAll('button');
+    ok(vb.length === 2 && vb[0].textContent === 'Throw it in now',
+       'and can end a vote either way  got ' + vb.map((b) => b.textContent).join('|'));
+    ok(H.pick('#btn-bum').hidden === true, 'while the vote box carries the bum deal');
   }
 
   {   // the end of the game is said once on the page

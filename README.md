@@ -281,8 +281,9 @@ makes one. Or type a table code and **Show a table**: the screen shows a
 game that is already running, and changes nothing at it — the players keep
 their seats and their phones still run the game. That screen cannot touch the
 game, which is what lets it take a code alone: it is shown only what is already
-on show. Use it to put a game that started on a phone up on a television
-without moving anybody.
+on show, and none of the table's controls — no bum deal, undo, new game, trick
+pad or vote buttons. Use it to put a game that started on a phone up on a
+television without moving anybody.
 
 - **Text size** under ⚙ scales the page from 100% to 200%, so the table can read
   it from across the room. The size is remembered in that browser.
