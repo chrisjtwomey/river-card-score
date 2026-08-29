@@ -87,16 +87,17 @@ function render() {
     if (s !== 'on' && s !== 'off') console.info('[wake] screen lock status:', s);
   });
   renderRound(r);
-  /* On a virtual table the felt is the game, so this page is the scorecard
-     and nothing else: the round, the standings, the card. The bidding and
-     the hand live on the felt, and the bids are read off the scorecard. What
-     stays beyond the three is the attention panel, and only while the table
-     actually needs a decision from this phone. */
+  /* On a virtual table the felt is the game, so this page is the scorecard:
+     the round, the bids, the standings, the card. The bidding and the hand
+     live on the felt. What stays beyond those is the attention panel, and
+     only while the table actually needs a decision from this phone. */
   const virtual = Game.virtual(ST);
   // No turn panel once the game is over: the round line and the winner
   // panel say so between them.
   $('#turn-panel').hidden = virtual || !r;
-  $('#bids-panel').hidden = virtual;
+  // The bids stay on the page in both modes: the felt names them too, but
+  // the page under it is the scorecard, and a scorecard has the bids on it.
+  $('#bids-panel').hidden = false;
   if (!virtual && r) renderTurn(r, me);
   renderWinner();
   renderVote();

@@ -252,8 +252,9 @@ that band.
   The number screw the dealer forbids is struck through.
 - The corner buttons are the way off the table: **Scores** drops the felt to
   the page underneath, and **Back to your cards** brings it back. That page is
-  the scorecard and nothing else -- the round, the standings, and the card,
-  open, never folded away -- read as one page rather than a stack of cards,
+  the scorecard and nothing else -- the round, the bids (won against bid once
+  the cards are out), the standings, and the card, open, never folded away --
+  read as one page rather than a stack of cards,
   with **Leave the game** across the foot of it. One panel appears on it only
   when the table needs a decision from that phone: a vote to answer, or a seat
   with nobody behind it that the table is stopped on.

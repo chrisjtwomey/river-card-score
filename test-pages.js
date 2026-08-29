@@ -1646,7 +1646,8 @@ part('bidding for a seat that is not there, and leaving');
     const P = playPage(seed, '?c=TEST');
     P.feed(table({ away: false }));
     ok(P.pick('#turn-panel').hidden === true, 'no turn panel: the felt asks for the bid');
-    ok(P.pick('#bids-panel').hidden === true, 'no bids strip: the felt stamps them');
+    ok(P.pick('#bids-panel').hidden === false, 'the bids stay on the page under the felt');
+    ok(P.pick('#bidstrip').children.length === 3, 'one pill a seat  got ' + P.pick('#bidstrip').children.length);
     // the bum deal is not the turn panel's, so it stays when the panel goes
     ok(P.pick('#bum-row').hidden === false, 'a bum deal can still be asked for on the page');
     ok(P.pick('#bum-row').querySelector('.btn').textContent === 'Bum deal',
