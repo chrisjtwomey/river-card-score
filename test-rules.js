@@ -734,6 +734,27 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   ok(t.room.seats[1].left && !t.room.seats[1].online, 'marked gone, with nobody behind it');
   ok(G.tablePlays(t.room.seats[1], t.room.cfg), 'and the table plays its hand from here on');
   ok(G.awaySeat(t.room) === -1, 'so the table is not waiting on it');
+  ok(G.tablePlaysOn(t.room), 'and it does play it: Ann and Cal are still in the game');
+}
+
+{
+  /* The table plays a hand nobody is behind -- while somebody is there to see
+     it. A player alone with bots who leaves came back to a game that had
+     played itself out: the bots bid the hand that was left, the bidding
+     closed, and the tricks ran to the end with nobody watching. */
+  const t = table().sit(['Ann']).sit(['Otter', 'Heron'], { bot: true })
+    .rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  ok(G.tablePlaysOn(t.room) && t.Bots.anyAuto(t.room), 'with a player at it, the table plays the bots\' hands');
+  ok(t.say(0, { t: 'leave' }) === null, 'the one player leaves');
+  ok(!G.tablePlaysOn(t.room), 'and now nobody is in the game to see a card played');
+  ok(!t.Bots.anyAuto(t.room), 'so the table has nothing to do');
+  t.Bots.nudge(t.room);
+  ok(!t.room.botTimer, 'and nothing is set going: the game stands where it was left');
+  const bids = JSON.stringify(t.round().bids);
+  t.room.seats[0].left = false;                  // the phone comes back to the seat
+  ok(JSON.stringify(t.round().bids) === bids, 'the round is untouched by the wait');
+  ok(G.tablePlaysOn(t.room) && t.Bots.anyAuto(t.room), 'and with the player back the table plays on');
 }
 
 {
@@ -757,6 +778,7 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   t.say(1, { t: 'leave' });
   ok(t.room.captainId === t.room.seats[0].id,
      'and with both gone it waits on a player rather than a bot: their token still works, so coming back takes it back');
+  ok(!G.tablePlaysOn(t.room), 'and the bot does not play the game out on its own');
 }
 
 part('table talk');

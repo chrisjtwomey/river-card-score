@@ -98,6 +98,14 @@ already played are that player's. So the seat stays, marked as gone, and
 auto-play takes its hand from there on. That phone can still come back to the seat
 from the front page, and it is a player's again.
 
+**The table plays on only while somebody is at it.** Auto-play and the bots
+are there so a game is not held up for a seat nobody is behind — not so that a
+game plays itself. When the last player leaves, every hand the table was
+holding stops where it is: no bid is made, no card goes down, and the game is
+exactly as it was left when a phone comes back to it. A player alone with bots
+who left used to come back to a game that had bid, played and scored itself
+without them.
+
 ### A browser holds more than one table
 
 Every table a browser takes a seat at is remembered, newest first, up to eight.

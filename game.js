@@ -203,6 +203,16 @@
   const tablePlays = (seat, cfg) =>
     !!seat && (!!seat.bot || (!!seat.left && !!cfg && cfg.deck === 'virtual'));
 
+  /* Whether the table plays those hands at all. It plays a seat with nobody
+     behind it -- but only while somebody is still in the game to see it done.
+     A player alone with bots who leaves used to come back to a game that had
+     played itself out without them: the bots bid the hand that was left, the
+     bidding closed, and the tricks ran to the last one with nobody watching.
+     So when the last player goes the table stands still, and the game is
+     where they left it when they come back to it. */
+  const tablePlaysOn = (state) =>
+    !!state && !!state.seats && state.seats.some((s) => !s.bot && !s.left);
+
   // The seat on turn with nobody behind it, or -1: the one seat the table is
   // stopped on and can do nothing about by itself.
   function awaySeat(state) {
@@ -222,7 +232,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, onTurn, tablePlays, awaySeat, firstLeader, totalsWithBonus,
+                virtual, onTurn, tablePlays, tablePlaysOn, awaySeat, firstLeader, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };
 
