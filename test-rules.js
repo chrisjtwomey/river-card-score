@@ -638,6 +638,9 @@ part('who may send what, and when');
      'and no seat moves once the game is on');
   ok(/not allowed now/.test(t.say(0, { t: 'kick', id: t.room.seats[1].id }) || ''), 'nor is anybody put out of one');
   ok(/the game has started/.test(t.say(0, { t: 'addbot', }) || ''), 'nor does the table add a player');
+  ok(/before the game starts/.test(t.say(0, { t: 'rename', name: 'Zed' }) || ''),
+     'nor does a name change: the scorecard is a column under it');
+  ok(/only a player/.test(t.say('host', { t: 'rename', name: 'Zed' }) || ''), 'and the host screen has no name to change');
 
   // deck
   ok(/real cards/.test(t.say(1, { t: 'dealt' }) || ''),
@@ -679,6 +682,16 @@ part('who may send what, and when');
   ok(t.say(t.boss(), { t: 'config', patch: { deck: 'physical' } }) === null && t.room.cfg.deck === 'physical',
      'and then the real cards come back');
   ok(t.room.captainId === boss, 'through all of which the same player runs the table');
+
+  // a name is changed in the lobby, and is one seat's
+  const bob = t.room.seats.findIndex((x) => x.name === 'Bob');
+  ok(t.say(bob, { t: 'rename', name: '  Robert  ' }) === null && t.room.seats[bob].name === 'Robert',
+     'a player changes their own name, trimmed');
+  ok(t.say(bob, { t: 'rename', name: 'ann' }) === 'that name is taken', 'but not to a name already at the table, in any case');
+  ok(t.say(bob, { t: 'rename', name: '   ' }) === 'type a name', 'and not to nothing');
+  ok(t.say(bob, { t: 'rename', name: 'A name far longer than sixteen' }) === null
+     && t.room.seats[bob].name === 'A name far longe', 'a long name is cut to sixteen, as it is on joining');
+  ok(t.say(bob, { t: 'rename', name: 'A name far longe' }) === null, 'the same name again changes nothing');
 }
 
 {
