@@ -1589,6 +1589,7 @@ part('bidding for a seat that is not there, and leaving');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"firstDealer":"s1"}}',
        'and a row sends what the glyph sent  got ' + JSON.stringify(P.socks[0].sent[0]));
     ok(!rows[1].querySelector('.seatmenu'), 'the menu shuts on the tap');
+    ok(names.indexOf('Move up') < 0 && names.indexOf('Move down') < 0, 'the order is changed by dragging, not from the menu');
     P.feed(table({ phase: 'lobby', boss: false }));
     ok(!P.pick('#lobby-seats').children[1].querySelector('.more'), 'a player who does not run the table has no menu');
   }
@@ -1604,6 +1605,32 @@ part('bidding for a seat that is not there, and leaving');
        'and it says my vote landed  got ' + (acts.querySelector('.hint') || {}).textContent);
     const btns = acts.querySelectorAll('button');
     ok(btns.length === 1 && btns[0].textContent === 'No, play on', 'with the other answer still there  got ' + btns.map((b) => b.textContent).join('|'));
+  }
+
+  {   // the order of play is changed by dragging a seat by its handle
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ phase: 'lobby' }));
+    const list = P.pick('#lobby-seats');
+    const rows = list.children;
+    const grip = rows[0].querySelector('.grip');
+    ok(!!grip, 'every seat has a handle to drag it by');
+    P.socks[0].sent.length = 0;
+    grip.fire('pointerdown', { clientY: 100, pointerId: 1, button: 0 });
+    grip.fire('pointermove', { clientY: 145, pointerId: 1 });     // rows are 20px tall here: two places down
+    ok(rows[0].classList.contains('dragging'), 'the row is held');
+    ok(/translateY\(-20px\)/.test(rows[1].style.transform), 'and the rows it passes step aside  got ' + rows[1].style.transform);
+    P.feed(table({ phase: 'lobby' }));
+    ok(rows[0].classList.contains('dragging'), 'a state landing mid-drag does not pull the row away');
+    grip.fire('pointerup', { clientY: 145, pointerId: 1 });
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"seatMove","id":"s0","to":2}',
+       'and the drop says where it landed  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(!rows[0].classList.contains('dragging') && !rows[1].style.transform, 'and lets go');
+    P.socks[0].sent.length = 0;
+    grip.fire('pointerdown', { clientY: 100, pointerId: 1, button: 0 });
+    grip.fire('pointerup', { clientY: 103, pointerId: 1 });
+    ok(P.socks[0].sent.length === 0, 'a seat put back where it was sends nothing');
+    P.feed(table({ phase: 'lobby', boss: false }));
+    ok(!list.children[0].querySelector('.grip'), 'a player who does not run the table cannot drag');
   }
 
   {   // the end of the game is said once on the page

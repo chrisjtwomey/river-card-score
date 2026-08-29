@@ -211,7 +211,7 @@ function renderLobby() {
   $('#first-dealer-hint').textContent = fd
     ? `${fd.name} deals the first round` +
       (capSeat ? `, and ${capSeat.name} runs the table from their phone.` : '.') +
-      ' The ⋯ beside a player changes either, moves them, or removes them.'
+      ' Drag a player by the handle to change the order; the ⋯ beside a player changes either, or removes them.'
     : '';
   const v = view();
   Lobby.seats($('#seatlist'), ST, v);

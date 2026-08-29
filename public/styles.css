@@ -863,8 +863,20 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 }
 .seat-item .mini:hover{color:var(--ink)}
 .seat-item .mini.x:hover{background:var(--red);color:#fff}
-/* the seat's controls, behind one button, named */
-.seat-item{position:relative}
+/* the seat's controls, behind one button, named; and a handle to drag it by */
+.seat-item{position:relative;transition:transform .12s ease-out}
+.seat-item .grip{
+  border:none;background:transparent;color:var(--ink-dim);padding:0;margin:0 -4px 0 -6px;
+  width:24px;height:30px;display:grid;place-items:center;flex:none;
+  cursor:grab;touch-action:none;
+}
+.seat-item .grip svg{width:16px;height:16px;fill:currentColor}
+.seat-item .grip:hover{color:var(--ink)}
+.seat-item.dragging{
+  transition:none;z-index:5;cursor:grabbing;
+  border-color:var(--gold);box-shadow:var(--shadow);background:var(--bg2);
+}
+.seat-item.dragging .grip{cursor:grabbing}
 .seat-item .mini.more{margin-left:auto;font-size:18px;line-height:1}
 .seat-item .menu{top:calc(100% - 2px);right:8px;min-width:200px}
 

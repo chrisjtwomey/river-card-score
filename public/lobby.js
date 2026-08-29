@@ -16,11 +16,14 @@ const Lobby = (function () {
   // A button is wired the first time it is drawn, and never twice.
   const onClick = (el, fn) => { if (el && !el._wired) { el._wired = true; el.addEventListener('click', fn); } };
 
-  /* The seats, in the order of play. Whoever runs the table gets a ⋯ menu
-     on each row: hand the table over (never to a bot), say who deals first,
-     move the seat, remove it (never their own). */
+  /* The seats, in the order of play. Whoever runs the table drags a seat by
+     its handle to change the order, and gets a ⋯ menu on each row: hand the
+     table over (never to a bot), say who deals first, remove it (never their
+     own). */
   function seats(root, ST, view) {
     if (!root) return;
+    root._last = { ST, view };
+    if (root._drag) return;              // a row is held: it is redrawn on the drop
     root.innerHTML = '';
     ST.seats.forEach((s, i) => {
       const isFirst = ST.firstDealerId ? ST.firstDealerId === s.id : i === 0;
@@ -35,14 +38,79 @@ const Lobby = (function () {
         (isFirst ? '<span class="badge soft">deals first</span>' : '') +
         `<span class="dotstat" title="${s.online ? 'connected' : 'not connected'}"></span>`;
       row.querySelector('.nm').textContent = s.name + (mine ? ' (you)' : '');
-      if (view.boss) row.appendChild(seatMenu(row, s, i, { isFirst, isCap, mine, n: ST.seats.length }, view));
+      if (view.boss) {
+        row.insertBefore(grip(root, row, s, view), row.firstChild);
+        row.appendChild(seatMenu(row, s, i, { isFirst, isCap, mine, n: ST.seats.length }, view));
+      }
       root.appendChild(row);
     });
   }
 
+  const GRIP = '<svg viewBox="0 0 20 20" aria-hidden="true">'
+    + '<circle cx="7" cy="4.5" r="1.7"/><circle cx="13" cy="4.5" r="1.7"/>'
+    + '<circle cx="7" cy="10" r="1.7"/><circle cx="13" cy="10" r="1.7"/>'
+    + '<circle cx="7" cy="15.5" r="1.7"/><circle cx="13" cy="15.5" r="1.7"/></svg>';
+
+  /* The order of play is changed by dragging a seat by its handle. Pointer
+     events, so a finger and a mouse are the same, and the handle takes the
+     touches so the page does not scroll under it. The held row follows the
+     pointer and the rows it passes step aside; the drop sends where it
+     landed, once, and the state that comes back draws the new order. While
+     a row is held the list is not redrawn: a state landing mid-drag would
+     pull the row out from under the finger. */
+  function grip(root, row, s, view) {
+    const h = document.createElement('button');
+    h.type = 'button';
+    h.className = 'grip';
+    h.title = 'Drag to change the order of play';
+    h.setAttribute('aria-label', `Drag ${s.name} to a new place`);
+    h.innerHTML = GRIP;
+    h.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+      closeSeatMenus();
+      const rows = Array.prototype.slice.call(root.querySelectorAll('.seat-item'));
+      const from = rows.indexOf(row);
+      if (from < 0) return;
+      // One place is the distance between two rows; a list of one is a row tall.
+      const r0 = rows[0].getBoundingClientRect();
+      const step = rows.length > 1 ? rows[1].getBoundingClientRect().top - r0.top : 0;
+      const d = { from, to: from, y: e.clientY, pitch: step > 0 ? step : (r0.height || 1) };
+      root._drag = d;
+      row.classList.add('dragging');
+      if (h.setPointerCapture) { try { h.setPointerCapture(e.pointerId); } catch (x) { /* a mouse, or an old browser */ } }
+      const move = (ev) => {
+        const dy = ev.clientY - d.y;
+        d.to = Math.max(0, Math.min(rows.length - 1, from + Math.round(dy / d.pitch)));
+        row.style.transform = `translateY(${dy}px)`;
+        rows.forEach((el, i) => {
+          if (el === row) return;
+          let shift = 0;
+          if (from < d.to && i > from && i <= d.to) shift = -d.pitch;
+          else if (from > d.to && i >= d.to && i < from) shift = d.pitch;
+          el.style.transform = shift ? `translateY(${shift}px)` : '';
+        });
+      };
+      const done = () => {
+        h.removeEventListener('pointermove', move);
+        h.removeEventListener('pointerup', done);
+        h.removeEventListener('pointercancel', done);
+        root._drag = null;
+        rows.forEach((el) => { el.style.transform = ''; el.classList.remove('dragging'); });
+        if (d.to !== from) view.send({ t: 'seatMove', id: s.id, to: d.to });
+        else if (root._last) seats(root, root._last.ST, root._last.view);   // a state may have landed meanwhile
+      };
+      h.addEventListener('pointermove', move);
+      h.addEventListener('pointerup', done);
+      h.addEventListener('pointercancel', done);
+    });
+    return h;
+  }
+
   /* The controls on a seat, behind one ⋯ button and named. A row of glyphs
      (★ 🂠 ↑ ↓ ×) told a first-time host nothing -- a title does not show on a
-     touch screen -- and the card back is a box on many Android fonts. */
+     touch screen -- and the card back is a box on many Android fonts. The
+     order is changed by dragging, so the menu has no Move rows. */
   function seatMenu(row, s, i, is, view) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -55,8 +123,6 @@ const Lobby = (function () {
     if (!s.bot) items.push({ label: 'Make table host', on: is.isCap, msg: { t: 'captain', id: s.id } });
     items.push({ label: 'Deals first', on: is.isFirst,
                  msg: { t: 'config', patch: { firstDealer: is.isFirst ? null : s.id } } });
-    if (i > 0) items.push({ label: 'Move up', msg: { t: 'seatMove', id: s.id, dir: 'up' } });
-    if (i < is.n - 1) items.push({ label: 'Move down', msg: { t: 'seatMove', id: s.id, dir: 'down' } });
     if (!is.mine) items.push({ label: 'Remove', danger: true, msg: { t: 'kick', id: s.id } });
     btn.addEventListener('click', (e) => {
       e.stopPropagation();

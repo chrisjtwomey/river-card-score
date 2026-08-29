@@ -149,6 +149,12 @@ function client(name, url) {
   // pick who deals the first round, then put it back for the rest of this game
   host.send({ t: 'config', patch: { firstDealer: P[2].seatId } }); await wait(120);
   ok(host.state.firstDealerId === P[2].seatId, 'the host can choose the first dealer');
+  // a seat dragged to a new place lands there, and the rest close up
+  host.send({ t: 'seatMove', id: P[2].seatId, to: 0 }); await wait(120);
+  ok(host.state.seats.map((s) => s.name).join(',') === 'Joe,Amy,Hugh',
+     'a seat dragged to the top lands there  got ' + host.state.seats.map((s) => s.name).join(','));
+  host.send({ t: 'seatMove', id: P[2].seatId, to: 2 }); await wait(120);
+  ok(host.state.seats.map((s) => s.name).join(',') === 'Amy,Hugh,Joe', 'and dragged back');
   host.send({ t: 'config', patch: { firstDealer: null } }); await wait(120);
   ok(host.state.firstDealerId === null, 'and can clear it again');
 
