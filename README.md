@@ -41,7 +41,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 1. Someone starts the table, from a phone with **Start a table**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone and on the TV screen. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
 2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can move a player up or down, or remove one, until the game starts.
 3. The table host taps 🂠 beside a player to say who deals the first round. Without a choice, seat 1 deals. The deal then moves on one seat each round. ★ passes the table host badge to another player.
-4. The table host sets the rules and presses **Start game**. Nobody can join after that.
+4. The table host sets the rules and presses **Start game**. Every phone shows the rules in the lobby; only the table host's can change them. Nobody can join after that.
 5. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
 6. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
 7. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.

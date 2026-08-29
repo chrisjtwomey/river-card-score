@@ -1569,6 +1569,8 @@ part('bidding for a seat that is not there, and leaving');
        'a change goes to the table as that one rule  got ' + JSON.stringify(P.socks[0].sent[0]));
     P.feed(st);
     ok(form.querySelectorAll('#cfg-max').length === 1, 'and the next state fills the form it has, not a second one');
+    P.feed(table({ phase: 'lobby', boss: false }));
+    ok(max.disabled === true, 'a player who does not run the table reads the rules and cannot touch them');
   }
 
   {   // a step back is asked about first, and told what it takes

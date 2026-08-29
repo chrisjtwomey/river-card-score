@@ -246,7 +246,6 @@ function renderCaptain(lobby) {
   }
 
   renderJoinBox();
-  Lobby.rulesForm($('#rules-form'), ST, view());
   Lobby.startButton($('#btn-start'), ST, view());
 }
 
@@ -302,6 +301,7 @@ function renderLobby(me) {
   const v = view();
   Lobby.seats($('#lobby-seats'), ST, v);
   Lobby.bots($('#bot-row'), ST, v);
+  Lobby.rulesForm($('#rules-form'), ST, v);      // read by everybody, changed by the host
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
   $('#lobby-title').textContent = v.boss ? 'Get the table ready' : 'Waiting for the table host';
   $('#lobby-hint').textContent = ST.seats.length < 2

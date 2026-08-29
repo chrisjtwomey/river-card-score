@@ -37,6 +37,11 @@
       <button class="btn addbot" id="btn-addbot" type="button">+ Add a bot</button>
       <small class="hint" id="bot-hint"></small>
     </div>
+    <!-- every player reads the rules here; only the table host can change them -->
+    <details class="capset">
+      <summary>Rules</summary>
+      <div id="rules-form"></div>
+    </details>
     <h2 class="avtitle">Your photo</h2>
     <div id="lobby-av"></div>
   </section>
@@ -59,10 +64,6 @@
       </div>
       <p class="hint">Show this to the others, or read out the code.</p>
       <p class="hint">Tap ★ to hand the table over, 🂠 to say who deals first, ↑ ↓ to reorder, × to remove.</p>
-      <details class="capset">
-        <summary>Rules</summary>
-        <div id="rules-form"></div>
-      </details>
       <button class="btn primary big" id="btn-start" type="button" disabled>Start game</button>
     </div>
 
