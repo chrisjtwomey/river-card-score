@@ -246,7 +246,7 @@ function renderCaptain(lobby) {
   }
 
   renderJoinBox();
-  Lobby.rulesForm($('#cap-lobby'), ST, view());
+  Lobby.rulesForm($('#rules-form'), ST, view());
   Lobby.startButton($('#btn-start'), ST, view());
 }
 

@@ -161,7 +161,7 @@ function render() {
 
   // rules: the same form the lobby has, and it stays open after the start
   const c = ST.cfg;
-  Lobby.rulesForm(document, ST, { me: -1, boss: true, send });
+  Lobby.rulesForm($('#rules-form'), ST, { me: -1, boss: true, send });
 
   // scorecard filler. Before the game starts the card is not built yet, so the
   // length comes from the rules.

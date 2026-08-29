@@ -1552,6 +1552,25 @@ part('bidding for a seat that is not there, and leaving');
        'and the scorecard is open, not folded away');
   }
 
+  {   // the rules form is built from one list, and a change goes back as one rule
+    const P = playPage(seed, '?c=TEST');
+    const st = table({ phase: 'lobby' }); st.cfg.max = 5;
+    P.feed(st);
+    const form = P.pick('#rules-form');
+    const max = form.querySelector('#cfg-max');
+    ok(max && max.value === '5', 'the form is built on the page and filled from the rules  got ' + (max && max.value));
+    const miss = form.querySelector('#cfg-miss');
+    ok(miss && miss.children.length === 5, 'with every choice of a rule  got ' + (miss && miss.children.length));
+    ok(form.querySelector('#cfg-trump-row') && form.querySelector('#cfg-trump-row').hidden === false,
+       'and the trump switch, since this table deals the cards');
+    P.socks[0].sent.length = 0;
+    max.value = '6'; max.fire('change');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"max":"6"}}',
+       'a change goes to the table as that one rule  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.feed(st);
+    ok(form.querySelectorAll('#cfg-max').length === 1, 'and the next state fills the form it has, not a second one');
+  }
+
   {   // a step back is asked about first, and told what it takes
     const P = playPage(seed, '?c=TEST');
     const st = table({ away: false }); st.phase = 'tricks'; st.turn = null;

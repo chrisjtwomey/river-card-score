@@ -215,7 +215,7 @@ function renderLobby() {
   const v = view();
   Lobby.seats($('#seatlist'), ST, v);
   Lobby.bots($('#bot-row'), ST, v);
-  Lobby.rulesForm($('#lobby'), ST, v);
+  Lobby.rulesForm($('#rules-form'), ST, v);
   Lobby.startButton($('#btn-start'), ST, v);
 }
 
