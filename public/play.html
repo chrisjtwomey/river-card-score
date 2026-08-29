@@ -53,15 +53,19 @@
     </div>
 
     <div id="cap-lobby" hidden>
-      <div class="joinrow">
-        <div class="qrbox"><img id="qr" alt="QR code with the join address"></div>
-        <div class="joinside">
-          <div class="code-badge" id="code-badge">····</div>
-          <p class="joinurl">or open <b id="join-url">…</b></p>
-          <div id="addr-mount"></div>
+      <!-- the code and the QR, unless a TV screen already has them up -->
+      <div id="cap-join">
+        <div class="joinrow">
+          <div class="qrbox"><img id="qr" alt="QR code with the join address"></div>
+          <div class="joinside">
+            <div class="code-badge" id="code-badge">····</div>
+            <p class="joinurl">or open <b id="join-url">…</b></p>
+            <div id="addr-mount"></div>
+          </div>
         </div>
+        <p class="hint">Show this to the others, or read out the code.</p>
       </div>
-      <p class="hint">Show this to the others, or read out the code.</p>
+      <p class="hint" id="cap-tv" hidden>This table is on the TV screen too. It shows the code, and it can run the game as well as you.</p>
       <p class="hint">Drag a player by the handle to change the order of play. The ⋯ beside a player hands the table over, says who deals first, or removes them.</p>
       <button class="btn primary big" id="btn-start" type="button" disabled>Start game</button>
     </div>

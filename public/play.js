@@ -219,7 +219,11 @@ function renderCaptain(lobby) {
     return;
   }
 
-  renderJoinBox();
+  // A TV screen that runs the table has the code up already, and the same
+  // buttons: the phone keeps its buttons and says the screen is there.
+  $('#cap-join').hidden = !!ST.tv;
+  $('#cap-tv').hidden = !ST.tv;
+  if (!ST.tv) renderJoinBox();
   Lobby.startButton($('#btn-start'), ST, view());
 }
 

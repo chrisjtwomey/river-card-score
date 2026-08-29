@@ -1681,6 +1681,20 @@ part('bidding for a seat that is not there, and leaving');
     ok(max.disabled === true, 'a player who does not run the table reads the rules and cannot touch them');
   }
 
+  {   // with a TV screen running the table, the phone keeps its buttons and drops its copy of the code
+    const P = playPage(seed, '?c=TEST');
+    const alone = table({ phase: 'lobby' });
+    P.feed(alone);
+    ok(P.pick('#cap-join').hidden === false && P.pick('#cap-tv').hidden === true,
+       'with no TV screen the phone shows the code');
+    const shared = table({ phase: 'lobby' }); shared.tv = true;
+    P.feed(shared);
+    ok(P.pick('#cap-join').hidden === true, 'with a TV screen at the table the phone does not repeat the code');
+    ok(P.pick('#cap-tv').hidden === false, 'and says the screen is there');   // the words are the page's own
+    ok(P.pick('#btn-start').disabled === false, 'and can still start the game');
+    ok(P.pick('#captain-panel').hidden === false, 'from its own panel');
+  }
+
   {   // the seat controls are a menu with words on it, not a row of glyphs
     const P = playPage(seed, '?c=TEST');
     P.feed(table({ phase: 'lobby' }));

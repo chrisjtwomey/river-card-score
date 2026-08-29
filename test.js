@@ -1234,7 +1234,12 @@ function client(name, url) {
     const nowhere = client('nowhere'); await nowhere.ready;
     nowhere.send({ t: 'screen', code: 'ZZZZ' }); await wait(150);
     ok(nowhere.errors.some((e) => /no table with that code/i.test(e)), 'a screen needs a table that exists');
-    nowhere.ws.close(); tv.ws.close(); ann.ws.close(); h.ws.close();
+
+    // the phones are told when a TV screen runs the table, and only then
+    ok(ann.state.tv === true, 'a phone knows a TV screen runs this table');
+    h.ws.close(); await wait(150);
+    ok(ann.state.tv === false, 'and knows when it has gone; a screen that only shows the table does not count');
+    nowhere.ws.close(); tv.ws.close(); ann.ws.close();
   }
 
   /* ---- leaving on purpose, which is not the same as dropping out ---- */
