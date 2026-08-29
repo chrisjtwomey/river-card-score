@@ -20,9 +20,10 @@ The players' phones must be on the same network as the server. Scan the QR code 
 The join panel also has **Scan the code**, which opens the camera and reads the
 table's QR code without leaving the page. The decoding is the browser's own, so
 nothing is downloaded and no picture leaves the phone. A camera needs a secure
-page, so the button is there over `https` (`npm run cert`) and in the Android
-app, and it hides itself where the browser offers no camera -- plain `http` to
-another machine, or Safari, which cannot read a code.
+page, so the button is there over `https` (`npm run cert`), and it hides itself
+where the browser offers no camera -- plain `http` to another machine, or
+Safari, which cannot read a code. In the Android app the scanner is on the
+app's own first screen instead, where it needs no server of ours at all.
 
 Every page carries one **⚙** button in the top bar, and it opens the settings
 page: the theme (system, light or dark), the animations (full, short or off),
@@ -467,9 +468,16 @@ page, where **Start a table** takes seat 1 as usual. That page leads
 with Start when it is read on the phone that runs the server, and with Join
 everywhere else -- the host wants a table, a player wants a seat. Join is still
 there for the host: a table made from a TV screen needs a seat taken
-in it. The others scan the QR code with a camera, or type the address. The
-app's own *Join a table* opens somebody else's address in the app instead of a
-browser, for anyone who prefers it.
+in it. The others scan the QR code with a camera, or type the address.
+
+**Joining somebody else's table needs no server of our own.** The app's first
+screen has *Join a table*: **Scan their code**, which reads the QR code on
+their TV or phone and opens that table here, or their address typed by hand.
+Neither starts the server on this phone. The scanner is on that screen and not
+on a table's join page because a browser hands over the camera only on a secure
+page: the app's own screen is one, and a table reached over plain `http` is
+not -- so the only place a scanner could otherwise live is a server we started
+ourselves, which is a server running for a game played on another phone.
 
 The way to put the table down is at the foot of the landing page: **Stop
 hosting table**, under *Past games* and *TV screen*, where the player page has
@@ -503,6 +511,11 @@ screen so it does not jump as one hands over to the next: the phone's own splash
 (`assets/chooser.html`). The shape itself lives in `res/drawable/river_mark.xml`
 and again, in SVG, in the chooser: change one and change the other.
 
+**The Java.** `MainActivity` is the chooser, `TableActivity` the table in a
+WebView, `NodeService` the server and its notification, and `CameraForWeb` the
+one answer both WebViews give a page that asks for the camera: it hands the
+question to Android and the answer back to the page.
+
 ### With no internet at all
 
 Nothing here needs the internet. Every page, script, picture and QR code comes
@@ -520,9 +533,10 @@ Getting them on one network is the part that needs care.
   others join the hotspot, then open the address it shows.
 - **The joining phones can find the address themselves**, if the QR code is out
   of reach: it is the "router" or "gateway" in their own Wi-Fi details.
-- **Scan the code with the phone's own camera app**, not the button on the join
-  page. A browser only hands the camera to a page over https, and a table on a
-  hotspot is plain http, so the in-page scanner hides itself there.
+- **Scan the code with the phone's own camera app**, or with *Scan their code*
+  on the app's first screen. Not the button on a table's join page: a browser
+  only hands the camera to a page over https, and a table on a hotspot is plain
+  http, so the in-page scanner hides itself there.
 
 The host phone has to know its own address to put in the QR code, and on a
 hotspot with no route off it that is harder than it sounds. Four things answer

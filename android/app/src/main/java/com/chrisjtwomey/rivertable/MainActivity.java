@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
   private static final String LOCAL = "http://127.0.0.1:" + NodeService.PORT + "/";
   private static final String PAGE = "file:///android_asset/chooser.html";
   private WebView web;
+  private CameraForWeb camera;         // the chooser reads a QR code to join by
   private boolean firstShow = true;    // only the first load plays the splash
   private boolean wasAway = false;     // this screen has been left and come back to
 
@@ -53,6 +54,10 @@ public class MainActivity extends Activity {
     // mark, the same picture the phone put up when the icon was tapped. The
     // pages paint their own background over it.
     web.setBackgroundColor(0x00000000);
+    // Reading somebody else's QR code needs the camera, and this page is a
+    // secure context (file://), so the browser will offer it once Android has.
+    camera = new CameraForWeb(this);
+    web.setWebChromeClient(camera);
     web.setWebViewClient(new WebViewClient() {
       @Override
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -192,7 +197,11 @@ public class MainActivity extends Activity {
     String url = typed.trim();
     if (!url.contains(":")) url = url + ":" + NodeService.PORT;
     if (!url.startsWith("http")) url = "http://" + url;
-    open(url.endsWith("/") ? url : url + "/");
+    /* A typed address is a machine and needs the slash that makes it a page.
+       A scanned code is the whole join address, table and all, and a slash on
+       the end of that lands after the question mark. */
+    if (!url.contains("?") && !url.endsWith("/")) url = url + "/";
+    open(url);
   }
 
   /**
@@ -241,6 +250,7 @@ public class MainActivity extends Activity {
   @Override
   public void onRequestPermissionsResult(int code, String[] names, int[] results) {
     super.onRequestPermissionsResult(code, names, results);
+    if (camera != null) camera.onResult(code, results);      // the page asked to see
     for (int i = 0; i < names.length; i++) {
       boolean granted = results[i] == PackageManager.PERMISSION_GRANTED;
       if (!granted && (names[i].endsWith("LOCAL_NETWORK") || names[i].endsWith("NEARBY_WIFI_DEVICES"))) {

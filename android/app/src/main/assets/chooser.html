@@ -122,7 +122,12 @@
 
   <section class="panel">
     <h2>Join</h2>
-    <p class="lead">Somebody else is hosting. Point a camera at their QR code and the table opens in the browser &mdash; or type their address here to open it in the app.</p>
+    <p class="lead">Somebody else is hosting. Scan the QR code on their screen, or type their address, and their table opens in this app. This phone runs nothing.</p>
+    <!-- The QR code the table shows carries the address as well as the code,
+         so this is the whole of joining somebody else's table: no address to
+         read off a screen and type in. Hidden where the phone has no camera or
+         no reader for the code. -->
+    <button class="btn primary big" id="scan" type="button" hidden>📷 Scan their code</button>
     <label class="field">
       <span>The host's address</span>
       <input id="addr" type="text" inputmode="url" autocapitalize="off" autocomplete="off"
@@ -132,6 +137,7 @@
   </section>
 </main>
 
+<script src="nodejs-project/public/scan.js"></script>
 <script>
   // The app is told what to do through a link it recognises. Nothing else on
   // this page talks to Android.
@@ -148,6 +154,28 @@
 
   const addr = document.getElementById('addr');
   try { addr.value = localStorage.getItem('lastHost') || ''; } catch (e) {}
+
+  /* The camera reads the code on the other phone's screen. This page is a
+     secure context, so the browser offers the camera here even though the
+     table it opens is plain http -- which is why the scanner lives on this
+     screen and not on a table's own join page, where it would mean starting a
+     server of our own before we could read somebody else's code. */
+  const scan = document.getElementById('scan');
+  if (Scan.can()) {
+    scan.hidden = false;
+    scan.addEventListener('click', () => {
+      say('');
+      Scan.read().then((text) => {
+        if (text === null) return;                  // closed without a read
+        const found = Scan.readAddress(text);
+        if (!found) return say('That code is not a table.', true);
+        // A bare table code says which table but not whose phone.
+        if (!found.url) return say('That code has no address on it. Type the address instead.', true);
+        try { localStorage.setItem('lastHost', new URL(found.url).host); } catch (e) {}
+        tell('join', found.url);
+      });
+    });
+  }
 
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-do]');
