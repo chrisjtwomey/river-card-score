@@ -43,12 +43,13 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can drag a player by the handle at the left of the row to a new place in the order, or remove one, until the game starts.
 3. The ⋯ menu beside a player says who deals the first round, makes them the table host, or removes them. Without a choice, seat 1 deals. The deal then moves on one seat each round.
 4. The table host sets the rules and presses **Start game**. Every phone shows the rules in the lobby; only the table host's can change them. Nobody can join after that.
-5. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
-6. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
-7. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
-8. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The TV screen can enter them too, if the dealer's phone is not handy.
-9. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
-10. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
+5. **The deal.** Every round opens with the deal on every screen: the deck shuffled and dealt round the table. On the TV screen it stays up while the bids come in, each bid stamped onto that player's pile. On a phone it plays and clears itself — a tap skips it — and the bids land on it while it is up.
+6. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
+7. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
+8. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
+9. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The TV screen can enter them too, if the dealer's phone is not handy.
+10. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
+11. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
 
 ### When a phone goes
 

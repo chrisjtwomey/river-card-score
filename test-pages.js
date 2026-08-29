@@ -2057,25 +2057,48 @@ part('tapping the deal away');
     ok(!overlay.hidden, 'and the table stays up: the deal is the round, not a scene');
   }
 
-  {   // a scene of its own (a phone at a table with real cards): tap, tap, gone
+  {   // a scene of its own (a phone at a table with real cards): the bids land on it, and one tap closes it
     const L = load(412, 860, 'full');
     const asked = record(L);
     const overlay = L.Stage.parts().overlay;
     const p = L.Deal.play({
       names: ['Ann', 'Ben', 'Cal'], dealer: 0, cards: 3, round: 1,
-      deck: 'physical', mine: 1, hand: [], upcard: null, trump: null, linger: 1000,
+      deck: 'physical', mine: 1, hand: [], upcard: null, trump: null, linger: 1000, key: '0:0',
     });
+    ok(L.Stage.isOpen('deal'), 'the scene is live while it is up, so the bids can land on it');
+    L.Deal.update({ key: '0:0', bids: [null, 1, null], turn: 2, text: 'Waiting for Cal to bid' });
+    const names = overlay.querySelectorAll('.dname').map((el) => el.textContent);
+    ok(names.indexOf('Ben · 1') >= 0, 'a bid that lands is written under that pile  got ' + names.join('|'));
+    ok(overlay.querySelector('.deal-status').textContent === 'Waiting for Cal to bid', 'and the line says whose bid it is');
+    ok(overlay.querySelector('.deal-skip').textContent === 'tap to skip', 'nothing waits for a tap');
     let threw = null;
     try {
       overlay.fire('pointerdown', { target: overlay, clientX: 200, clientY: 400, pointerId: 1 });
-      overlay.fire('pointerdown', { target: overlay, clientX: 200, clientY: 400, pointerId: 1 });
     } catch (e) { threw = e; }
-    ok(!threw, 'two taps close a scene without throwing  ' + (threw ? threw.message : ''));
+    ok(!threw, 'one tap closes a scene without throwing  ' + (threw ? threw.message : ''));
     const out = asked[asked.length - 1];
     ok(out && out.el === overlay && out.kf[1] && out.kf[1].opacity === 0, 'the last thing asked for is the fade out');
     if (out && out.onfinish) out.onfinish();
     ok(overlay.hidden, 'and the overlay is gone after it');
     p.then(() => ok(true, 'the scene\'s promise settles'));
+  }
+
+  {   // and left alone, it goes by itself
+    const L = load(412, 860, 'full');
+    record(L);
+    const overlay = L.Stage.parts().overlay;
+    const timers = [];
+    const realSet = setTimeout;
+    global.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return realSet(() => {}, 0); };
+    try {
+      L.Deal.play({ names: ['Ann', 'Ben', 'Cal'], dealer: 0, cards: 3, round: 1,
+                    deck: 'physical', mine: 0, hand: [], upcard: null, trump: null, linger: 1000 });
+    } finally { global.setTimeout = realSet; }
+    const ends = timers.filter((t) => t.ms > 3000);
+    ok(ends.length >= 1, 'a scene of its own arms its own end  got ' + timers.map((t) => t.ms).join(','));
+    ends.forEach((t) => t.fn());
+    const out = overlay._on && overlay._on.pointerdown ? overlay._on.pointerdown.length : 0;
+    ok(out === 0, 'and once it has gone a tap on the stage is nobody\'s');
   }
 }
 

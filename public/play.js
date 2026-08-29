@@ -181,28 +181,33 @@ function feltView(on) {
   bar.hidden = !!on || !live;
 }
 
-// The deal plays at the start of each round. It does not hold on a phone: the
-// bid pad has to be reachable. A tap skips it.
+// The deal plays at the start of each round, on every phone, the dealer's
+// too. It does not hold: the bid pad has to be reachable, so it plays and
+// clears itself, and a tap skips it. While it is up the bids land on it, the
+// same as on the TV screen.
 function dealWatch(r) {
   if (ST.phase === 'lobby') { dealtKey = null; return; }
-  if (!r || ST.phase !== 'bid') return;
+  if (!r || ST.phase !== 'bid') { Deal.close('deal'); return; }   // the cards are out: the count is wanted
   const key = Table.roundKey(ST);
-  if (dealtKey === key) return;
-  const first = dealtKey === null && ST.idx > 0;     // a reload part way through
-  dealtKey = key;
-  if (first) return;                                  // do not replay on a reload
-  const virtual = Game.virtual(ST);
-  // The dealer is the one shuffling the real deck. A scene of it shuffling
-  // itself would only be in the way on that phone.
-  if (!virtual && r.dealer === mySeat()) return;
-  // With a virtual deck the cards come to you: your own land face up in a
-  // fan, so the scene already shows the hand and needs no extra pause.
-  Deal.play(Object.assign(Table.dealOpts(ST, ST.idx), {
-    avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
-    mine: mySeat(),
-    hand: ST.hand || [],
-    linger: virtual ? 300 : 1000,   // a phone gets longer to read a bare deal
-  }));
+  if (dealtKey !== key) {
+    const first = dealtKey === null && ST.idx > 0;     // a reload part way through
+    dealtKey = key;
+    if (!first) {                                        // do not replay on a reload
+      Deal.play(Object.assign(Table.dealOpts(ST, ST.idx), {
+        avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
+        mine: mySeat(),
+        key,
+        linger: 1000,                                    // a phone gets longer to read a bare deal
+      }));
+    }
+  }
+  if (!Deal.isOpen('deal')) return;
+  const me = mySeat();
+  Deal.update({
+    key, bids: r.bids || [], turn: ST.turn,
+    text: ST.turn === null ? 'All bids are in' : ST.turn === me ? 'Your bid'
+      : `Waiting for ${ST.seats[ST.turn].name} to bid`,
+  });
 }
 
 // The table host runs the game from their phone: rules, seats, start, go

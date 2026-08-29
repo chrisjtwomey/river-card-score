@@ -24,7 +24,10 @@ const Deal = (function () {
      With keep, the scene never closes itself at all: once the cards are down
      it hands the stage over to onTable() and the table plays on it for the
      rest of the round. A tap still lands the deal, and only that.
-     A tap, a click, or a key ends the deal early; a second one closes it. */
+     With neither, the scene plays and clears itself: the cards land, the
+     trump turns, and a moment later it goes. A tap lands a held deal, and
+     closes one that would clear itself anyway. Whichever way, the bids
+     land on it while it is up: update() stamps them onto the piles. */
   /* A scene that throws half-built is worse than no scene at all. The overlay
      is already up, and the tap that closes it is bound at the end of the
      build, so a throw leaves a screen the player cannot get past. Whatever
@@ -95,11 +98,10 @@ const Deal = (function () {
       // waiting. The first deal of a game gets the whole performance; after
       // that the deck is riffled once and gets on with it.
       const brief = !!(opts && opts.brief);
-      // The turned card is the last thing the scene says, so a player reads
-      // it in their own time and taps it away. The host screen holds through
-      // the bidding anyway, so it needs none of this.
-      const waitTap = !hold && !keep;
-      if (skipEl) skipEl.textContent = waitTap ? 'tap to continue' : 'tap to skip';
+      // A scene that neither holds nor keeps plays and goes. It used to wait
+      // for a tap on a phone at a table with real cards, which was a tap
+      // before every round and a scene the dealer never saw.
+      if (skipEl) skipEl.textContent = 'tap to skip';
       let ended = false, settled = false;
 
       /* ---- the deck in the middle, face down ---- */
@@ -379,7 +381,9 @@ const Deal = (function () {
         tagEl.textContent = Stage.trumpLine(k);
       };
 
-      if (hold) {
+      // The line under the round says whose bid it is. Not on a table the
+      // felt keeps: the felt has a line of its own.
+      if (!keep) {
         anims.push(status.animate(
           [{ opacity: 0 }, { opacity: 1 }],
           { duration: 260, delay: dealEnd + 380, easing: 'ease-out', fill: 'both' }
@@ -430,40 +434,35 @@ const Deal = (function () {
         // A table only ever lands the deal: it is the round's own screen, and
         // the next tap on it is a card being picked up, not a scene being shut.
         if (keep) { if (!settled) settle(); return; }
-        // The first tap lands the deal; the next one closes it. A scene that
-        // is only waiting to be tapped away is already landed, so one does.
-        if ((hold || waitTap) && !settled) { settle(); return; }
+        // The first tap lands a held deal; the next one closes it. A scene
+        // that clears itself anyway is closed by one.
+        if (hold && !settled) { settle(); return; }
         settle(); finish();
       }
 
       overlay.addEventListener('pointerdown', skip);
       window.addEventListener('keydown', skip);
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
-      const trumpHold = waitTap ? 0 : T.hold + linger;
       // Timed from the start of the scene.
-      const naturalEnd = heroAt + T.flip + trumpHold;
+      const naturalEnd = heroAt + T.flip + T.hold + linger;
       const landedAtEnd = heroAt + T.flip;               // the cards are all down
       function arm() {
-        if (hold || waitTap || keep) {
-          timers.push(setTimeout(() => {
-            settled = true;
-            if (S.live) { S.live.settled = true; applyTurn(); }   // now the cards have landed
-            handover();
-          }, landedAtEnd));
-        } else {
-          timers.push(setTimeout(finish, naturalEnd));
-        }
+        timers.push(setTimeout(() => {
+          settled = true;
+          if (S.live) { S.live.settled = true; applyTurn(); }   // now the cards have landed
+          handover();
+        }, landedAtEnd));
+        if (!hold && !keep) timers.push(setTimeout(finish, naturalEnd));
       }
 
-      if (hold || waitTap || keep) {
-        S.live = {
-          kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
-          key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
-          bids: null,                       // what was on the table at the last update
-          trumpSet,                         // repaints the suit if the host corrects it
-        };
-        if (hold && last && last.key === S.live.key) update(last);   // re-opened: catch up
-      }
+      // Every deal is live while it is up, so the bids can land on it.
+      S.live = {
+        kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
+        key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
+        bids: null,                       // what was on the table at the last update
+        trumpSet,                         // repaints the suit if the host corrects it
+      };
+      if (hold && last && last.key === S.live.key) update(last);   // re-opened: catch up
       arm();
     });
   }
