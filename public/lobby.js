@@ -272,12 +272,16 @@ const Lobby = (function () {
       sum.append(make('span', 'capset-name', r.label), make('small', 'capset-sum'));
       const list = make('div', 'toggles');
       ACC().forEach((a) => {
+        const row = make('div', 'switchrow');
         const lab = make('label', 'switch');
         const el = make('input');
         el.type = 'checkbox';
         el.id = 'acc-' + a.key;
         lab.append(el, make('span', '', a.title));
-        list.appendChild(lab);
+        row.appendChild(lab);
+        // What it takes to be given it, under the name of it.
+        if (a.how) row.appendChild(make('small', '', a.how));
+        list.appendChild(row);
       });
       box.append(sum, list);
       return box;

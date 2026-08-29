@@ -2062,6 +2062,11 @@ part('bidding for a seat that is not there, and leaving');
     ok(which.querySelector('.capset-sum').textContent === '11 of 11',
        'a table that has not been asked hands out all of them  got ' + which.querySelector('.capset-sum').textContent);
     ok(which.querySelectorAll('input').every((i) => i.checked), 'with every one ticked');
+    // the fake DOM matches one selector at a time, so this is asked in two
+    const told = which.querySelectorAll('.switchrow').filter((r) => !!r.querySelector('small'));
+    ok(told.length === Accolades.ALL.length,
+       'and each says what it takes to be given it  got ' + told.length);
+    ok(Accolades.ALL.every((a) => a.how && /\.$/.test(a.how)), 'every accolade has that line');
     P.socks[0].sent.length = 0;
     const off = which.querySelector('#acc-steady');
     off.checked = false;

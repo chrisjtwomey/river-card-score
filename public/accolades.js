@@ -8,17 +8,17 @@ const Accolades = (function () {
      The titles live here and nowhere else: the rules form lists them to be
      chosen from, and the awards below are named from the same list. */
   const ALL = [
-    { key: 'fearless', title: 'Most fearless' },
-    { key: 'tricks', title: 'Most tricks won' },
-    { key: 'best', title: 'Best round' },
-    { key: 'steady', title: 'Steadiest hand' },
-    { key: 'climb', title: 'Best comeback' },
-    { key: 'zeros', title: 'Zero hero' },
-    { key: 'allin', title: 'All in' },
-    { key: 'under', title: 'Quiet achiever' },
-    { key: 'careful', title: 'Most careful' },
-    { key: 'over', title: 'Biggest eyes' },
-    { key: 'blank', title: 'Hardest luck' },
+    { key: 'fearless', title: 'Most fearless', how: 'Bid the most tricks over the game.' },
+    { key: 'tricks', title: 'Most tricks won', how: 'Won the most tricks over the game.' },
+    { key: 'best', title: 'Best round', how: 'Scored the most points in one round.' },
+    { key: 'steady', title: 'Steadiest hand', how: 'Finished nearest the bids: fewest tricks out all game.' },
+    { key: 'climb', title: 'Best comeback', how: 'Climbed the most places between half way and the end.' },
+    { key: 'zeros', title: 'Zero hero', how: 'Bid nothing and took nothing, most often.' },
+    { key: 'allin', title: 'All in', how: 'Bid a whole hand and made it, most often.' },
+    { key: 'under', title: 'Quiet achiever', how: 'Won the most tricks above the bids.' },
+    { key: 'careful', title: 'Most careful', how: 'Bid the fewest tricks over the game.' },
+    { key: 'over', title: 'Biggest eyes', how: 'Bid the most tricks above what was won.' },
+    { key: 'blank', title: 'Hardest luck', how: 'The most rounds that paid nothing at all.' },
   ];
   const titleOf = (key) => (ALL.find((a) => a.key === key) || {}).title || key;
 
