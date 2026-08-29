@@ -224,10 +224,10 @@ const Lobby = (function () {
     { id: 'cfg-screw', key: 'screw', kind: 'check', label: 'Screw the dealer',
       hint: 'The dealer may not bid the number that would make the bids total the tricks.' },
     { id: 'cfg-trump', key: 'trump', kind: 'check', label: 'Turn a card for trumps' },
-    { id: 'cfg-accolade-count', key: 'accoladeCount', kind: 'select', label: 'Accolades drawn',
+    { id: 'cfg-accolade-which', key: 'accolades', kind: 'picks', label: 'Accolades' },
+    { id: 'cfg-accolade-count', key: 'accoladeCount', kind: 'select', label: 'How many are drawn',
       hint: 'Prizes for how you played, drawn at random when the game ends.' },
     { id: 'cfg-accolade-pay', key: 'accoladePay', kind: 'select', label: 'Each one pays' },
-    { id: 'cfg-accolade-which', key: 'accolades', kind: 'picks', label: 'Which ones' },
   ];
   /* How the fields sit: groups, a hairline between one and the next, and two
      abreast inside a group where they read as a pair. What kind of cards are
@@ -239,7 +239,7 @@ const Lobby = (function () {
     [['cfg-max', 'cfg-ones'], 'cfg-pattern'],
     [['cfg-bonus', 'cfg-miss']],
     [{ toggles: ['cfg-screw', 'cfg-trump'] }],
-    [['cfg-accolade-count', 'cfg-accolade-pay'], 'cfg-accolade-which'],
+    ['cfg-accolade-which', ['cfg-accolade-count', 'cfg-accolade-pay']],
   ];
   const MISS_SAID = {
     atleast: 'Over the bid pays the tricks won; short of it pays 0.',

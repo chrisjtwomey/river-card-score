@@ -2051,6 +2051,11 @@ part('bidding for a seat that is not there, and leaving');
     ok(!!groups[2].querySelector('#cfg-miss'), 'then what a bid pays');
     ok(!!groups[3].querySelector('#cfg-screw'), 'then the variants');
     ok(!!groups[4].querySelector('#cfg-accolade-count'), 'and the prizes last');
+    ok(groups[4].children[0].id === 'cfg-accolade-which',
+       'which accolades a table plays for heads that group  got ' + groups[4].children[0].id);
+    ok(form.querySelector('#cfg-accolade-which').querySelector('.capset-name').textContent === 'Accolades',
+       'under the name of the thing itself  got '
+       + form.querySelector('#cfg-accolade-which').querySelector('.capset-name').textContent);
 
     /* Which accolades this table hands out: eleven switches, folded away
        because most tables never touch them, and every change sends the whole
