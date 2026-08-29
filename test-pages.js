@@ -2058,6 +2058,30 @@ part('bidding for a seat that is not there, and leaving');
     ok(max.disabled === true, 'a player who does not run the table reads the rules and cannot touch them');
   }
 
+  {   /* Folded away on a phone, the heading still says what the rules are, and
+         it is opened for whoever runs the table: they came to set them. */
+    const P = playPage(seed, '?c=TEST');
+    const st = table({ phase: 'lobby' });
+    st.cfg.max = 7; st.cfg.screw = true; st.cfg.deck = 'physical';
+    P.feed(st);
+    const rounds = Game.schedule(st.cfg.max, st.cfg.pattern, st.cfg.ones).length;
+    ok(P.pick('#rules-sum').textContent === `${rounds} rounds · real cards · screw the dealer`,
+       'shut, the rules say what they are  got ' + P.pick('#rules-sum').textContent);
+    ok(P.pick('#rules-box').open === true, 'and they are open for whoever sets them');
+    P.pick('#rules-box').open = false;                 // shut by hand
+    P.feed(st);
+    ok(P.pick('#rules-box').open === false, 'and stay shut once they have been shut');
+
+    const Q = playPage(seed, '?c=TEST');
+    const qst = table({ phase: 'lobby', boss: false });
+    qst.cfg.deck = 'virtual'; qst.cfg.screw = false; qst.cfg.max = 7; qst.cfg.ones = 3;
+    Q.feed(qst);
+    ok(Q.pick('#rules-box').open === false, 'a player who is not setting them is not opened into a form');
+    const qrounds = Game.schedule(qst.cfg.max, qst.cfg.pattern, qst.cfg.ones).length;
+    ok(Q.pick('#rules-sum').textContent === `${qrounds} rounds · dealt on the phones`,
+       'and reads them on the heading, with no rule that is off  got ' + Q.pick('#rules-sum').textContent);
+  }
+
   {   // with a TV screen running the table, the phone keeps its buttons and drops its copy of the code
     const P = playPage(seed, '?c=TEST');
     const alone = table({ phase: 'lobby' });

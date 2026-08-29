@@ -346,5 +346,17 @@ const Lobby = (function () {
       `${MISS_SAID[c.miss] || ''}\nBid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`);
   }
 
-  return { seats, bots, startButton, rulesForm };
+  /* The rules in force, in a line: what a screen shows where the form itself
+     is folded away. The three that change how a hand is played, in the order
+     a table asks about them. */
+  function rulesLine(ST) {
+    const c = ST.cfg;
+    const n = Game.schedule(c.max, c.pattern, c.ones).length;
+    const bits = [`${n} round${n === 1 ? '' : 's'}`,
+                  Game.virtual(ST) ? 'dealt on the phones' : 'real cards'];
+    if (c.screw) bits.push('screw the dealer');
+    return bits.join(' · ');
+  }
+
+  return { seats, bots, startButton, rulesForm, rulesLine };
 })();

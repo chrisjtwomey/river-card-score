@@ -1125,14 +1125,28 @@ body.host .scorecard-panel .table-wrap{
 /* ---------- the elected table host ---------- */
 .captain-panel{border-color:var(--gold)}
 .tally.gold{background:rgba(184,134,43,.18);color:var(--gold)}
+/* The rules on a phone, folded away. It was a small grey word with a smaller
+   arrow, and the players who most wanted it -- everybody who is not setting
+   the rules -- did not see it was there at all. It is a card with a heading
+   now, and shut it still says what the rules are. */
+.capset{
+  display:flex;flex-direction:column;
+  border:1px solid var(--line);border-radius:12px;background:var(--bg);
+  padding:0 12px;
+}
 .capset > summary{
-  cursor:pointer;font-size:13px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.08em;color:var(--ink-dim);list-style:none;padding:4px 0;
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;
+  cursor:pointer;list-style:none;padding:12px 0;
+  font-size:16px;font-weight:800;color:var(--ink);
 }
 .capset > summary::-webkit-details-marker{display:none}
-.capset > summary::after{content:' ▾'}
-.capset[open] > summary::after{content:' ▴'}
-.capset{display:flex;flex-direction:column;gap:10px}
+.capset > summary::after{content:'▾';margin-left:auto;color:var(--ink-dim);font-size:15px}
+.capset[open] > summary::after{content:'▴'}
+/* under the heading, on a line of its own */
+.capset-sum{flex:1 1 100%;order:3;font-size:13px;font-weight:600;color:var(--ink-dim)}
+.capset[open] .capset-sum{display:none}          /* open, the form says it better */
+.capset[open] > summary{border-bottom:1px solid var(--line)}
+.capset > #rules-form{padding:14px 0}
 .captain-panel .seat-item .mini{width:34px;height:34px}
 .captain-panel .code-badge{font-size:46px;letter-spacing:.16em}
 .captain-panel .qrbox img{width:150px;height:150px}

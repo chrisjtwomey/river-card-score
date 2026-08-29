@@ -36,9 +36,13 @@
       <button class="btn addbot" id="btn-addbot" type="button">+ Add a bot</button>
       <small class="hint" id="bot-hint"></small>
     </div>
-    <!-- every player reads the rules here; only the table host can change them -->
-    <details class="capset">
-      <summary>Rules</summary>
+    <!-- every player reads the rules here; only the table host can change
+         them. Shut, the line under the heading still says what they are. -->
+    <details class="capset" id="rules-box">
+      <summary>
+        <span class="capset-name">Rules</span>
+        <small class="capset-sum" id="rules-sum"></small>
+      </summary>
       <div id="rules-form"></div>
     </details>
   </section>

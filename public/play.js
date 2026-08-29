@@ -295,6 +295,14 @@ function renderLobby(me) {
   Lobby.seats($('#lobby-seats'), ST, v);
   Lobby.bots($('#bot-row'), ST, v);
   Lobby.rulesForm($('#rules-form'), ST, v);      // read by everybody, changed by the host
+  /* Folded away, the heading still says what the rules are, so a player who
+     only wants to know reads it without opening anything. It is opened once
+     for whoever runs the table: they came to set them. */
+  const rules = $('#rules-box');
+  if (rules) {
+    $('#rules-sum').textContent = Lobby.rulesLine(ST);
+    if (!rules._asked) { rules._asked = true; rules.open = v.boss; }
+  }
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
   $('#lobby-title').textContent = v.boss ? 'Get the table ready' : 'Waiting for the table host';
   $('#lobby-hint').textContent = ST.seats.length < 2
