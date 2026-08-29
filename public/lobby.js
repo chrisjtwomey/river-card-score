@@ -16,9 +16,9 @@ const Lobby = (function () {
   // A button is wired the first time it is drawn, and never twice.
   const onClick = (el, fn) => { if (el && !el._wired) { el._wired = true; el.addEventListener('click', fn); } };
 
-  /* The seats, in the order of play. Whoever runs the table gets the controls
-     on each row: ★ hands the table over (never to a bot, which cannot run
-     it), 🂠 says who deals first, ↑ ↓ reorder, × removes (never yourself). */
+  /* The seats, in the order of play. Whoever runs the table gets a ⋯ menu
+     on each row: hand the table over (never to a bot), say who deals first,
+     move the seat, remove it (never their own). */
   function seats(root, ST, view) {
     if (!root) return;
     root.innerHTML = '';
@@ -33,25 +33,68 @@ const Lobby = (function () {
         (isCap ? '<span class="badge">table host</span>' : '') +
         (s.bot ? '<span class="badge soft">bot</span>' : '') +
         (isFirst ? '<span class="badge soft">deals first</span>' : '') +
-        `<span class="dotstat" title="${s.online ? 'connected' : 'not connected'}"></span>` +
-        (view.boss
-          ? (s.bot ? '' : `<button class="mini" data-a="cap" title="Make this player the table host" aria-pressed="${isCap}">★</button>`) +
-            `<button class="mini d" data-a="deal" title="This player deals the first round" aria-pressed="${isFirst}">🂠</button>` +
-            '<button class="mini" data-a="up" title="Move up">↑</button>' +
-            '<button class="mini" data-a="down" title="Move down">↓</button>' +
-            (mine ? '' : '<button class="mini x" data-a="kick" title="Remove">×</button>')
-          : '');
+        `<span class="dotstat" title="${s.online ? 'connected' : 'not connected'}"></span>`;
       row.querySelector('.nm').textContent = s.name + (mine ? ' (you)' : '');
-      row.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-        const a = b.dataset.a;
-        if (a === 'kick') view.send({ t: 'kick', id: s.id });
-        else if (a === 'cap') view.send({ t: 'captain', id: s.id });
-        else if (a === 'deal') view.send({ t: 'config', patch: { firstDealer: isFirst ? null : s.id } });
-        else view.send({ t: 'seatMove', id: s.id, dir: a });
-      }));
+      if (view.boss) row.appendChild(seatMenu(row, s, i, { isFirst, isCap, mine, n: ST.seats.length }, view));
       root.appendChild(row);
     });
   }
+
+  /* The controls on a seat, behind one ⋯ button and named. A row of glyphs
+     (★ 🂠 ↑ ↓ ×) told a first-time host nothing -- a title does not show on a
+     touch screen -- and the card back is a box on many Android fonts. */
+  function seatMenu(row, s, i, is, view) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mini more';
+    btn.textContent = '⋯';
+    btn.title = 'Seat options';
+    btn.setAttribute('aria-label', `Options for ${s.name}`);
+    btn.setAttribute('aria-haspopup', 'true');
+    const items = [];
+    if (!s.bot) items.push({ label: 'Make table host', on: is.isCap, msg: { t: 'captain', id: s.id } });
+    items.push({ label: 'Deals first', on: is.isFirst,
+                 msg: { t: 'config', patch: { firstDealer: is.isFirst ? null : s.id } } });
+    if (i > 0) items.push({ label: 'Move up', msg: { t: 'seatMove', id: s.id, dir: 'up' } });
+    if (i < is.n - 1) items.push({ label: 'Move down', msg: { t: 'seatMove', id: s.id, dir: 'down' } });
+    if (!is.mine) items.push({ label: 'Remove', danger: true, msg: { t: 'kick', id: s.id } });
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = row.querySelector('.seatmenu');
+      closeSeatMenus();
+      if (open) return;                         // the same button shuts it
+      const menu = document.createElement('div');
+      menu.className = 'menu seatmenu';
+      menu.setAttribute('role', 'menu');
+      items.forEach((it) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'menu-row menu-tap' + (it.danger ? ' danger' : '');
+        const name = document.createElement('span');
+        name.className = 'menu-label';
+        name.textContent = it.label;
+        b.appendChild(name);
+        if (it.on !== undefined) {
+          const tick = document.createElement('span');
+          tick.className = 'menu-tick';
+          tick.textContent = it.on ? '✓' : '';
+          b.appendChild(tick);
+        }
+        b.addEventListener('click', (e2) => { e2.stopPropagation(); menu.remove(); view.send(it.msg); });
+        menu.appendChild(b);
+      });
+      row.appendChild(menu);
+    });
+    return btn;
+  }
+  function closeSeatMenus() {
+    document.querySelectorAll('.seatmenu').forEach((m) => m.remove());
+  }
+  // A tap anywhere else is the way out that needs no button.
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.seatmenu, .mini.more')) return;
+    closeSeatMenus();
+  });
 
   /* Players the table provides, for a hand short of people. They hold cards,
      so they belong to a table that deals them. `root` is the row: the button

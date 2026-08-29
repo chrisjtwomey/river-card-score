@@ -209,8 +209,9 @@ function renderLobby() {
   const fd = ST.seats.find((s) => s.id === ST.firstDealerId) || ST.seats[0];
   const capSeat = ST.seats.find((s) => s.id === ST.captainId);
   $('#first-dealer-hint').textContent = fd
-    ? `${fd.name} deals the first round. Tap 🂠 beside a player to change it.` +
-      (capSeat ? ` ${capSeat.name} runs the table from their phone: tap ★ to pass that on.` : '')
+    ? `${fd.name} deals the first round` +
+      (capSeat ? `, and ${capSeat.name} runs the table from their phone.` : '.') +
+      ' The ⋯ beside a player changes either, moves them, or removes them.'
     : '';
   const v = view();
   Lobby.seats($('#seatlist'), ST, v);

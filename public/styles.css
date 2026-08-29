@@ -868,6 +868,10 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 }
 .seat-item .mini:hover{color:var(--ink)}
 .seat-item .mini.x:hover{background:var(--red);color:#fff}
+/* the seat's controls, behind one button, named */
+.seat-item{position:relative}
+.seat-item .mini.more{margin-left:auto;font-size:18px;line-height:1}
+.seat-item .menu{top:calc(100% - 2px);right:8px;min-width:200px}
 
 /* bid strip */
 .bidstrip{display:flex;gap:8px;flex-wrap:wrap}
@@ -969,7 +973,6 @@ body.host .topbar .btn{font-size:15px;padding:8px 12px}
 
 /* who deals the first round */
 .seat-item.first-dealer{border-color:var(--gold)}
-.seat-item .mini.d[aria-pressed="true"]{background:var(--gold);color:#1c1a12}
 
 /* ---------- standings stay in view ---------- */
 .standings-panel{
@@ -1029,7 +1032,6 @@ body.host .scorecard-panel .table-wrap{
 /* ---------- the elected table host ---------- */
 .captain-panel{border-color:var(--gold)}
 .tally.gold{background:rgba(184,134,43,.18);color:var(--gold)}
-.seat-item .mini[data-a="cap"][aria-pressed="true"]{background:var(--gold);color:#1c1a12}
 .capset > summary{
   cursor:pointer;font-size:13px;font-weight:700;text-transform:uppercase;
   letter-spacing:.08em;color:var(--ink-dim);list-style:none;padding:4px 0;

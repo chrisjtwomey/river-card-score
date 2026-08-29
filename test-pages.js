@@ -1573,6 +1573,28 @@ part('bidding for a seat that is not there, and leaving');
     ok(max.disabled === true, 'a player who does not run the table reads the rules and cannot touch them');
   }
 
+  {   // the seat controls are a menu with words on it, not a row of glyphs
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({ phase: 'lobby' }));
+    const rows = P.pick('#lobby-seats').children;
+    ok(rows.length === 3 && !!rows[1].querySelector('.more'), 'every seat has one ⋯ button');
+    rows[1].querySelector('.more').fire('click');
+    const menu = rows[1].querySelector('.seatmenu');
+    ok(!!menu, 'and it opens a menu on the row');
+    // the words are on a span inside the button, and the fake DOM does not roll text up
+    const label = (b) => b.querySelector('.menu-label').textContent;
+    const names = menu ? menu.querySelectorAll('.menu-tap').map(label) : [];
+    ok(names.indexOf('Make table host') >= 0 && names.indexOf('Deals first') >= 0 && names.indexOf('Remove') >= 0,
+       'with the controls named  got ' + names.join(' | '));
+    P.socks[0].sent.length = 0;
+    menu.querySelectorAll('.menu-tap').find((b) => label(b) === 'Deals first').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"firstDealer":"s1"}}',
+       'and a row sends what the glyph sent  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(!rows[1].querySelector('.seatmenu'), 'the menu shuts on the tap');
+    P.feed(table({ phase: 'lobby', boss: false }));
+    ok(!P.pick('#lobby-seats').children[1].querySelector('.more'), 'a player who does not run the table has no menu');
+  }
+
   {   // the end of the game is said once on the page
     const P = playPage(seed, '?c=TEST');
     const st = table({ away: false }); st.cfg.deck = 'physical'; st.phase = 'done'; st.idx = 1; st.turn = null;
