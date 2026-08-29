@@ -184,9 +184,9 @@ function feltView(on) {
 }
 
 // The deal plays at the start of each round, on every phone, the dealer's
-// too. It does not hold: the bid pad has to be reachable, so it plays and
-// clears itself, and a tap skips it. While it is up the bids land on it, the
-// same as on the TV screen.
+// too -- the shuffle only. The real cards are on the real table, dealt by
+// the real dealer, so the scene stops before a card goes out, and the bid
+// pad is not kept waiting. A tap skips it.
 function dealWatch(r) {
   if (ST.phase === 'lobby') { dealtKey = null; return; }
   if (!r || ST.phase !== 'bid') { Deal.close('deal'); return; }   // the cards are out: the count is wanted
@@ -199,17 +199,10 @@ function dealWatch(r) {
         avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
         mine: mySeat(),
         key,
-        linger: 1000,                                    // a phone gets longer to read a bare deal
+        shuffleOnly: true,
       }));
     }
   }
-  if (!Deal.isOpen('deal')) return;
-  const me = mySeat();
-  Deal.update({
-    key, bids: r.bids || [], turn: ST.turn,
-    text: ST.turn === null ? 'All bids are in' : ST.turn === me ? 'Your bid'
-      : `Waiting for ${ST.seats[ST.turn].name} to bid`,
-  });
 }
 
 // The table host runs the game from their phone: rules, seats, start, go

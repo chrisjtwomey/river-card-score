@@ -2324,6 +2324,34 @@ part('tapping the deal away');
     const out = overlay._on && overlay._on.pointerdown ? overlay._on.pointerdown.length : 0;
     ok(out === 0, 'and once it has gone a tap on the stage is nobody\'s');
   }
+
+  {   // a phone at a table with real cards: the shuffle plays, and the scene goes before a card is dealt
+    const L = load(412, 860, 'full');
+    const asked = record(L);
+    const overlay = L.Stage.parts().overlay;
+    const timers = [];
+    const realSet = setTimeout;
+    global.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return realSet(() => {}, 0); };
+    try {
+      L.Deal.play({ names: ['Ann', 'Ben', 'Cal'], dealer: 0, cards: 3, round: 1,
+                    deck: 'physical', mine: 1, hand: [], upcard: null, trump: null, shuffleOnly: true });
+    } finally { global.setTimeout = realSet; }
+    const cls = (a) => a.el.className;
+    const deck = asked.filter((a) => /\bdeck\b/.test(cls(a)));
+    const dealt = asked.filter((a) => /\bdcard\b/.test(cls(a)) && !/\bdeck\b/.test(cls(a)));
+    ok(deck.length >= 30, 'the deck is shuffled on screen  got ' + deck.length);
+    ok(dealt.length === 0, 'and no card is dealt out  got ' + dealt.length);
+    ok(overlay.querySelectorAll('.dname').length === 0, 'no pile is named');
+    ok(overlay.querySelectorAll('.dcard.hero').length === 0, 'and nothing is turned for trumps');
+    ok(overlay.querySelector('.deal-doing').textContent === 'Ann is dealing…', 'the line says who is dealing');
+    const shuffleEnd = Math.max(...deck.map((a) => (a.opts.delay || 0) + (a.opts.duration || 0)));
+    const end = timers.filter((t) => t.ms > shuffleEnd);
+    ok(end.length >= 1 && Math.min(...end.map((t) => t.ms)) < shuffleEnd + 800,
+       'it goes by itself as soon as the shuffle is over  shuffle ends ' + shuffleEnd + ', timers ' + end.map((t) => t.ms).join(','));
+    end.forEach((t) => t.fn());
+    const out = asked[asked.length - 1];
+    ok(out && out.el === overlay && out.kf[1] && out.kf[1].opacity === 0, 'and it fades out');
+  }
 }
 
 

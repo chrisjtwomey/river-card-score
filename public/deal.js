@@ -27,7 +27,11 @@ const Deal = (function () {
      With neither, the scene plays and clears itself: the cards land, the
      trump turns, and a moment later it goes. A tap lands a held deal, and
      closes one that would clear itself anyway. Whichever way, the bids
-     land on it while it is up: update() stamps them onto the piles. */
+     land on it while it is up: update() stamps them onto the piles.
+     With shuffleOnly the scene stops at the end of the shuffle: the deck is
+     squared up, held a moment, and the scene fades before any card goes
+     out. For a phone at a table with real cards, where the real dealer
+     deals the real cards. Nothing lands on it. */
   /* A scene that throws half-built is worse than no scene at all. The overlay
      is already up, and the tap that closes it is bound at the end of the
      build, so a throw leaves a screen the player cannot get past. Whatever
@@ -98,6 +102,9 @@ const Deal = (function () {
       // waiting. The first deal of a game gets the whole performance; after
       // that the deck is riffled once and gets on with it.
       const brief = !!(opts && opts.brief);
+      // The shuffle and nothing after it: no card goes out, nothing is
+      // turned, nobody is named.
+      const shuffleOnly = !!(opts && opts.shuffleOnly);
       // A scene that neither holds nor keeps plays and goes. It used to wait
       // for a tap on a phone at a table with real cards, which was a tap
       // before every round and a scene the dealer never saw.
@@ -207,7 +214,7 @@ const Deal = (function () {
       const lastAt = [], myCards = [];
       let given = 0;
 
-      for (let k = 0; k < passes; k++) {
+      for (let k = 0; k < (shuffleOnly ? 0 : passes); k++) {
         for (let step = 1; step <= n; step++) {       // left of the dealer first
           const p = (dealer + step) % n;
           const { x } = seat(p);
@@ -253,7 +260,7 @@ const Deal = (function () {
         }
       }
 
-      const dealEnd = dealAt + (given - 1) * perCard + T.fly;
+      const dealEnd = shuffleOnly ? shuffleEnd : dealAt + (given - 1) * perCard + T.fly;
 
       // The shuffle's z-order has done its work. It has to go before the
       // turned trump card flips on top of the pile, and by now the deck is
@@ -263,7 +270,7 @@ const Deal = (function () {
       }, dealEnd));
       dropBand();
 
-      for (let step = 1; step <= n; step++) {          // the names, as each pile lands
+      for (let step = 1; step <= (shuffleOnly ? 0 : n); step++) {   // the names, as each pile lands
         const p = (dealer + step) % n;
         // Your own cards are named for what they are, above the fan. Every
         // other pile is named for whose it is, below it.
@@ -291,13 +298,14 @@ const Deal = (function () {
         });
       }
 
-      // The deck goes quiet once it has given everything out.
-      deckEls.forEach((d, i) => fade(d,
+      // The deck goes quiet once it has given everything out. A shuffle on
+      // its own goes with the scene, whole.
+      if (!shuffleOnly) deckEls.forEach((d, i) => fade(d,
         [{ opacity: 1 }, { opacity: keep ? 0 : (i === stackN - 1 ? .5 : .18) }],
         { duration: 320, delay: dealEnd - 200, easing: 'ease-out', fill: 'both' }, anims));
 
       /* ---- the card turned for trumps ---- */
-      const heroAt = dealEnd + (virtual ? 260 : 140);
+      const heroAt = shuffleOnly ? shuffleEnd : dealEnd + (virtual ? 260 : 140);
       const hero = cardEl(upFace, 'hero');
       const heroFront = hero.querySelector('.front');
       if (!upFace) {
@@ -315,10 +323,12 @@ const Deal = (function () {
       };
       if (trumpK) setHeroFace(trumpK);
       hero.style.transform = calm ? 'rotateY(0deg)' : 'rotateY(180deg)';
-      stage.appendChild(hero);
+      if (!shuffleOnly) stage.appendChild(hero);
       const turn = { duration: T.flip, delay: heroAt, fill: 'both',
                      easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.3)' };
-      if (calm) {
+      if (shuffleOnly) {
+        // nothing is turned: the real deck is on the real table
+      } else if (calm) {
         hero.style.transform = tf(0, R.cy, 0, 0, 1.15);
         fade(hero, [{ opacity: 0 }, { opacity: 1 }], turn, anims);
       } else {
@@ -337,7 +347,7 @@ const Deal = (function () {
           : (trumpK ? Stage.trumpLine(trumpK) : ''),
         ringTop: H / 2 + R.cy - ry - 56,       // the top card's top edge
       });
-      anims.push(cap.animate(
+      if (!shuffleOnly) anims.push(cap.animate(
         [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'translateY(0)' }],
         { duration: 300, delay: heroAt + 120,
           easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }
@@ -370,7 +380,7 @@ const Deal = (function () {
           { duration: 280, delay: at, easing: 'ease-out', fill: 'forwards' })));
       }
 
-      (anims[anims.push(tagEl.animate(
+      if (!shuffleOnly) (anims[anims.push(tagEl.animate(
         [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
         { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'forwards' }
       )) - 1]);
@@ -382,8 +392,8 @@ const Deal = (function () {
       };
 
       // The line under the round says whose bid it is. Not on a table the
-      // felt keeps: the felt has a line of its own.
-      if (!keep) {
+      // felt keeps: the felt has a line of its own. Nor over a shuffle.
+      if (!keep && !shuffleOnly) {
         anims.push(status.animate(
           [{ opacity: 0 }, { opacity: 1 }],
           { duration: 260, delay: dealEnd + 380, easing: 'ease-out', fill: 'both' }
@@ -446,8 +456,9 @@ const Deal = (function () {
       window.addEventListener('keydown', skip);
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
       // Timed from the start of the scene.
-      const naturalEnd = heroAt + T.flip + T.hold + linger;
-      const landedAtEnd = heroAt + T.flip;               // the cards are all down
+      // A shuffle on its own is held a moment, squared up, and goes.
+      const naturalEnd = shuffleOnly ? shuffleEnd + T.hold : heroAt + T.flip + T.hold + linger;
+      const landedAtEnd = shuffleOnly ? shuffleEnd : heroAt + T.flip;   // the cards are all down
       function arm() {
         timers.push(setTimeout(() => {
           settled = true;

@@ -43,7 +43,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can drag a player by the handle at the left of the row to a new place in the order, or remove one, until the game starts.
 3. The ⋯ menu beside a player says who deals the first round, makes them the table host, or removes them. Without a choice, seat 1 deals. The deal then moves on one seat each round.
 4. The table host sets the rules and presses **Start game**. Every phone shows the rules in the lobby; only the table host's can change them. Nobody can join after that.
-5. **The deal.** Every round opens with the deal on every screen: the deck shuffled and dealt round the table. On the TV screen it stays up while the bids come in, each bid stamped onto that player's pile. On a phone it plays and clears itself — a tap skips it — and the bids land on it while it is up.
+5. **The deal.** Every round opens with the deal on every screen: the deck shuffled and dealt round the table. On the TV screen it stays up while the bids come in, each bid stamped onto that player's pile. On a phone with real cards only the shuffle plays, and the scene clears itself before any card goes out — a tap skips it.
 6. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
 7. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
 8. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
@@ -318,10 +318,10 @@ npm start        # the console now says (https)
 
 `npm run cert` needs `openssl`, and it puts every address of this machine in the certificate. Nobody signed it, so each phone shows a warning the first time. Accept it once and the screen lock works. Set `TLS_KEY` and `TLS_CERT` to use your own certificate, or `NO_TLS=1` to force plain http.
 
-Both screens play the deal animation at the start of every round: a card flies to each seat in dealing order, with the player names.
+Both screens play the deal animation at the start of every round. On the TV screen, and on a phone at a table dealt on the phones, a card flies to each seat in dealing order, with the player names.
 
 - On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows and their pile peeks -- the top card tips up and shivers every few seconds -- and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it.
-- On a **phone** it plays and then clears, so the bid pad is never blocked. A tap skips it. It does not replay when a phone reloads part way through a game.
+- On a **phone** at a table with real cards only the shuffle plays: the deck is riffled and squared up, and the scene fades before any card goes out -- the real dealer deals the real cards. A tap skips it. It does not replay when a phone reloads part way through a game.
 
 When somebody bids, every other screen says so: a line slides in under the top bar — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. Your own bid is not announced, because your own pad already shows it. A refusal from the table — a bid out of turn, a rule that cannot change with bots seated — is said the same way, in red, so it is seen over the felt and in the lobby alike. On the TV screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.
 
