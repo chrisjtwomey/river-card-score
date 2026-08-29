@@ -795,7 +795,7 @@ On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙
 
 A real table gets the state editor and nothing else. **Force**, **Round** and **State** work. Everything that invents data — new table, jump to, fill scorecard, randomise — is hidden, and the server refuses it even with `DEV=1`. The top bar turns red, and the page says the game is real.
 
-The phones are there, one pane a player, so you can see what each of them sees. On a real table they are **watching windows**: the same page, off the same state, with a 👁 badge and nothing that can be pressed. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
+The phones are there, one pane a player, so you can see what each of them sees. On a real table they are **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
 
 The server decides this, not the page:
 

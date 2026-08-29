@@ -814,8 +814,19 @@ body.watching summary,
 body.showing button,
 body.showing input,
 body.showing select{pointer-events:none}
+/* Everything but the settings page and the question it asks. Those are the
+   reader's own -- their theme, their text size, full screen, and the way to
+   put a table down -- and not the game this screen may not touch. The settings
+   used to be a menu inside the top bar, which this rule already let through;
+   as a page of its own over the body it went dead, arrow and all. */
 body.watching .topbar-actions button,
 body.showing .topbar-actions button,
+body.watching .settings button,
+body.watching .settings input,
+body.watching dialog button,
+body.showing .settings button,
+body.showing .settings input,
+body.showing dialog button,
 body.showing summary{pointer-events:auto}
 
 /* Leaving the table, at the top of the player page, where the host's

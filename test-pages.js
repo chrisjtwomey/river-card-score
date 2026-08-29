@@ -2849,6 +2849,31 @@ part('the pages and the stylesheet agree');
   ok(deal !== null && page > deal, `and over the felt and the deal  got ${page} vs ${deal}`);
 }
 
+/* A screen that only shows a table, and a window that only watches a seat,
+   cannot press anything on the game -- and the stylesheet does that with one
+   rule over every button on the page. The settings page is not the game: it is
+   the reader's own theme, text size and full screen, and the way to put a
+   table down. It used to be a menu inside the top bar, which that rule already
+   let through; as a page of its own over the body every row on it went dead,
+   the way back included, and the question it asks went with it. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const rules = css.split('}').map((chunk) => {
+    const i = chunk.lastIndexOf('{');
+    return i < 0 ? null : { sel: chunk.slice(0, i), body: chunk.slice(i + 1) };
+  }).filter(Boolean);
+  const inRules = (want, value) => rules.some((r) =>
+    r.body.indexOf('pointer-events:' + value) >= 0
+    && r.sel.split(',').some((s) => s.trim() === want));
+  ['showing', 'watching'].forEach((cls) => {
+    if (!inRules(`body.${cls} button`, 'none')) return;      // nothing turned off, nothing to let through
+    ok(inRules(`body.${cls} .settings button`, 'auto'),
+       `body.${cls}: the settings page can still be pressed`);
+    ok(inRules(`body.${cls} dialog button`, 'auto'),
+       `body.${cls}: and so can the question it asks`);
+  });
+}
+
 /* A class on a <body> styles the whole page. One that already means something
    else in the stylesheet turns the page into that thing: `class="sheet"` made
    a page the sheet the table talk opens in -- fixed, over everything, and the
