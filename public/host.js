@@ -206,7 +206,6 @@ const view = () => ({ me: -1, boss: !SHOW, send: (m) => Net.send(m) });
 function renderLobby() {
   const n = ST.seats.length;
   $('#seat-count').textContent = `${n} player${n === 1 ? '' : 's'}`;
-  $('#lobby-wait').hidden = n >= 2;
   const fd = ST.seats.find((s) => s.id === ST.firstDealerId) || ST.seats[0];
   const capSeat = ST.seats.find((s) => s.id === ST.captainId);
   $('#first-dealer-hint').textContent = fd
