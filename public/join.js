@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* The name this phone plays under is asked for once. Coming back to join
      another table, it is already there. */
   const knownName = Net.name();
-  if (knownName) { $('#in-name').value = knownName; $('#new-name').value = knownName; }
+  if (knownName) $('#in-name').value = knownName;
 
   /* Every table this browser holds a seat at, newest first. There used to be
      room for one, so a second table wrote over the first and the seat at it
@@ -89,17 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
   /* The picture is picked here but sent from the player page: this page walks
      away the moment the seat exists, and a socket closing mid-send would lose
      it. The phone keeps the copy, and the player page hands it over. */
-  let av = Avatar.saved();
-  const pickers = ['#join-av', '#new-av'].map((sel) => {
-    const pk = Avatar.picker((d) => {
-      av = d;
-      Avatar.remember(d);
-      pickers.forEach((o) => { if (o !== pk) o.show(d); });
-    });
-    $(sel).appendChild(pk.el);
-    pk.show(av);
-    return pk;
-  });
+  const picker = Avatar.picker((d) => Avatar.remember(d));
+  $('#in-av').appendChild(picker.el);
+  picker.show(Avatar.saved());
   const err = (msg) => { $('#join-err').textContent = msg; $('#join-err').hidden = !msg; };
   // News, not a fault: it is not written in red.
   const note = (msg) => { $('#join-note').textContent = msg; $('#join-note').hidden = !msg; };
@@ -134,8 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const newErr = (msg) => { $('#new-err').textContent = msg; $('#new-err').hidden = !msg; };
 
   $('#btn-new-table').addEventListener('click', () => {
-    const name = $('#new-name').value.trim();
-    if (!name) return newErr('Type your name.');
+    const name = $('#in-name').value.trim();
+    if (!name) { $('#in-name').focus(); return newErr('Type your name.'); }
     newErr('');
     Net.setName(name);
     $('#btn-new-table').disabled = true;
@@ -155,5 +147,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  $('#new-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-new-table').click(); });
 });

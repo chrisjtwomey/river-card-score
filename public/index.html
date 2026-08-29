@@ -29,6 +29,15 @@
     <p class="hint">A table stays here until you forget it, so a second table never loses the first.</p>
   </section>
 
+  <!-- Who you are, once: the name and the photo go with whichever you do next. -->
+  <section class="panel" id="who-panel">
+    <label class="field">
+      <span>Your name</span>
+      <input type="text" id="in-name" maxlength="16" autocomplete="nickname" placeholder="Type your name">
+    </label>
+    <div id="in-av"></div>
+  </section>
+
   <section class="panel" id="join-panel">
     <h2>Join a table</h2>
     <p class="hint" id="join-note" hidden></p>
@@ -38,11 +47,6 @@
     </label>
     <!-- Hidden until the browser is asked: no camera, no button. -->
     <button class="btn" id="btn-scan" type="button" hidden>📷 Scan the code</button>
-    <label class="field">
-      <span>Your name</span>
-      <input type="text" id="in-name" maxlength="16" autocomplete="nickname" placeholder="Type your name">
-    </label>
-    <div id="join-av"></div>
     <button class="btn primary big" id="btn-join" type="button">Take a seat</button>
     <p class="err" id="join-err" hidden></p>
   </section>
@@ -50,11 +54,6 @@
   <section class="panel" id="new-panel">
     <h2>Start a table</h2>
     <p class="hint">Make a new table and take the first seat. You run the game from your phone: the rules, who deals, and when to start.</p>
-    <label class="field">
-      <span>Your name</span>
-      <input type="text" id="new-name" maxlength="16" autocomplete="nickname" placeholder="Type your name">
-    </label>
-    <div id="new-av"></div>
     <button class="btn primary big" id="btn-new-table" type="button">Start a table</button>
     <p class="err" id="new-err" hidden></p>
   </section>

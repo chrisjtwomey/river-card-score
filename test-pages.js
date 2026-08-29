@@ -1342,7 +1342,7 @@ part('the front page, and the screen');
   {   // the name this phone plays under is asked for once
     const P = loadPage('join.js', { 'rcs:name:v1': 'Chris' });
     P.start();
-    ok(P.pick('#in-name').value === 'Chris' && P.pick('#new-name').value === 'Chris',
+    ok(P.pick('#in-name').value === 'Chris',
        'the name this phone played under is already there  got ' + P.pick('#in-name').value);
     const Q = loadPage('join.js', {});
     Q.start();
