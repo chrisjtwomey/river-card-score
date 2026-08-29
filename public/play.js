@@ -221,7 +221,11 @@ function renderJoinBox() {
   $('#code-badge').textContent = ST.code;
   if (joinAddr === null) {
     joinAddr = '';                                    // built once, then it tells us
-    UI.addressPicker($('#addr-mount'), (u) => { joinAddr = u; renderJoinBox(); });
+    /* Quiet: the phone takes the best address it has and shows no choice
+       about it. The one case it still asks is a phone that cannot see its own
+       address at all -- hosting a hotspot, most often -- where the code is
+       useless until somebody types one in. */
+    UI.addressPicker($('#addr-mount'), (u) => { joinAddr = u; renderJoinBox(); }, { quiet: true });
     return;
   }
   if (!joinAddr) return;
@@ -293,7 +297,6 @@ function renderLobby(me) {
     if (!rules._asked) { rules._asked = true; rules.open = v.boss; }
   }
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
-  $('#lobby-title').textContent = v.boss ? 'Get the table ready' : 'Waiting for the table host';
   /* The way in at the top, and the button that ends the waiting at the foot:
      both are the table host's, and both belong where the thing is done. A TV
      screen that runs the table has the code up already, so the phone says the
@@ -303,11 +306,12 @@ function renderLobby(me) {
   if (v.boss && !ST.tv) renderJoinBox();
   $('#btn-start').hidden = !v.boss;
   Lobby.startButton($('#btn-start'), ST, v);
-  // The button says what the table is waiting for, so this line says what a
-  // seat can be done with instead of saying it twice.
-  $('#lobby-hint').textContent = v.boss
-    ? 'Drag a player by the handle to change the order of play. The ⋯ beside a player hands the table over, says who deals first, or takes them off it.'
-    : `${capName} starts the game when everybody is seated.`;
+  /* Nothing for whoever runs the table: the code, the seats, the rules and
+     the button say what this screen is and what to do with it. A player who
+     runs nothing is told who they are waiting on. */
+  const hint = $('#lobby-hint');
+  hint.textContent = v.boss ? '' : `${capName} starts the game when everybody is seated.`;
+  hint.hidden = !hint.textContent;
 }
 
 function renderRound(r) {

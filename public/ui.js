@@ -274,9 +274,12 @@ const UI = (function () {
 
      mount: the element to build in. onPick: called with the address, now and on
      every change. */
-  function addressPicker(mount, onPick) {
+  function addressPicker(mount, onPick, opts) {
     const el = typeof mount === 'string' ? document.querySelector(mount) : mount;
     if (!el) return;
+    // quiet: take the best address and say nothing, unless there is no address
+    // worth having, which is the one thing only a person can put right.
+    const quiet = !!(opts && opts.quiet);
     el.innerHTML =
       '<p class="err addr-warn" hidden></p>' +
       '<label class="field addr-field" hidden><span>Address in the QR code</span>' +
@@ -303,8 +306,9 @@ const UI = (function () {
       o.value = OTHER; o.textContent = 'Another address…';
       pick.appendChild(o);
       pick.value = found.best;
-      // One address and nothing to say: no picker at all.
-      field.hidden = found.urls.length < 2 && !found.onlyLocal;
+      // One address and nothing to say: no picker at all. Nor on a screen that
+      // asked to be quiet, which takes the best of them.
+      field.hidden = quiet || (found.urls.length < 2 && !found.onlyLocal);
       if (found.onlyLocal) {
         warn.hidden = false;
         warn.textContent = 'This phone cannot see its own address, so the code below only works '

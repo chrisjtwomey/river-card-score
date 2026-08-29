@@ -2135,8 +2135,9 @@ part('bidding for a seat that is not there, and leaving');
        'with no TV screen the phone shows the code');
     ok(P.pick('#btn-start').hidden === false, 'and carries the start button itself');
     ok(P.pick('#captain-panel').hidden === true, 'with no second panel about running the table');
-    ok(/Drag a player/.test(P.pick('#lobby-hint').textContent),
-       'the line under the seats says what a seat can be done with  got ' + P.pick('#lobby-hint').textContent);
+    ok(P.pick('#lobby-hint').hidden === true,
+       'and says nothing to whoever runs it: the screen itself says what to do  got '
+       + P.pick('#lobby-hint').textContent);
 
     const shared = table({ phase: 'lobby' }); shared.tv = true;
     P.feed(shared);
