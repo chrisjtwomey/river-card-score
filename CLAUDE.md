@@ -145,7 +145,7 @@ When you do run it:
 - **Browser.** `PORT=8790 npm run dev` (live reload; a change under `public/`
   reloads every open page, a change to `server.js`, `lib/` or `game.js` needs a
   restart). Host screen at `/host.html`, a seat at `/` (type a name, *Start a
-  table and play*), the whole table at once at `/dev.html` (needs `DEV=1`, which
+  table*), the whole table at once at `/dev.html` (needs `DEV=1`, which
   `npm run dev` sets): it seats stand-ins and shows the host screen and every
   phone side by side, and its *Jump to* and *Force* controls reach any state a
   real game can. A second phone is a second browser profile or a private window;
@@ -154,7 +154,7 @@ When you do run it:
   the tricks → a round scores → go back → new game. Dealt on the phones: add a
   bot, the deal lands on the felt, bid on the felt, play a trick, a bum deal,
   finish → finale. Then the odd paths: a phone goes quiet at its turn (bid for /
-  play for / hand the seat over), *Show that table* on a second host screen, a
+  play for / hand the seat over), *Show a table* on a second host screen, a
   watching window from the dev page.
 - **Mobile.** A real phone on the same network reaches the laptop's server at
   the address the console prints; the QR code on the host screen carries it. For

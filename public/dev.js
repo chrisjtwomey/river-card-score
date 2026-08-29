@@ -38,7 +38,7 @@ function connect() {
     } else if (m.t === 'error') {
       // No table yet means the stand-in table was refused. Say the other way in.
       err(!LIVE && !CODE
-        ? `${m.msg}. To put a real game right, start the server with DEV=1 and open Dev controls under ⚙ on the TV screen.`
+        ? `${m.msg} To put a real game right, start the server with DEV=1 and open Dev controls under ⚙ on the TV screen.`
         : m.msg);
     }
   };
