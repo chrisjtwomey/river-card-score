@@ -1854,18 +1854,28 @@ part('bidding for a seat that is not there, and leaving');
     // the words are on a span inside the button, and the fake DOM does not roll text up
     const label = (b) => b.querySelector('.menu-label').textContent;
     const names = menu ? menu.querySelectorAll('.menu-tap').map(label) : [];
-    ok(names.indexOf('Make table host') >= 0 && names.indexOf('Deals first') >= 0 && names.indexOf('Remove') >= 0,
+    ok(names.indexOf('Make table host') >= 0 && names.indexOf('Make dealer') >= 0 && names.indexOf('Remove') >= 0,
        'with the controls named  got ' + names.join(' | '));
     P.socks[0].sent.length = 0;
-    menu.querySelectorAll('.menu-tap').find((b) => label(b) === 'Deals first').fire('click');
+    menu.querySelectorAll('.menu-tap').find((b) => label(b) === 'Make dealer').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"firstDealer":"s1"}}',
        'and a row sends what the glyph sent  got ' + JSON.stringify(P.socks[0].sent[0]));
     ok(!rows[1].querySelector('.seatmenu'), 'the menu shuts on the tap');
     ok(names.indexOf('Move up') < 0 && names.indexOf('Move down') < 0, 'the order is changed by dragging, not from the menu');
-    rows[0].querySelector('.more').fire('click');           // the seat that runs the table
-    const host = rows[0].querySelector('.seatmenu').querySelectorAll('.menu-tap').map(label);
-    ok(host.indexOf('Make table host') < 0 && host.indexOf('Deals first') >= 0,
-       'the seat that already runs the table is not offered the job  got ' + host.join(' | '));
+    // seat 1 runs the table and deals first, and it is this phone's: nothing to offer
+    ok(!rows[0].querySelector('.more'), 'a seat with nothing left to offer has no ⋯');
+    const D = playPage(seed, '?c=TEST');
+    const dealt = table({ phase: 'lobby' });
+    dealt.firstDealerId = 's1';
+    D.feed(dealt);
+    const drows = D.pick('#lobby-seats').children;
+    drows[0].querySelector('.more').fire('click');
+    const host = drows[0].querySelector('.seatmenu').querySelectorAll('.menu-tap').map(label);
+    ok(host.join(' | ') === 'Make dealer', 'the seat that runs the table is offered the deal and nothing else  got ' + host.join(' | '));
+    drows[1].querySelector('.more').fire('click');
+    const dealer = drows[1].querySelector('.seatmenu').querySelectorAll('.menu-tap').map(label);
+    ok(dealer.indexOf('Make dealer') < 0 && dealer.indexOf('Make table host') >= 0,
+       'and the seat that already deals first is not offered the deal  got ' + dealer.join(' | '));
     P.feed(table({ phase: 'lobby', boss: false }));
     ok(!P.pick('#lobby-seats').children[1].querySelector('.more'), 'a player who does not run the table has no menu');
   }

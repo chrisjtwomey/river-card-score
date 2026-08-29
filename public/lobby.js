@@ -41,7 +41,8 @@ const Lobby = (function () {
       row.querySelector('.nm').textContent = s.name + (mine ? ' (you)' : '');
       if (view.boss) {
         row.insertBefore(grip(root, row, s, view), row.firstChild);
-        row.appendChild(seatMenu(row, s, i, { isFirst, isCap, mine, n: ST.seats.length }, view));
+        const more = seatMenu(row, s, i, { isFirst, isCap, mine, n: ST.seats.length }, view);
+        if (more) row.appendChild(more);
       }
       root.appendChild(row);
     });
@@ -111,7 +112,9 @@ const Lobby = (function () {
   /* The controls on a seat, behind one ⋯ button and named. A row of glyphs
      (★ 🂠 ↑ ↓ ×) told a first-time host nothing -- a title does not show on a
      touch screen -- and the card back is a box on many Android fonts. The
-     order is changed by dragging, so the menu has no Move rows. */
+     order is changed by dragging, so the menu has no Move rows. Every row
+     does something: a seat is not offered what it already is, and a seat
+     with nothing left to offer has no ⋯ at all. */
   function seatMenu(row, s, i, is, view) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -123,9 +126,9 @@ const Lobby = (function () {
     const items = [];
     // Not on the seat that already runs the table: a row that does nothing.
     if (!s.bot && !is.isCap) items.push({ label: 'Make table host', msg: { t: 'captain', id: s.id } });
-    items.push({ label: 'Deals first', on: is.isFirst,
-                 msg: { t: 'config', patch: { firstDealer: is.isFirst ? null : s.id } } });
+    if (!is.isFirst) items.push({ label: 'Make dealer', msg: { t: 'config', patch: { firstDealer: s.id } } });
     if (!is.mine) items.push({ label: 'Remove', danger: true, msg: { t: 'kick', id: s.id } });
+    if (!items.length) return null;           // the host's own seat, already dealing: nothing to offer
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const open = row.querySelector('.seatmenu');
@@ -142,12 +145,6 @@ const Lobby = (function () {
         name.className = 'menu-label';
         name.textContent = it.label;
         b.appendChild(name);
-        if (it.on !== undefined) {
-          const tick = document.createElement('span');
-          tick.className = 'menu-tick';
-          tick.textContent = it.on ? '✓' : '';
-          b.appendChild(tick);
-        }
         b.addEventListener('click', (e2) => { e2.stopPropagation(); menu.remove(); view.send(it.msg); });
         menu.appendChild(b);
       });
