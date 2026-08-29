@@ -300,7 +300,7 @@ const Lobby = (function () {
     }
     const lab = make('label', 'field');
     lab.appendChild(make('span', '', r.label));
-    let el;
+    let el, box = null;
     if (r.kind === 'select') {
       el = make('select');
       OPTIONS[r.key].forEach(([v, t]) => {
@@ -308,6 +308,10 @@ const Lobby = (function () {
         o.value = String(v);
         el.appendChild(o);
       });
+      // The caret is drawn on this, not by the browser: one shape for every
+      // thing on the page that opens, and room of its own on the right.
+      box = make('div', 'selbox');
+      box.appendChild(el);
     } else {
       el = make('input');
       el.type = 'number';
@@ -317,7 +321,7 @@ const Lobby = (function () {
     el.id = r.id;
     const small = make('small', '', r.hint || '');
     small.id = r.id + '-hint';
-    lab.append(el, small);
+    lab.append(box || el, small);
     return lab;
   }
 

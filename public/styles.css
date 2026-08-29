@@ -115,6 +115,17 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
   font:inherit;font-weight:500;color:var(--ink);background:var(--bg);
   border:1px solid var(--line);border-radius:10px;padding:10px 11px;width:100%;
 }
+/* The browser's own arrow sits hard against the edge and is a different shape
+   on every platform. This is the same chevron as the one on a section that
+   opens, with room of its own beside it. */
+.field select{appearance:none;-webkit-appearance:none;padding-right:38px}
+.selbox{position:relative;display:block}
+.chev,.selbox::after,.capset > summary::after{
+  content:'';width:9px;height:9px;flex:none;
+  border-right:2px solid var(--ink-dim);border-bottom:2px solid var(--ink-dim);
+  border-radius:0 0 2px 0;
+}
+.selbox::after{position:absolute;right:15px;top:50%;margin-top:-7px;pointer-events:none;transform:rotate(45deg)}
 .field small{font-weight:500;white-space:pre-line}
 .toggles{display:flex;flex-direction:column;gap:14px}
 .switch{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
@@ -1140,8 +1151,8 @@ body.host .scorecard-panel .table-wrap{
   font-size:16px;font-weight:800;color:var(--ink);
 }
 .capset > summary::-webkit-details-marker{display:none}
-.capset > summary::after{content:'▾';margin-left:auto;color:var(--ink-dim);font-size:15px}
-.capset[open] > summary::after{content:'▴'}
+.capset > summary::after{margin-left:auto;margin-right:4px;transform:translateY(-3px) rotate(45deg)}
+.capset[open] > summary::after{transform:translateY(2px) rotate(225deg)}
 /* under the heading, on a line of its own */
 .capset-sum{flex:1 1 100%;order:3;font-size:13px;font-weight:600;color:var(--ink-dim)}
 .capset[open] .capset-sum{display:none}          /* open, the form says it better */
