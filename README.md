@@ -284,8 +284,6 @@ without moving anybody.
 
 - **Text size** under ⚙ scales the page from 100% to 200%, so the table can read
   it from across the room. The size is remembered in that browser.
-- **Play the deal again** under ⚙ replays the deal animation for the round on
-  screen at any time. Once the game is over it replays the result instead.
 - **Fix this game** under ⚙ opens the dev page on this table, to put a game in
   play right. See [Fixing a real game](#fixing-a-real-game).
 - The TV screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
@@ -305,7 +303,7 @@ npm start        # the console now says (https)
 
 Both screens play the deal animation at the start of every round: a card flies to each seat in dealing order, with the player names.
 
-- On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it, and **Play the deal again** under ⚙ brings it back with the bids so far.
+- On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it.
 - On a **phone** it plays and then clears, so the bid pad is never blocked. A tap skips it. It does not replay when a phone reloads part way through a game.
 
 When somebody bids, every other screen says so: a line slides in under the top bar — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. Your own bid is not announced, because your own pad already shows it. A refusal from the table — a bid out of turn, a rule that cannot change with bots seated — is said the same way, in red, so it is seen over the felt and in the lobby alike. On the TV screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.

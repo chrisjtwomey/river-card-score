@@ -378,14 +378,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAddresses();
   UI.startZoom();
   /* A host screen is read from across the room, so text size belongs here, and
-     so do the screen's own three: play the flourish again, the dev page for a
-     game that needs putting right, and a new game. */
+     so do the screen's own two: the dev page for a game that needs putting
+     right, and a new game. */
   menu = UI.settingsMenu('#btn-settings', UI.commonSettings({ motion: true, zoom: true }).concat([
     { kind: 'group', label: 'This screen' },
-    { kind: 'action',
-      label: () => (ST && ST.phase === 'done' ? 'Play the result again' : 'Play the deal again'),
-      hidden: () => !ST || ST.phase === 'lobby',
-      run: () => (ST && ST.phase === 'done' ? playFinaleNow() : playDealNow()) },
     // Not inside a dev preview, where it would only open the page it sits in.
     { kind: 'link', label: () => (ST && ST.dev ? 'Dev controls' : 'Fix this game'), blank: true,
       hidden: () => window.top !== window,
