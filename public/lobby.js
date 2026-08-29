@@ -176,10 +176,12 @@ const Lobby = (function () {
       btn.textContent = count ? '+ Add another bot' : '+ Add a bot';
       onClick(btn, () => view.send({ t: 'addbot' }));
     }
+    /* Nothing at all before the first one is added: what a bot is, is plain
+       from the button, and the rules below say what the cards are doing. */
     text(root, '#bot-hint', full ? 'The table is full.'
       : count ? `${count} of the ${ST.seats.length} seats play themselves.`
       : Game.virtual(ST) ? 'It plays its own hand. Kick it from its ⋯ menu.'
-      : 'It plays its own hand, so the cards move to the phones.');
+      : '');
   }
 
   // Start needs two players, and somebody who may press it.
