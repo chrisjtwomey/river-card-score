@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ? 'Your seat is given up. Join again with the table code while the game has not started.'
         : 'Your seat stays on the scorecard and auto-play takes your hand from here. '
           + 'This phone can come back to it from the front page.',
-      'Leave').then((yes) => { if (yes) Net.send({ t: 'leave' }); });
+      'Leave', true).then((yes) => { if (yes) Net.send({ t: 'leave' }); });
   });
   $('#btn-undo').addEventListener('click', () => Round.undo(view(), ST));
   $('#btn-reset').addEventListener('click', () => Round.newGame(view()));

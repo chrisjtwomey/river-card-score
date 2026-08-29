@@ -463,7 +463,8 @@ const UI = (function () {
 
   // Builds its own dialog, so any page can ask without markup of its own.
   // Falls back to the browser's own box where <dialog> is not supported.
-  function ask(title, body, okLabel) {
+  // `danger` paints the OK red: only for a thing that cannot be got back.
+  function ask(title, body, okLabel, danger) {
     let d = document.getElementById('ui-confirm');
     if (!d) {
       d = document.createElement('dialog');
@@ -477,7 +478,9 @@ const UI = (function () {
     if (!d.showModal) return Promise.resolve(window.confirm(title + (body ? '\n\n' + body : '')));
     d.querySelector('h2').textContent = title;
     d.querySelector('p').textContent = body || '';
-    d.querySelector('[value="yes"]').textContent = okLabel || 'Yes';
+    const yes = d.querySelector('[value="yes"]');
+    yes.textContent = okLabel || 'Yes';
+    yes.className = 'btn primary' + (danger ? ' danger' : '');
     d.returnValue = '';
     return new Promise((res) => {
       d.addEventListener('close', () => res(d.returnValue === 'yes'), { once: true });

@@ -192,7 +192,7 @@ const Round = (function () {
       UI.ask(`Auto-play ${who}'s hand?`,
         `The seat keeps its name and its place on the scorecard, and auto-play takes the hand `
         + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
-        'Auto-play').then((yes) => { if (yes) view.send({ t: 'playout' }); });
+        'Auto-play', true).then((yes) => { if (yes) view.send({ t: 'playout' }); });
     });
   }
 
@@ -234,11 +234,11 @@ const Round = (function () {
       : ST.phase === 'tricks'
         ? `The bids of round ${back + 1} are cleared, and it is bid again.`
         : `Round ${back + 1} is unscored, and its tricks are entered again.`;
-    UI.ask('Undo the last step?', body, 'Undo').then((yes) => { if (yes) view.send({ t: 'undo' }); });
+    UI.ask('Undo the last step?', body, 'Undo', true).then((yes) => { if (yes) view.send({ t: 'undo' }); });
   }
 
   function newGame(view) {
-    UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.', 'New game')
+    UI.ask('New game?', 'The same players stay at the table. The scorecard is deleted.', 'New game', true)
       .then((yes) => { if (yes) view.send({ t: 'reset' }); });
   }
 
