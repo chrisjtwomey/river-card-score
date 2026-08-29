@@ -38,7 +38,7 @@ function connect() {
     } else if (m.t === 'error') {
       // No table yet means the stand-in table was refused. Say the other way in.
       err(!LIVE && !CODE
-        ? `${m.msg}. To put a real game right, open this page from the host screen with 🛠.`
+        ? `${m.msg}. To put a real game right, open this page from the TV screen with 🛠.`
         : m.msg);
     }
   };
@@ -85,7 +85,7 @@ function renderFrames() {
     topKey = top;
     const box = $('#host-frame');
     box.innerHTML = '';
-    frame(box, `host screen · table ${CODE}`, 'host.html', `#c=${CODE}&t=${HOST_TOKEN}`, 'host');
+    frame(box, `TV screen · table ${CODE}`, 'host.html', `#c=${CODE}&t=${HOST_TOKEN}`, 'host');
     if (cap) frame(box, `table host · ${cap.name}`, 'play.html', seatHash(cap), 'captain');
   }
 

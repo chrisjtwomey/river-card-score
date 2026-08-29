@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
       nm.textContent = `Table ${t.code}`;
       const badge = document.createElement('span');
       badge.className = 'badge soft';
-      badge.textContent = t.role === 'host' ? 'host screen' : t.role === 'screen' ? 'on show' : 'your seat';
+      badge.textContent = t.role === 'host' ? 'TV screen' : t.role === 'screen' ? 'TV screen, show only' : 'your seat';
       const go = document.createElement('button');
       go.className = 'btn primary';
       go.type = 'button';

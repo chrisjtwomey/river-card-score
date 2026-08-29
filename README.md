@@ -1,6 +1,6 @@
 # Up the River, Down the River — score tracker
 
-A score tracker for the betting card game: one host screen plus a phone for
+A score tracker for the betting card game: one TV screen plus a phone for
 each player. Players bid in turn on their own phone.
 
 ## Run the table server
@@ -12,10 +12,10 @@ npm start
 
 The console prints the addresses. On the host machine:
 
-- host screen: `http://localhost:8787/host.html`
+- TV screen: `http://localhost:8787/host.html`
 - players join: `http://localhost:8787/`
 
-The players' phones must be on the same network as the server. Scan the QR code on the host screen, or type the `http://<your-ip>:8787/` address that the console prints. Set `PORT` to use a different port.
+The players' phones must be on the same network as the server. Scan the QR code on the TV screen, or type the `http://<your-ip>:8787/` address that the console prints. Set `PORT` to use a different port.
 
 The join panel also has **Scan the code**, which opens the camera and reads the
 table's QR code without leaving the page. The decoding is the browser's own, so
@@ -26,7 +26,7 @@ another machine, or Safari, which cannot read a code.
 
 Every page carries one **⚙** button in the top bar, and every setting is behind
 it: the theme (system, light or dark), the animations (full, short or off), full
-screen, and on the host screen the text size. Rows that a browser cannot honour
+screen, and on the TV screen the text size. Rows that a browser cannot honour
 leave themselves out -- full screen is not offered on Safari on an iPhone. A
 table's screens have one other button, 💬 for the talk, and nothing else.
 
@@ -34,20 +34,20 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 ### How a game runs
 
-**One phone is enough.** On the landing page, type your name and press **Start a table and play**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A host screen on a TV is optional.
+**One phone is enough.** On the landing page, type your name and press **Start a table and play**. That makes a table, takes the first seat, and hands you the controls. Your phone then shows the code and a QR code for the others to scan. A TV screen is optional.
 
-**The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, go back, and new game. They can hand that over with the ★ button beside any player. So a game needs no host screen at all — but a host screen is still nice on a TV, and it has the same powers.
+**The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, go back, and new game. They can hand that over with the ★ button beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
 
-1. Someone starts the table, from a phone with **Start a table and play**, or from a host screen on a TV. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone and on the host screen. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the host screen chooses which one goes in the QR code.
+1. Someone starts the table, from a phone with **Start a table and play**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone and on the TV screen. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
 2. Each player opens the site on their phone, types the code, and takes a seat. The seat order is the order of play. The host can move a player up or down, or remove one, until the game starts.
 3. The table host taps 🂠 beside a player to say who deals the first round. Without a choice, seat 1 deals. The deal then moves on one seat each round. ★ passes the table host badge to another player.
 4. The table host sets the rules and presses **Start game**. Nobody can join after that.
 5. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
 6. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
-7. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the host screen marks the bid that can still change. Once the next player bids, the change is refused.
-8. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The host screen can enter them too, if the dealer's phone is not handy.
+7. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
+8. **Tricks.** The dealer of that round enters the tricks each player won. The server refuses a set that does not total the hand size. The TV screen can enter them too, if the dealer's phone is not handy.
 9. The round scores, the next round opens, and the deal moves on one seat.
-10. The table host, or the host screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
+10. The table host, or the TV screen, can press **Go back** to reopen the last step, and **New game** to return the same players to the lobby.
 
 ### When a phone goes
 
@@ -67,7 +67,7 @@ waiting on them. Three ways back:
   without them, a name is not enough and the phone that holds the seat must
   come back to it. A seat somebody is sitting in is never handed over.
 - **Whoever runs the table bids or plays for them.** *Bid for Ann* appears on
-  the table host's phone and on the host screen while the bidding waits on an
+  the table host's phone and on the TV screen while the bidding waits on an
   empty seat; the number is read off that seat's own hand, the same arithmetic
   the bots use, or the host taps the number the player at the table asks for.
   *Play a card for them* does the same once the cards are out.
@@ -124,7 +124,7 @@ disk alike.
 Every table has a chat room of its own. 💬 in the top bar opens a sheet over the
 game, with a count on it of what has not been read; a line arriving while the
 sheet is shut says itself in a toast instead, the same way a bid does. Players
-talk, the host screen talks as **Table**, and a watch-only window reads and says
+talk, the TV screen talks as **Table**, and a watch-only window reads and says
 nothing.
 
 The talk belongs to the table, not to the game on it: it carries over into the
@@ -167,7 +167,7 @@ An accolade is shared when two players earn it, and both are paid. It is not awa
 
 The table can play without real cards. In the lobby set **Cards** to *Deal on the phones*, and the server becomes the dealer:
 
-1. It shuffles a 52-card deck and deals the hand to each phone. A hand is a secret: the server sends each socket the table and **its own cards only**, and the host screen is dealt none.
+1. It shuffles a 52-card deck and deals the hand to each phone. A hand is a secret: the server sends each socket the table and **its own cards only**, and the TV screen is dealt none.
 2. It turns the next card for trump, before the bidding, so everybody bids knowing it. With nothing left in the deck — four players at thirteen cards — the hand is played at no trumps.
 3. Bidding runs as it always does, in order, with screw the dealer if it is on.
 4. The player left of the dealer leads. On a phone the round is played on the
@@ -268,13 +268,13 @@ that band.
 If the cards were dealt wrong, throw the hand in and deal it again. The round keeps the same dealer and hand size, and the bids, tricks, and trump are cleared. The round label then shows `re-deal 1`.
 
 - The **dealer** or the **table host** re-deals on their own. They are asked to confirm first, so one stray tap cannot throw a hand in.
-- Any other player calls a bum deal and the table votes. Every player must agree. One "no" ends it, and the player who called it can take it back. The table host, or the host screen, can also force the re-deal.
+- Any other player calls a bum deal and the table votes. Every player must agree. One "no" ends it, and the player who called it can take it back. The table host, or the TV screen, can also force the re-deal.
 
 If the table host leaves the table, the badge moves to the first seat.
 
-### Host screen
+### TV screen
 
-A host screen belongs to one table, and it asks which. **Start a new table**
+A TV screen belongs to one table, and it asks which. **Start a new table**
 makes one. Or type a table code and **Show that table**: the screen shows a
 game that is already running, and changes nothing at it — the players keep
 their seats and their phones still run the game. That screen cannot touch the
@@ -288,7 +288,7 @@ without moving anybody.
   screen at any time. Once the game is over it replays the result instead.
 - **Fix this game** under ⚙ opens the dev page on this table, to put a game in
   play right. See [Fixing a real game](#fixing-a-real-game).
-- The host screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
+- The TV screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
 
 ### Keeping phone screens on
 
@@ -305,10 +305,10 @@ npm start        # the console now says (https)
 
 Both screens play the deal animation at the start of every round: a card flies to each seat in dealing order, with the player names.
 
-- On the **host screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it, and **Play the deal again** under ⚙ brings it back with the bids so far.
+- On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives, the player to act glows, and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it, and **Play the deal again** under ⚙ brings it back with the bids so far.
 - On a **phone** it plays and then clears, so the bid pad is never blocked. A tap skips it. It does not replay when a phone reloads part way through a game.
 
-When somebody bids, every other screen says so: a line slides in under the top bar — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. Your own bid is not announced, because your own pad already shows it. A refusal from the table — a bid out of turn, a rule that cannot change with bots seated — is said the same way, in red, so it is seen over the felt and in the lobby alike. On the host screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.
+When somebody bids, every other screen says so: a line slides in under the top bar — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. Your own bid is not announced, because your own pad already shows it. A refusal from the table — a bid out of turn, a rule that cannot change with bots seated — is said the same way, in red, so it is seen over the felt and in the lobby alike. On the TV screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.
 
 When the last round is scored, both screens play the finish: the places come up from last to first with the scores before the accolades, each accolade is then read out and paid into the list, and last the winner's card turns over and paper falls. Every player's score is on screen, best first, with a shared place for a draw. It clears itself after a few seconds. A tap lands it, and a second tap clears it. A screen that opens on a game already over does not replay it.
 
@@ -327,7 +327,7 @@ Phones reconnect on their own. A player who closes the page and comes back is of
   - **0 points**, **minus 1 per trick off**, or **tricks won only**.
 - Screw the dealer, and -- on a virtual deck -- whether a card is turned for
   trumps. With real cards the deck on the table decides everything about
-  trumps, so nothing on a phone or the host screen asks about them.
+  trumps, so nothing on a phone or the TV screen asks about them.
 - Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
 - How many accolades are drawn at the end, from none to five, and what each one pays: 20, 10, 5, or nothing. See [Accolades](#accolades).
 
@@ -347,12 +347,12 @@ One phone makes the network, a laptop runs the table:
 3. Join the laptop to that hotspot and run `npm start`.
 4. The console prints the address the hotspot gave the laptop. Open the host
    screen there, or open the site on any phone and press **Start a table and
-   play** — the table host is a player, so no host screen is needed.
+   play** — the table host is a player, so no TV screen is needed.
 5. Everyone else joins the hotspot and scans the QR code as normal.
 
 Worth knowing:
 
-- If the laptop holds more than one address, the picker on the host screen
+- If the laptop holds more than one address, the picker on the TV screen
   chooses which one goes into the QR code. Pick the hotspot one.
 - Some hotspots keep their devices apart from each other ("client
   isolation"). The phones only need to reach the laptop, and that path
@@ -401,7 +401,7 @@ Say yes, open the app, and allow the local network when it asks.
 page, where **Start a table and play** takes seat 1 as usual. That page leads
 with Start when it is read on the phone that runs the server, and with Join
 everywhere else -- the host wants a table, a player wants a seat. Join is still
-there for the host: a table made from a host screen on a TV needs a seat taken
+there for the host: a table made from a TV screen needs a seat taken
 in it. The others scan the QR code with a camera, or type the address. The
 app's own *Join a table* opens somebody else's address in the app instead of a
 browser, for anyone who prefers it.
@@ -466,7 +466,7 @@ it, so one failing costs nothing:
    -- a private address on its own port, and nothing else, because that header
    is written by the player's browser.
 
-If all four come up empty the host screen says so plainly and takes the address
+If all four come up empty the TV screen says so plainly and takes the address
 typed in. On a laptop `PUBLIC_URL=http://192.168.1.5:8787` still overrides the
 lot.
 
@@ -562,11 +562,11 @@ PUBLIC_URL=http://192.168.1.5:8787 docker compose up --build
 
 `PUBLIC_URL` is the address the phones use. A container cannot see it, so the QR code shows this instead of the container's own address. Use the address of the machine that runs Docker. Without it, the QR code says `localhost`, which no phone can reach.
 
-`PUBLIC_URL` **replaces** the detected addresses, it does not add to them. Behind a proxy or in a container the detected ones are private and useless to a phone, so the host screen offers only what you name here.
+`PUBLIC_URL` **replaces** the detected addresses, it does not add to them. Behind a proxy or in a container the detected ones are private and useless to a phone, so the TV screen offers only what you name here.
 
 The compose file mounts `./certs` read only. Run `npm run cert` on the host first for https, or delete that line. `NO_TLS=1` forces plain http.
 
-The same variable works outside Docker, and it accepts a list: `PUBLIC_URL=http://192.168.1.5:8787,https://table.example.com`. Each address appears in the picker on the host screen.
+The same variable works outside Docker, and it accepts a list: `PUBLIC_URL=http://192.168.1.5:8787,https://table.example.com`. Each address appears in the picker on the TV screen.
 
 ### The built image
 
@@ -676,7 +676,7 @@ When the socket cannot connect, the page now says so at the bottom of the screen
 
 ## Motion
 
-The deal animation lives in `public/deal.js` and the finish in `public/finale.js`, on the shared overlay in `public/stage.js`. Both are used by the host screen and the phones.
+The deal animation lives in `public/deal.js` and the finish in `public/finale.js`, on the shared overlay in `public/stage.js`. Both are used by the TV screen and the phones.
 
 The screens also move in smaller ways. When a round is scored the standings slide to their new order, each score runs up or down to its new value, and what the round paid floats up out of it in green or red. When a bid lands that player's pill springs, and a ring spreads out of the seat that has to bid next.
 
@@ -688,7 +688,7 @@ To override it, open the page with a flag. The choice is saved for that browser:
 - `host.html?motion=reduced` — always play the short fade
 - `host.html?motion=off` — never animate
 
-From the browser console on the host screen: `playDeal()`, `playFinale()`, either with `'reduced'`.
+From the browser console on the TV screen: `playDeal()`, `playFinale()`, either with `'reduced'`.
 
 ## Working on it
 
@@ -710,7 +710,7 @@ Changes to `server.js` still need a restart, and that ends the games in memory. 
 npm run dev
 ```
 
-Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the host screen and one phone per seat, live, side by side. Press a button and every pane updates together.
+Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the TV screen and one phone per seat, live, side by side. Press a button and every pane updates together.
 
 It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
@@ -725,7 +725,7 @@ The filled bids keep the screw-the-dealer rule, the filled tricks always total t
 
 #### Fixing a real game
 
-The host screen always offers **Fix this game** under ⚙, on any server. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
+The TV screen always offers **Fix this game** under ⚙, on any server. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
 
 A real table gets the state editor and nothing else. **Force**, **Round** and **State** work. Everything that invents data — new table, jump to, fill scorecard, randomise — is hidden, and the server refuses it even with `DEV=1`. The top bar turns red, and the page says the game is real.
 
@@ -741,7 +741,7 @@ The server decides this, not the page:
 
 On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
-Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, says so, and points at **Fix this game** under ⚙ on the host screen, which is the way in to a real table.
+Making a table of stand-ins needs `DEV=1`. On a normal server the page loads, says so, and points at **Fix this game** under ⚙ on the TV screen, which is the way in to a real table.
 
 ## Test
 
@@ -780,8 +780,8 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `public/stage.js` — the overlay both scenes are played on, its parts, and the slot that says which one is open.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
 - `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
-- `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a host screen and a phone; and what the deal and the finish read off the state.
-- `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the host screen, the table host's phone and the dev page.
+- `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a TV screen and a phone; and what the deal and the finish read off the state.
+- `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the TV screen, the table host's phone and the dev page.
 - `public/round.js` — the round in play: the round line, the bids as they land, the dealer's trick pad, the pads for a seat with nobody behind it, and the winner. Each widget takes the element it draws into and a view of who is looking.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
 - `public/ui.js` also builds the ⚙ menu: a page hands it a list of settings and its own rows, and the menu draws them.
@@ -798,7 +798,7 @@ the ⚙ menu opening and closing. Run it alone with `npm run test:pages`.
 - `.github/workflows/docker.yml` — builds the container, smoke tests it, and publishes it to the repository's registry.
 - `android/tools/build-local.sh` — the same build on this machine, no runner.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
-- `public/host.html`, `host.js` — host screen: code, lobby, rules, live bids, standings, scorecard.
+- `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player phone: your bid pad, the trick pad when you deal, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
 - `public/styles.css` — shared styles, light and dark.
