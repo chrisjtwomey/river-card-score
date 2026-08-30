@@ -866,8 +866,9 @@ The controls are one band over the screens, two rows:
 - **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, **randomise** (shuffles the rules and plays a random number of rounds), and stand-in photos on and off.
 
 - **Players** — a panel under the band, one row a seat: name, who hosts, who deals, bot, left, this round's bid and tricks, a photo on or off. Everything lands as it is changed; the tricks are kept once every seat has a number. It absorbs the old **Round** grid and does what **Force** did for the dealer and the host.
+- **State** — the whole table as JSON, the same record it is saved to disk as: rounds, seats, rules, hands, everything. Edit it and press Apply, and the table becomes what the text says; Reload throws the edits away and reads the table afresh. The table's code and the pictures stay as they are, whatever the text says. This is the raw way to any state the other controls cannot reach.
 
-**Rules** and **State** are still to come back — the rules form and a full state editor. The server answers their actions already; only the controls are missing.
+**Rules** is still to come back — the rules form, editable after the start. The server answers its action already; only the control is missing.
 
 The filled bids keep the screw-the-dealer rule, the filled tricks always total the hand size, and every played round gets a trump, so nothing on screen is impossible.
 

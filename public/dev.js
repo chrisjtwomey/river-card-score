@@ -51,6 +51,13 @@ function connect() {
       err('');
     } else if (m.t === 'tables') {
       renderTables(m.tables || []);
+    } else if (m.t === 'stateRaw') {
+      // The record to edit. Never over what is being typed: Reload asks again.
+      const box = $('#state-text');
+      if (box && document.activeElement !== box) {
+        box.value = JSON.stringify(m.record, null, 1);
+        $('#state-err').hidden = true;
+      }
     } else if (m.t === 'seat') {
       // The seat asked for: put it in the pane, which then acts as the player.
       const one = seatOf(m.id);
@@ -411,6 +418,32 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-no-avatars').addEventListener('click', () => {
     if (!ST || !ST.seats) return;
     ST.seats.forEach((s, i) => act('avatar', { seat: i, data: null }));
+  });
+
+  // The state panel: fetch on open and after every apply; never mid-edit.
+  $('#btn-state').addEventListener('click', () => {
+    const panel = $('#state-panel');
+    panel.hidden = !panel.hidden;
+    $('#btn-state').textContent = panel.hidden ? 'State ▾' : 'State ▴';
+    $('#btn-state').setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) act('state');
+  });
+  $('#btn-state-reload').addEventListener('click', () => {
+    $('#state-text').blur();
+    act('state');
+  });
+  $('#btn-state-apply').addEventListener('click', () => {
+    let rec;
+    try { rec = JSON.parse($('#state-text').value); }
+    catch (e) {
+      $('#state-err').textContent = `Not JSON: ${e.message}`;
+      $('#state-err').hidden = false;
+      return;
+    }
+    $('#state-err').hidden = true;
+    $('#state-text').blur();
+    act('state', { record: rec });
+    act('state');                       // and read back what the table became
   });
 
   $('#btn-players').addEventListener('click', () => {

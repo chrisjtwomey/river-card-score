@@ -78,6 +78,7 @@ function client(name, url) {
     else if (m.t === 'pong') c.pongs++;
     else if (m.t === 'tables') c.tables = m.tables;
     else if (m.t === 'seat') c.seat = m;
+    else if (m.t === 'stateRaw') c.raw = m.record;
     else if (m.t === 'kicked') c.kicked = true;
     else if (m.t === 'left') c.left = true;
   });
@@ -618,6 +619,26 @@ async function bidRound(P) {
        'and stood back up, with the job handed back');
     d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, dealer: 2 } } });
     await okBy(() => d.state.rounds[0].dealer === 2, 'the round on show can change its dealer');
+
+    // ---- the whole table as text ----
+    d.send({ t: 'dev', action: 'state' });
+    await okBy(() => d.raw && d.raw.code === d.state.code && Array.isArray(d.raw.rounds)
+      && d.raw.seats.length === 4 && !!d.raw.seats[0].token,
+       'the page can read the table whole, the same record the disk gets');
+    const rec = JSON.parse(JSON.stringify(d.raw));
+    rec.rounds[0].bids = [2, 0, 1, 0];
+    rec.rounds[0].tricks = [3, 0, 0, 0];
+    rec.idx = 1;
+    rec.phase = 'bid';
+    rec.code = 'HACK';                    // the code is the key the table is held under
+    d.send({ t: 'dev', action: 'state', record: rec });
+    await okBy(() => d.state.idx === 1 && JSON.stringify(d.state.rounds[0].tricks) === '[3,0,0,0]'
+      && d.state.totals.some((v) => v !== 0),
+       'an edited record becomes the table, totals and all');
+    ok(d.state.code !== 'HACK', 'but its code stays what it was');
+    d.send({ t: 'dev', action: 'state', record: [1, 2] });
+    await okBy(() => /not a table/.test(d.last()), 'junk in the editor is refused whole');
+    d.send({ t: 'dev', action: 'goto', round: 1, phase: 'bid' }); await d.rt();
 
     /* ---- a hand stacked on purpose, played over real sockets ----
        What the rules of a trick are is settled in test-rules.js, against the
