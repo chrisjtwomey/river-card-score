@@ -2319,8 +2319,10 @@ part('bidding for a seat that is not there, and leaving');
     ok(S.pick('#btn-bum').hidden === true && S.pick('#btn-undo').hidden === true && S.pick('#btn-reset').hidden === true,
        'no bum deal, undo or new game on a screen that only shows the table');
     ok(S.pick('#host-count').hidden === true, 'and no count of the tricks');
-    ok(!/here or on any phone/.test(S.pick('#turn-hint').textContent),
+    ok(!/tap it here/.test(S.pick('#turn-hint').textContent),
        'nor a hint that says there is one  got ' + S.pick('#turn-hint').textContent);
+    ok(/Ann taps who takes each trick/.test(S.pick('#turn-hint').textContent),
+       'it names the dealer instead  got ' + S.pick('#turn-hint').textContent);
     const voting = tricks(); voting.vote = { kind: 'bumdeal', by: 1, round: 0, yes: [1], no: [] };
     S.feed(voting);
     ok(S.pick('#votebox').hidden === false, 'a vote is shown');
@@ -2335,7 +2337,8 @@ part('bidding for a seat that is not there, and leaving');
     ok(H.pick('#btn-bum').hidden === false && H.pick('#btn-undo').hidden === false && H.pick('#btn-reset').hidden === false,
        'the screen that runs the table has them all');
     ok(H.pick('#host-count').hidden === false, 'and the count of the tricks');
-    ok(/here or on any phone/.test(H.pick('#turn-hint').textContent), 'and says so');
+    ok(/Ann taps who takes each trick, or tap it here/.test(H.pick('#turn-hint').textContent),
+       'and says the dealer keeps it, or the screen can  got ' + H.pick('#turn-hint').textContent);
     H.feed(voting);
     const vb = H.pick('#votebox').querySelectorAll('button');
     ok(vb.length === 2 && vb[0].textContent === 'Throw it in now',
@@ -2420,7 +2423,7 @@ part('bidding for a seat that is not there, and leaving');
     ok(said.some((s) => /^Ann \+11 · Ben 0 · Cal \+1/.test(s)), 'and the TV screen is told what everybody got  got ' + said.join(' | '));
   }
 
-  {   // with real cards the tricks are counted as they are taken, by anybody
+  {   // with real cards the dealer counts the tricks as they are taken
     const counting = (log) => {
       const st = table({ away: false, phase: 'tricks' }); st.cfg.deck = 'physical'; st.turn = null;
       st.rounds[0].bids = [1, 1, 0];
@@ -2468,6 +2471,22 @@ part('bidding for a seat that is not there, and leaving');
     const S = hostPage('screen');
     S.feed(counting([]));
     ok(S.pick('#host-count').hidden === true, 'a screen that only shows the table does not');
+
+    /* The phone above is the dealer's, which is why it has the rows. Move the
+       deal one seat and the same phone is a player like any other: it reads
+       the count off the pills and is told whose job it is. */
+    const notMine = counting([]); notMine.rounds[0].dealer = 1;
+    const O = playPage(seed, '?c=TEST');
+    O.feed(notMine);
+    ok(O.pick('#trick-count').hidden === true, 'a phone that is not the dealer is offered no count');
+    ok(/Ben counts the tricks\.$/.test(O.pick('#turn-text').textContent),
+       'and is told who keeps it  got ' + O.pick('#turn-text').textContent);
+    ok(O.pick('#bid-tally').textContent === '0 of 2 tricks played',
+       'while the count itself is still everybody\'s to read  got ' + O.pick('#bid-tally').textContent);
+    const H2 = hostPage('host');
+    H2.feed(notMine);
+    ok(H2.pick('#host-count').hidden === false,
+       'the screen that runs the table counts whoever deals: it holds no seat');
   }
 
   {   // on a table dealt on the phones the TV waits on a seat with a card back in the trick

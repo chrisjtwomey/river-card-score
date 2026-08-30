@@ -60,7 +60,7 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
    the felt it is said over the table. Nobody is on play through it, so no card
    goes down and no trick is counted — a tap that early is refused and the
    phone is told why. Then the hand opens by itself.
-10. **Tricks.** The table counts them as they are taken: after each trick, anybody taps who took it, on their own phone or on the TV screen. Every screen follows — the pills show won against bid, the tally counts the tricks played, a line says who took it — and the last trick scores the round. A wrong tap is undone with **Take back the last trick**.
+10. **Tricks.** The dealer keeps the round, as at a kitchen table: after each trick they tap who took it, on their own phone. A TV screen that runs the table can tap it too — it holds no seat, and it is the one everybody can see. Every other screen follows without touching it — the pills show won against bid, the tally counts the tricks played, a line says who took it — and the last trick scores the round. A wrong tap is undone with **Take back the last trick**.
 11. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
 12. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
 

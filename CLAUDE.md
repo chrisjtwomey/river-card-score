@@ -62,7 +62,7 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
    `if` in two files, you are in the wrong file.
 2. **Never re-derive a rule.** Ask `Game.onTurn`, `Game.awaySeat`, `Game.tablePlays`,
    `Game.tablePlaysOn`, `Game.virtual`, `Game.firstLeader`, `Game.forbiddenBid`,
-   `Game.changeableSeat`.
+   `Game.changeableSeat`, `Game.bidsHeld`, `Game.countingSeat`.
    `cfg.deck === 'virtual'` appears in `game.js` and nowhere else.
 3. **A new message is a row in `lib/messages.js`.** Give it `who`, `phase`, `deck`
    and `when` guards and a one-line `run` that calls a Room verb. Never put game

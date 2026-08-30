@@ -104,15 +104,16 @@ const Round = (function () {
   }
 
   /* ---------- the tricks, counted as they are taken ----------
-     With real cards the table counts: whoever saw the trick taken taps who
-     took it, on any phone or on the screen that runs the table. One row a
-     seat, the row a button; the last tap scores the round, and a wrong one
-     is taken back. A screen that may not count sees none of it: the pills
-     carry the count for everybody. */
+     With real cards the dealer keeps the round, as at a kitchen table: after
+     each trick they tap who took it. One row a seat, the row a button; the
+     last tap scores the round, and a wrong one is taken back. A screen that
+     runs the table and holds no seat counts for the table -- it is the one
+     everybody can see. Every other screen sees none of it: the pills carry
+     the count for them. */
   function trickCount(root, ST, r, view) {
     if (!root) return;
     const p = ST.play;
-    const may = view.me >= 0 || view.boss;
+    const may = Game.countingSeat(ST) === view.me || (view.me < 0 && view.boss);
     const on = may && !!r && !!playing(ST) && !Game.virtual(ST) && !!p && !!p.log;
     root.hidden = !on;
     if (!on) return;

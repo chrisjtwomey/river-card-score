@@ -325,9 +325,12 @@ function renderTurn(r, n) {
     return;
   }
   $('#turn-title').textContent = 'Tricks won';
+  // The dealer keeps the round. A screen that runs the table can count for it;
+  // one that only shows the table names whose job it is and leaves it there.
+  const keeper = ST.seats[Game.countingSeat(ST)];
   $('#turn-hint').textContent = `${leader} leads the first trick. ` + (SHOW
-    ? 'The table taps who takes each trick.'
-    : 'Tap who takes each trick, here or on any phone. The last one scores the round.');
+    ? `${keeper.name} taps who takes each trick.`
+    : `${keeper.name} taps who takes each trick, or tap it here. The last one scores the round.`);
 }
 
 // The table, when the deck is virtual: the trick in the middle, and what each

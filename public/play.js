@@ -400,13 +400,16 @@ function renderTurn(r, me) {
     if (p && p.turn === me) panel.classList.add('mine');
     return;
   }
-  // With real cards the table counts, and that is everybody's job, so the
-  // panel is lit for everybody.
+  /* With real cards the dealer keeps the round, so their phone is the one lit
+     and the one with the rows on it. Everybody else reads the count off the
+     pills, and is told whose job it is rather than left wondering. */
   const taken = ST.play && ST.play.log ? ST.play.log.length : 0;
-  panel.classList.add('mine');
-  $('#turn-text').textContent = taken === 0
-    ? `${leads} the first trick. Tap who takes it.`
-    : `Trick ${Math.min(taken + 1, r.cards)} of ${r.cards}. Tap who takes it.`;
+  const counts = Game.countingSeat(ST) === me;
+  if (counts) panel.classList.add('mine');
+  $('#turn-text').textContent = (taken === 0
+    ? `${leads} the first trick. `
+    : `Trick ${Math.min(taken + 1, r.cards)} of ${r.cards}. `)
+    + (counts ? 'Tap who takes it.' : `${ST.seats[r.dealer].name} counts the tricks.`);
 }
 
 function renderBidStrip(r) {

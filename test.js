@@ -241,17 +241,23 @@ async function bidRound(P) {
   /* ---- the bids stand before anything is counted ----
      The beat is the room's, and a phone that taps over it hears why from the
      table rather than from its own screen. */
-  P[1].send({ t: 'trick', p: 0 });
-  await okBy(() => /bids are still up/.test(P[1].last()),
+  P[0].send({ t: 'trick', p: 0 });                   // seat 0 deals this round
+  await okBy(() => /bids are still up/.test(P[0].last()),
      'a trick counted while the bids stand is refused, and the phone is told why');
   await okBy(() => host.state.play.held === false, 'the bids are read, and the count opens');
   ok(host.state.play.won.join() === '0,0,0', 'with nothing counted over the moment');
 
-  // ---- the tricks are counted by whoever saw one taken ----
+  // ---- the tricks are counted by the dealer ----
   P[1].send({ t: 'trick', p: 0 });
-  await okBy(() => host.state.play.won.join() === '1,0,0', 'a player counts a trick');
+  await okBy(() => /dealer counts the tricks/i.test(P[1].last()),
+     'a phone that is not the dealer is told whose job it is  got ' + JSON.stringify(P[1].last()));
+  ok(host.state.play.won.join() === '0,0,0', 'and nothing lands on any screen');
+  P[0].send({ t: 'trick', p: 0 });
+  await okBy(() => host.state.play.won.join() === '1,0,0', 'the dealer counts a trick');
   P[2].send({ t: 'trickback' });
-  await okBy(() => host.state.play.won.join() === '0,0,0', 'and another takes it back');
+  await okBy(() => /dealer counts the tricks/i.test(P[2].last()), 'nor may anybody else take one back');
+  P[0].send({ t: 'trickback' });
+  await okBy(() => host.state.play.won.join() === '0,0,0', 'the dealer takes it back');
   host.send({ t: 'trick', p: 0 });
   await okBy(() => P[0].state.play.won.join() === '1,0,0', 'the host screen counts one too, and the phones see it');
   P[0].send({ t: 'trick', p: 1 });
@@ -323,7 +329,7 @@ async function bidRound(P) {
     await bidRound(seats);
     await okBy(() => seats[0].state.phase === 'tricks', 'and the bidding runs without one');
     await until(() => seats[0].state.play.held === false);   // the bids are read first
-    seats[1 - r.dealer].send({ t: 'trick', p: 0 });   // whoever saw it
+    seats[r.dealer].send({ t: 'trick', p: 0 });       // the dealer keeps the round
     await okBy(() => seats[0].state.idx === 1, 'and the round scores');
     seats[0].send({ t: 'undo' });
     await okBy(() => seats[0].state.idx === 0 && seats[0].state.phase === 'tricks', 'the table host can go back');

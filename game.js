@@ -225,6 +225,16 @@
   // The seat left of the dealer bids first and leads the first trick.
   const firstLeader = (round, n) => (round.dealer + 1) % n;
 
+  /* Who says who took a trick, at a table with real cards, or -1 where
+     nobody does. The dealer keeps the round, as at a kitchen table: one pair
+     of hands on the tally, so two phones cannot count the same trick twice.
+     A screen that runs the table and holds no seat counts for the table --
+     it is the one everybody can see, and it is nobody's hand. */
+  function countingSeat(state) {
+    const r = state && state.rounds && state.rounds[state.idx];
+    return (r && !virtual(state)) ? r.dealer : -1;
+  }
+
   /* The bids are in and the table is reading them: the round is on tricks,
      but nobody is on play yet. Both decks hold the same way, so a screen asks
      this rather than working it out from a turn that is null for two
@@ -239,7 +249,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, onTurn, tablePlays, tablePlaysOn, awaySeat, firstLeader, bidsHeld, totalsWithBonus,
+                virtual, onTurn, tablePlays, tablePlaysOn, awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };
 

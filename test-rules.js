@@ -419,16 +419,26 @@ part('counting the tricks, with real cards on the table');
   const play = () => t.room.play;
   ok(play() && play().real && play().won.join() === '0,0,0', 'the count opens with nobody having taken one');
 
-  ok(/no such seat/i.test(t.say(1, { t: 'trick', p: 7 })), 'a trick goes to a seat at the table');
-  ok(t.say(1, { t: 'trick', p: 0 }) === null, 'a player who is not the dealer counts a trick');
+  const dealer = t.round().dealer, other = (dealer + 2) % 3;
+  ok(G.countingSeat(t.room) === dealer, 'the dealer keeps the round');
+  ok(G.countingSeat(started(['Ann', 'Bob', 'Cal'], { deck: 'virtual' }).room) === -1,
+     'and nobody keeps it where the cards count themselves');
+
+  ok(t.say(other, { t: 'trick', p: 0 }) === 'the dealer counts the tricks',
+     'a player who is not the dealer counts nothing');
+  ok(play().won.join() === '0,0,0', 'and nothing lands on the table');
+  ok(/no such seat/i.test(t.say(dealer, { t: 'trick', p: 7 })), 'a trick goes to a seat at the table');
+  ok(t.say(dealer, { t: 'trick', p: 0 }) === null, 'the dealer counts a trick');
   ok(play().won.join() === '1,0,0' && play().last.winner === 0, 'and it lands on the seat that took it');
-  ok(t.say(2, { t: 'trickback' }) === null && play().won.join() === '0,0,0', 'another player takes it back');
+  ok(t.say(other, { t: 'trickback' }) === 'the dealer counts the tricks',
+     'nor does anybody else take one back');
+  ok(t.say(dealer, { t: 'trickback' }) === null && play().won.join() === '0,0,0', 'the dealer takes it back');
   ok(play().last === null, 'and nobody is shown as having taken the last one');
-  ok(/no trick to take back/i.test(t.say(2, { t: 'trickback' })), 'once only');
-  ok(t.say('host', { t: 'trick', p: 0 }) === null, 'the host screen counts one too');
+  ok(/no trick to take back/i.test(t.say(dealer, { t: 'trickback' })), 'once only');
+  ok(t.say('host', { t: 'trick', p: 0 }) === null, 'the screen that runs the table counts for it');
   ok(t.room.idx === 0 && t.room.phase === 'tricks', 'and the round waits for the rest');
 
-  t.say(0, { t: 'trick', p: 1 });
+  t.say(dealer, { t: 'trick', p: 1 });
   ok(t.room.idx === 1 && t.room.phase === 'bid', 'the last trick scores the round, and the next one opens');
   ok(t.room.rounds[0].tricks.join() === '1,1,0', 'with the tricks as counted  got ' + t.room.rounds[0].tricks);
   ok(t.room.play === null, 'and the next round counts nothing until its bids are in');
