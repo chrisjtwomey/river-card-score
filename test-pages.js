@@ -1557,6 +1557,42 @@ function tookTrick(motion) {
   ok(overlay.querySelectorAll('.dring').length === 1, 'and nobody else is ringed');
 }
 {
+  /* The box is what it holds. Each card in a pile is turned a little more than
+     the one under it, so the two ends of a pile are not turned the same, and one
+     allowance taken at the worse of them left up to nine pixels of dead air at
+     the straighter end. The word is centred on the box, so it read as pushed off
+     the cards it stands over -- worst at the seats up the sides of the table,
+     where the pile is turned most, and not there at all at the seat opposite. */
+  const W = 412, H = 860;
+  for (const n of [3, 4, 6]) {
+    for (const cards of [1, 5, 7, 13]) {
+      if (cards > Game.maxCardsFor(n)) continue;
+      const me = 1;
+      const made = stateFor(n, cards, me, { bids: [1, null, null, null], turn: 1 });
+      const L = load(W, H, 'full');
+      const R = L.Stage.ring(n, me, W, H), F = L.Stage.fan(cards, W, H);
+      const c = L.Stage.cardSize(W), z = L.Stage.seatScale(n);
+      const wide = (d) => ((c.w * Math.cos(Math.abs(d) * Math.PI / 180)
+                          + c.h * Math.sin(Math.abs(d) * Math.PI / 180)) * z) / 2;
+      for (let q = 0; q < n; q++) {
+        if (q === me) continue;                     // your own seat is the heading
+        made.ST.rounds[0].dealer = q;
+        L.Felt.sync(made.ST, me, { send: () => {} });
+        const box = boxOf(L.dom.document.getElementById('deal').querySelector('.dring'));
+        const a = L.Stage.pile(R, F, q, 0, n), b = L.Stage.pile(R, F, q, cards - 1, n);
+        const lo = Math.min(a.x - wide(a.tilt), b.x - wide(b.tilt));
+        const hi = Math.max(a.x + wide(a.tilt), b.x + wide(b.tilt));
+        const tag = `n=${n} c=${cards} seat ${q}`;
+        ok(Math.abs(box.x - (lo + hi) / 2) <= 1,
+           `${tag}: the word stands over the middle of the pile  `
+           + `got ${Math.round(box.x)} for ${Math.round((lo + hi) / 2)}`);
+        ok(Math.abs((lo - (box.x - box.w / 2)) - ((box.x + box.w / 2) - hi)) <= 1,
+           `${tag}: with the same air either side of it`);
+      }
+    }
+  }
+}
+{
   /* Your own seat is a fan across the bottom of the screen with a heading over
      it, so the heading alone is ringed: a box round the fan would be most of
      the screen wide, would shrink with every card played, and would lie over

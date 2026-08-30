@@ -170,17 +170,24 @@ const Stage = (function () {
     const of = Math.max(1, o.of || 1);
     const F = fan(of, W, H);
     const a = pile(R, F, p, 0, n), b = pile(R, F, p, of - 1, n);
-    // A card in a pile is turned a little, which widens and deepens what it covers.
-    const t = rad(Math.max(Math.abs(a.tilt), Math.abs(b.tilt)));
-    const hw = ((c.w * Math.cos(t) + c.h * Math.sin(t)) * z) / 2;
-    const hh = ((c.h * Math.cos(t) + c.w * Math.sin(t)) * z) / 2;
-    const left = Math.min(a.x, b.x) - hw, right = Math.max(a.x, b.x) + hw;
+    /* A card in a pile is turned a little, which widens and deepens what it
+       covers -- and the turn grows across the pile, so the two ends are not
+       turned the same. Allowed for once, at the worst of the two, the box
+       carried up to nine pixels of dead air at the straighter end, and the word
+       centred on the box then read as pushed off the cards it stands over. Each
+       end is allowed for on its own. */
+    const wide = (d) => ((c.w * Math.cos(rad(Math.abs(d))) + c.h * Math.sin(rad(Math.abs(d)))) * z) / 2;
+    const deep = (d) => ((c.h * Math.cos(rad(Math.abs(d))) + c.w * Math.sin(rad(Math.abs(d)))) * z) / 2;
     const s = R.at(p);
-    // The name hangs under the pile, and it is the bottom of the box.
+    /* The box is what it holds: the pile, and the name hanging under it. The
+       name is centred on the seat and the pile is not quite, so both have a say
+       in either edge. */
+    const left = Math.min(a.x - wide(a.tilt), b.x - wide(b.tilt), s.x - nameW / 2) - padX;
+    const right = Math.max(a.x + wide(a.tilt), b.x + wide(b.tilt), s.x + nameW / 2) + padX;
     const nameTop = s.y + c.h * z / 2 + 19;
     const nameH = Math.round((z < 0.9 ? Math.max(10, Math.round(13 * z)) : 14) * 1.3);
-    const y = Math.min(a.y, b.y) - hh - padTop;
-    return { x: (left + right) / 2, y, w: Math.max(right - left, nameW) + padX * 2,
+    const y = Math.min(a.y - deep(a.tilt), b.y - deep(b.tilt)) - padTop;
+    return { x: (left + right) / 2, y, w: right - left,
              h: nameTop + nameH + padBot - y };
   }
 
