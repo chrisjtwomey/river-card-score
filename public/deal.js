@@ -66,6 +66,11 @@ const Deal = (function () {
       const avatars = (opts && opts.avatars) || [];
       const upFace = virtual ? faceOf(opts && opts.upcard) : null;
       const trumpK = (!virtual && opts && opts.trump) ? String(opts.trump) : null;
+      /* There is a deck in the middle already -- the round before put itself
+         away into one -- so this scene carries on from it rather than opening.
+         The stage is not wiped and the overlay is not faded up: what the
+         reader is looking at simply starts being shuffled. */
+      const carry = !!(opts && opts.carry);
 
       if (!n || !stage || !stage.animate) {
         console.warn('[deal] skipped: no players, or no Web Animations API');
@@ -78,7 +83,7 @@ const Deal = (function () {
           'Add ?motion=full to the URL for the full deal, or run playDeal().');
       }
 
-      stage.innerHTML = '';
+      if (!carry) stage.innerHTML = '';
       overlay.hidden = false;
 
       const W = overlay.clientWidth, H = overlay.clientHeight;
@@ -127,10 +132,19 @@ const Deal = (function () {
         d.style.transform = rest;
         stage.appendChild(d);
         deckEls.push(d);
+        if (carry) continue;              // the deck is already lying there
         const pop = { duration: T.deckPop, delay: i * popStep, fill: 'both',
                       easing: calm ? 'ease-out' : 'cubic-bezier(.2,.9,.3,1.4)' };
         if (!calm) anims.push(d.animate([{ transform: rest + ' scale(.5)' }, { transform: rest + ' scale(1)' }], pop));
         fade(d, [{ opacity: 0 }, { opacity: 1 }], pop, anims);
+      }
+      /* The deck the round left is swapped for this one where it lies, in the
+         same breath: the pile the reader is looking at is the pile that gets
+         riffled, and nothing blinks in between. */
+      if (carry) {
+        Array.prototype.slice.call(stage.children).forEach((el) => {
+          if (deckEls.indexOf(el) < 0) el.remove();
+        });
       }
 
       /* ---- the shuffle: a riffle and a cut ---- */
@@ -185,7 +199,9 @@ const Deal = (function () {
             { duration: squareMs, delay: at + riffleMs, easing: 'ease-in-out' }));
         });
       };
-      const deckReady = T.deckPop + (stackN - 1) * popStep;
+      // A deck carried over is ready the moment it is taken over: there is no
+      // stack to land first.
+      const deckReady = carry ? 0 : T.deckPop + (stackN - 1) * popStep;
       let shuffleEnd = deckReady;
       if (!calm) {
         let at = deckReady + 60;
@@ -397,7 +413,9 @@ const Deal = (function () {
         ));
       }
 
-      anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
+      // Nothing to fade up when the table was already there: the fade is what
+      // used to let the page behind show through between two rounds.
+      if (!carry) anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
 
       function finish() {
         if (ended) return;

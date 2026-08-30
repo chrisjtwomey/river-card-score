@@ -1083,7 +1083,7 @@ const Felt = (function () {
 
   /* ---------------- coming and going ---------------- */
 
-  function start(r) {
+  function start(r, carry) {
     // A phone that arrives in the middle of a round has missed the deal, and
     // replaying it would be a lie about where the game is. Only an untouched
     // round is dealt.
@@ -1091,6 +1091,9 @@ const Felt = (function () {
       && (r.bids || []).every((b) => b === null || b === undefined)
       && ST.play && !ST.play.trick.length && ST.play.won.every((v) => !v);
     if (!untouched || still()) { build(r); return; }
+    // A deck put away by the round before is the deck this one is shuffled
+    // from, so the scene carries on from the table rather than opening on one.
+    const from = !!carry;
 
     mount();
     say('');                             // last round's line has no place over a shuffle
@@ -1105,7 +1108,7 @@ const Felt = (function () {
       deck: 'virtual', mine: me, hand: ST.hand || [],
       upcard: ST.play.upcard, trump: r.trump || null,
       avatars: ST.seats.map((s) => Avatar.url(ST.code, s)),
-      keep: true, brief: !long,
+      keep: true, brief: !long || from, carry: from,
       onTable: (ctx) => {
         dealing = false;
         // The round may have moved on while the cards were in the air -- a bum
@@ -1239,7 +1242,7 @@ const Felt = (function () {
      `last` is the table the round left behind; the felt has already let go of
      it, so this moves elements and reads no state but the round's. */
   function unwind(last, r, done) {
-    if (!last || !T0(last) || still() || !UI.fx.on()) return done();
+    if (!last || !T0(last) || still() || !UI.fx.on()) return done(false);
     const g = geom(), n = ST.seats.length, home = r.dealer;
     const legs = [];
     (last.won || []).forEach((stack, q) => (stack || []).forEach((el) => {
@@ -1284,7 +1287,7 @@ const Felt = (function () {
         at(hero, deckAt(g, legs.length, true));
       }
     }, over);
-    setTimeout(() => { if (key === k) done(); }, over + 340);
+    setTimeout(() => { if (key === k) done(true); }, over + 340);
   }
 
   // Something worth putting away: a table that was never stood up has nothing.
@@ -1388,9 +1391,9 @@ const Felt = (function () {
           if (!pausing || key !== k) return;
           endBeat();
           // What the round paid has been read; now the table is put away.
-          unwind(last, r, () => {
+          unwind(last, r, (carried) => {
             pausing = false;
-            if (key === k && want && round()) start(round());
+            if (key === k && want && round()) start(round(), carried);
           });
         }, PAID_HOLD);
         return;

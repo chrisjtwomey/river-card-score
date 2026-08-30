@@ -1099,10 +1099,38 @@ function scored(motion) {
   ok(tricks().filter(middle).length === 0,
      'the first step only lifts them onto the ring, it does not put them away  got '
      + tricks().filter(middle).length);
-  steps.forEach((t) => t.fn());
+  const done = steps[steps.length - 1];
+  steps.slice(0, -1).forEach((t) => t.fn());
   ok(tricks().filter(middle).length === 5, 'and they all end in the middle  got ' + tricks().filter(middle).length);
   ok(middle(hero()) && spotOf(hero()).face === 180,
      'the card the deck turned goes face down on top of them  got ' + JSON.stringify(spotOf(hero())));
+
+  /* And the shuffle carries on from the deck the round left: the stage is not
+     wiped and the overlay is not faded up -- that fade was the page behind
+     showing through between two rounds. */
+  const asked = [];
+  L.dom.El.prototype.animate = function (kf, opts) {
+    const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {}, play() {},
+                finish() {}, finished: Promise.resolve(), onfinish: null };
+    asked.push(a);
+    return a;
+  };
+  L.dom.El.prototype.getAnimations = () => [];
+  done.fn();
+  const overlay = L.dom.document.getElementById('deal');
+  ok(stage.querySelectorAll('.dcard.deck').length === 9,
+     'the deck is taken over where it lies  got ' + stage.querySelectorAll('.dcard.deck').length);
+  ok(tricks().length === 0, 'and what the round left is cleared away under it  got ' + tricks().length);
+  ok(!overlay.hidden, 'the table never goes');
+  const up = asked.filter((a) => a.el === overlay && a.kf[0] && a.kf[0].opacity === 0);
+  ok(up.length === 0, 'and it is never faded up over the page behind  got ' + up.length);
+  /* The deck is riffled, of course -- what it is not is landed card by card
+     first. A pop fades a card up from nothing; a shuffle never does. */
+  const pops = asked.filter((a) => /\bdeck\b/.test(a.el.className || '')
+    && a.kf[0] && a.kf[0].opacity === 0);
+  ok(pops.length === 0, 'and it is not landed card by card first: it is already there  got ' + pops.length);
+  const riffled = asked.filter((a) => /\bdeck\b/.test(a.el.className || ''));
+  ok(riffled.length > 0, 'it goes straight into the shuffle  got ' + riffled.length);
 }
 {
   const t = scored('full');
