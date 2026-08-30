@@ -42,6 +42,11 @@ const Felt = (function () {
      real table while it is still being read, so this is spent inside
      TOOK_HOLD and the round is no slower for it. */
   const SWEEP = 420;
+
+  /* How long what the round paid stands before the table is put away for the
+     next one. A figure a player has to catch inside two seconds is a figure
+     they read once and are not sure of. */
+  const PAID_HOLD = 2000;
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
@@ -1308,7 +1313,7 @@ const Felt = (function () {
           pausing = false;
           endBeat();
           if (key === k && want && round()) start(round());
-        }, 1900);
+        }, PAID_HOLD);
         return;
       }
       start(r);
