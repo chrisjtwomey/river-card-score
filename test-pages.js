@@ -1134,9 +1134,26 @@ function scored(motion) {
      in the scorecard's own rows, before the next round is shuffled from it. */
   const after = [];
   const realAgain = setTimeout;
+  /* The list moves off what it was last time -- the widths the bars had, the
+     order the names were in -- so it has to be drawn into the same box, and
+     that box has to be standing when it is drawn. Both are asked at the
+     moment it is drawn, because neither can be read back afterwards. */
+  const drawn = [];
+  const realStandings = L.Table.standings;
+  L.Table.standings = function (box, st, o) {
+    drawn.push({ box, up: !box.parentNode.hidden });
+    return realStandings.call(this, box, st, o);
+  };
   global.setTimeout = (f, ms) => { after.push({ fn: f, ms }); return realAgain(() => {}, 0); };
-  try { done.fn(); } finally { global.setTimeout = realAgain; }
+  try { done.fn(); } finally { global.setTimeout = realAgain; L.Table.standings = realStandings; }
   const panel = overlay.querySelector('.felt-stands');
+  ok(drawn.length === 1 && drawn[0].up,
+     'the list is standing before its rows are drawn, so it has places to slide from');
+  ok(drawn[0].box === panel.querySelector('.standings'),
+     'and it is drawn into the box the panel keeps between rounds');
+  ok(typeof drawn[0].box._places === 'string' && drawn[0].box._places.length > 0,
+     'which now remembers the order, for the next round to move off  got '
+     + JSON.stringify(drawn[0].box._places));
   ok(!!panel && !panel.hidden, 'the places stand up over the deck the round left');
   const rows = panel.querySelectorAll('.stand-row');
   ok(rows.length === 4, 'one row a seat  got ' + rows.length);
@@ -1150,6 +1167,32 @@ function scored(motion) {
      'they are armed to go by themselves  got ' + after.map((t) => t.ms).join(','));
   runTimers(after, () => !!stage.querySelector('.dcard.deck'));
   ok(panel.hidden, 'then they go, and the deal has the table');
+
+  /* And again a round later, which is the round that has somewhere to move
+     from: the list has been put away since, and it has to come back standing
+     and into the box it was drawn in before, or the places jump. */
+  const third = stateFor(n, 3, me, { phase: 'bid', turn: 2 }).ST;
+  third.idx = 2;
+  third.rounds = [next.rounds[0],
+                  { cards: 4, dealer: 1, trump: 'S', bids: [1, 1, 1, 1], tricks: [2, 1, 1, 0] },
+                  third.rounds[0]];
+  third.totals = [23, 10, 24, 1];
+  const wasBox = drawn[0].box;
+  drawn.length = 0;
+  const again = [];
+  L.Table.standings = function (box, st, o) {
+    drawn.push({ box, up: !box.parentNode.hidden });
+    return realStandings.call(this, box, st, o);
+  };
+  global.setTimeout = (f, ms) => { again.push({ fn: f, ms }); return realAgain(() => {}, 0); };
+  try { L.Felt.sync(third, me, { send: () => {} }); } finally { global.setTimeout = realAgain; }
+  runTimers(again, () => drawn.length > 0);
+  L.Table.standings = realStandings;
+  ok(drawn.length === 1, 'the places are stood up again  got ' + drawn.length);
+  ok(drawn[0].up, 'standing before its rows are drawn, with the last round\'s still in it');
+  ok(drawn[0].box === wasBox,
+     'and it is the box the round before was drawn in, so the rows and the bars '
+     + 'have somewhere to move from');
   ok(stage.querySelectorAll('.dcard.deck').length === 9,
      'the deck is taken over where it lies  got ' + stage.querySelectorAll('.dcard.deck').length);
   ok(tricks().length === 0, 'and what the round left is cleared away under it  got ' + tricks().length);

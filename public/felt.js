@@ -1319,18 +1319,25 @@ const Felt = (function () {
     if (!el) {
       el = document.createElement('div');
       el.className = 'felt-stands';
+      const first = document.createElement('div');
+      first.className = 'standings';
+      el.appendChild(first);
       overlay.appendChild(el);
     }
-    el.textContent = '';
-    const box = document.createElement('div');
-    box.className = 'standings';
-    el.appendChild(box);
+    /* The same box every round, kept between them. It is what the rows were
+       drawn into last time, and that is where the movement comes from: the
+       widths the bars had, and the order the names were in. A box built fresh
+       has nothing to have changed from, and the list simply appears in its
+       new shape. */
+    const box = el.querySelector('.standings');
     const was = {};
     ST.seats.forEach((s, i) => {
       was[s.id] = ST.totals[i] - Game.roundScore(prev.bids[i], prev.tricks[i], ST.cfg);
     });
-    Table.standings(box, ST, { me, lastTotals: was });
+    // Standing before the rows are drawn, not after: a box that is not laid
+    // out has no places to slide from.
     el.hidden = false;
+    Table.standings(box, ST, { me, lastTotals: was });
     if (el.animate) {
       el.animate([{ opacity: 0, transform: 'translate(-50%,-46%)' },
                   { opacity: 1, transform: 'translate(-50%,-50%)' }],

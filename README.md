@@ -320,8 +320,9 @@ that band.
   middle, under the card the deck turned. That card goes face down on top of
   them, and what is left is a deck. Where the round leaves everybody then
   stands over that deck for two and a half seconds -- the scorecard's own rows,
-  best first, each score running up from where it stood before the round --
-  and fades. Then the next round is shuffled out of the same deck: the scene
+  best first, each score running up from where it stood before the round, the
+  bars growing to their new lengths and any change of places sliding past
+  itself, exactly as on the scores page -- and fades. Then the next round is shuffled out of the same deck: the scene
   carries on from the table rather than opening on one, so nothing is wiped,
   nothing is faded up, and the page behind is never seen between two rounds.
   With movement off none of this plays.
