@@ -2626,6 +2626,17 @@ part('the front page, and the screen');
     P.socks[0].onmessage({ data: devState(false) });
     ok(P.pick('#state-stale').hidden === true,
        'a state arriving with a read outstanding is the answer coming, not news');
+
+    // A copy of the broken table, before it is put right.
+    const took = [];
+    P.dom.window.navigator = { clipboard: { writeText: (t) => { took.push(t); return Promise.resolve(); } } };
+    P.pick('#state-text').value = '{"code":"AAAA"}';
+    P.pick('#btn-state-copy').fire('click');
+    ok(took[0] === '{"code":"AAAA"}', 'Copy puts the record on the clipboard  got ' + took[0]);
+
+    P.dom.window.navigator = {};              // a page that may not copy
+    P.pick('#btn-state-copy').fire('click');
+    ok(took.length === 1, 'and where it may not, it says so rather than doing nothing');
   }
 
   {   // a table of stand-ins on a dev server: everything, as before

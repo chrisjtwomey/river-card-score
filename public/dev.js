@@ -593,6 +593,17 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#state-text').blur();
     askState();
   });
+  /* A broken table is worth keeping a copy of before it is put right: it is
+     what the bug looked like. The clipboard is read off `window` by name --
+     there is none on a page served over plain http from another machine, and
+     saying so is better than a button that does nothing. */
+  $('#btn-state-copy').addEventListener('click', () => {
+    const cb = window.navigator && window.navigator.clipboard;
+    if (!cb) return UI.fx.toast('This browser will not let the page copy', { err: true });
+    cb.writeText($('#state-text').value || '').then(
+      () => UI.fx.toast('The record is on the clipboard'),
+      () => UI.fx.toast('Nothing was copied', { err: true }));
+  });
   $('#btn-state-apply').addEventListener('click', () => {
     let rec;
     try { rec = JSON.parse($('#state-text').value); }
