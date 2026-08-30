@@ -342,7 +342,8 @@ that band.
   nothing is faded up, and the page behind is never seen between two rounds.
   With movement off none of this plays.
 - **Bidding** happens on the felt too: the numbers arc above your hand, under
-  a heading of their own, and are picked up the same way -- touch to lift, tap
+  a heading of their own and clear of it -- and of the ring round it when the
+  deal is yours -- and are picked up the same way -- touch to lift, tap
   again to call. Your own bid stays lit and can be changed until the next player bids.
   The number screw the dealer forbids is struck through. Another player's bid
   lands the way it does on the TV screen: the number slams onto their pile in

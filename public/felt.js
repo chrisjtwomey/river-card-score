@@ -761,8 +761,14 @@ const Felt = (function () {
     const B = Stage.bidRow(g.W);
     /* Anchored by its foot, not its head: the heading above the fan has to stay
        readable, and a long hand's numbers must grow upward into the empty
-       middle of the table and never down over the cards. */
-    rail.style.bottom = `calc(50% - ${Math.round(g.F.at(0).y - B.foot)}px)`;
+       middle of the table and never down over the cards.
+
+       That foot stands over the middle of the fan, which is the room `fan`
+       reserves for it. Hung off the lowest card of the fan instead, the row
+       crept down as the hand grew -- the outer cards of a long fan sit lower --
+       until at seven cards it stood on the heading, and on the word cutting the
+       ring round it when the reader is the one dealing. */
+    rail.style.bottom = `calc(50% - ${Math.round(g.F.y - B.foot)}px)`;
 
     // Named, the way the hand below it is named.
     const title = document.createElement('div');
@@ -829,7 +835,7 @@ const Felt = (function () {
     const rail = document.querySelector('#deal .felt-bids');
     if (!rail || rail.hidden) return -1;
     const B = Stage.bidRow(g.W);
-    const foot = g.H / 2 + g.F.at(0).y - B.foot;      // the rail's own foot
+    const foot = g.H / 2 + g.F.y - B.foot;            // the rail's own foot
     const size = B.size;
     if (py > foot + 14 || py < foot - size - 24) return -1;
     const cx = px - g.W / 2;

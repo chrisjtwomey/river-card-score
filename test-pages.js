@@ -674,7 +674,7 @@ function bidding(o) {
            // where a thumb has to land to be on that number
            spot: (v) => ({ pointerId: 1, button: 0,
                            clientX: W / 2 + arc.off(v) * step,
-                           clientY: H / 2 + F.at(0).y - B.foot - size / 2 }),
+                           clientY: H / 2 + F.y - B.foot - size / 2 }),
            head: () => (overlay.querySelector('.bidname') || null),
            hint: () => (overlay.querySelector('.felt-hint') || {}).textContent || '' };
 }
@@ -687,8 +687,10 @@ function bidding(o) {
   ok(t.chips().map((c) => c.textContent).join(',') === '0,1,2,3,4,5', 'nought to the hand size');
   ok(/How many of the 5 tricks/.test(t.hint()), 'and it asks: ' + JSON.stringify(t.hint()));
   ok(!!t.head() && t.head().textContent === 'Your bid', 'the row is named, the way the hand is');
-  ok(Number(/([\d]+)px/.exec(t.head().style.bottom)[1]) >= t.L.Stage.bidRow(t.W).up,
-    'and stands clear of a number lifted under a thumb');
+  const headUp = Number(/([\d]+)px/.exec(t.head().style.bottom)[1]);
+  ok(headUp + 4 >= t.L.Stage.bidRow(t.W).up,
+    'and a number lifted under a thumb reaches its letters and no further  got '
+    + headUp + ' against ' + t.L.Stage.bidRow(t.W).up);
   // the numbers are picked up like the cards: a touch lifts one, a tap on the
   // one already up calls it
   const at3 = t.spot(3);
@@ -751,22 +753,36 @@ function bidding(o) {
     'which is the number the rules forbid');
 }
 
-// the numbers must not sit on the heading above the fan
+/* The numbers must not sit on the heading above the fan -- nor on the ring
+   round it, nor on the word cutting the top of that ring, when the reader is
+   the one dealing. The row used to hang off the lowest card of the fan, which
+   sinks as the hand grows: by seven cards it stood on the word. */
 {
   for (const [W, H] of [[360, 640], [412, 860], [500, 860], [760, 1000]]) {
     for (const cards of [1, 5, 7, 13]) {
       const n = 4, me = 1;
       if (cards > Game.maxCardsFor(n)) continue;
       const made = stateFor(n, cards, me, { phase: 'bid', turn: me });
+      made.ST.rounds[0].dealer = me;              // so the ring is round your own heading
       const L = load(W, H, 'off');
       L.Felt.sync(made.ST, me, { send: () => {} });
       const overlay = L.dom.document.getElementById('deal');
       const F = L.Stage.fan(cards, W, H);
       const B = L.Stage.bidRow(W);
       const size = B.size;
-      const foot = F.at(0).y - B.foot;             // the rail sits on this line
-      const label = F.at(0).y - 66;                // and the heading starts here
+      // Where the felt actually put the row, not where the stage says it goes.
+      const foot = pxOf(overlay.querySelector('.felt-bids').style.bottom);
+      ok(Math.abs(foot - (F.y - B.foot)) <= 1,
+         `${W}x${H} c=${cards}: the row stands over the middle of the fan, where `
+         + `the room for it is kept  got ${Math.round(foot)} for ${Math.round(F.y - B.foot)}`);
+      const label = F.y - 66;                      // and the heading starts here
       ok(foot + 4 < label, `${W}x${H} c=${cards}: the numbers clear "Your hand"`);
+      /* The word on the ring is centred on the ring's top line and stands about
+         six either side of it, so the row has that and some air to clear. */
+      const ringTop = pxOf(overlay.querySelector('.dring').style.top);
+      ok(foot + 12 <= ringTop,
+         `${W}x${H} c=${cards}: and clear the ring on the dealer's heading `
+         + `(${Math.round(foot)} against ${Math.round(ringTop)})`);
       const top = foot - B.up;
       // The turned card lies in the middle, come down to the size of a card
       // played, so the numbers have that to clear.
@@ -889,7 +905,7 @@ function bidding(o) {
   const topOf = (el) => Number(/([-\d]+)px/.exec(el.style.top)[1]);
   const names = stage.querySelectorAll('.dname').filter((e) => !e.classList.contains('mine'));
   const lowest = Math.max(...names.map(topOf)) + 15;   // a name stands about this tall
-  const head = F.at(0).y - B.foot - B.head - 15;       // the top of the block
+  const head = F.y - B.foot - B.head - 15;             // the top of the block
   const foot = F.at(0).y + c.h / 2;                    // and its lowest card
   const line = H / 2 - 76;                             // the line along the bottom
   ok(head > lowest, `the block starts below the piles either side (${Math.round(head)} > ${Math.round(lowest)})`);

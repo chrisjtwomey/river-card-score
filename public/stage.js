@@ -182,10 +182,15 @@ const Stage = (function () {
     // A number under the thumb grows and rises a little; this is how tall it
     // then stands, measured up from the line the row stands on.
     const up = size * 1.17 + 6;
-    // The heading hugs the row, the way the one over the hand hugs the fan,
-    // and still clears a number held up under a thumb.
-    const head = Math.max(size + 14, up + 1);
-    return { size, foot: 88, up, head, tall: head + 15 };
+    /* How high the row stands over the middle of the fan. It has the heading
+       over the hand to clear, and -- when the reader is the one dealing -- the
+       ring drawn round that heading and the word cutting the top of it. */
+    const foot = 94;
+    /* The heading hugs the row, the way the one over the hand hugs the fan. A
+       number held up under a thumb rises into the leading under the heading's
+       letters, and no further. */
+    const head = Math.max(size + 9, up - 4);
+    return { size, foot, up, head, tall: head + 15 };
   }
 
   /* A hand is a fan, not a row. Each card steps a fixed distance along from the
