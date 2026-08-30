@@ -1176,6 +1176,56 @@ function tookTrick(motion) {
      'and the labels turn to won against bid  got ' + overlay.querySelectorAll('.dname')[me].textContent);
 }
 {
+  /* The trick comes in the way it went out: each card goes round the ring
+     clockwise, seat by seat, and they meet on the winner's spot before the
+     stack goes to the pile. A card that crossed the middle would say nothing
+     about who won it. */
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me, bids: [1, 2, 1, 1] });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const held = JSON.parse(JSON.stringify(made.ST));
+  held.hand = made.ST.hand.slice(1);
+  held.play.trick = [];
+  held.play.last = { trick: made.hands.map((h, p) => ({ p, card: h[0] })), winner: 3 };
+  held.play.won = [0, 0, 0, 1];
+  held.play.turn = null;
+  held.play.counts = made.hands.map((h) => h.length - 1);
+  const timers = [];
+  const realSet = setTimeout;
+  global.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return realSet(() => {}, 0); };
+  try { L.Felt.sync(held, me, { send: () => {} }); } finally { global.setTimeout = realSet; }
+
+  const stage = L.dom.document.getElementById('deal').querySelector('.deal-stage');
+  const won = stage.querySelector('.dcard.took');
+  const spot = (el) => spotOf(el) || { x: NaN, y: NaN };
+  const home = spot(won);
+  const near = (el) => Math.abs(spot(el).x - home.x) < 1 && Math.abs(spot(el).y - home.y) < 1;
+  const onWinner = () => stage.querySelectorAll('.dcard').filter(near).length;
+  ok(!!won, 'the card that took the trick is marked');
+  ok(onWinner() === 1, 'and it is the only card on its spot while the trick lies there  got ' + onWinner());
+
+  // The cards set off inside the moment the trick is named, not after it.
+  const off = timers.filter((t) => t.ms > 0 && t.ms < 2000);
+  ok(off.length >= 1, 'they set off while the news is still up  got ' + timers.map((t) => t.ms).join(','));
+  const legs = [];
+  timers.filter((t) => t.ms < 2000).forEach((t) => {
+    global.setTimeout = (f, ms) => { legs.push({ fn: f, ms }); return realSet(() => {}, 0); };
+    try { t.fn(); } finally { global.setTimeout = realSet; }
+  });
+  /* Three cards to bring in, and the ways round are 3, 2 and 1 seats long:
+     six steps in all, not three jumps. */
+  ok(legs.length === 6, 'each card is given a step for every seat it passes  got ' + legs.length);
+  const fire = (ms) => legs.filter((t) => t.ms === ms).forEach((t) => t.fn());
+  const stops = legs.map((t) => t.ms).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
+  fire(stops[0]);
+  ok(onWinner() === 2, 'the first step brings in only the seat before the winner  got ' + onWinner());
+  fire(stops[1]);
+  ok(onWinner() === 3, 'the next brings in the one before that  got ' + onWinner());
+  stops.slice(2).forEach(fire);
+  ok(onWinner() === 4, 'and the whole trick ends up on the winner\'s spot  got ' + onWinner());
+}
+{
   const t = tookTrick('off');
   ok(!t.beat() || t.beat().hidden, 'with animations off nothing is said');
   ok(t.stage.querySelectorAll('.dcard.took').length === 1, 'and the trick lies there as it always did');

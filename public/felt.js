@@ -36,6 +36,12 @@ const Felt = (function () {
      longer still (TRICK_HOLD in lib/deck.js): the winner must not lead while
      the news of the last one is still on the screen. */
   const TOOK_HOLD = 2000;
+
+  /* How long the cards take to come in. They set off before the news of the
+     trick has gone and arrive as it does, the way a trick is gathered at a
+     real table while it is still being read, so this is spent inside
+     TOOK_HOLD and the round is no slower for it. */
+  const SWEEP = 420;
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
@@ -60,6 +66,7 @@ const Felt = (function () {
   let told = null;                 // the finished trick this screen has announced
   let swept = null;                // and the one it has gathered in
   let bidsUp = false;              // the bids are up to be read, before the first card
+  let sweeping = null;             // the trick whose cards are on their way to the winner
 
   const virtual = () => !!ST && Game.virtual(ST);
   /* A trick that has been taken and is still lying in the middle. The server
@@ -520,7 +527,9 @@ const Felt = (function () {
       el.style.zIndex = String(7 + i);
       el.classList.toggle('took', winner !== null && x.p === winner);
       el.classList.remove('slow');       // a card played moves at a card's pace
-      at(el, trickAt(g, x.p));
+      // A card being gathered is somewhere between two seats, and the sweep
+      // is steering it; its own spot is no longer where it belongs.
+      if (!sweeping) at(el, trickAt(g, x.p));
     });
 
     (T.won || []).forEach((stack, q) => (stack || []).forEach((el, k) => {
@@ -1176,6 +1185,39 @@ const Felt = (function () {
     if (on) bidsBeat(r); else endBeat();
   }
 
+  /* The trick comes in the way it went out: each card travels round the ring
+     clockwise -- which is the way the seats run, and the order the cards were
+     played -- and they meet on the winner's spot. Only then does the stack go
+     to the pile beside them. A card that crosses the middle to get there says
+     nothing about who won; a card that comes round the table does. */
+  function sweepIn(taken, sig) {
+    if (!T || still() || !UI.fx.on()) return;
+    const g = geom(), n = ST.seats.length, win = taken.winner;
+    const legs = [];
+    taken.trick.forEach((x) => {
+      const el = T.table.get(x.card);
+      if (!el) return;
+      const steps = (((win - x.p) % n) + n) % n;
+      if (steps) legs.push({ el, from: x.p, steps });   // the winner's own card stays put
+    });
+    if (!legs.length) return;
+    sweeping = sig;
+    // The longest way round takes the whole sweep, whatever the table size:
+    // eight seats must not take twice as long to come in as four.
+    const most = legs.reduce((a, l) => Math.max(a, l.steps), 0);
+    const gap = Math.max(60, Math.round(SWEEP / most));
+    const k = key;
+    legs.forEach(({ el, from, steps }) => {
+      for (let s = 1; s <= steps; s++) {
+        const seat = (from + s) % n;
+        setTimeout(() => {
+          if (sweeping !== sig || key !== k || !el.parentNode) return;
+          at(el, trickAt(g, seat));
+        }, (s - 1) * gap);
+      }
+    });
+  }
+
   /* A trick taken is a moment: it is named, and only when that has been read
      are the cards gathered to whoever took them. Without it a trick ends by
      the cards simply being somewhere else. */
@@ -1196,9 +1238,15 @@ const Felt = (function () {
     swept = null;
     tookBeat(p, r);
     const k = key;
+    // The cards set off while the news is still up and arrive as it goes.
+    setTimeout(() => {
+      if (told !== sig || key !== k) return;
+      sweepIn(taken, sig);
+    }, Math.max(0, TOOK_HOLD - SWEEP));
     setTimeout(() => {
       if (told !== sig || key !== k) return;   // the table moved on without us
       swept = sig;
+      sweeping = null;
       endBeat();
       const now = round();
       if (T && want && now) { reconcile(now); paint(now); }
@@ -1214,7 +1262,7 @@ const Felt = (function () {
     key = null;
     unpeek();
     pausing = false;
-    told = null; swept = null; bidsUp = false;
+    told = null; swept = null; bidsUp = false; sweeping = null;
     endBeat();
     if (T || dealing) { Stage.close('deal'); T = null; dealing = false; }
     unmount();
@@ -1247,7 +1295,7 @@ const Felt = (function () {
       T = null;
       dealing = false;
       sent = null;
-      told = null; swept = null; bidsUp = false;
+      told = null; swept = null; bidsUp = false; sweeping = null;
       if (!want) return;
       // A round has been played and scored on this table: its result is held up
       // for a moment, over the trick that ended it, before the next deal.

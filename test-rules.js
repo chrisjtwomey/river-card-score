@@ -975,6 +975,12 @@ part('the pauses a game is built around');
   ok(took && Number(took[1]) < deck({}).TRICK_HOLD,
      'the table holds the trick longer than the phones take to gather it  got '
      + (took && took[1]) + ' against ' + deck({}).TRICK_HOLD);
+  /* The cards come in round the ring while the trick is still named, so the
+     sweep is spent inside that moment and costs the round nothing. */
+  const sweep = /SWEEP\s*=\s*(\d+)/.exec(felt);
+  ok(sweep && Number(sweep[1]) <= Number(took[1]),
+     'the cards are gathered inside the moment the trick is named  got '
+     + (sweep && sweep[1]) + ' against ' + (took && took[1]));
 }
 
 part('what every screen is told');
