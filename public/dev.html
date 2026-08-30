@@ -67,6 +67,8 @@
   .prow input[type=text],.prow input[type=number]{font:inherit;padding:5px 6px;border-radius:8px;
     border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
   .prow input[type=number]{text-align:center}
+  /* A cell the column is waiting on, so a half-filled one says which. */
+  .prow input.part{border-style:dashed;border-color:var(--gold)}
   .prow .mid{justify-self:center}
   .prow .pbtns{display:flex;gap:5px}
 
@@ -176,7 +178,7 @@
       <span>bid</span><span>won</span><span id="ph-photo">photo</span><span></span>
     </div>
     <div id="prows" style="display:contents"></div>
-    <p class="hint">Everything lands as it is changed. The won column is kept once every seat has a number.</p>
+    <p class="hint">Everything lands as it is changed. The won column goes as one, once every seat has a number: the cells still wanted are ringed until it does.</p>
   </div>
 
   <div class="panel statebox" id="state-panel" hidden>

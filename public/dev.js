@@ -424,6 +424,23 @@ function standInAvatar(name, i) {
 
 /* ---------- the players panel ---------- */
 
+/* The tricks a round paid are one column, not seven cells: the table keeps
+   them only when every seat has a number, and a half-filled column sent cell
+   by cell was thrown away each time and the typing with it. So the column
+   goes together, off the row of boxes as they stand, and until it is whole
+   the empty cells say which ones are wanted. */
+const wonBad = (v) => v === '' || !Number.isFinite(Number(v));
+
+function sendWon() {
+  const box = $('#prows');
+  if (!box || !ST) return;
+  const cells = Array.from(box.querySelectorAll('input.won'));
+  const vals = cells.map((el) => String(el.value).trim());
+  cells.forEach((el, i) => el.classList.toggle('part', wonBad(vals[i])));
+  if (vals.length !== ST.seats.length || vals.some(wonBad)) return;
+  act('patch', { patch: { round: { i: ST.idx, tricks: vals.map(Number) } } });
+}
+
 /* One row a seat. Every control sends the moment it is used, and the rows
    are rebuilt only while nothing in them is being typed in. */
 function renderPlayers() {
@@ -474,13 +491,16 @@ function renderPlayers() {
       return el;
     };
 
+    // A bid stands on its own -- the table keeps a column with gaps in it.
+    // The tricks do not, so they go as one.
     const num = (k, v) => {
       const el = document.createElement('input');
       el.type = 'number'; el.min = '0';
+      if (k === 'tricks') el.className = 'won';
       el.value = v === null || v === undefined ? '' : v;
       el.disabled = !r;
-      el.addEventListener('change', () =>
-        numbers(k, p, el.value.trim() === '' ? null : Number(el.value)));
+      el.addEventListener('change', k === 'tricks' ? sendWon
+        : () => numbers(k, p, el.value.trim() === '' ? null : Number(el.value)));
       return el;
     };
 

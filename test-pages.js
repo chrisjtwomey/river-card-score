@@ -2639,6 +2639,44 @@ part('the front page, and the screen');
     ok(took.length === 1, 'and where it may not, it says so rather than doing nothing');
   }
 
+  {   /* ---- the won column ----
+         The table keeps the tricks only when every seat has a number, so a
+         column sent a cell at a time was thrown away on each cell and took
+         the typing with it. It goes as one now. */
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' },
+                              { id: 's2', name: 'Bob', watch: 'w2' }]);
+    P.socks[0].onmessage({ data: devState(false) });
+
+    const won = P.pick('#prows').querySelectorAll('input.won');
+    ok(won.length === 2, 'one won box a seat  got ' + won.length);
+
+    P.socks[0].sent.length = 0;
+    won[0].value = '2';
+    won[0].fire('change');
+    ok(P.socks[0].sent.length === 0, 'half a column is not sent, so it cannot be thrown away');
+    ok(won[1].classList.contains('part') && !won[0].classList.contains('part'),
+       'and the cell it is waiting on says so');
+
+    won[1].value = '1';
+    won[1].fire('change');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"round":{"i":0,"tricks":[2,1]}}}',
+       'the whole column goes at once  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(!won[0].classList.contains('part') && !won[1].classList.contains('part'),
+       'and nothing is left ringed');
+
+    // A bid is not a column: the table keeps one with gaps, so it still goes
+    // on its own.
+    P.socks[0].sent.length = 0;
+    const bids = P.pick('#prows').querySelectorAll('input').filter(
+      (el) => el.type === 'number' && !el.classList.contains('won'));
+    bids[0].value = '3';
+    bids[0].fire('change');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"round":{"i":0,"bids":[3,null]}}}',
+       'a bid still lands beside the gaps  got ' + JSON.stringify(P.socks[0].sent[0]));
+  }
+
   {   // a table of stand-ins on a dev server: everything, as before
     const P = devPage(true, [{ id: 's1', name: 'Ann', token: 't1' },
                              { id: 's2', name: 'Bob', token: 't2' }]);
