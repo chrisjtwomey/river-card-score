@@ -69,9 +69,14 @@ const Felt = (function () {
   const LEAD_MIN = 42, LEAD_MAX = 110;
 
   /* How long the places stand over the fresh deck before the next round is
-     dealt. Long enough to find your own row and see what the round moved you
-     to; not so long that the game is waiting on a table nobody is playing. */
-  const STAND_HOLD = 2500;
+     dealt, counted from the moment they come up. Long enough to find your own
+     row and then watch what the round did to it; not so long that the game is
+     waiting on a table nobody is playing. */
+  const STAND_HOLD = 3000;
+
+  // And how long it stands still first, showing where the round found things
+  // before it says what it did to them.
+  const STAND_WAIT = 500;
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
@@ -1437,20 +1442,28 @@ const Felt = (function () {
        has nothing to have changed from, and the list simply appears in its
        new shape. */
     const box = el.querySelector('.standings');
+    const before = ST.totals.map((v, i) => v - Game.roundScore(prev.bids[i], prev.tricks[i], ST.cfg));
     const was = {};
-    ST.seats.forEach((s, i) => {
-      was[s.id] = ST.totals[i] - Game.roundScore(prev.bids[i], prev.tricks[i], ST.cfg);
-    });
+    ST.seats.forEach((s, i) => { was[s.id] = before[i]; });
     // Standing before the rows are drawn, not after: a box that is not laid
     // out has no places to slide from.
     el.hidden = false;
-    Table.standings(box, ST, { me, lastTotals: was });
+    /* It comes up showing where things stood, and holds there for a moment.
+       A list that is already moving as it arrives has moved before anybody
+       has found their own row in it. */
+    Table.standings(box, Object.assign({}, ST, { totals: before }), { me, lastTotals: was });
     if (el.animate) {
       el.animate([{ opacity: 0, transform: 'translate(-50%,-46%)' },
                   { opacity: 1, transform: 'translate(-50%,-50%)' }],
         { duration: 240, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' });
     }
     const k = key;
+    // Then what the round did to it: the scores run up, the bars grow, and
+    // anybody who has changed places slides past whoever they passed.
+    setTimeout(() => {
+      if (key !== k) return;
+      Table.standings(box, ST, { me, lastTotals: was });
+    }, STAND_WAIT);
     setTimeout(() => {
       if (key !== k) return;
       const off = el.animate

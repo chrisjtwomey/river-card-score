@@ -332,10 +332,12 @@ that band.
   A hand of thirteen tricks shortens the wait between cards rather than making
   the round longer; a stand-in for a trick this phone never saw has no face to
   show, so it comes in face down. Where the round leaves everybody then
-  stands over that deck for two and a half seconds -- the scorecard's own rows,
-  best first, each score running up from where it stood before the round, the
-  bars growing to their new lengths and any change of places sliding past
-  itself, exactly as on the scores page -- and fades. Then the next round is shuffled out of the same deck: the scene
+  stands over that deck for three seconds. It comes up as the round found it
+  -- the scorecard's own rows, best first, with everybody where they stood
+  before the hand -- holds still for half a second so you can find your own
+  row, and only then says what the round did: the scores run up, the bars grow
+  to their new lengths, and anybody who changed places slides past whoever
+  they passed, exactly as on the scores page. Then it fades. Then the next round is shuffled out of the same deck: the scene
   carries on from the table rather than opening on one, so nothing is wiped,
   nothing is faded up, and the page behind is never seen between two rounds.
   With movement off none of this plays.

@@ -1239,7 +1239,7 @@ function scored(motion) {
   const drawn = [];
   const realStandings = L.Table.standings;
   L.Table.standings = function (box, st, o) {
-    drawn.push({ box, up: !box.parentNode.hidden });
+    drawn.push({ box, up: !box.parentNode.hidden, totals: (st.totals || []).slice() });
     return realStandings.call(this, box, st, o);
   };
   global.setTimeout = (f, ms) => { after.push({ fn: f, ms }); return realAgain(() => {}, 0); };
@@ -1261,8 +1261,24 @@ function scored(motion) {
      'best first, worst last  got ' + rows.map((el) => el.dataset.k).join(','));
   ok(rows[3].classList.contains('me'), 'and your own row is marked');
   ok(!stage.querySelector('.dcard.deck'), 'nothing is shuffled while they are up');
-  ok(after.some((t) => t.ms === 2500),
-     'they are armed to go by themselves  got ' + after.map((t) => t.ms).join(','));
+  /* It comes up showing where things stood and holds there, and only then says
+     what the round did: a list already moving as it arrives has moved before
+     anybody has found their own row. */
+  ok(drawn[0].totals.join() !== next.totals.join(),
+     'it comes up as the round found it  got ' + drawn[0].totals.join());
+  ok(after.some((t) => t.ms === 500),
+     'and is armed to move a moment later  got ' + after.map((t) => t.ms).join(','));
+  ok(after.some((t) => t.ms === 3000),
+     'and to go by itself after that  got ' + after.map((t) => t.ms).join(','));
+  L.Table.standings = function (box, st, o) {
+    drawn.push({ box, up: !box.parentNode.hidden, totals: (st.totals || []).slice() });
+    return realStandings.call(this, box, st, o);
+  };
+  after.filter((t) => t.ms === 500).forEach((t) => t.fn());
+  L.Table.standings = realStandings;
+  ok(drawn.length === 2 && drawn[1].totals.join() === next.totals.join(),
+     'what it moves to is where the round leaves everybody  got '
+     + drawn.map((d) => d.totals.join()).join(' | '));
   runTimers(after, () => !!stage.querySelector('.dcard.deck'));
   ok(panel.hidden, 'then they go, and the deal has the table');
 
@@ -1279,7 +1295,7 @@ function scored(motion) {
   drawn.length = 0;
   const again = [];
   L.Table.standings = function (box, st, o) {
-    drawn.push({ box, up: !box.parentNode.hidden });
+    drawn.push({ box, up: !box.parentNode.hidden, totals: (st.totals || []).slice() });
     return realStandings.call(this, box, st, o);
   };
   global.setTimeout = (f, ms) => { again.push({ fn: f, ms }); return realAgain(() => {}, 0); };
