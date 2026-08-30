@@ -355,10 +355,11 @@ const Deal = (function () {
 
       /* ---- what is happening, just above the deck ---- */
       /* Nothing is shuffled under reduced motion, so there is nothing to say.
-         The deal is the dealer's on either deck, so the line names them on
-         both: the verb is what differs, because with real cards they are
-         dealing the hand and here the deck is still being shuffled. */
-      const doing = calm ? '' : `${names[dealer]} is ${virtual ? 'shuffling' : 'dealing'}…`;
+         The deal is the dealer's on either deck, and the same words say so:
+         the shuffle is the front of the deal, not a thing of its own -- a
+         phone at a table with real cards plays only the shuffle and has
+         always called it the deal. */
+      const doing = calm ? '' : `${names[dealer]} is dealing…`;
       if (doing) {
         const doingEl = document.createElement('div');
         doingEl.className = 'deal-doing';

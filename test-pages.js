@@ -2995,9 +2995,9 @@ part('tapping the deal away');
                   deck: 'virtual', mine: -1, hand: [], upcard: 'TH', trump: 'H', hold: true, key: '0:0' });
     L.Deal.update({ key: '0:0', bids: [null, null, null], turn: 1, text: '' });   // the TV fills in the bids it opens with
     L.Deal.update({ key: '0:0', bids: [null, 1, null], turn: 2, text: 'Waiting for Cal to bid' });
-    // The deal is the dealer's on either deck, so the line names them on both.
-    ok(overlay.querySelector('.deal-doing').textContent === 'Ann is shuffling…',
-       'the line says who is shuffling  got ' + overlay.querySelector('.deal-doing').textContent);
+    // The deal is the dealer's on either deck, and the same words say so.
+    ok(overlay.querySelector('.deal-doing').textContent === 'Ann is dealing…',
+       'the line says whose deal it is  got ' + overlay.querySelector('.deal-doing').textContent);
     ok(stage().querySelectorAll('.dstamp').length === 0, 'nothing is stamped onto a pile that has not landed');
     ok(overlay.querySelectorAll('.dname').map((el) => el.textContent).indexOf('Ben · 1') >= 0, 'but the name has the bid');
     const timers = [];
