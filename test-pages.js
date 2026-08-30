@@ -2588,57 +2588,45 @@ part('the dev controls, on each kind of server');
     P.socks[0].onmessage({ data: devState(false) });
 
     ok(P.pick('#tables-tools').hidden === true, 'a normal server hides the tables a page cannot list');
+    ok(P.pick('#scrub-tools').hidden === true, 'and the scrubber, which fills a card it may not invent');
     ok(P.pick('#shots-dev').hidden === true, 'and every one-shot that makes data up');
-    ok(P.pick('#btn-fillto').hidden === true, 'and filling the card, which invents the rounds it fills');
+    ok(P.pick('#scrub').children.length === 0, 'so the card is not even drawn');
     ok(P.pick('#panel-toggles').hidden === false, 'but the panels that put a game right stay');
     ok(P.pick('#live-note').hidden === false, 'and the page says real players may be at the table');
     ok(P.pick('#ph-photo').textContent === '', 'the photo column says nothing it cannot do');
 
-    /* ---- the card, which is the way about the game and the way into it ----
-       Every edit on it is a forced value, so the whole card works on a normal
-       server: this is what puts a real game right. */
-    const grid = P.pick('#cardgrid');
-    const rows = grid.querySelectorAll('.crow');
-    ok(rows.length === 4, 'a head, both rounds and the total  got ' + rows.length);
-    ok(rows[1].classList.contains('on'), 'the round in play is marked');
+    /* ---- the form that moves a stuck game ----
+       In place of the scrubber, the one control the protocol takes anywhere:
+       a phase and a round, forced, with nothing invented. */
+    const box = P.pick('#repair');
+    ok(box.hidden === false, 'the repair form stands where the scrubber is not allowed');
+    const seg = box.querySelector('.seg');
+    ok(seg && seg.querySelectorAll('.btn').length === 4,
+       'it offers the four phases the table will hold');
+    ok(seg.querySelector('.btn.on').dataset.phase === 'bid',
+       'and says where the game is now  got ' + seg.querySelector('.btn.on').dataset.phase);
+    ok(box.querySelector('input').value === '1', 'with the round it is on');
 
-    const labels = grid.querySelectorAll('button.cround');
-    ok(labels.length === 2 && labels[0].textContent === '1 · 3',
-       'each round is a way to itself  got ' + (labels[0] || {}).textContent);
+    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'tricks').fire('click');
+    box.querySelector('input').value = '2';
     P.socks[0].sent.length = 0;
-    labels[1].fire('click');
+    box.querySelectorAll('.btn.primary')[0].fire('click');
     ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"patch","patch":{"phase":"bid","idx":1}}',
-       'and takes the game there, forced, inventing nothing  got '
-       + JSON.stringify(P.socks[0].sent[0]));
+       === '{"t":"dev","action":"patch","patch":{"phase":"tricks","idx":1}}',
+       'and Put forces that phase and that round  got ' + JSON.stringify(P.socks[0].sent[0]));
 
-    P.pick('#card-phase').querySelectorAll('.btn').find((b) => b.dataset.phase === 'tricks').fire('click');
+    // A round means nothing in the lobby, so none is sent with it.
+    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'lobby').fire('click');
     P.socks[0].sent.length = 0;
-    labels[0].fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"patch","patch":{"phase":"tricks","idx":0}}',
-       'and the segment says where it lands  got ' + JSON.stringify(P.socks[0].sent[0]));
+    box.querySelectorAll('.btn.primary')[0].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"patch","patch":{"phase":"lobby"}}',
+       'the lobby is put to without a round  got ' + JSON.stringify(P.socks[0].sent[0]));
 
-    // A cell edits its own round, whatever round the game is on.
-    const cells = (row, cls) => rows[row].querySelectorAll('input.' + cls);
-    P.socks[0].sent.length = 0;
-    cells(2, 'bidcell')[0].value = '2';
-    cells(2, 'bidcell')[0].fire('change');
-    ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"patch","patch":{"round":{"i":1,"bids":[2,null]}}}',
-       'a bid lands on the round it is in, not the one in play  got '
-       + JSON.stringify(P.socks[0].sent[0]));
-
-    P.socks[0].sent.length = 0;
-    cells(2, 'won')[0].value = '2';
-    cells(2, 'won')[0].fire('change');
-    ok(P.socks[0].sent.length === 0, 'half a won row is not sent, so it cannot be thrown away');
-    ok(cells(2, 'won')[1].classList.contains('part'), 'and the cell it waits on says so');
-    cells(2, 'won')[1].value = '0';
-    cells(2, 'won')[1].fire('change');
-    ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"patch","patch":{"round":{"i":1,"tricks":[2,0]}}}',
-       'and the whole row goes at once  got ' + JSON.stringify(P.socks[0].sent[0]));
+    // While it is aimed, the table moving must not move the form under the hand.
+    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'done').fire('click');
+    P.socks[0].onmessage({ data: devState(false) });
+    ok(seg.querySelector('.btn.on').dataset.phase === 'done',
+       'a state landing mid-aim leaves the form where it was pointed');
   }
 
   {   /* ---- a record the table will not have ----
@@ -2716,6 +2704,44 @@ part('the dev controls, on each kind of server');
     ok(took.length === 1, 'and where it may not, it says so rather than doing nothing');
   }
 
+  {   /* ---- the won column ----
+         The table keeps the tricks only when every seat has a number, so a
+         column sent a cell at a time was thrown away on each cell and took
+         the typing with it. It goes as one now. */
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' },
+                              { id: 's2', name: 'Bob', watch: 'w2' }]);
+    P.socks[0].onmessage({ data: devState(false) });
+
+    const won = P.pick('#prows').querySelectorAll('input.won');
+    ok(won.length === 2, 'one won box a seat  got ' + won.length);
+
+    P.socks[0].sent.length = 0;
+    won[0].value = '2';
+    won[0].fire('change');
+    ok(P.socks[0].sent.length === 0, 'half a column is not sent, so it cannot be thrown away');
+    ok(won[1].classList.contains('part') && !won[0].classList.contains('part'),
+       'and the cell it is waiting on says so');
+
+    won[1].value = '1';
+    won[1].fire('change');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"round":{"i":0,"tricks":[2,1]}}}',
+       'the whole column goes at once  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(!won[0].classList.contains('part') && !won[1].classList.contains('part'),
+       'and nothing is left ringed');
+
+    // A bid is not a column: the table keeps one with gaps, so it still goes
+    // on its own.
+    P.socks[0].sent.length = 0;
+    const bids = P.pick('#prows').querySelectorAll('input').filter(
+      (el) => el.type === 'number' && !el.classList.contains('won'));
+    bids[0].value = '3';
+    bids[0].fire('change');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"round":{"i":0,"bids":[3,null]}}}',
+       'a bid still lands beside the gaps  got ' + JSON.stringify(P.socks[0].sent[0]));
+  }
+
   {   /* ---- stopping a table that plays itself, and walking it on ----
          Only where there are hands the table plays for itself. A table of
          people has nothing to stop, so the controls are not drawn at all. */
@@ -2757,11 +2783,11 @@ part('the dev controls, on each kind of server');
     P.socks[0].onmessage({ data: devState(true) });
 
     ok(P.pick('#tables-tools').hidden === false, 'a dev server shows the tables it will hand over');
+    ok(P.pick('#scrub-tools').hidden === false, 'and the scrubber');
     ok(P.pick('#shots-dev').hidden === false, 'and the one-shots');
-    ok(P.pick('#btn-fillto').hidden === false, 'and offers to fill the card');
-    ok(P.pick('#cardgrid').querySelectorAll('.crow').length === 4,
-       'the card is a head, both rounds and the total  got '
-       + P.pick('#cardgrid').querySelectorAll('.crow').length);
+    ok(P.pick('#repair').hidden === true, 'and puts the repair form away, the scrubber being the better way');
+    ok(P.pick('#scrub').children.length === 4, 'the card is the lobby, both rounds and the finish  got '
+       + P.pick('#scrub').children.length);
     ok(P.pick('#ph-photo').textContent === 'photo', 'and the photo column is offered');
 
     // And on a dev server a stopped table can be walked on a move at a time.
