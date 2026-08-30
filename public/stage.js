@@ -324,13 +324,11 @@ const Stage = (function () {
     return el;
   }
 
-  /* The round line across the top of the stage -- the caption, a status line
-     under it, and the trump line, which drops most of the way down the empty
-     band between the line and the top of the ring so it belongs to neither.
-     The deal builds it, and the felt builds it when there was no deal; a
-     line placed two ways would jump at the handover, so it is placed here.
-     `ringTop` is the top card's top edge, from the middle of the stage.
-     Returns the parts, for the deal to animate. */
+  /* The round line across the top of the stage -- the caption and a status
+     line under it. The deal builds it, and the felt builds it when there was
+     no deal; a line placed two ways would jump at the handover, so it is
+     placed here. `ringTop` is the top card's top edge, from the middle of the
+     stage. Returns the parts, for the deal to animate. */
   function head(stage, o) {
     const box = document.createElement('div');
     box.className = 'deal-head';
@@ -339,38 +337,34 @@ const Stage = (function () {
     cap.textContent = `Round ${o.round} · ${o.cards} card${o.cards === 1 ? '' : 's'} · ${o.dealer} deals`;
     const status = document.createElement('div');
     status.className = 'deal-status';
-    const tag = document.createElement('div');
-    tag.className = 'deal-tag';
-    tag.textContent = o.tag || '';
-    box.append(cap, status, tag);
+    box.append(cap, status);
     stage.appendChild(box);
-    dropTag(box, o.ringTop, o.reserve);
-    return { box, cap, status, tag };
+    band(box, o.ringTop);
+    return { box, cap, status };
   }
 
-  /* The trump line drops most of the way down the empty band between the round
-     line and the top of the ring, so it belongs to neither. `reserve` is room
-     kept below it: the table parks the card the deck turned there, and the
-     line has to leave space for it. Answers where the line now ends, so the
-     caller can hang something off it. Safe to ask again. */
-  function dropTag(box, ringTop, reserve) {
-    const tag = box && box.querySelector('.deal-tag');
-    if (!tag) return 0;
-    tag.style.marginTop = '0px';
-    // Measured from the free space below the line, so a screen with a narrow
-    // band moves it a little and never pushes it into the cards. offsetTop,
-    // not a client rect: the line may already be carrying its entry
-    // animation, and a transform would skew what a rect reports.
-    const foot = box.offsetTop + tag.offsetTop + tag.getBoundingClientRect().height;
-    const drop = Math.max(6, Math.round(Math.max(0, ringTop - (reserve || 0) - foot) * 0.45));
-    tag.style.marginTop = `${drop}px`;
-    return foot + drop;
+  /* Where a toast comes up while a scene is on: the empty band between the
+     round line and the top of the ring, which belongs to neither. The page
+     chrome cannot work this out for itself -- only the stage knows where the
+     ring begins -- so the head says, and the stylesheet reads it. Kept clear
+     of the cards: a toast that reaches the ring covers the top player's pile,
+     which is what put it here. Safe to ask again. */
+  function band(box, ringTop) {
+    // offsetTop, not a client rect: the line may already be carrying its
+    // entry animation, and a transform would skew what a rect reports.
+    const foot = box.offsetTop + box.getBoundingClientRect().height;
+    const drop = Math.max(6, Math.round(Math.max(0, (ringTop || 0) - foot) * 0.30));
+    const top = Math.round(Math.min(foot + drop, Math.max(foot + 6, (ringTop || 0) - 64)));
+    document.body.classList.add('stage-head');
+    document.body.style.setProperty('--stage-band', `${top}px`);
+    return top;
   }
 
-  // What the trump line says of a suit, or of no trumps at all.
-  function trumpLine(k) {
-    const su = Game.SUITS.find((x) => x.k === k && x.k !== 'NT');
-    return su ? `${su.name} are trumps` : 'No trumps';
+  /* The scene is down: a toast comes up under the top bar again, where it
+     does on a page with no table on it. */
+  function bandOff() {
+    document.body.classList.remove('stage-head');
+    document.body.style.removeProperty('--stage-band');
   }
 
   // The overlay and what stands on it: the stage the cards are placed on and
@@ -387,6 +381,6 @@ const Stage = (function () {
   function close(kind) { if (S.live && (!kind || S.live.kind === kind)) S.live.finish(); }
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
-  return { S, faceOf, cardEl, tf, rad, fade, parts, head, dropTag, trumpLine, close, isOpen,
+  return { S, faceOf, cardEl, tf, rad, fade, parts, head, band, bandOff, close, isOpen,
            ring, fan, pile, seatScale, cardSize, nameAt, bidRow, settle, peek, stamp };
 })();

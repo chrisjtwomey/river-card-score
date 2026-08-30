@@ -42,6 +42,7 @@ const Deal = (function () {
       const { overlay, stage } = parts();
       S.live = null;
       overlay.hidden = true;
+      Stage.bandOff();
       if (stage) stage.innerHTML = '';
     });
   }
@@ -337,14 +338,14 @@ const Deal = (function () {
            { transform: tf(0, R.cy, 0, 0, 1.15) }], turn)) - 1]);
       }
 
-      /* ---- the round line across the top, and the trump under it ----
+      /* ---- the round line across the top ----
          Where it sits is the stage's to say: the felt draws the same line
-         when there was no deal, and the handover must not jump. */
-      const { cap, status, tag: tagEl } = Stage.head(stage, {
+         when there was no deal, and the handover must not jump. What the
+         deck turned is not said in words -- the card is turned over in the
+         middle of the table, and the band under this line is left clear for
+         what the table has to say. */
+      const { cap, status } = Stage.head(stage, {
         round: opts.round || 1, cards, dealer: names[dealer],
-        tag: virtual
-          ? (upFace ? Stage.trumpLine(Game.suitOf(opts.upcard)) : 'No trumps')
-          : (trumpK ? Stage.trumpLine(trumpK) : ''),
         ringTop: H / 2 + R.cy - ry - 56,       // the top card's top edge
       });
       if (!shuffleOnly) anims.push(cap.animate(
@@ -384,16 +385,8 @@ const Deal = (function () {
           { duration: 280, delay: at, easing: 'ease-out', fill: 'forwards' })));
       }
 
-      if (!shuffleOnly) (anims[anims.push(tagEl.animate(
-        [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
-        { duration: 260, delay: heroAt + T.flip - 80, easing: 'ease-out', fill: 'forwards' }
-      )) - 1]);
-
       // What the trump pick paints, whenever it lands or changes.
-      const trumpSet = virtual ? null : (k) => {
-        setHeroFace(k);
-        tagEl.textContent = Stage.trumpLine(k);
-      };
+      const trumpSet = virtual ? null : (k) => { setHeroFace(k); };
 
       // The line under the round says whose bid it is. Not on a table the
       // felt keeps: the felt has a line of its own. Nor over a shuffle.
@@ -417,7 +410,7 @@ const Deal = (function () {
         // A scene that opens while this one fades out owns the overlay now, so
         // do not pull the stage out from under it.
         out.onfinish = () => {
-          if (!S.live) { overlay.hidden = true; stage.innerHTML = ''; }
+          if (!S.live) { overlay.hidden = true; Stage.bandOff(); stage.innerHTML = ''; }
           resolve();
         };
       }

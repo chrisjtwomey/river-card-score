@@ -328,7 +328,7 @@ const Finale = (function () {
         // A scene that opens while this one fades out owns the overlay now, so
         // do not pull the stage out from under it.
         out.onfinish = () => {
-          if (!S.live) { overlay.hidden = true; stage.innerHTML = ''; }
+          if (!S.live) { overlay.hidden = true; Stage.bandOff(); stage.innerHTML = ''; }
           resolve();
         };
       }

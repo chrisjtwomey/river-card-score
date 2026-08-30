@@ -22,7 +22,13 @@ function makeDom(W, H) {
     constructor(tag) {
       this.tagName = String(tag).toUpperCase();
       this.children = []; this.parentNode = null;
-      this.style = { setProperty() {}, removeProperty() {} };
+      // A custom property is set and read back the way a browser does, so a
+      // check can ask what the page told the stylesheet.
+      this.style = {
+        setProperty(k, v) { this[k] = String(v); },
+        removeProperty(k) { delete this[k]; },
+        getPropertyValue(k) { return this[k] === undefined ? '' : this[k]; },
+      };
       this._cls = new Set(); this._text = '';
       this.hidden = false; this.dataset = {};
       this.offsetTop = 0;
@@ -2983,6 +2989,8 @@ part('tapping the deal away');
     ok(out && out.el === overlay && out.kf[1] && out.kf[1].opacity === 0, 'the last thing asked for is the fade out');
     if (out && out.onfinish) out.onfinish();
     ok(overlay.hidden, 'and the overlay is gone after it');
+    ok(!L.dom.document.body.classList.contains('stage-head'),
+       'and the band a toast came up in goes with it');
     p.then(() => ok(true, 'the scene\'s promise settles'));
   }
 
@@ -2998,6 +3006,19 @@ part('tapping the deal away');
     // The deal is the dealer's on either deck, and the same words say so.
     ok(overlay.querySelector('.deal-doing').textContent === 'Ann is dealing…',
        'the line says whose deal it is  got ' + overlay.querySelector('.deal-doing').textContent);
+    /* What the deck turned is not said in words: the card is turned over in
+       the middle of the table, and the band under the round line is left for
+       what the table has to say. */
+    ok(!overlay.querySelector('.deal-tag'), 'nothing says the trump suit in words');
+    const body = L.dom.document.body;
+    ok(body.classList.contains('stage-head'), 'the page is marked while a round line is up');
+    const bandTop = Number(String(body.style.getPropertyValue('--stage-band')).replace('px', ''));
+    const headBox = overlay.querySelector('.deal-head');
+    const headFoot = headBox.offsetTop + headBox.getBoundingClientRect().height;
+    const ringTop = 720 / 2 + L.Stage.ring(3, 0, 1280, 720).cy - L.Stage.ring(3, 0, 1280, 720).ry - 56;
+    ok(bandTop >= headFoot, 'a toast comes up under the round line  got ' + bandTop + ' against ' + headFoot);
+    ok(bandTop + 64 <= ringTop || bandTop <= headFoot + 6,
+       'and clear of the top of the ring  got ' + bandTop + ' against ' + ringTop);
     ok(stage().querySelectorAll('.dstamp').length === 0, 'nothing is stamped onto a pile that has not landed');
     ok(overlay.querySelectorAll('.dname').map((el) => el.textContent).indexOf('Ben · 1') >= 0, 'but the name has the bid');
     const timers = [];

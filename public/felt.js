@@ -382,14 +382,15 @@ const Felt = (function () {
       box = Stage.head(stage, { round: ST.idx + 1, cards: r.cards, dealer: ST.seats[r.dealer].name,
                                 ringTop: g.H / 2 + g.R.cy - g.R.ry - 56 }).box;
     }
-    box.querySelectorAll('.deal-cap,.deal-status,.deal-tag').forEach((el) => { el.style.opacity = '1'; });
+    // Asked again every paint: the band a toast comes up in follows the ring,
+    // and the ring moves when the screen is turned.
+    Stage.band(box, geom().H / 2 + geom().R.cy - geom().R.ry - 56);
+    box.querySelectorAll('.deal-cap,.deal-status').forEach((el) => { el.style.opacity = '1'; });
     const cap = box.querySelector('.deal-cap');
     if (cap) {
       cap.textContent = `Round ${ST.idx + 1} · ${r.cards} card${r.cards === 1 ? '' : 's'} · `
         + `${ST.seats[r.dealer].name} deals`;
     }
-    const tag = box.querySelector('.deal-tag');
-    if (tag) tag.textContent = Stage.trumpLine(r.trump);
   }
 
   /* ---------------- keeping it right ---------------- */
@@ -1306,6 +1307,7 @@ const Felt = (function () {
     if (pausing) { pausing = false; endBeat(); }
     const overlay = (parts(false) || {}).overlay;
     if (overlay) { overlay.hidden = true; overlay.classList.remove('dragging', 'armed'); }
+    Stage.bandOff();
     document.body.classList.remove('felt-up');
     if (onView) onView(false);
   }

@@ -411,6 +411,9 @@ body.host .seatcount .left{font-size:16px}
 .trump-bar.turned .trumps{display:none}
 
 /* ---------- what just happened ---------- */
+/* Under the top bar on a page with no table up; while a scene is on, in the
+   empty band the stage measures between the round line and the top of the
+   ring -- clear of the piles, which a toast used to come down over. */
 .toaster{
   position:fixed;left:0;right:0;top:calc(var(--topbar-h, 62px) + 8px);z-index:70;
   display:flex;flex-direction:column;align-items:center;gap:6px;
@@ -426,11 +429,7 @@ body.host .seatcount .left{font-size:16px}
 .toast.err{background:var(--red);color:#fff}
 body.host .toast{font-size:24px;padding:12px 22px}
 body.host .toast .note{font-size:19px}
-/* With the felt up the round line is at the top, and a toast landed on it.
-   They come up in the band under it instead -- between the round line and
-   the piles, where the vote box also sits -- and never over the hand at the
-   foot. */
-body.felt-up .toaster{top:calc(clamp(48px, 8vh, 78px) + 84px + env(safe-area-inset-top))}
+body.stage-head .toaster{top:var(--stage-band, calc(clamp(48px, 8vh, 78px) + 84px + env(safe-area-inset-top)))}
 
 /* ---------- deal animation ---------- */
 .deal{
@@ -517,13 +516,6 @@ body.felt-up .toaster{top:calc(clamp(48px, 8vh, 78px) + 84px + env(safe-area-ins
   font-size:clamp(13px, 1.6vw, 18px);font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.9);
   text-shadow:0 2px 12px rgba(0,0,0,.9);opacity:0;pointer-events:none;
-}
-/* what the turned card means: a line in the head, under the round line */
-.deal-tag{
-  min-height:1.2em;
-  font-size:clamp(18px, 2.8vw, 28px);font-weight:800;letter-spacing:.06em;
-  text-transform:uppercase;white-space:nowrap;color:#fff;
-  text-shadow:0 2px 12px rgba(0,0,0,.9);opacity:0;
 }
 /* your own cards, dealt face up into a fan you can read */
 .dcard.mine .face{box-shadow:0 8px 22px rgba(0,0,0,.55)}
