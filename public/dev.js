@@ -17,6 +17,8 @@ let DEVSRV = false;              // this server takes the controls that invent d
 let polling = false;             // the list of tables, on a dev server only
 let onTable = false;             // this socket got onto a table
 let stateBusy = false;           // a record is out, and its answer is the panel's
+let stateLoaded = false;         // a record is in the box, read at some moment
+let stateReading = false;        // and one was asked for, so a change is not news
 
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
    lands on the game it was pressed from. The page writes the same hash for
@@ -61,21 +63,28 @@ function connect() {
       onTable = true;
       err('');
       // The record landed, so read back what the table became.
-      if (stateBusy) { stateBusy = false; act('state'); }
+      if (stateBusy) { stateBusy = false; askState(); }
     } else if (m.t === 'tables') {
       renderTables(m.tables || []);
     } else if (m.t === 'stateRaw') {
       // The record to edit. Never over what is being typed: Reload asks again.
+      stateReading = false;
       const box = $('#state-text');
       if (box && document.activeElement !== box) {
         box.value = JSON.stringify(m.record, null, 1);
+        stateLoaded = true;
         stateErr('');
+        stateStale(false);          // this text is the table, as of now
       }
     } else if (m.t === 'seat') {
       // The seat asked for: put it in the pane, which then acts as the player.
       const one = seatOf(m.id);
       if (one) { one.token = m.token; seatKey = ''; renderFrames(); }
     } else if (m.t === 'state') {
+      /* The table moved while a record sits in the box. Applying it now would
+         put that move back the way it was, so say so rather than let it
+         happen quietly. A read already asked for is not the table moving. */
+      if (stateLoaded && !stateReading && !$('#state-panel').hidden) stateStale(true);
       ST = m; render();
     } else if (m.t === 'error') {
       /* The table it was on would not open: a server that restarted, a game
@@ -110,6 +119,10 @@ const act = (action, extra) => send(Object.assign({ t: 'dev', action }, extra ||
 const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !msg; };
 // The panel's own line, beside the button that earned it.
 const stateErr = (msg) => { $('#state-err').textContent = msg; $('#state-err').hidden = !msg; };
+const stateStale = (on) => { if ($('#state-stale')) $('#state-stale').hidden = !on; };
+// Reading is asked for in one place, so a change arriving in the meantime is
+// the answer coming, not the table moving under the text.
+const askState = () => { stateReading = true; act('state'); };
 
 /* ---------- previews ---------- */
 
@@ -574,17 +587,18 @@ document.addEventListener('DOMContentLoaded', () => {
     panel.hidden = !panel.hidden;
     $('#btn-state').textContent = panel.hidden ? 'State ▾' : 'State ▴';
     $('#btn-state').setAttribute('aria-expanded', String(!panel.hidden));
-    if (!panel.hidden) act('state');
+    if (!panel.hidden) askState();
   });
   $('#btn-state-reload').addEventListener('click', () => {
     $('#state-text').blur();
-    act('state');
+    askState();
   });
   $('#btn-state-apply').addEventListener('click', () => {
     let rec;
     try { rec = JSON.parse($('#state-text').value); }
     catch (e) { return stateErr(`Not JSON: ${e.message}`); }
     stateErr('');
+    stateStale(false);              // it is the text's turn now, whatever moved
     $('#state-text').blur();
     /* Nothing is read back here. The table answers an apply either way, and a
        read sent now would land on a refusal and put the unchanged table over

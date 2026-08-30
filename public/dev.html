@@ -76,6 +76,7 @@
     border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);padding:9px}
   .statebox .btnrow{display:flex;gap:6px;align-items:center}
   .statebox .err{margin:0}
+  .statebox .stale{margin:0;color:var(--gold);font-weight:650}
   body.livemode .topbar{background:linear-gradient(90deg,#5c1a12,#8d2a1c)}
 
   /* The screens, full width under the band. */
@@ -184,7 +185,8 @@
       <button class="btn primary" id="btn-state-apply" type="button">Apply</button>
       <button class="btn ghost" id="btn-state-reload" type="button">Reload</button>
       <p class="err" id="state-err" hidden></p>
-      <p class="hint">The table becomes what the text says. Its code and the photos stay as they are.</p>
+      <p class="hint stale" id="state-stale" hidden>The table has moved since this was read — Reload before you Apply, or the move is undone.</p>
+      <p class="hint">The table becomes what the text says. Its code, its keys and the photos stay as they are.</p>
     </div>
   </div>
 

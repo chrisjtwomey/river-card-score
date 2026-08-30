@@ -2603,6 +2603,31 @@ part('the front page, and the screen');
        'a record the table took is read back once it has landed');
   }
 
+  {   /* ---- the table moving under the text ----
+         An Apply puts back everything the record does not carry, so a table
+         that has moved since the read has to be said, not found out. */
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }]);
+    P.pick('#state-text').blur = () => {};
+    P.socks[0].onmessage({ data: devState(false) });
+    P.pick('#btn-state').fire('click');
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'stateRaw', record: { code: 'AAAA', seats: [] } }) });
+    ok(P.pick('#state-stale').hidden === true, 'a record just read is not stale');
+
+    P.socks[0].onmessage({ data: devState(false) });
+    ok(P.pick('#state-stale').hidden === false,
+       'the table moving under the text says so');
+
+    P.pick('#btn-state-reload').fire('click');
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'stateRaw', record: { code: 'AAAA', seats: [] } }) });
+    ok(P.pick('#state-stale').hidden === true, 'and reading it afresh clears it');
+
+    // The answer to a read is not the table moving.
+    P.pick('#btn-state-reload').fire('click');
+    P.socks[0].onmessage({ data: devState(false) });
+    ok(P.pick('#state-stale').hidden === true,
+       'a state arriving with a read outstanding is the answer coming, not news');
+  }
+
   {   // a table of stand-ins on a dev server: everything, as before
     const P = devPage(true, [{ id: 's1', name: 'Ann', token: 't1' },
                              { id: 's2', name: 'Bob', token: 't2' }]);
