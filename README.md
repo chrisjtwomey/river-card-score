@@ -873,13 +873,13 @@ On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙
 
 Both doors are one message. A table's host token opens it on any server — it is authority the TV screen already holds — and with `DEV=1` the code alone will do, because that server hands its tables to the page anyway. The page writes the table it is on into its own address, so a reload comes back to it, and a socket that drops and returns re-opens it rather than making another. If the table has gone — the server restarted, the game ended — the page lets it go and makes a table of stand-ins, which is what a page with no table does.
 
-A real table gets nothing that invents data — jump to, fill scorecard and randomise are hidden, and the server refuses them even with `DEV=1`. The state editor that put a real game right is being redone, so for now the page shows a real table rather than changes it. The top bar turns red, and the page says the game is real. **Tables** stays, so the way off a real game is where the way onto it was.
+What the page may do follows the **server**, not the table. On a server started with `DEV=1` a real table takes every control a table of stand-ins does — jump to, fill scorecard, randomise, all of it. The top bar turns red and the page says real players may be at the table, because every click lands on their game; nothing is taken away. On a normal server the host token opens the state forcer alone, and everything that invents data is refused.
 
 The phones are there, one pane a player, so you can see what each of them sees. On a real table they are **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
 
 The server decides this, not the page:
 
-- Anything that makes or fills a table of stand-ins needs `DEV=1` **and** a table the dev page itself made.
+- Anything that invents data — a table of stand-ins, filled bids, a played-out card — needs `DEV=1`. On a dev server every table takes it; on any other, no table does.
 - The list of tables needs `DEV=1`. A table's four characters are its only door, and a listing handed to a page that has not proved anything would open every table at once.
 - Opening the page on a table needs that table's host token, or `DEV=1`. Nothing else: the page cannot ask for a seat.
 - Forcing a state needs only the host or the table host of that table, which is authority they already have.

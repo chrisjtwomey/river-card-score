@@ -1,8 +1,8 @@
 'use strict';
 /* Dev controls. Opens on any table this server is running, or makes one of
-   stand-in players, and shows every screen at once. A table of stand-ins may
-   be forced into any state; a real game may only be looked at. The server
-   only answers a table of stand-ins with DEV=1. */
+   stand-in players, and shows every screen at once. What it may do follows
+   the server: with DEV=1 every table takes every control; a normal server
+   answers the state forcer alone, over the table's own host token. */
 
 const $ = (s) => document.querySelector(s);
 
@@ -175,7 +175,7 @@ function renderTables(list) {
     box.appendChild(b);
   });
   $('#tables-hint').textContent = list.length
-    ? 'Press one to show its screens here. A real game can be watched, not changed.'
+    ? 'Press one to take this page onto it.'
     : 'No table is running on this server yet.';
 }
 
@@ -207,11 +207,10 @@ function render() {
 
 /* ---------- wiring ---------- */
 
-// A real table gets the state editor only. Everything that invents data needs
-// a table of stand-ins.
+// A real table takes the same controls; the page only says to tread with
+// care, because the clicks land on somebody's game.
 function applyMode() {
   document.body.classList.toggle('livemode', LIVE);
-  document.querySelectorAll('[data-stand]').forEach((el) => { el.hidden = LIVE; });
   $('#live-note').hidden = !LIVE;
   if (LIVE) {
     $('#code').textContent = CODE;

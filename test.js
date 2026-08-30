@@ -440,7 +440,7 @@ async function bidRound(P) {
     ok(h.hello.seats.every((x) => !x.token), 'and gets no seat tokens back');
 
     h.send({ t: 'dev', action: 'randomise' });
-    await okBy(() => /stand-ins/.test(h.last()), 'but nothing on the page may invent data for it');
+    await okBy(() => /DEV=1/.test(h.last()), 'but on a normal server nothing may invent data for it');
     h.send({ t: 'dev', action: 'endGame' }); await h.rt();
     ok(h.state.phase === 'bid', 'and it cannot be played out with made-up rounds');
 
@@ -633,14 +633,23 @@ async function bidRound(P) {
       at.forEach((c) => c.ws.close());
     }
 
-    // a real table on a dev server is still not a table of stand-ins
+    // capability follows the server: with DEV=1 a real table gets everything
     const real = client('devreal', `ws://127.0.0.1:${port3}/ws`); await real.ready;
     real.send({ t: 'create' }); await until(() => real.hello);
     real.send({ t: 'dev', action: 'randomise' });
-    await okBy(() => /stand-ins/.test(real.last()),
-       'even with DEV=1, a real table cannot have data invented on it');
+    await okBy(() => /at least 2 players/.test(real.last()),
+       'a table with nobody at it cannot have rounds played');
+    for (const nm of ['Cai', 'Dee']) {
+      const c = client(nm, `ws://127.0.0.1:${port3}/ws`); await c.ready;
+      c.send({ t: 'join', code: real.hello.code, name: nm });
+      await until(() => c.hello && c.hello.seatId);
+    }
+    real.send({ t: 'dev', action: 'randomise' });
+    await okBy(() => real.state && real.state.rounds.length > 0,
+       'with DEV=1 a real table takes the same controls a table of stand-ins does');
+    ok(real.hello.stand === false, 'while still saying it is a real table');
     real.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
-    await okBy(() => real.state.phase === 'done', 'but its state can still be forced');
+    await okBy(() => real.state.phase === 'done', 'and its state can be forced');
 
     // ---- what this server is running, and a way onto any of it ----
     real.send({ t: 'dev', action: 'tables' });
@@ -651,7 +660,7 @@ async function bidRound(P) {
     hop.send({ t: 'dev', action: 'open', code: real.hello.code });
     await okBy(() => hop.hello && hop.hello.code === real.hello.code,
        'and with DEV=1 the code alone opens the dev page on any of them');
-    ok(hop.hello.stand === false, 'which says a real game, so nothing may invent data for it');
+    ok(hop.hello.stand === false, 'which says real players may be behind it');
     hop.send({ t: 'dev', action: 'open', code: 'ZZZZ' });
     await okBy(() => /no table with that code/i.test(hop.last()), 'a code with no table is refused');
     srv3.kill();
