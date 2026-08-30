@@ -866,7 +866,7 @@ The controls are one band over the screens, two rows:
 - **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, **randomise** (shuffles the rules and plays a random number of rounds), and stand-in photos on and off.
 
 - **Players** — a panel under the band, one row a seat: name, who hosts, who deals, bot, left, this round's bid and tricks, a photo on or off. Everything lands as it is changed; the tricks are kept once every seat has a number. It absorbs the old **Round** grid and does what **Force** did for the dealer and the host.
-- **State** — the whole table as JSON, the same record it is saved to disk as: rounds, seats, rules, hands, everything. Edit it and press Apply, and the table becomes what the text says; Reload throws the edits away and reads the table afresh. The table's code and the pictures stay as they are, whatever the text says. This is the raw way to any state the other controls cannot reach.
+- **State** — the whole table as JSON, the same record it is saved to disk as: rounds, seats, rules, hands, everything. Edit it and press Apply, and the table becomes what the text says; Reload throws the edits away and reads the table afresh. The table's code, its keys and the pictures stay as they are, whatever the text says. This is the raw way to any state the other controls cannot reach, and it works on any server: it is how a real game nothing else reaches is put right.
 
 **Rules** is still to come back — the rules form, editable after the start. The server answers its action already; only the control is missing.
 
@@ -878,7 +878,7 @@ On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙
 
 Both doors are one message. A table's host token opens it on any server — it is authority the TV screen already holds — and with `DEV=1` the code alone will do, because that server hands its tables to the page anyway. The page writes the table it is on into its own address, so a reload comes back to it, and a socket that drops and returns re-opens it rather than making another. If the table has gone — the server restarted, the game ended — the page lets it go and makes a table of stand-ins, which is what a page with no table does.
 
-What the page may do follows the **server**, not the table. On a server started with `DEV=1` a real table takes every control a table of stand-ins does — jump to, fill scorecard, randomise, all of it. The top bar turns red and the page says real players may be at the table, because every click lands on their game; nothing is taken away. On a normal server the host token opens the state forcer alone, and everything that invents data is refused.
+What the page may do follows the **server**, not the table. On a server started with `DEV=1` a real table takes every control a table of stand-ins does — jump to, fill scorecard, randomise, all of it. The top bar turns red and the page says real players may be at the table, because every click lands on their game; nothing is taken away. On a normal server the host token opens the two controls that put a game right and invent nothing: the forced values of the **Players** panel, and the **State** record itself. Everything that makes data up is refused.
 
 The phones are there, one pane a player, so you can see what each of them sees. On a real table they open as **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
 
@@ -889,8 +889,9 @@ The server decides this, not the page:
 - Anything that invents data — a table of stand-ins, filled bids, a played-out card — needs `DEV=1`. On a dev server every table takes it; on any other, no table does.
 - The list of tables needs `DEV=1`. A table's four characters are its only door, and a listing handed to a page that has not proved anything would open every table at once.
 - Opening the page on a table needs that table's host token, or `DEV=1`. Nothing else: the page cannot ask for a seat.
-- Forcing a state needs only the host or the table host of that table, which is authority they already have.
-- A real table never hands its seat tokens out. It hands out a watch token a seat instead, which opens that screen and can do nothing else.
+- Forcing a state needs only the host or the table host of that table, which is authority they already have. So does reading and rewriting the record whole: it is the same authority, made complete.
+- A real table never hands its seat tokens out. It hands out a watch token a seat instead, which opens that screen and can do nothing else. The record read off a real table carries neither — nor the cards in anybody's hand, which the screen is never shown either.
+- The keys are the table's own, never the text's. A pasted record cannot change the host token, cannot hand anybody a seat, and cannot leave a table nobody can open: whatever the text says, each seat keeps the key its phone holds.
 - A watching socket is refused every message but `ping`, and is left out of who counts as online.
 - Forced bids and tricks are checked for shape: one whole number a seat, no bigger than the hand. Junk is dropped rather than stored.
 

@@ -455,6 +455,39 @@ async function bidRound(P) {
     h.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, tricks: [5, 0] } } });
     await okBy(() => JSON.stringify(h.state.rounds[0].tricks) === '[1,0]', 'and a count above the hand size is clamped');
 
+    /* ---- the record itself, on a normal server ----
+       The whole table as text is how a game nothing else reaches is put
+       right, so the host token gets it here too. What it must not carry is
+       the way into anybody's seat, and the keys it comes back without must
+       still be the table's own after a paste. */
+    h.send({ t: 'dev', action: 'state' });
+    await okBy(() => h.raw && h.raw.code === code && Array.isArray(h.raw.rounds),
+       'the host of a real table can read the record whole');
+    ok(h.raw.seats.length === 2 && h.raw.seats.every((x) => !x.token && !x.watch),
+       'but the record hands out no seat keys');
+
+    const rec = JSON.parse(JSON.stringify(h.raw));
+    rec.rounds[0].bids = [1, 1];
+    rec.hostToken = 'EVIL';                       // the keys are the table's, not the text's
+    rec.seats[0].token = 'EVIL-SEAT';
+    h.send({ t: 'dev', action: 'state', record: rec });
+    await okBy(() => JSON.stringify(h.state.rounds[0].bids) === '[1,1]',
+       'and an edited record becomes the table');
+
+    const after = client('after'); await after.ready;
+    after.send({ t: 'dev', action: 'open', code, token: h.hello.token });
+    await okBy(() => after.hello && after.hello.code === code,
+       'the host token still opens the table a pasted record tried to rekey');
+    const seatBack = client('seatback'); await seatBack.ready;
+    seatBack.send({ t: 'resume', code, token: p1.hello.token });
+    await okBy(() => seatBack.state && seatBack.state.code === code,
+       'and a seat keeps the key its phone holds');
+
+    h.send({ t: 'dev', action: 'state', record: [1, 2] });
+    await okBy(() => /not a table/.test(h.last()), 'junk in the editor is refused whole');
+    seatBack.ws.close();
+    after.ws.close();
+
     // ---- the seats come back as watching windows, not as seats ----
     const seats = h.hello.seats;
     ok(seats.length === 2 && seats.every((x) => x.watch && !x.token),
