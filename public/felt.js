@@ -1285,14 +1285,15 @@ const Felt = (function () {
        says nothing about the hand that was played. A stand-in for a trick this
        phone never saw taken has no face to show, so it stays face down. */
     const legs = [];
-    (last.won || []).forEach((stack, q) => (stack || []).slice().reverse().forEach((el, k) => {
+    (last.won || []).forEach((stack, q) => (stack || []).forEach((el, k) => {
       if (!el || !el.parentNode) return;
+      // `k` is where the card lies in its pile, which is where it lifts from.
       legs.push({ el, q, k, turn: ((((seatStep(g, q) === 0 ? 0 : n - seatStep(g, q)) % n) + n) % n),
                   face: el.querySelector('.front .big') ? 0 : 180 });
     }));
     // Anticlockwise round the table from the reader's own seat, and the top of
     // each pile first.
-    legs.sort((x, y) => (x.turn - y.turn) || (x.k - y.k));
+    legs.sort((x, y) => (x.turn - y.turn) || (y.k - x.k));
 
     /* The names and the outlines under the last hand belong to a round that is
        over, so they go -- but not at the moment the first card lifts. A seat
@@ -1312,14 +1313,20 @@ const Felt = (function () {
       ? Math.max(LEAD_MIN, Math.min(LEAD_MAX, Math.round((UNWIND - ARC) / (legs.length - 1))))
       : 0;
     const k = key;
-    legs.forEach(({ el, q, face }, i) => {
+    legs.forEach(({ el, q, k: kIdx, face }, i) => {
       el.style.zIndex = String(3 + i);
       el.classList.remove('slow');
       const rest = deckAt(g, i, face === 180);
-      el.style.transform = rest;                 // where it is, whatever the arc does
-      if (!el.animate) return;
-      el.animate(arcIn(g, q, face, rest),
-        { duration: ARC, delay: i * lead, easing: 'cubic-bezier(.35,.05,.3,1)', fill: 'both' });
+      if (!el.animate) { el.style.transform = rest; return; }
+      /* Forwards, not both: a card holds where the round left it -- on its own
+         pile, face down and small -- until its turn comes. Filling backwards
+         would put every card into its lifted pose the moment the first one
+         set off, so the whole table would turn over at once and then a few
+         cards would trickle in out of poses they had already taken. */
+      el.animate(arcIn(g, q, kIdx, face, rest),
+        { duration: ARC, delay: i * lead, easing: 'cubic-bezier(.35,.05,.3,1)', fill: 'forwards' });
+      // And it is where the table says it is once it has got there.
+      setTimeout(() => { if (key === k) el.style.transform = rest; }, i * lead + ARC);
     });
 
     // The last one is in. The turned card goes face down on the pile they have
@@ -1341,11 +1348,13 @@ const Felt = (function () {
      size of a card as it turns face up. Drawn as a run of places along the
      spiral rather than a hop from seat to seat, so what it reads as is one
      movement and not a series of them. */
-  function arcIn(g, q, face, rest) {
+  function arcIn(g, q, kIdx, face, rest) {
     const s = g.R.at(q), z = Stage.seatScale(g.n);
     const a0 = Math.atan2((s.y - g.R.cy) / (g.R.ry || 1), s.x / (g.R.rx || 1));
-    const to = Stage.cardSize ? (g.ch / heroH(g)) : 1;
-    const kf = [];
+    const to = g.ch / heroH(g);
+    // Off the pile it is lying on, so the lift is part of the movement and not
+    // a jump into it.
+    const kf = [{ transform: wonAt(g, q, kIdx) }];
     for (let i = 0; i <= ARC_STEPS; i++) {
       const u = i / ARC_STEPS;
       // Anticlockwise: the ring runs clockwise as the angle grows, so this

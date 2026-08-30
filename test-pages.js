@@ -1101,6 +1101,7 @@ function scored(motion) {
   };
   // What the cards are asked to do, rather than where they are afterwards: the
   // way in is one movement now, and a movement is not read off a style.
+  const onPile = tricks().map((el) => el.style.transform);
   const arcs = [];
   L.dom.El.prototype.animate = function (kf, opts) {
     const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {},
@@ -1137,13 +1138,21 @@ function scored(motion) {
   ok(runs.every((a) => a.opts.duration === runs[0].opts.duration),
      'each taking as long as the last');
 
-  /* Off the pile it was tucked into, out where its own seat sits: a card that
-     starts on the ring the trick was played on has crossed most of the table
-     before anybody has seen it leave. */
-  const home = runs.map((a) => spotOfKf(a.kf[0]));
-  ok(home.every((h) => h && Math.abs(Math.hypot(h.x / R.rx, (h.y - R.cy) / R.ry) - 1) < 0.02),
-     'each one starts out where its seat is  got '
-     + home.map((h) => Math.round(Math.hypot(h.x / R.rx, (h.y - R.cy) / R.ry) * 100) / 100).join(','));
+  /* The movement begins on the pile the card is lying on, so the lift is part
+     of it: an arc that begins anywhere else is a jump into position first. */
+  ok(runs.every((a) => a.kf[0].transform === onPile[stack.indexOf(a.el)]),
+     'each one starts off the pile it is lying on');
+  // And it lies there until its turn: filling an animation backwards would
+  // stand every card up the moment the first one set off.
+  ok(runs.every((a) => (a.opts.fill || '') === 'forwards'),
+     'it holds its place until then  got ' + runs.map((a) => a.opts.fill).join(','));
+  ok(stack.every((el, i) => el.style.transform === onPile[i]),
+     'so the table is still showing them on their piles');
+  // Out to where the seat is as it lifts, and in to the middle at the end.
+  const lift = runs.map((a) => spotOfKf(a.kf[1]));
+  ok(lift.every((h) => h && Math.abs(Math.hypot(h.x / R.rx, (h.y - R.cy) / R.ry) - 1) < 0.02),
+     'it comes up over its own seat  got '
+     + lift.map((h) => Math.round(Math.hypot(h.x / R.rx, (h.y - R.cy) / R.ry) * 100) / 100).join(','));
   ok(runs.every((a) => {
     const e = spotOfKf(a.kf[a.kf.length - 1]);
     return e && Math.abs(e.x) < 1 && Math.abs(e.y - R.cy) < 8;
@@ -1154,10 +1163,11 @@ function scored(motion) {
   const turned = runs.map((a) => {
     // Only over the outer part of the arc: a card closing on the middle has
     // barely any distance left to take an angle from, and the answer there is
-    // noise rather than a direction.
+    // noise rather than a direction. The pile it lifts off is skipped too --
+    // it sits beside the seat, not on the ring.
     let d = 0;
     const upto = Math.ceil((a.kf.length - 1) / 3);
-    for (let i = 1; i <= upto; i++) {
+    for (let i = 2; i <= upto; i++) {
       let step = ang(a.kf[i]) - ang(a.kf[i - 1]);
       while (step > Math.PI) step -= 2 * Math.PI;
       while (step < -Math.PI) step += 2 * Math.PI;
@@ -1170,7 +1180,7 @@ function scored(motion) {
 
   // It closes on the middle as it goes, rather than crossing and coming back.
   const closes = runs.every((a) => {
-    const r = a.kf.slice(0, -1).map((f) => {
+    const r = a.kf.slice(1, -1).map((f) => {
       const m = spotOfKf(f);
       return Math.hypot(m.x / R.rx, (m.y - R.cy) / R.ry);
     });
@@ -1178,8 +1188,6 @@ function scored(motion) {
   });
   ok(closes, 'closing on the middle the whole way, never opening out again');
 
-  // Where the table says its cards are is where they end up, arc or no arc.
-  ok(stack.every(middle), 'the table says they are in the middle from the off');
   const top = Number(hero().style.zIndex || 0);
   ok(stack.every((el) => Number(el.style.zIndex || 0) < top),
      'the turned card stands over them all the way in  got ' + top);
