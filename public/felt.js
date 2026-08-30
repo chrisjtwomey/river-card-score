@@ -421,6 +421,12 @@ const Felt = (function () {
     // Left where the deal turned it; layout lifts it to its perch from there.
     if (T.hero) own(T.hero, tf(0, g.R.cy, 0, 0, 1.15));
     T.labels.forEach((el) => { if (el) { el.style.opacity = '1'; own(el, el.style.transform || ''); } });
+    // The deal faded the dealer's ring in, and a filled animation outranks the
+    // style: let it go, or the ring cannot be moved for the rest of the round.
+    const ring = T.stage.querySelector('.dring');
+    if (ring && ring.getAnimations) {
+      ring.getAnimations().forEach((a) => { try { a.cancel(); } catch (e) {} });
+    }
     mount();
     head(r);
     reconcile(r);
@@ -435,7 +441,7 @@ const Felt = (function () {
     let box = stage.querySelector('.deal-head');
     if (!box) {
       const g = geom();
-      box = Stage.head(stage, { round: ST.idx + 1, cards: r.cards, dealer: ST.seats[r.dealer].name,
+      box = Stage.head(stage, { round: ST.idx + 1, cards: r.cards,
                                 ringTop: g.H / 2 + g.R.cy - g.R.ry - 56 }).box;
     }
     // Asked again every paint: the band a toast comes up in follows the ring,
@@ -443,10 +449,7 @@ const Felt = (function () {
     Stage.band(box, geom().H / 2 + geom().R.cy - geom().R.ry - 56);
     box.querySelectorAll('.deal-cap,.deal-status').forEach((el) => { el.style.opacity = '1'; });
     const cap = box.querySelector('.deal-cap');
-    if (cap) {
-      cap.textContent = `Round ${ST.idx + 1} · ${r.cards} card${r.cards === 1 ? '' : 's'} · `
-        + `${ST.seats[r.dealer].name} deals`;
-    }
+    if (cap) cap.textContent = `Round ${ST.idx + 1} · ${r.cards} card${r.cards === 1 ? '' : 's'}`;
   }
 
   /* ---------------- keeping it right ---------------- */
@@ -605,6 +608,11 @@ const Felt = (function () {
       at(T.hero, heroAt(g));
     }
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
+    // Who deals, said at the seat rather than in the round line. Placed again
+    // with the names, since it is drawn round one of them.
+    Stage.dealerRing(T.stage, { R: g.R, p: r.dealer, n: g.n, W: g.W, H: g.H,
+                                of: r.cards, own: r.dealer === me,
+                                nameEl: T.labels[r.dealer] });
     if (peeking) peekAt(peeking.q, r);   // the pile may lie somewhere else now
   }
 
@@ -1330,6 +1338,9 @@ const Felt = (function () {
     };
     (last.labels || []).forEach(away);
     (last.places || []).forEach(away);
+    // The ring goes with the names it was drawn round: the next round deals a
+    // new one, and it must not be seen standing over an empty table meanwhile.
+    away(last.stage && last.stage.querySelector('.dring'));
 
     /* Every card takes the same time to come in and sets off after the one
        before it. The whole of that is UNWIND where it can be: a hand of many

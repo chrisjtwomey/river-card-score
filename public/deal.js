@@ -304,6 +304,19 @@ const Deal = (function () {
         )) - 1]);
       }
 
+      /* Who deals is not in the round line any more: their seat is ringed. It
+         comes up with the names, since it is drawn round one of them. */
+      if (!shuffleOnly) {
+        const ring = Stage.dealerRing(stage, {
+          R, p: dealer, n, W, H, of: cards,
+          own: virtual && dealer === mine, nameEl: labels[dealer],
+        });
+        if (ring && ring.animate) anims.push(ring.animate(
+          [{ opacity: 0 }, { opacity: 1 }],
+          { duration: 260, delay: lastAt[dealer] + T.fly - 100, easing: 'ease-out', fill: 'both' }
+        ));
+      }
+
       // Your hand settles: the fan lifts, card by card, once it is all in.
       if (!calm && myCards.length > 1) {
         myCards.forEach((c, k) => {
@@ -361,7 +374,7 @@ const Deal = (function () {
          middle of the table, and the band under this line is left clear for
          what the table has to say. */
       const { cap, status } = Stage.head(stage, {
-        round: opts.round || 1, cards, dealer: names[dealer],
+        round: opts.round || 1, cards,
         ringTop: H / 2 + R.cy - ry - 56,       // the top card's top edge
       });
       if (!shuffleOnly) anims.push(cap.animate(

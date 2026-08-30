@@ -347,6 +347,10 @@ that band.
   The number screw the dealer forbids is struck through. Another player's bid
   lands the way it does on the TV screen: the number slams onto their pile in
   gold, the pile takes the hit, and the name under it keeps the bid.
+- **Who deals is ringed, not written.** The dealer's cards and the name under
+  them stand in a gold dashed outline with **dealer** cutting the line at the
+  top, so the round line above stays the round and the hand size. When you are
+  the dealer the outline is round the heading over your own hand.
 - **The seat the table waits on peeks.** The top card of that player's pile
   tips up on its edge and shivers, every few seconds -- the same peek the TV
   screen gives the player to bid -- through the bidding and whenever a card
@@ -414,6 +418,8 @@ npm start        # the console now says (https)
 Both screens play the deal animation at the start of every round. On the TV screen, and on a phone at a table dealt on the phones, a card flies to each seat in dealing order, with the player names.
 
 What the deck turned is not said in words: the card is turned face up in the middle of the table and stays there, and the band under the round line is left for what the table has to say.
+
+Who deals is not said in words either. The round line across the top is the round and the hand size -- *Round 3 · 5 cards* -- and the dealer is ringed where they sit: a gold dashed outline round their cards and the name under them, with **dealer** cutting the line at the top. A name in a line has to be read and then matched to a seat; the ring is the answer where the question is asked. When the dealer is you, the outline goes round the heading over your own hand instead -- your cards are a fan across the bottom of the screen, and a box round that would be most of the screen wide and would shrink with every card you played. Every screen that draws seats draws the ring: the TV screen, the deal on a phone, and the felt. It goes when the round does.
 
 - On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives -- a bid that lands while the cards are still in the air is stamped once they are down -- the player to act glows and their pile peeks -- the top card tips up and shivers every few seconds -- and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it.
 - On a **phone** at a table with real cards only the shuffle plays: the deck is riffled and squared up, and the scene fades before any card goes out -- the real dealer deals the real cards. A tap skips it. It does not replay when a phone reloads part way through a game.

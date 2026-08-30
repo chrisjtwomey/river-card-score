@@ -494,6 +494,35 @@ body.stage-head .toaster{top:var(--stage-band, calc(clamp(48px, 8vh, 78px) + 84p
   font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
   color:rgba(255,255,255,.92);
 }
+/* Who deals. The round line used to say it in words; the seat says it now, so
+   it is read where the answer is wanted. Gold, and dashed like the outline a
+   played-out hand leaves behind, so it reads as a mark on the table rather
+   than as something to tap. Sized and placed by the stage. */
+.dring{
+  position:absolute;left:50%;top:50%;
+  z-index:0;pointer-events:none;--dring-gap:0px;
+}
+.dring-box{
+  position:absolute;inset:0;
+  border:2px dashed rgba(246,212,136,.58);border-radius:12px;
+  /* The word cuts the line rather than covering it: the top of the box is
+     masked away for the width of the word. A patch the colour of the table
+     would not do -- the table is a gradient, and the patch would show. */
+  -webkit-mask:
+    linear-gradient(90deg, #000 0 calc(50% - var(--dring-gap) / 2),
+      transparent 0 calc(50% + var(--dring-gap) / 2), #000 0) 50% 0 / 100% 3px no-repeat,
+    linear-gradient(#000 0 0) 50% 100% / 100% calc(100% - 3px) no-repeat;
+  mask:
+    linear-gradient(90deg, #000 0 calc(50% - var(--dring-gap) / 2),
+      transparent 0 calc(50% + var(--dring-gap) / 2), #000 0) 50% 0 / 100% 3px no-repeat,
+    linear-gradient(#000 0 0) 50% 100% / 100% calc(100% - 3px) no-repeat;
+}
+.dring-tag{
+  position:absolute;left:50%;top:0;transform:translate(-50%,-50%);
+  font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;
+  white-space:nowrap;color:#f6d488;
+  text-shadow:0 2px 8px rgba(0,0,0,.9), 0 0 12px rgba(246,212,136,.35);
+}
 .deal-head{
   position:absolute;left:0;right:0;top:clamp(14px, 5vh, 60px);
   display:flex;flex-direction:column;align-items:center;gap:8px;

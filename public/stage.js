@@ -98,6 +98,81 @@ const Stage = (function () {
              tilt: (s.x / (R.rx || 1)) * 9 + off * 2.2, z };
   }
 
+  /* The seat that deals, ringed where it sits. The round line used to name the
+     dealer in words, which had to be read and then matched to a seat; the ring
+     says it where the answer is wanted. It goes round what that seat has on the
+     table -- its cards and the name under them -- and the word cuts the line at
+     the top rather than sitting inside it, where the name already is.
+
+     Your own seat is a fan across the bottom and a heading over it, so there
+     the heading alone is ringed: a box round the fan would be most of the
+     screen wide, would shrink with every card played, and would lie over the
+     line a card is dragged across to be played.
+
+     The box is fixed to the round, not to what is left of the pile: a ring that
+     followed the cards away would crawl all round the seat as they were played.
+
+     Both the deal and the table it hands over to draw it, so it is placed here.
+     Safe to ask again -- it is one element, moved. */
+  function dealerRing(stage, o) {
+    if (!stage) return null;
+    let el = stage.querySelector('.dring');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'dring';
+      const bx = document.createElement('div');
+      bx.className = 'dring-box';
+      const tg = document.createElement('div');
+      tg.className = 'dring-tag';
+      tg.textContent = 'dealer';
+      el.append(bx, tg);
+      // First on the stage: every card lies over it, whatever its z-index.
+      stage.insertBefore(el, stage.firstChild);
+    }
+    const b = dealerAt(o);
+    el.style.left = `calc(50% + ${Math.round(b.x)}px)`;
+    el.style.top = `calc(50% + ${Math.round(b.y)}px)`;
+    el.style.width = `${Math.round(b.w)}px`;
+    el.style.height = `${Math.round(b.h)}px`;
+    el.style.marginLeft = `${-Math.round(b.w / 2)}px`;
+    /* The line is broken for the word, not covered by it: the table behind is a
+       gradient, so a patch of the table's colour would show as a patch. How wide
+       to break it only the word knows, so it is measured and handed to the
+       stylesheet. */
+    const tag = el.querySelector('.dring-tag');
+    el.style.setProperty('--dring-gap', `${((tag && tag.offsetWidth) || 46) + 13}px`);
+    return el;
+  }
+
+  /* Where that ring is drawn, in offsets from the middle of the stage: `x` the
+     middle of the box and `y` its top edge, the way a name is placed. */
+  function dealerAt(o) {
+    const { R, p, n, W, H } = o;
+    const z = seatScale(n), c = cardSize(W);
+    const padX = 11, padTop = 9, padBot = 7;
+    const nameW = (o.nameEl && o.nameEl.offsetWidth) || 0;
+    if (o.own) {
+      const top = fan(1, W, H).y - 66;          // where nameAt hangs the heading
+      return { x: 0, y: top - padTop, w: Math.max(nameW, 104) + padX * 2,
+               h: 16 + padTop + padBot };
+    }
+    const of = Math.max(1, o.of || 1);
+    const F = fan(of, W, H);
+    const a = pile(R, F, p, 0, n), b = pile(R, F, p, of - 1, n);
+    // A card in a pile is turned a little, which widens and deepens what it covers.
+    const t = rad(Math.max(Math.abs(a.tilt), Math.abs(b.tilt)));
+    const hw = ((c.w * Math.cos(t) + c.h * Math.sin(t)) * z) / 2;
+    const hh = ((c.h * Math.cos(t) + c.w * Math.sin(t)) * z) / 2;
+    const left = Math.min(a.x, b.x) - hw, right = Math.max(a.x, b.x) + hw;
+    const s = R.at(p);
+    // The name hangs under the pile, and it is the bottom of the box.
+    const nameTop = s.y + c.h * z / 2 + 19;
+    const nameH = Math.round((z < 0.9 ? Math.max(10, Math.round(13 * z)) : 14) * 1.3);
+    const y = Math.min(a.y, b.y) - hh - padTop;
+    return { x: (left + right) / 2, y, w: Math.max(right - left, nameW) + padX * 2,
+             h: nameTop + nameH + padBot - y };
+  }
+
   /* The row of bid numbers stands on a line above the fan, with its own
      heading above that. The felt draws them there and the fan is placed with
      room for them, so the two have to be one answer. Everything is measured up
@@ -334,7 +409,7 @@ const Stage = (function () {
     box.className = 'deal-head';
     const cap = document.createElement('div');
     cap.className = 'deal-cap';
-    cap.textContent = `Round ${o.round} · ${o.cards} card${o.cards === 1 ? '' : 's'} · ${o.dealer} deals`;
+    cap.textContent = `Round ${o.round} · ${o.cards} card${o.cards === 1 ? '' : 's'}`;
     const status = document.createElement('div');
     status.className = 'deal-status';
     box.append(cap, status);
@@ -382,5 +457,5 @@ const Stage = (function () {
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
   return { S, faceOf, cardEl, tf, rad, fade, parts, head, band, bandOff, close, isOpen,
-           ring, fan, pile, seatScale, cardSize, nameAt, bidRow, settle, peek, stamp };
+           ring, fan, pile, seatScale, cardSize, nameAt, dealerRing, bidRow, settle, peek, stamp };
 })();

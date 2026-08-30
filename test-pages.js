@@ -170,6 +170,12 @@ function runTimers(go, stop) {
   }
 }
 
+/* A box the stage placed with left/top/width/height rather than a transform --
+   the dealer's ring, and the names -- read back out of what it wrote. */
+const pxOf = (v) => { const m = /(-?[\d.]+)px/.exec(String(v || '')); return m ? Number(m[1]) : NaN; };
+const boxOf = (el) => ({ x: pxOf(el && el.style.left), y: pxOf(el && el.style.top),
+                         w: pxOf(el && el.style.width), h: pxOf(el && el.style.height) });
+
 // the place a keyframe asks for, read the way a style is read
 function spotOfKf(kf) { return kf && kf.transform ? spotOf({ style: { transform: kf.transform } }) : null; }
 
@@ -1466,6 +1472,57 @@ function tookTrick(motion) {
   ok(overlay.querySelector('.felt-beat').hidden === true, 'the moment passes when the table says so');
   ok(/^You · 0\/2$/.test(overlay.querySelectorAll('.dname')[me].textContent),
      'and the labels turn to won against bid  got ' + overlay.querySelectorAll('.dname')[me].textContent);
+}
+{
+  /* Who deals is a mark on the seat, not words in the round line. A name in a
+     line has to be read and then matched to a seat; the ring is the answer
+     where the question is asked, and it goes round what that seat has on the
+     table -- its cards and the name under them. */
+  const n = 4, cards = 5, me = 1;
+  // A bid is in, so the felt draws the table itself rather than dealing it.
+  const made = stateFor(n, cards, me, { bids: [1, null, null, null], turn: 1 });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  const cap = overlay.querySelector('.deal-cap');
+  ok(cap.textContent === 'Round 1 · 5 cards',
+     'the round line is the round and the count, and no more  got ' + cap.textContent);
+  const ring = overlay.querySelector('.dring');
+  ok(!!ring, 'the seat that deals is ringed');
+  ok(!!ring && ring.querySelector('.dring-tag').textContent === 'dealer',
+     'and the word says which mark it is');
+  ok(!!ring && ring.parentNode.children.indexOf(ring) === 0,
+     'the ring is first on the stage, so every card lies over it');
+  const b = boxOf(ring);
+  const R = L.Stage.ring(n, me, 412, 860), F = L.Stage.fan(cards, 412, 860);
+  const first = L.Stage.pile(R, F, 0, 0, n), last = L.Stage.pile(R, F, 0, cards - 1, n);
+  const c = L.Stage.cardSize(412), z = L.Stage.seatScale(n);
+  ok(b.x - b.w / 2 <= Math.min(first.x, last.x) - c.w * z / 2
+     && b.x + b.w / 2 >= Math.max(first.x, last.x) + c.w * z / 2,
+     'it goes round the whole pile, not the top card of it');
+  ok(b.y < Math.min(first.y, last.y) - c.h * z / 2, 'it starts above the cards');
+  const name = overlay.querySelectorAll('.dname')[0];
+  ok(b.y + b.h > pxOf(name.style.top), 'and takes the name under them in with it');
+  // The other three seats have no mark of their own: one ring, one dealer.
+  ok(overlay.querySelectorAll('.dring').length === 1, 'and nobody else is ringed');
+}
+{
+  /* Your own seat is a fan across the bottom of the screen with a heading over
+     it, so the heading alone is ringed: a box round the fan would be most of
+     the screen wide, would shrink with every card played, and would lie over
+     the line a card is dragged across to be played. */
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { bids: [1, null, null, null], turn: 1 });
+  made.ST.rounds[0].dealer = me;
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  const b = boxOf(overlay.querySelector('.dring'));
+  const fanY = L.Stage.fan(1, 412, 860).y, ch = L.Stage.cardSize(412).h;
+  ok(Math.abs(b.x) <= 1, 'your own ring stands over the middle, where the heading does');
+  ok(b.y < fanY - 66 && b.y + b.h > fanY - 66, 'the heading is inside it');
+  ok(b.y + b.h < fanY - ch / 2, 'and the fan is left outside it');
+  ok(b.w < 412 * 0.6, 'so it is a badge over a heading, not a box round the hand  got ' + b.w);
 }
 {
   /* The trick comes in the way it went out: each card goes round the ring
@@ -3352,6 +3409,21 @@ part('tapping the deal away');
        the middle of the table, and the band under the round line is left for
        what the table has to say. */
     ok(!overlay.querySelector('.deal-tag'), 'nothing says the trump suit in words');
+    /* And nothing says who deals in words either: the round line is the round
+       and the count, and the seat that deals carries the mark. The screen that
+       holds no seat rings a pile, since every pile on it belongs to somebody
+       else. */
+    ok(overlay.querySelector('.deal-cap').textContent === 'Round 1 · 3 cards',
+       'the round line does not name the dealer  got ' + overlay.querySelector('.deal-cap').textContent);
+    const dring = overlay.querySelector('.dring');
+    ok(!!dring && dring.querySelector('.dring-tag').textContent === 'dealer',
+       'the seat that deals is ringed instead');
+    const dbox = boxOf(dring);
+    const dseat = L.Stage.ring(3, 0, 1280, 720).at(0);
+    ok(dbox.y < dseat.y && dbox.y + dbox.h > dseat.y,
+       'the ring stands over that seat  got ' + dbox.y + '..' + (dbox.y + dbox.h) + ' for ' + dseat.y);
+    ok(dbox.h > L.Stage.cardSize(1280).h,
+       'and takes in the cards and the name, not a heading  got ' + dbox.h);
     const body = L.dom.document.body;
     ok(body.classList.contains('stage-head'), 'the page is marked while a round line is up');
     const bandTop = Number(String(body.style.getPropertyValue('--stage-band')).replace('px', ''));
@@ -3438,6 +3510,21 @@ part('the pages and the stylesheet agree');
   const rule = /\.dstamp\{([^}]*)\}/.exec(css);
   const z = rule && /z-index:\s*(\d+)/.exec(rule[1]);
   ok(!!z && Number(z[1]) > 40, 'the bid stamp lies over every card on the felt  got ' + (z ? z[1] : 'no z-index'));
+}
+
+/* The gold a bid is stamped in and the gold the dealer is ringed in are the
+   same gold: two marks the table makes on the same felt, and two shades of it
+   would read as two different kinds of thing. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const colourOf = (sel) => {
+    const r = new RegExp('\\n' + sel.replace('.', '\\.') + '\\{([^}]*)\\}').exec(css);
+    const c = r && /(?:^|;)\s*color:\s*(#[0-9a-fA-F]{3,8})/.exec(r[1]);
+    return c ? c[1].toLowerCase() : null;
+  };
+  const stamp = colourOf('.dstamp'), ring = colourOf('.dring-tag');
+  ok(stamp !== null && stamp === ring,
+     `the dealer's ring is the bid stamp's gold  got ${ring} against ${stamp}`);
 }
 
 /* The settings page lies over the felt and the deal, and under the toasts:

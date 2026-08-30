@@ -41,7 +41,8 @@ public/lobby.js    Widgets for the lobby: seats, bots, rulesForm, startButton.
 public/round.js    Widgets for a round in play: header, bidStrip, trickCount, bidFor, playFor,
                    playout, winner, and the two dialogs (newGame, bumDeal).
 public/stage.js    The overlay both scenes play on, its parts, the round line (head), cards
-                   drawn off Game, the seat ring and the fan geometry. `Stage.peek` is the one
+                   drawn off Game, the seat ring, the fan geometry and the mark on the
+                   dealer's seat (`dealerRing`). `Stage.peek` is the one
                    "waiting on you" animation: the deal, the felt and the trick all use it.
 public/deal.js     The deal scene.   public/finale.js  The finish.   public/felt.js  The
                    table a phone plays a virtual round on; the deal hands it the stage.
