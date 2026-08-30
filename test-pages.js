@@ -2595,38 +2595,45 @@ part('the dev controls, on each kind of server');
     ok(P.pick('#live-note').hidden === false, 'and the page says real players may be at the table');
     ok(P.pick('#ph-photo').textContent === '', 'the photo column says nothing it cannot do');
 
-    /* ---- the form that moves a stuck game ----
-       In place of the scrubber, the one control the protocol takes anywhere:
-       a phase and a round, forced, with nothing invented. */
-    const box = P.pick('#repair');
-    ok(box.hidden === false, 'the repair form stands where the scrubber is not allowed');
-    const seg = box.querySelector('.seg');
+    /* ---- managing the round a live game is stuck in ----
+       The panel says which round it is editing, and carries the one control
+       the numbers themselves cannot supply: the phase. */
+    const row = P.pick('#phase-row');
+    ok(row.querySelector('.pround').textContent === 'Round 1 of 2 · 3 cards',
+       'the panel names the round it is editing  got ' + row.querySelector('.pround').textContent);
+    const seg = row.querySelector('.seg');
     ok(seg && seg.querySelectorAll('.btn').length === 4,
        'it offers the four phases the table will hold');
     ok(seg.querySelector('.btn.on').dataset.phase === 'bid',
-       'and says where the game is now  got ' + seg.querySelector('.btn.on').dataset.phase);
-    ok(box.querySelector('input').value === '1', 'with the round it is on');
+       'and marks the one the game is in  got ' + seg.querySelector('.btn.on').dataset.phase);
 
+    P.socks[0].sent.length = 0;
     seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'tricks').fire('click');
-    box.querySelector('input').value = '2';
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"patch","patch":{"phase":"tricks"}}',
+       'and a phase lands the moment it is pressed  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* ---- taking a player out ----
+       Mid-game the seat cannot go: the rounds played are that player's. So it
+       is marked gone and can be given back. */
+    const seats = P.pick('#prows').querySelectorAll('.prow');
+    const handOver = seats[0].querySelectorAll('button').find((b) => /Hand over/.test(b.textContent));
+    ok(!!handOver, 'each seat can be taken out of the game');
     P.socks[0].sent.length = 0;
-    box.querySelectorAll('.btn.primary')[0].fire('click');
+    handOver.fire('click');
     ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"patch","patch":{"phase":"tricks","idx":1}}',
-       'and Put forces that phase and that round  got ' + JSON.stringify(P.socks[0].sent[0]));
+       === '{"t":"dev","action":"patch","patch":{"seat":{"i":0,"left":true}}}',
+       'which marks it gone rather than removing it  got ' + JSON.stringify(P.socks[0].sent[0]));
 
-    // A round means nothing in the lobby, so none is sent with it.
-    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'lobby').fire('click');
+    P.socks[0].onmessage({ data: devState(false, {
+      seats: [{ id: 's1', name: 'Ann', left: true }, { id: 's2', name: 'Bob' }] }) });
+    const back = P.pick('#prows').querySelectorAll('.prow')[0]
+      .querySelectorAll('button').find((b) => /Take back/.test(b.textContent));
+    ok(!!back, 'and a seat that is out can be given back');
     P.socks[0].sent.length = 0;
-    box.querySelectorAll('.btn.primary')[0].fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"patch","patch":{"phase":"lobby"}}',
-       'the lobby is put to without a round  got ' + JSON.stringify(P.socks[0].sent[0]));
-
-    // While it is aimed, the table moving must not move the form under the hand.
-    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'done').fire('click');
-    P.socks[0].onmessage({ data: devState(false) });
-    ok(seg.querySelector('.btn.on').dataset.phase === 'done',
-       'a state landing mid-aim leaves the form where it was pointed');
+    back.fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"seat":{"i":0,"left":false}}}',
+       'to whoever holds its phone  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 
   {   /* ---- a record the table will not have ----
@@ -2785,7 +2792,8 @@ part('the dev controls, on each kind of server');
     ok(P.pick('#tables-tools').hidden === false, 'a dev server shows the tables it will hand over');
     ok(P.pick('#scrub-tools').hidden === false, 'and the scrubber');
     ok(P.pick('#shots-dev').hidden === false, 'and the one-shots');
-    ok(P.pick('#repair').hidden === true, 'and puts the repair form away, the scrubber being the better way');
+    ok(P.pick('#phase-row').querySelector('.seg').querySelectorAll('.btn').length === 4,
+       'and the panel still carries the phase, which unsticks a flow either way');
     ok(P.pick('#scrub').children.length === 4, 'the card is the lobby, both rounds and the finish  got '
        + P.pick('#scrub').children.length);
     ok(P.pick('#ph-photo').textContent === 'photo', 'and the photo column is offered');

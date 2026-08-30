@@ -20,11 +20,8 @@
   /* A group of controls the server either takes or does not. Hiding one is
      one attribute, so nothing is left behind with its separators. */
   .cluster{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
-  #repair{flex:none;gap:8px}
   #run-tools{flex:none;gap:6px}
   #run-tools .btn{padding:6px 9px;font-size:12px}
-  #repair input{width:52px;font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);
-    background:var(--bg);color:var(--ink);text-align:center}
 
   .tablestrip{display:flex;gap:6px;overflow-x:auto;min-width:0;flex:1}
   .trow{display:flex;gap:7px;align-items:baseline;flex:none;font-size:12px;padding:5px 9px;text-align:left}
@@ -60,9 +57,11 @@
   .live-note{color:var(--red);font-weight:650;margin:0 2px}
   .btn.tiny{padding:2px 7px;font-size:10px}
 
-  /* The players panel: one row a seat, every control landing as it is used. */
+  /* The players panel: what the round is, then one row a seat. */
   .players{padding:10px 12px;gap:6px}
-  .prow{display:grid;grid-template-columns:minmax(130px,220px) 44px 52px 40px 40px 54px 54px 72px 1fr;
+  .phaserow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:2px}
+  .phaserow .pround{font-size:13px;font-weight:700;color:var(--ink);flex:1;min-width:0}
+  .prow{display:grid;grid-template-columns:minmax(130px,220px) 44px 52px 40px 54px 54px 72px 1fr;
     gap:9px;align-items:center;font-size:13px}
   .prow.phead span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;
     color:var(--ink-dim);font-weight:700}
@@ -146,9 +145,6 @@
           <button class="btn" data-phase="tricks" type="button" title="Land the round with its bids in">tricks</button>
         </div>
       </span>
-      <!-- The repair form, drawn by the page: the one way to move a game on
-           where the scrubber is refused. -->
-      <span class="cluster" id="repair" hidden></span>
       <!-- Stopping the table, and walking it on a move at a time. Both are
            about hands nobody is behind, so both come and go with them. -->
       <span class="cluster" id="run-tools" hidden>
@@ -183,9 +179,10 @@
   </p>
 
   <div class="panel players" id="players-panel" hidden>
+    <div class="phaserow" id="phase-row"></div>
     <div class="prow phead">
-      <span>seat</span><span>host</span><span>dealer</span><span>bot</span><span>left</span>
-      <span>bid</span><span>won</span><span id="ph-photo">photo</span><span></span>
+      <span>seat</span><span>host</span><span>dealer</span><span>bot</span>
+      <span>bid</span><span>won</span><span id="ph-photo">photo</span><span>in the game</span>
     </div>
     <div id="prows" style="display:contents"></div>
     <p class="hint">Everything lands as it is changed. The won column goes as one, once every seat has a number: the cells still wanted are ringed until it does.</p>

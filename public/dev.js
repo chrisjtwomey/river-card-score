@@ -57,7 +57,6 @@ function connect() {
       DEVSRV = m.srv !== false;              // an older server said nothing, and took it all
       history.replaceState(null, '', `#c=${CODE}&t=${HOST_TOKEN}`);
       topKey = seatKey = tableKey = '';      // another table, so every pane is stale
-      repairTouched = false;                 // and the form is aimed at nothing yet
       applyMode();
       if (polling) askTables();
       onTable = true;
@@ -302,74 +301,6 @@ function renderScrub() {
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-/* ---------- the repair form ---------- */
-
-/* Where the scrubber is refused, this is how a game is moved on. It forces a
-   phase and a round and nothing else: no rounds are invented, no bids are made
-   up, so it is the one control a normal server takes. A game stuck in the
-   wrong phase -- bidding that will not close, a finish that came too early --
-   is put right here.
-
-   The four phases are the four the server will hold. The round only travels
-   with a phase a round exists in. */
-const REPAIR_PHASES = ['lobby', 'bid', 'tricks', 'done'];
-let repairTouched = false;      // once it is aimed, stop following the table
-
-function buildRepair() {
-  const box = $('#repair');
-  if (!box || box._wired) return;
-  box._wired = true;
-
-  const lbl = document.createElement('span');
-  lbl.className = 'bandlbl';
-  lbl.textContent = 'Put to';
-
-  const seg = document.createElement('div');
-  seg.className = 'seg';
-  REPAIR_PHASES.forEach((p) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn' + (p === 'bid' ? ' on' : '');
-    b.dataset.phase = p;
-    b.textContent = p;
-    b.addEventListener('click', () => {
-      seg.querySelectorAll('.btn').forEach((x) => x.classList.toggle('on', x === b));
-      repairTouched = true;
-    });
-    seg.appendChild(b);
-  });
-
-  const round = document.createElement('input');
-  round.type = 'number';
-  round.min = '1';
-  round.title = 'The round to put the game at';
-  round.addEventListener('input', () => { repairTouched = true; });
-
-  const go = document.createElement('button');
-  go.type = 'button';
-  go.className = 'btn primary';
-  go.textContent = 'Put';
-  go.title = 'Force the game to this phase and round. Nothing is played or invented.';
-  go.addEventListener('click', sendRepair);
-
-  box.append(lbl, seg, round, go);
-}
-
-// What the form is aimed at, read off the form itself at the tap.
-function sendRepair() {
-  const box = $('#repair');
-  const seg = box && box.querySelector('.seg');
-  const on = seg && seg.querySelector('.btn.on');
-  const phase = (on && on.dataset.phase) || 'bid';
-  const patch = { phase };
-  const el = box && box.querySelector('input');
-  const n = Math.round(Number(el && el.value));
-  // A round means nothing in the lobby, and the finish picks its own.
-  if ((phase === 'bid' || phase === 'tricks') && Number.isFinite(n) && n >= 1) patch.idx = n - 1;
-  act('patch', { patch });
-  repairTouched = false;              // it has landed: follow the table again
-}
-
 /* Stopping the table, and walking it on. Both are about the hands nobody is
    behind, so they come and go with them -- `Game.canPause` is the same
    question the host screen's button asks, and the same one the message that
@@ -391,24 +322,6 @@ function renderRun() {
   // Pause is the table's own, so it works anywhere. Stepping is a dev server's.
   $('#btn-step').hidden = !DEVSRV;
   $('#btn-step').disabled = !btn._now;       // stepping a running table is a race
-}
-
-// Until it is aimed, the form says where the game is, so a tap on Put with
-// one thing changed changes only that thing.
-function fillRepair() {
-  const box = $('#repair');
-  if (!box || box.hidden || repairTouched || !ST) return;
-  const seg = box.querySelector('.seg');
-  if (seg) {
-    seg.querySelectorAll('.btn').forEach((b) =>
-      b.classList.toggle('on', b.dataset.phase === ST.phase));
-  }
-  const el = box.querySelector('input');
-  if (el && document.activeElement !== el) {
-    const total = ST.rounds.length;
-    el.max = String(total || 1);
-    el.value = String(total ? Math.min(ST.idx + 1, total) : 1);
-  }
 }
 
 /* Stand-in photos, so the picture on a card can be tested without anybody
@@ -447,6 +360,57 @@ function standInAvatar(name, i) {
 
 /* ---------- the players panel ---------- */
 
+/* What the panel is editing, over the seats it edits it on.
+
+   The bid and won columns act on the round the game is standing in, so that
+   round has to be named: there is no other way to know which one you are
+   typing into. And forcing the phase is the one thing that unsticks a flow the
+   round's own numbers cannot -- every bid in and the phase never turned. A
+   phase lands the moment it is pressed; the one the game is in is marked, so
+   the row says where the game is as well as where to send it. */
+const PHASES = ['lobby', 'bid', 'tricks', 'done'];
+
+function buildPhaseRow() {
+  const box = $('#phase-row');
+  if (!box || box._wired) return;
+  box._wired = true;
+  const at = document.createElement('span');
+  at.className = 'pround';
+  const lbl = document.createElement('span');
+  lbl.className = 'bandlbl';
+  lbl.textContent = 'Phase';
+  const seg = document.createElement('div');
+  seg.className = 'seg';
+  PHASES.forEach((p) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn';
+    b.dataset.phase = p;
+    b.textContent = p;
+    b.title = `Force the game to ${p}. Nothing is played or invented.`;
+    b.addEventListener('click', () => act('patch', { patch: { phase: p } }));
+    seg.appendChild(b);
+  });
+  box.append(at, lbl, seg);
+}
+
+function renderPhaseRow() {
+  const box = $('#phase-row');
+  if (!box || !ST) return;
+  const r = ST.rounds[Math.min(ST.idx, ST.rounds.length - 1)] || null;
+  const at = box.querySelector('.pround');
+  if (at) {
+    at.textContent = r
+      ? `Round ${Math.min(ST.idx + 1, ST.rounds.length)} of ${ST.rounds.length} · ${r.cards} cards`
+      : 'No round in play';
+  }
+  const seg = box.querySelector('.seg');
+  if (seg) {
+    seg.querySelectorAll('.btn').forEach((b) =>
+      b.classList.toggle('on', b.dataset.phase === ST.phase));
+  }
+}
+
 /* The tricks a round paid are one column, not seven cells: the table keeps
    them only when every seat has a number, and a half-filled column sent cell
    by cell was thrown away each time and the typing with it. So the column
@@ -469,6 +433,7 @@ function sendWon() {
 function renderPlayers() {
   const box = $('#prows');
   if (!box || $('#players-panel').hidden) return;
+  renderPhaseRow();
   const r = ST.rounds[Math.min(ST.idx, ST.rounds.length - 1)] || null;
   const key = ST.seats.map((s, p) =>
     `${s.name}/${s.bot}/${s.left}/${s.id === ST.captainId}/${r ? r.dealer : ST.firstDealerId}` +
@@ -543,10 +508,26 @@ function renderPlayers() {
       pbtns.append(photo, clear);
     }
 
-    row.append(name, host, dealer, check(!!s.bot, 'bot'), check(!!s.left, 'left'),
+    /* Taking a player out of a live game. Mid-game the seat cannot simply go:
+       the rounds already played are that player's, and the scorecard is a
+       column for it. So the seat stays and is marked gone, the table plays its
+       hand from there on, and the phone that holds it can be given it back --
+       which is why this is a pair and not a one-way kick. Removing a seat
+       outright is the lobby's business, and the table host's. */
+    const gone = document.createElement('button');
+    gone.type = 'button';
+    gone.className = 'btn tiny' + (s.left ? ' primary' : '');
+    gone.textContent = s.left ? 'Take back' : 'Hand over';
+    gone.title = s.left
+      ? 'Give the seat back to whoever holds its phone'
+      : 'Mark the seat gone. The table plays its hand, and the scorecard keeps its column.';
+    gone.addEventListener('click', () =>
+      act('patch', { patch: { seat: { i: p, left: !s.left } } }));
+
+    row.append(name, host, dealer, check(!!s.bot, 'bot'),
                num('bids', r && r.bids ? r.bids[p] : null),
                num('tricks', r && r.tricks ? r.tricks[p] : null),
-               pbtns, document.createElement('span'));
+               pbtns, gone);
     box.appendChild(row);
   });
 }
@@ -556,7 +537,6 @@ function renderPlayers() {
 function render() {
   renderFrames();
   if (DEVSRV) renderScrub();       // the card it draws is a card only a dev server can fill
-  else fillRepair();
   renderRun();
   renderPlayers();
   const n = ST.seats.length;
@@ -593,18 +573,17 @@ function applyMode() {
    knows them from the hello, so it shows what works and nothing else.
 
    On a normal server that leaves the two that put a game right -- the players
-   panel and the record -- with the repair form in place of the scrubber. */
+   panel -- which is where a live game is managed -- and the record. */
 function applyGates() {
   const el = (s) => $(s);
   ['#tables-tools', '#scrub-tools', '#shots-dev', '#shots-sep'].forEach((s) => {
     if (el(s)) el(s).hidden = !DEVSRV;
   });
-  if (el('#repair')) el('#repair').hidden = DEVSRV || !CODE;
   if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV ? 'photo' : '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  buildRepair();
+  buildPhaseRow();
   applyMode();
   UI.wireTheme('#btn-theme');
 
