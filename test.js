@@ -493,6 +493,9 @@ async function bidRound(P) {
     d.send({ t: 'dev', action: 'setup', players: 4 });
     await okBy(() => d.hello && d.hello.dev && d.hello.seats.length === 4,
        'dev setup makes 4 stand-in seats with tokens');
+    // The hello and the first state are two frames, and the hello comes first:
+    // read on the hello alone, the state is sometimes not there yet.
+    await okBy(() => !!d.state, 'and the table itself reaches the page');
     ok(d.state.dev === true, 'and the state says tables of stand-ins are on');
     d.send({ t: 'dev', action: 'startGame' }); await d.rt();
     d.send({ t: 'dev', action: 'fillBids' });
