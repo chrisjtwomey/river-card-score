@@ -853,7 +853,9 @@ Changes to `server.js` still need a restart, and that ends the games in memory. 
 npm run dev
 ```
 
-Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the TV screen and one phone per seat, live, side by side. Press a button and every pane updates together.
+Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the TV screen across the top, and under it one phone per seat, live, side by side. Press a button and every pane updates together.
+
+The phone of whoever runs the table stands first in that row, ringed in gold. It moves with the job, not with the seating, so the pane that has the table's buttons on it is always in the same place.
 
 It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 

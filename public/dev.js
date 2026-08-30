@@ -49,18 +49,18 @@ const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !
 
 /* ---------- previews ---------- */
 
-const SIZES = { host: [1180, 820], seat: [400, 800], captain: [400, 900] };
+const SIZES = { host: [1180, 820], seat: [400, 800] };
 
 // A seat frame opens the seat itself on a table of stand-ins, and only watches
 // on a real one. The hash says which: t= is the seat, w= just shows it.
 const seatHash = (s) => (s.watch ? `#c=${CODE}&w=${s.watch}` : `#c=${CODE}&t=${s.token}`);
 
-function frame(box, label, page, hash, kind, seatId) {
+function frame(box, label, page, hash, kind, seatId, boss) {
   const scale = Number($('#scale').value) || 0.65;
   const [w, h] = SIZES[kind];
   const url = page + hash;
   const el = document.createElement('div');
-  el.className = 'frame' + (kind === 'captain' ? ' captain' : '');
+  el.className = 'frame' + (boss ? ' captain' : '');
   if (seatId) el.dataset.seat = seatId;
   el.innerHTML =
     `<header><span class="lbl"></span><a href="${url}" target="_blank" rel="noopener">open</a></header>` +
@@ -75,28 +75,28 @@ const seatOf = (id) => SEATS.find((s) => s.id === id) || null;
 function renderFrames() {
   if (!CODE) return;
   const scale = $('#scale').value;
-  // A real table hands out no seat tokens, so it gets the host screen alone.
   const cap = ST ? seatOf(ST.captainId) : null;
 
-  // top row: the big screen, and the phone of whoever runs the table
-  const top = `${CODE}:${HOST_TOKEN}:${cap ? seatHash(cap) : ''}:${scale}`;
+  // top row: the big screen, on its own
+  const top = `${CODE}:${HOST_TOKEN}:${scale}`;
   if (top !== topKey) {
     topKey = top;
     const box = $('#host-frame');
     box.innerHTML = '';
     frame(box, `TV screen · table ${CODE}`, 'host.html', `#c=${CODE}&t=${HOST_TOKEN}`, 'host');
-    if (cap) frame(box, `table host · ${cap.name}`, 'play.html', seatHash(cap), 'captain');
   }
 
-  // bottom row: the other seats. The table host is already up top, so it is
-  // not shown twice. The key changes with them, so it follows the badge.
-  const others = SEATS.filter((s) => !cap || s.id !== cap.id);
-  const seats = `${CODE}:${others.map(seatHash).join(',')}:${scale}`;
+  // bottom row: the phones, the one that runs the table always first. Whoever
+  // that is, that pane stands in the same place, so the eye is not sent
+  // hunting for it. The key follows the order, so a new table host re-draws.
+  const phones = cap ? [cap].concat(SEATS.filter((s) => s.id !== cap.id)) : SEATS;
+  const seats = `${CODE}:${phones.map(seatHash).join(',')}:${scale}`;
   if (seats !== seatKey) {
     seatKey = seats;
     const box = $('#seat-frames');
     box.innerHTML = '';
-    others.forEach((s) => frame(box, s.name, 'play.html', seatHash(s), 'seat', s.id));
+    phones.forEach((s) => frame(box, s === cap ? `${s.name} · table host` : s.name,
+                                'play.html', seatHash(s), 'seat', s.id, s === cap));
   }
 }
 
