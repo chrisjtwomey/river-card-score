@@ -20,11 +20,8 @@
   /* A group of controls the server either takes or does not. Hiding one is
      one attribute, so nothing is left behind with its separators. */
   .cluster{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
-  #repair{flex:none;gap:8px}
   #run-tools{flex:none;gap:6px}
   #run-tools .btn{padding:6px 9px;font-size:12px}
-  #repair input{width:52px;font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);
-    background:var(--bg);color:var(--ink);text-align:center}
 
   .tablestrip{display:flex;gap:6px;overflow-x:auto;min-width:0;flex:1}
   .trow{display:flex;gap:7px;align-items:baseline;flex:none;font-size:12px;padding:5px 9px;text-align:left}
@@ -40,16 +37,31 @@
   .newtable input{width:44px;font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);
     background:var(--bg);color:var(--ink);text-align:center}
 
-  /* The scrubber: the whole card as cells. Click a round and the game is
-     played up to it; the ends are the lobby and the finish. */
-  .scrub{display:flex;gap:3px;overflow-x:auto;min-width:0;flex:1}
-  .scell{flex:none;min-width:30px;padding:4px 5px;border:1px solid var(--line);border-radius:8px;
-    background:var(--bg2);color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
-  .scell small{font-size:9px;color:var(--ink-dim);font-weight:600}
-  .scell:hover{background:var(--chip)}
-  .scell.played{background:rgba(31,122,77,.14)}
-  .scell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+  /* The card: a row a round, a column a seat, in the shape the game already
+     draws it. The round in play is marked; a round already scored is tinted.
+     Each cell is the pair the scorecard shows -- what was bid, what was won. */
+  .cardbox{padding:10px 12px;gap:8px}
+  .cardhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .cardhead .hint{margin:0;flex:1;min-width:0}
+  .cardhead-right{display:flex;align-items:center;gap:8px;flex:none}
+  .cardgrid{display:flex;flex-direction:column;gap:2px;overflow:auto;max-height:46vh;min-width:0}
+  .crow{display:grid;grid-template-columns:92px repeat(var(--seats,4),minmax(74px,1fr));
+    gap:4px;align-items:center}
+  .crow.played{background:rgba(31,122,77,.10);border-radius:8px}
+  .crow.on{background:rgba(184,134,43,.14);border-radius:8px;
+    box-shadow:inset 0 0 0 1px rgba(184,134,43,.5)}
+  .cround{font-size:11px;font-weight:700;color:var(--ink-dim);padding:3px 6px;white-space:nowrap}
+  button.cround{border:1px solid var(--line);border-radius:8px;background:var(--bg2);color:var(--ink);
+    font:inherit;font-size:11px;font-weight:700;cursor:pointer;text-align:left}
+  button.cround:hover{background:var(--chip);border-color:var(--gold)}
+  .chead .cseat,.cfoot .ctotal{font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--ink-dim);font-weight:700;text-align:center;overflow:hidden;text-overflow:ellipsis}
+  .cfoot .ctotal{font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink)}
+  .cpair{display:flex;gap:3px}
+  .cpair input{width:100%;min-width:0;font:inherit;font-size:12px;padding:3px 2px;text-align:center;
+    border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+  .cpair input.won{background:var(--bg2)}
+  .cpair input.part{border-style:dashed;border-color:var(--gold)}
   .seg{display:flex;flex:none;border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .seg .btn{border:0;border-radius:0;padding:6px 10px;font-size:12px}
   .seg .btn.on{background:var(--felt);color:#fff}
@@ -62,7 +74,7 @@
 
   /* The players panel: one row a seat, every control landing as it is used. */
   .players{padding:10px 12px;gap:6px}
-  .prow{display:grid;grid-template-columns:minmax(130px,220px) 44px 52px 40px 40px 54px 54px 72px 1fr;
+  .prow{display:grid;grid-template-columns:minmax(130px,220px) 44px 52px 40px 40px 72px 1fr;
     gap:9px;align-items:center;font-size:13px}
   .prow.phead span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;
     color:var(--ink-dim);font-weight:700}
@@ -138,17 +150,6 @@
       </span>
     </div>
     <div class="bandrow">
-      <span class="cluster" id="scrub-tools" hidden>
-        <span class="bandlbl">Go to</span>
-        <div class="scrub" id="scrub"></div>
-        <div class="seg" id="goto-phase">
-          <button class="btn on" data-phase="bid" type="button" title="Land the round at its bids">bid</button>
-          <button class="btn" data-phase="tricks" type="button" title="Land the round with its bids in">tricks</button>
-        </div>
-      </span>
-      <!-- The repair form, drawn by the page: the one way to move a game on
-           where the scrubber is refused. -->
-      <span class="cluster" id="repair" hidden></span>
       <!-- Stopping the table, and walking it on a move at a time. Both are
            about hands nobody is behind, so both come and go with them. -->
       <span class="cluster" id="run-tools" hidden>
@@ -169,6 +170,7 @@
       </div>
       <span class="bandsep"></span>
       <div class="oneshots" id="panel-toggles">
+        <button class="btn" id="btn-card" type="button" aria-expanded="true">Card ▴</button>
         <button class="btn" id="btn-players" type="button" aria-expanded="false">Players ▾</button>
         <button class="btn" id="btn-state" type="button" aria-expanded="false">State ▾</button>
       </div>
@@ -182,13 +184,30 @@
     putting anybody at the table.
   </p>
 
+  <!-- The card: the game itself, and the way about it. A round label takes the
+       game to that round; a cell edits that round where it stands. -->
+  <div class="panel cardbox" id="card-panel">
+    <div class="cardhead">
+      <span class="bandlbl">Card</span>
+      <span class="hint">A round label takes the game there. A cell edits that round, wherever the game is.</span>
+      <span class="cardhead-right">
+        <span class="bandlbl">lands at</span>
+        <div class="seg" id="card-phase"></div>
+        <button class="btn" id="btn-fillto" type="button" hidden
+          title="Play every round before this one through, with bids and tricks a real table could have made. It throws away what is on the card.">Fill to here</button>
+      </span>
+    </div>
+    <div class="cardgrid" id="cardgrid"></div>
+    <p class="hint" id="card-empty" hidden>No game on this table yet. Start one and the card is here.</p>
+  </div>
+
   <div class="panel players" id="players-panel" hidden>
     <div class="prow phead">
       <span>seat</span><span>host</span><span>dealer</span><span>bot</span><span>left</span>
-      <span>bid</span><span>won</span><span id="ph-photo">photo</span><span></span>
+      <span id="ph-photo">photo</span><span></span>
     </div>
     <div id="prows" style="display:contents"></div>
-    <p class="hint">Everything lands as it is changed. The won column goes as one, once every seat has a number: the cells still wanted are ringed until it does.</p>
+    <p class="hint">What belongs to the seat, not to a round. Everything lands as it is changed. What a seat bid and won is on the card.</p>
   </div>
 
   <div class="panel statebox" id="state-panel" hidden>

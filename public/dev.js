@@ -5,7 +5,7 @@
    answers the state forcer alone, over the table's own host token.
 
    The page is one band of controls over the screens: which table, where in
-   the game (the scrubber is the whole scorecard, clickable), and the
+   the game (the card is the whole scorecard, clickable and editable), and the
    one-shots. */
 
 const $ = (s) => document.querySelector(s);
@@ -57,7 +57,6 @@ function connect() {
       DEVSRV = m.srv !== false;              // an older server said nothing, and took it all
       history.replaceState(null, '', `#c=${CODE}&t=${HOST_TOKEN}`);
       topKey = seatKey = tableKey = '';      // another table, so every pane is stale
-      repairTouched = false;                 // and the form is aimed at nothing yet
       applyMode();
       if (polling) askTables();
       onTable = true;
@@ -261,113 +260,145 @@ function renderTables(list) {
   });
 }
 
-/* ---------- the scrubber ---------- */
+/* ---------- the card ---------- */
 
-// The phase a clicked round lands at: 'bid' or 'tricks'.
-const gotoPhase = () => {
-  const on = document.querySelector('#goto-phase .btn.on');
+/* The scorecard, in the shape the game already draws it: a row a round, a
+   column a seat, the round in play marked. It is the whole of this page's
+   navigation and most of its editing, because it is the whole of the game.
+
+   Click a round's label and the game is taken there -- a forced phase and
+   round, nothing invented, so it works on any server. Type in a cell and that
+   round is edited where it stands, whatever round the game is on: putting a
+   mistyped trick right three rounds back is what this page is for, and it
+   should not mean moving the game to get at it.
+
+   Filling the card -- playing every round up to one with rounds a real table
+   could have made -- is a different act on the same rows, so it is a button of
+   its own and says what it does. */
+
+// Where a clicked round lands: at its bids, or with its bids in.
+const cardPhase = () => {
+  const seg = $('#card-phase');
+  const on = seg && seg.querySelector('.btn.on');
   return (on && on.dataset.phase) || 'bid';
 };
 
-/* The whole card as cells: the lobby, every round, the finish. The cell the
-   game is at is marked; the rounds already played are tinted. Click anywhere
-   and the game is taken there. */
-function renderScrub() {
-  const box = $('#scrub');
-  const rounds = ST.rounds.length ? ST.rounds
-    : Game.schedule(ST.cfg.max, ST.cfg.pattern, ST.cfg.ones).map((c) => ({ cards: c }));
-  const played = ST.rounds.length ? Math.min(ST.idx, rounds.length) : 0;
-  const key = `${ST.code}:${rounds.map((r) => r.cards).join(',')}:${played}:${ST.phase}`;
-  if (box.dataset.key === key) return;
-  box.dataset.key = key;
-  box.innerHTML = '';
-  const cell = (label, sub, cls, jump) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'scell' + (cls ? ' ' + cls : '');
-    b.appendChild(document.createTextNode(label));
-    if (sub) { const s = document.createElement('small'); s.textContent = sub; b.appendChild(s); }
-    b.addEventListener('click', jump);
-    box.appendChild(b);
-    return b;
-  };
-  cell('⌂', 'lobby', ST.phase === 'lobby' ? 'on' : '', () => act('lobby'));
-  rounds.forEach((r, i) => {
-    const here = ST.rounds.length && ST.idx === i && ST.phase !== 'done' && ST.phase !== 'lobby';
-    cell(String(i + 1), `${r.cards}c`, (here ? 'on ' : '') + (i < played ? 'played' : ''),
-         () => act('goto', { round: i + 1, phase: gotoPhase() }));
-  });
-  cell('🏁', 'end', ST.phase === 'done' ? 'on' : '', () => act('endGame'));
-  const on = box.querySelector('.scell.on');
-  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-}
-
-/* ---------- the repair form ---------- */
-
-/* Where the scrubber is refused, this is how a game is moved on. It forces a
-   phase and a round and nothing else: no rounds are invented, no bids are made
-   up, so it is the one control a normal server takes. A game stuck in the
-   wrong phase -- bidding that will not close, a finish that came too early --
-   is put right here.
-
-   The four phases are the four the server will hold. The round only travels
-   with a phase a round exists in. */
-const REPAIR_PHASES = ['lobby', 'bid', 'tricks', 'done'];
-let repairTouched = false;      // once it is aimed, stop following the table
-
-function buildRepair() {
-  const box = $('#repair');
-  if (!box || box._wired) return;
-  box._wired = true;
-
-  const lbl = document.createElement('span');
-  lbl.className = 'bandlbl';
-  lbl.textContent = 'Put to';
-
-  const seg = document.createElement('div');
-  seg.className = 'seg';
-  REPAIR_PHASES.forEach((p) => {
+function buildCardPhase() {
+  const seg = $('#card-phase');
+  if (!seg || seg._wired) return;
+  seg._wired = true;
+  [['bid', 'Take the game to the round waiting for its bids'],
+   ['tricks', 'Take the game to the round with its bids in']].forEach(([p, why]) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'btn' + (p === 'bid' ? ' on' : '');
     b.dataset.phase = p;
     b.textContent = p;
-    b.addEventListener('click', () => {
-      seg.querySelectorAll('.btn').forEach((x) => x.classList.toggle('on', x === b));
-      repairTouched = true;
-    });
+    b.title = why;
+    b.addEventListener('click', () =>
+      seg.querySelectorAll('.btn').forEach((x) => x.classList.toggle('on', x === b)));
     seg.appendChild(b);
   });
-
-  const round = document.createElement('input');
-  round.type = 'number';
-  round.min = '1';
-  round.title = 'The round to put the game at';
-  round.addEventListener('input', () => { repairTouched = true; });
-
-  const go = document.createElement('button');
-  go.type = 'button';
-  go.className = 'btn primary';
-  go.textContent = 'Put';
-  go.title = 'Force the game to this phase and round. Nothing is played or invented.';
-  go.addEventListener('click', sendRepair);
-
-  box.append(lbl, seg, round, go);
 }
 
-// What the form is aimed at, read off the form itself at the tap.
-function sendRepair() {
-  const box = $('#repair');
-  const seg = box && box.querySelector('.seg');
-  const on = seg && seg.querySelector('.btn.on');
-  const phase = (on && on.dataset.phase) || 'bid';
-  const patch = { phase };
-  const el = box && box.querySelector('input');
-  const n = Math.round(Number(el && el.value));
-  // A round means nothing in the lobby, and the finish picks its own.
-  if ((phase === 'bid' || phase === 'tricks') && Number.isFinite(n) && n >= 1) patch.idx = n - 1;
-  act('patch', { patch });
-  repairTouched = false;              // it has landed: follow the table again
+const trumpGlyph = (r) => {
+  const s = r.trump && Game.SUITS.find((x) => x.k === r.trump);
+  return s ? ' ' + s.g : '';
+};
+
+/* A whole won row goes at once: the table keeps a tricks column only when
+   every seat in it has a number, so a cell at a time would be thrown away on
+   each cell. A bid stands on its own -- a bid row may have gaps. */
+function sendWon(row, i) {
+  const cells = Array.from(row.querySelectorAll('input.won'));
+  const vals = cells.map((el) => String(el.value).trim());
+  cells.forEach((el, q) => el.classList.toggle('part', wonBad(vals[q])));
+  if (vals.some(wonBad)) return;
+  act('patch', { patch: { round: { i, tricks: vals.map(Number) } } });
+}
+const wonBad = (v) => v === '' || !Number.isFinite(Number(v));
+
+function sendBid(row, i, p) {
+  const cells = Array.from(row.querySelectorAll('input.bidcell'));
+  const out = cells.map((el, q) => {
+    const v = String(el.value).trim();
+    return (q === p && v === '') || v === '' ? null : Number(v);
+  });
+  act('patch', { patch: { round: { i, bids: out } } });
+}
+
+function renderCard() {
+  const box = $('#cardgrid');
+  const panel = $('#card-panel');
+  if (!box || (panel && panel.hidden)) return;
+  // Before a game there is no card: say so rather than draw an empty frame.
+  const live = ST.rounds.length > 0;
+  if ($('#card-empty')) $('#card-empty').hidden = live;
+  if (!live) { box.innerHTML = ''; delete box.dataset.key; return; }
+
+  // Rebuilt only when it has something new to say, and never under a hand
+  // that is typing in it.
+  const key = `${ST.code}:${ST.idx}:${ST.phase}:${DEVSRV}:` + ST.seats.map((s) => s.name).join(',')
+    + ':' + ST.rounds.map((r) => `${r.cards}/${r.dealer}/${r.trump || ''}/${r.bids}/${r.tricks}`).join('|')
+    + ':' + ST.totals.join(',');
+  if (box.dataset.key === key || box.contains(document.activeElement)) return;
+  box.dataset.key = key;
+  box.innerHTML = '';
+
+  const cell = (into, cls, txt) => {
+    const e = document.createElement('div');
+    e.className = cls;
+    if (txt !== undefined) e.textContent = txt;
+    into.appendChild(e);
+    return e;
+  };
+  box.style.setProperty('--seats', String(ST.seats.length));
+
+  const head = cell(box, 'crow chead');
+  cell(head, 'cround', 'round');
+  ST.seats.forEach((s) => cell(head, 'cseat', s.name));
+
+  ST.rounds.forEach((r, i) => {
+    const here = ST.idx === i && ST.phase !== 'lobby' && ST.phase !== 'done';
+    const row = cell(box, 'crow' + (here ? ' on' : '') + (Game.roundDone(r) ? ' played' : ''));
+
+    // The label is the way to the round: one press and the game is there.
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'cround go';
+    go.textContent = `${i + 1} · ${r.cards}${trumpGlyph(r)}`;
+    go.title = `Take the game to round ${i + 1}, at its ${cardPhase()}`;
+    go.addEventListener('click', () =>
+      act('patch', { patch: { phase: cardPhase(), idx: i } }));
+    row.appendChild(go);
+
+    ST.seats.forEach((s, p) => {
+      const pair = cell(row, 'cpair');
+      const num = (cls, v) => {
+        const el = document.createElement('input');
+        el.type = 'number';
+        el.min = '0';
+        el.max = String(r.cards);
+        el.className = cls;
+        el.value = v === null || v === undefined ? '' : v;
+        pair.appendChild(el);
+        return el;
+      };
+      const bid = num('bidcell', r.bids ? r.bids[p] : null);
+      bid.title = `${s.name}, round ${i + 1}: what was bid`;
+      bid.addEventListener('change', () => sendBid(row, i, p));
+      const won = num('won', r.tricks ? r.tricks[p] : null);
+      won.title = `${s.name}, round ${i + 1}: tricks taken. The row goes at once.`;
+      won.addEventListener('change', () => sendWon(row, i));
+    });
+  });
+
+  const foot = cell(box, 'crow cfoot');
+  cell(foot, 'cround', 'total');
+  ST.totals.forEach((t) => cell(foot, 'ctotal', String(t)));
+
+  const on = box.querySelector('.crow.on');
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
 /* Stopping the table, and walking it on. Both are about the hands nobody is
@@ -391,24 +422,6 @@ function renderRun() {
   // Pause is the table's own, so it works anywhere. Stepping is a dev server's.
   $('#btn-step').hidden = !DEVSRV;
   $('#btn-step').disabled = !btn._now;       // stepping a running table is a race
-}
-
-// Until it is aimed, the form says where the game is, so a tap on Put with
-// one thing changed changes only that thing.
-function fillRepair() {
-  const box = $('#repair');
-  if (!box || box.hidden || repairTouched || !ST) return;
-  const seg = box.querySelector('.seg');
-  if (seg) {
-    seg.querySelectorAll('.btn').forEach((b) =>
-      b.classList.toggle('on', b.dataset.phase === ST.phase));
-  }
-  const el = box.querySelector('input');
-  if (el && document.activeElement !== el) {
-    const total = ST.rounds.length;
-    el.max = String(total || 1);
-    el.value = String(total ? Math.min(ST.idx + 1, total) : 1);
-  }
 }
 
 /* Stand-in photos, so the picture on a card can be tested without anybody
@@ -447,44 +460,20 @@ function standInAvatar(name, i) {
 
 /* ---------- the players panel ---------- */
 
-/* The tricks a round paid are one column, not seven cells: the table keeps
-   them only when every seat has a number, and a half-filled column sent cell
-   by cell was thrown away each time and the typing with it. So the column
-   goes together, off the row of boxes as they stand, and until it is whole
-   the empty cells say which ones are wanted. */
-const wonBad = (v) => v === '' || !Number.isFinite(Number(v));
-
-function sendWon() {
-  const box = $('#prows');
-  if (!box || !ST) return;
-  const cells = Array.from(box.querySelectorAll('input.won'));
-  const vals = cells.map((el) => String(el.value).trim());
-  cells.forEach((el, i) => el.classList.toggle('part', wonBad(vals[i])));
-  if (vals.length !== ST.seats.length || vals.some(wonBad)) return;
-  act('patch', { patch: { round: { i: ST.idx, tricks: vals.map(Number) } } });
-}
-
-/* One row a seat. Every control sends the moment it is used, and the rows
-   are rebuilt only while nothing in them is being typed in. */
+/* One row a seat: what belongs to the seat and not to any one round -- who it
+   is, who runs the table, who deals, whether it is a bot, whether it is gone,
+   its picture. What a seat did in a round belongs to that round, and is
+   edited on the card. */
 function renderPlayers() {
   const box = $('#prows');
   if (!box || $('#players-panel').hidden) return;
   const r = ST.rounds[Math.min(ST.idx, ST.rounds.length - 1)] || null;
   const key = ST.seats.map((s, p) =>
-    `${s.name}/${s.bot}/${s.left}/${s.id === ST.captainId}/${r ? r.dealer : ST.firstDealerId}` +
-    `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}`).join('|') + `@${ST.idx}:${ST.phase}`;
+    `${s.name}/${s.bot}/${s.left}/${s.id === ST.captainId}/${r ? r.dealer : ST.firstDealerId}`)
+    .join('|') + `@${ST.idx}:${ST.phase}:${DEVSRV}`;
   if (box.dataset.key === key || box.contains(document.activeElement)) return;
   box.dataset.key = key;
   box.innerHTML = '';
-
-  // An edited number lands beside the others, not instead of them.
-  const numbers = (k, p, v) => {
-    const out = ST.seats.map((x, q) => {
-      const have = r && r[k] ? r[k][q] : null;
-      return q === p ? v : (have === undefined ? null : have);
-    });
-    act('patch', { patch: { round: { i: ST.idx, [k]: out } } });
-  };
 
   ST.seats.forEach((s, p) => {
     const row = document.createElement('div');
@@ -514,19 +503,6 @@ function renderPlayers() {
       return el;
     };
 
-    // A bid stands on its own -- the table keeps a column with gaps in it.
-    // The tricks do not, so they go as one.
-    const num = (k, v) => {
-      const el = document.createElement('input');
-      el.type = 'number'; el.min = '0';
-      if (k === 'tricks') el.className = 'won';
-      el.value = v === null || v === undefined ? '' : v;
-      el.disabled = !r;
-      el.addEventListener('change', k === 'tricks' ? sendWon
-        : () => numbers(k, p, el.value.trim() === '' ? null : Number(el.value)));
-      return el;
-    };
-
     // A stand-in photo is invented data, so only a dev server takes it. The
     // cell stays, empty, or every row after it would slide up a column.
     const pbtns = document.createElement('span');
@@ -544,8 +520,6 @@ function renderPlayers() {
     }
 
     row.append(name, host, dealer, check(!!s.bot, 'bot'), check(!!s.left, 'left'),
-               num('bids', r && r.bids ? r.bids[p] : null),
-               num('tricks', r && r.tricks ? r.tricks[p] : null),
                pbtns, document.createElement('span'));
     box.appendChild(row);
   });
@@ -555,8 +529,7 @@ function renderPlayers() {
 
 function render() {
   renderFrames();
-  if (DEVSRV) renderScrub();       // the card it draws is a card only a dev server can fill
-  else fillRepair();
+  renderCard();
   renderRun();
   renderPlayers();
   const n = ST.seats.length;
@@ -593,28 +566,45 @@ function applyMode() {
    knows them from the hello, so it shows what works and nothing else.
 
    On a normal server that leaves the two that put a game right -- the players
-   panel and the record -- with the repair form in place of the scrubber. */
+   panel and the record -- and the card, whose every edit is a forced value. */
 function applyGates() {
   const el = (s) => $(s);
-  ['#tables-tools', '#scrub-tools', '#shots-dev', '#shots-sep'].forEach((s) => {
+  ['#tables-tools', '#shots-dev', '#shots-sep'].forEach((s) => {
     if (el(s)) el(s).hidden = !DEVSRV;
   });
-  if (el('#repair')) el('#repair').hidden = DEVSRV || !CODE;
+  // Filling the card invents the rounds it fills, so only a dev server takes it.
+  if (el('#btn-fillto')) el('#btn-fillto').hidden = !DEVSRV;
   if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV ? 'photo' : '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  buildRepair();
+  buildCardPhase();
   applyMode();
   UI.wireTheme('#btn-theme');
 
   document.querySelectorAll('[data-act]').forEach((b) =>
     b.addEventListener('click', () => act(b.dataset.act)));
 
-  document.querySelectorAll('#goto-phase .btn').forEach((b) =>
-    b.addEventListener('click', () => {
-      document.querySelectorAll('#goto-phase .btn').forEach((x) => x.classList.toggle('on', x === b));
-    }));
+  /* Every round up to the one the game is on, played through with rounds a
+     real table could have made. It rewrites the card, so it says so and is
+     kept away from the labels that only move the game. */
+  $('#btn-fillto').addEventListener('click', () => {
+    if (!ST || !ST.rounds.length) return;
+    const to = ST.idx;
+    if (!to) return act('fillCard', { rounds: 0 });
+    UI.ask(`Fill the card up to round ${to + 1}?`,
+           `Rounds 1 to ${to} are played through with bids and tricks a real table could have made. `
+           + 'Whatever is on the card now is thrown away.', 'Fill the card', true)
+      .then((yes) => { if (yes) act('fillCard', { rounds: to }); });
+  });
+
+  $('#btn-card').addEventListener('click', () => {
+    const panel = $('#card-panel');
+    panel.hidden = !panel.hidden;
+    $('#btn-card').textContent = panel.hidden ? 'Card ▾' : 'Card ▴';
+    $('#btn-card').setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden && ST) { delete $('#cardgrid').dataset.key; renderCard(); }
+  });
 
   $('#btn-avatars').addEventListener('click', () => {
     if (!ST || !ST.seats) return;
