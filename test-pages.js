@@ -70,6 +70,7 @@ function makeDom(W, H) {
     fire(t, evt) { ((this._on || {})[t] || []).slice().forEach((f) => f(Object.assign({ type: t, preventDefault() {}, stopPropagation() {} }, evt))); }
     setPointerCapture() {}
     releasePointerCapture() {}
+    scrollIntoView() {}
     setAttribute(k, v) { if (k === 'id') this.id = v; this['attr_' + k] = v; }
     getAttribute(k) { return this['attr_' + k] === undefined ? null : this['attr_' + k]; }
     removeAttribute(k) { delete this['attr_' + k]; }
@@ -99,6 +100,8 @@ function makeDom(W, H) {
     body,
     documentElement: root,
     createElement: (t) => new El(t),
+    // Text put beside elements, which is how the scrubber writes a cell.
+    createTextNode: (t) => { const e = new El('#text'); e.textContent = String(t); return e; },
     getElementById: (id) => body.all().find((e) => e.id === id) || null,
     querySelector: (sel) => {
       const m = /^#([\w-]+)\s+\.([\w-]+)$/.exec(sel);
@@ -2105,7 +2108,7 @@ part('the front page, and the screen');
     dom.document.getElementById = (id) => pick('#' + id);
     const gone = [];
     const location = { protocol: 'http:', host: 'table', hostname: o.hostname || 'table', pathname: '/' + file,
-                       search: search || '', hash: '',
+                       search: search || '', hash: o.hash || '',
                        get href() { return this._h; }, set href(v) { this._h = v; gone.push(v); } };
     const history = { replaceState: (a, b, u) => { history.url = u; } };
     dom.window.location = location;              // as in a browser: one address, two names
@@ -2135,10 +2138,13 @@ part('the front page, and the screen');
       Avatar: { saved: () => null, remember() {}, url: () => null,
                 picker: () => ({ el: new dom.El('div'), show() {}, say() {} }) } }, o.given || {});
     const fetch = o.fetch || (() => Promise.reject(new Error('the fake DOM reaches no server')));
+    /* A page that arms a repeating timer would hold the whole suite open long
+       after its checks are done, so a check that loads one hands in its own. */
+    const timer = o.setInterval || (() => 0);
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
-      'Game', 'console', 'fetch', ...names, src + '\n; return { Net };');
+      'Game', 'console', 'fetch', 'setInterval', ...names, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
-      { log() {}, info() {}, warn() {}, error() {} }, fetch,
+      { log() {}, info() {}, warn() {}, error() {} }, fetch, timer,
       ...names.map((n) => (n in given ? given[n] : anything)));
     return Object.assign(out, { dom, pick, gone, socks, loc: location,
       start: () => dom.document.fire('DOMContentLoaded') });
@@ -2476,6 +2482,66 @@ part('the front page, and the screen');
     F.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'that table is gone' }) });
     ok(!F.socks[0].sent.some((m) => m.t === 'create'),
        'the same screen in a pane of the dev page invents nothing');
+  }
+
+  /* ---- the dev page, and what each server lets it do ----
+
+     The page is opened on a table the way the TV screen's ⚙ opens it, and
+     then told what kind of server it reached. What must not happen is a
+     control that draws itself and answers a refusal: on a normal server the
+     page shows the two things that put a game right and nothing that invents
+     data. */
+  part('the dev controls, on each kind of server');
+
+  // A table on the wire: the hello the dev page gets, then a state.
+  const devPage = (srv, seats) => {
+    const P = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th' });
+    P.start();
+    P.socks[0].onopen();
+    P.socks[0].onmessage({ data: JSON.stringify({
+      t: 'hello', role: 'host', code: 'AAAA', token: 'th', dev: true, srv,
+      stand: !!srv, seats,
+    }) });
+    return P;
+  };
+  const devState = (dev) => JSON.stringify({
+    t: 'state', code: 'AAAA', phase: 'bid', dev, idx: 0,
+    cfg: { max: 3, pattern: 'down', ones: 2, deck: 'real' },
+    seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Bob' }],
+    captainId: 's1', firstDealerId: 's1',
+    rounds: [{ cards: 3, dealer: 0, bids: [null, null], tricks: null },
+             { cards: 2, dealer: 1, bids: null, tricks: null }],
+    totals: [0, 0], chat: [],
+  });
+
+  {   // a real game on a normal server: the repair tools, and no more
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' },
+                              { id: 's2', name: 'Bob', watch: 'w2' }]);
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"open","code":"AAAA","token":"th"}',
+       'the page opens on the table its address names  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.socks[0].onmessage({ data: devState(false) });
+
+    ok(P.pick('#tables-tools').hidden === true, 'a normal server hides the tables a page cannot list');
+    ok(P.pick('#scrub-tools').hidden === true, 'and the scrubber, which fills a card it may not invent');
+    ok(P.pick('#shots-dev').hidden === true, 'and every one-shot that makes data up');
+    ok(P.pick('#scrub').children.length === 0, 'so the card is not even drawn');
+    ok(P.pick('#panel-toggles').hidden === false, 'but the panels that put a game right stay');
+    ok(P.pick('#live-note').hidden === false, 'and the page says real players may be at the table');
+    ok(P.pick('#ph-photo').textContent === '', 'the photo column says nothing it cannot do');
+  }
+
+  {   // a table of stand-ins on a dev server: everything, as before
+    const P = devPage(true, [{ id: 's1', name: 'Ann', token: 't1' },
+                             { id: 's2', name: 'Bob', token: 't2' }]);
+    P.socks[0].onmessage({ data: devState(true) });
+
+    ok(P.pick('#tables-tools').hidden === false, 'a dev server shows the tables it will hand over');
+    ok(P.pick('#scrub-tools').hidden === false, 'and the scrubber');
+    ok(P.pick('#shots-dev').hidden === false, 'and the one-shots');
+    ok(P.pick('#repair').hidden === true, 'and puts the repair form away, the scrubber being the better way');
+    ok(P.pick('#scrub').children.length === 4, 'the card is the lobby, both rounds and the finish  got '
+       + P.pick('#scrub').children.length);
+    ok(P.pick('#ph-photo').textContent === 'photo', 'and the photo column is offered');
   }
 }
 

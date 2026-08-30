@@ -13,6 +13,7 @@ const $ = (s) => document.querySelector(s);
 let ws = null, ST = null, CODE = null, HOST_TOKEN = null, SEATS = [];
 let topKey = '', seatKey = '', tableKey = '';  // re-draw only when it has to change
 let LIVE = false;                // real players may be behind this table
+let DEVSRV = false;              // this server takes the controls that invent data
 let polling = false;             // the list of tables, on a dev server only
 let onTable = false;             // this socket got onto a table
 
@@ -50,6 +51,7 @@ function connect() {
       CODE = m.code; HOST_TOKEN = m.token; SEATS = m.seats || [];
       SEATS.forEach((x) => { if (held.has(x.id)) x.token = held.get(x.id); });
       LIVE = m.stand === false;              // the table says which it is, not the address
+      DEVSRV = m.srv !== false;              // an older server said nothing, and took it all
       history.replaceState(null, '', `#c=${CODE}&t=${HOST_TOKEN}`);
       topKey = seatKey = tableKey = '';      // another table, so every pane is stale
       applyMode();
@@ -119,8 +121,9 @@ function frame(box, label, page, hash, kind, entry, boss) {
     `<iframe src="${url}" width="${w}" height="${h}" style="transform:scale(${scale})"></iframe></div>`;
   el.querySelector('.lbl').textContent = label;
   // On a real table a pane only watches until it is told to act. The button
-  // swaps the pane between the watch link and the seat itself.
-  if (entry && entry.watch) {
+  // swaps the pane between the watch link and the seat itself, and only a dev
+  // server ever hands a seat over, so on any other there is no button.
+  if (entry && entry.watch && DEVSRV) {
     const tk = document.createElement('button');
     tk.type = 'button';
     tk.className = 'btn tiny';
@@ -157,7 +160,7 @@ function renderFrames() {
   // that is, that pane stands in the same place, so the eye is not sent
   // hunting for it. The key follows the order, so a new table host re-draws.
   const phones = cap ? [cap].concat(SEATS.filter((s) => s.id !== cap.id)) : SEATS;
-  const seats = `${CODE}:${phones.map(seatHash).join(',')}:${scale}`;
+  const seats = `${CODE}:${phones.map(seatHash).join(',')}:${scale}:${DEVSRV}`;
   if (seats !== seatKey) {
     seatKey = seats;
     const box = $('#seat-frames');
@@ -370,17 +373,21 @@ function renderPlayers() {
       return el;
     };
 
+    // A stand-in photo is invented data, so only a dev server takes it. The
+    // cell stays, empty, or every row after it would slide up a column.
     const pbtns = document.createElement('span');
     pbtns.className = 'pbtns';
-    const photo = document.createElement('button');
-    photo.type = 'button'; photo.className = 'btn tiny'; photo.textContent = '📷';
-    photo.title = 'A stand-in photo on this seat';
-    photo.addEventListener('click', () => act('avatar', { seat: p, data: standInAvatar(s.name, p) }));
-    const clear = document.createElement('button');
-    clear.type = 'button'; clear.className = 'btn tiny'; clear.textContent = '✕';
-    clear.title = 'No photo on this seat';
-    clear.addEventListener('click', () => act('avatar', { seat: p, data: null }));
-    pbtns.append(photo, clear);
+    if (DEVSRV) {
+      const photo = document.createElement('button');
+      photo.type = 'button'; photo.className = 'btn tiny'; photo.textContent = '📷';
+      photo.title = 'A stand-in photo on this seat';
+      photo.addEventListener('click', () => act('avatar', { seat: p, data: standInAvatar(s.name, p) }));
+      const clear = document.createElement('button');
+      clear.type = 'button'; clear.className = 'btn tiny'; clear.textContent = '✕';
+      clear.title = 'No photo on this seat';
+      clear.addEventListener('click', () => act('avatar', { seat: p, data: null }));
+      pbtns.append(photo, clear);
+    }
 
     row.append(name, host, dealer, check(!!s.bot, 'bot'), check(!!s.left, 'left'),
                num('bids', r && r.bids ? r.bids[p] : null),
@@ -394,7 +401,7 @@ function renderPlayers() {
 
 function render() {
   renderFrames();
-  renderScrub();
+  if (DEVSRV) renderScrub();       // the card it draws is a card only a dev server can fill
   renderPlayers();
   const n = ST.seats.length;
 
@@ -422,6 +429,22 @@ function applyMode() {
     $('#code').textContent = CODE;
     $('#subtitle').textContent = `live table ${CODE}`;
   }
+  applyGates();
+}
+
+/* What the server will not take is not shown. A control that draws itself and
+   then answers a refusal teaches the limits one click at a time; the page
+   knows them from the hello, so it shows what works and nothing else.
+
+   On a normal server that leaves the two that put a game right -- the players
+   panel and the record -- with the repair form in place of the scrubber. */
+function applyGates() {
+  const el = (s) => $(s);
+  ['#tables-tools', '#scrub-tools', '#shots-dev', '#shots-sep'].forEach((s) => {
+    if (el(s)) el(s).hidden = !DEVSRV;
+  });
+  if (el('#repair')) el('#repair').hidden = DEVSRV || !CODE;
+  if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV ? 'photo' : '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
