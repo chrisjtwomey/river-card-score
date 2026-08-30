@@ -202,6 +202,8 @@ The finish plays in three moves:
 2. **Each accolade in turn, eight seconds each.** The name comes up with what it was for, the **+10** lands, and that player's score runs up in the list behind. The places shuffle as the points go in.
 3. **The winner** — whoever is top once every accolade is paid, which is not always whoever led before them.
 
+On a table dealt on the phones the felt is up when the last round is scored, and it hands the game straight to the finish: the stage is held at full through the handover, so the scorecard behind it is never shown. On a screen with nothing up the finish is a scene opening, and it fades in.
+
 With three accolades the finish runs about 35 seconds. A tap lands the whole thing at once — every accolade paid, the list settled, the winner there — and another clears it.
 
 They come from the scorecard alone — the bids, the tricks and the hand sizes — so a table with real cards earns them the same way as one with a virtual deck. The scorecard grows an **Accolades** row under the last round, and the Total row is the final score.

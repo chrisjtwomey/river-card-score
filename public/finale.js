@@ -9,6 +9,13 @@ const Finale = (function () {
   const { S, cardEl, fade, parts, close } = Stage;
 
   function finale(opts, force) {
+    /* Whether the stage is already on screen, asked before anything is shut.
+       On a table dealt on the phones the felt is up when the last round scores,
+       and it hands the game straight over to the finish: an overlay faded in
+       from nothing then shows the page behind it -- the scorecard -- for the
+       length of the fade, which reads as being taken to the scores and brought
+       back. On a screen with nothing up it is a scene opening, and it fades. */
+    const wasUp = (() => { const p = parts(false); return !!p && !p.overlay.hidden; })();
     close();
     return new Promise((resolve) => {
       const { overlay, stage } = parts();
@@ -130,7 +137,11 @@ const Finale = (function () {
       }
       relayout(false);
 
-      anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
+      // Held at full where the stage was already up: the fade the felt started
+      // on its way out is outranked by this, which is asked for after it.
+      anims.push(wasUp
+        ? overlay.animate([{ opacity: 1 }, { opacity: 1 }], { duration: 1, fill: 'both' })
+        : overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
 
       /* The trophy lies face down from the first frame, so the top of the scene
          is not a hole while the table reads the scores. Only the faces fade: an

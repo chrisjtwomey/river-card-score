@@ -129,11 +129,16 @@ function makeDom(W, H) {
 
 const ROOT = __dirname;
 
-function load(W, H, motion) {
+/* `fin` loads the finish for real instead of stubbing it, in the page's own
+   script order. It is a scene of its own and most checks want it out of the
+   way, so it is asked for. */
+function load(W, H, motion, fin) {
   const dom = makeDom(W, H);
   dom.localStorage.setItem('river-card-score:motion:v1', motion || 'off');
-  const src = ['public/ui.js', 'public/stage.js', 'public/deal.js', 'public/felt.js', 'public/table.js', 'public/round.js']
-    .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
+  const files = ['public/ui.js', 'public/stage.js', 'public/deal.js',
+                 'public/felt.js', 'public/table.js', 'public/round.js'];
+  if (fin) files.splice(3, 0, 'public/finale.js');
+  const src = files.map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
   const Avatar = { url: () => null };
   const Finale = { play: () => Promise.resolve() };
   const talk = [];
@@ -146,10 +151,12 @@ function load(W, H, motion) {
     },
     wire() {}, update() {},
   };
-  const fn = new Function('window', 'document', 'localStorage', 'Game', 'Avatar', 'Finale', 'Chat', 'console',
-    src + '\n; return { UI, Stage, Deal, Felt, Table };');
-  return Object.assign({ dom, talk }, fn(dom.window, dom.document, dom.localStorage, Game, Avatar, Finale, Chat,
-    { log() {}, info() {}, warn() {}, error(...a) { throw new Error('console.error: ' + a.join(' ')); } }));
+  const args = ['window', 'document', 'localStorage', 'Game', 'Avatar', 'Chat', 'console'];
+  const vals = [dom.window, dom.document, dom.localStorage, Game, Avatar, Chat,
+    { log() {}, info() {}, warn() {}, error(...a) { throw new Error('console.error: ' + a.join(' ')); } }];
+  if (!fin) { args.splice(5, 0, 'Finale'); vals.splice(5, 0, Finale); }
+  const fn = new Function(...args, src + '\n; return { UI, Stage, Deal, Felt, Table };');
+  return Object.assign({ dom, talk }, fn(...vals));
 }
 
 /* Drive the timers a scene arms, and the ones those arm in turn, until it
@@ -3658,6 +3665,58 @@ part('tapping the deal away');
 }
 }
 
+
+part('the finish takes the stage over');
+
+/* On a table dealt on the phones the felt is up when the last round is scored,
+   and it hands the game straight to the finish. An overlay faded in from
+   nothing shows the page behind it -- the scorecard -- for the length of the
+   fade, which reads as being taken to the scores and brought back. */
+{
+  const spy = (L) => {
+    const asked = [];
+    L.dom.El.prototype.animate = function (kf, opts) {
+      const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {},
+                  play() {}, finish() {}, finished: Promise.resolve(), onfinish: null };
+      asked.push(a);
+      return a;
+    };
+    L.dom.El.prototype.getAnimations = () => [];
+    return asked;
+  };
+  const opts = () => ({ names: ['P1', 'P2', 'P3'], totals: [10, 8, 6],
+                        awards: [], points: 0, bonus: [0, 0, 0] });
+  const overlayFade = (asked, overlay) => {
+    const mine = asked.filter((a) => a.el === overlay && a.kf && a.kf[0] && 'opacity' in a.kf[0]);
+    return mine[mine.length - 1];         // the last one asked for is the one that holds
+  };
+
+  {
+    const n = 3, cards = 3, me = 1;
+    const made = stateFor(n, cards, me, { bids: [1, null, null], turn: 1 });
+    const L = load(412, 860, 'full', true);
+    const asked = spy(L);
+    L.Felt.sync(made.ST, me, { send: () => {} });
+    const overlay = L.dom.document.getElementById('deal');
+    ok(!overlay.hidden, 'the felt is on screen when the last round is scored');
+    asked.length = 0;
+    L.Deal.finale(opts());
+    const f = overlayFade(asked, overlay);
+    ok(!!f && f.kf[0].opacity === 1 && f.kf[1].opacity === 1,
+       'the finish holds the stage at full, so the scorecard is never shown  got '
+       + JSON.stringify(f && f.kf));
+  }
+  {
+    const L = load(412, 860, 'full', true);
+    const asked = spy(L);
+    const overlay = L.Stage.parts().overlay;
+    ok(overlay.hidden, 'a screen with nothing up');
+    L.Deal.finale(opts());
+    const f = overlayFade(asked, overlay);
+    ok(!!f && f.kf[0].opacity === 0 && f.kf[1].opacity === 1,
+       'is a scene opening, and it fades in  got ' + JSON.stringify(f && f.kf));
+  }
+}
 
 part('the pages and the stylesheet agree');
 
