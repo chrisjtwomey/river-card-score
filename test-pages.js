@@ -2002,6 +2002,68 @@ part('what a round paid');
    television came to invent a table nobody was sitting at. Both are checked
    here against a document that answers any selector, which is enough to see
    what the page builds and what it puts on the wire. */
+part('a bot is not announced');
+
+/* A pill says what somebody did while you were looking away. A bot answers the
+   moment it is asked, so a table with three of them kept three lines stacked up
+   through the whole of the bidding, saying nothing anybody could act on. */
+{
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { bids: [2, null, 1, 3], turn: null });
+  const ST = made.ST, r = ST.rounds[0];
+  const L = load(412, 860, 'off');
+  const box = () => L.dom.document.getElementById('toaster');
+  const lines = () => (box() ? box().children.map((el) =>
+    el.querySelector('.what').textContent) : []);
+  const clear = () => { if (box()) box().children.slice().forEach((el) => el.remove()); };
+
+  [0, 2, 3].forEach((p) => { ST.seats[p].bot = true; });
+  L.Table.sayBids(ST, r, [0, 2, 3], me);
+  ok(lines().length === 0, 'three bots bidding say nothing  got ' + JSON.stringify(lines()));
+
+  clear();
+  ST.seats[0].bot = false;                       // one of them is a person
+  L.Table.sayBids(ST, r, [0, 2, 3], me);
+  ok(lines().length === 1 && lines()[0] === 'P1 bid 2',
+     'and the one person among them is the only line  got ' + JSON.stringify(lines()));
+  ok(box().children[0].querySelector('.note').textContent === 'all bids in',
+     'which still carries who the table waits on next');
+
+  clear();
+  L.Table.sayBids(ST, r, [me], me);
+  ok(lines().length === 0, 'your own bid is still not announced, bot or not');
+
+  // Four people bidding at once is a catch-up, and collapses; three bots and
+  // one person is not a catch-up.
+  clear();
+  [0, 2, 3].forEach((p) => { ST.seats[p].bot = false; });
+  L.Table.sayBids(ST, r, [0, 2, 3], me);
+  ok(lines().length === 1 && /^3 more bids in$/.test(lines()[0]),
+     'three people at once collapse to one line  got ' + JSON.stringify(lines()));
+  clear();
+  [2, 3].forEach((p) => { ST.seats[p].bot = true; });
+  L.Table.sayBids(ST, r, [0, 2, 3], me);
+  ok(lines().length === 1 && lines()[0] === 'P1 bid 2',
+     'but two bots and a person do not  got ' + JSON.stringify(lines()));
+}
+
+{
+  // A bot never drops out or comes back, and if one ever did it would not be said.
+  const n = 3, cards = 3, me = 0;
+  const made = stateFor(n, cards, me);
+  const ST = made.ST;
+  ST.seats[1].bot = true;
+  const L = load(412, 860, 'off');
+  const box = () => L.dom.document.getElementById('toaster');
+  const seen = L.Table.sayPresence(ST, me, null);
+  ST.seats[1].online = false;
+  ST.seats[2].online = false;
+  L.Table.sayPresence(ST, me, seen);
+  const said = box().children.map((el) => el.querySelector('.what').textContent);
+  ok(said.length === 1 && said[0] === 'P3 dropped out',
+     'a seat going quiet is said for a person and not for a bot  got ' + JSON.stringify(said));
+}
+
 part('the front page, and the screen');
 {
   const anything = new Proxy(function () {}, {

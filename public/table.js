@@ -273,12 +273,23 @@ const Table = (function () {
     return mark;
   }
 
+  /* A pill says what somebody did while you were looking away. A bot is never
+     looked away from: it answers the moment it is asked, so a table with three
+     of them kept three lines stacked up through the whole of the bidding, and
+     none of them was news. What a bot does is still shown -- its chip pops in
+     the strip, its number slams onto its pile on the felt and on the TV -- it
+     is only not said.
+
+     A trick is the exception, and stays: the thing that happened there is a
+     person tapping who took it, whoever the winner was. */
+  const worthSaying = (ST, p) => p >= 0 && !!ST.seats[p] && !ST.seats[p].bot;
+
   // "Hugh bid 2 · Joe to bid", for the seats that have just bid. `me` is the
   // seat reading it, or -1 for a screen that belongs to nobody. Your own bid
   // is not announced: your own pad already says it.
   function sayBids(ST, r, landed, me) {
     if (!landed || !landed.length) return;
-    const others = landed.filter((p) => p !== me);
+    const others = landed.filter((p) => p !== me && worthSaying(ST, p));
     if (!others.length) return;
     const next = ST.turn === null ? 'all bids in'
       : ST.turn === me ? 'your turn' : `${ST.seats[ST.turn].name} to bid`;
@@ -315,7 +326,7 @@ const Table = (function () {
       || !!(ST.play && ST.play.turn === p);
     ST.seats.forEach((s, p) => {
       const was = last[s.id];
-      if (!was || was === now[s.id] || p === me) return;
+      if (!was || was === now[s.id] || p === me || !worthSaying(ST, p)) return;
       if (now[s.id] === 'left') {
         UI.fx.toast(`${s.name} left the game`, { note: 'auto-play has that hand now' });
       } else if (now[s.id] === 'away') {
