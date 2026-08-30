@@ -41,7 +41,14 @@ function connect() {
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === 'hello') {
+      /* Every dev action answers with a hello, and its seat list arrives
+         without the seats this page has taken over -- a real table never
+         volunteers them. Carry those tokens across, or pressing any control
+         would quietly put every acting pane back to watching. */
+      const held = new Map(CODE === m.code
+        ? SEATS.filter((x) => x.watch && x.token).map((x) => [x.id, x.token]) : []);
       CODE = m.code; HOST_TOKEN = m.token; SEATS = m.seats || [];
+      SEATS.forEach((x) => { if (held.has(x.id)) x.token = held.get(x.id); });
       LIVE = m.stand === false;              // the table says which it is, not the address
       history.replaceState(null, '', `#c=${CODE}&t=${HOST_TOKEN}`);
       topKey = seatKey = tableKey = '';      // another table, so every pane is stale
