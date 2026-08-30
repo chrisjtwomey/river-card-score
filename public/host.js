@@ -101,6 +101,11 @@ function enter(mode, code) {
       if (/table is gone|no table/i.test(msg)) {
         Net.forget(CODE);
         if (SHOW) { location.href = 'host.html'; return; }   // ask again, do not invent one
+        /* A screen on a wall puts up a fresh table so play can go on. A pane
+           inside the dev page must not: its parent heard the same line and is
+           already moving to another table -- a table made here would be a
+           second one, made by a frame about to be torn down. */
+        if (window.top !== window) { CODE = null; return; }
         CODE = null;
         Net.send({ t: 'create' });
         return;

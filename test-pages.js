@@ -119,6 +119,8 @@ function makeDom(W, H) {
     location: { search: '' },
     fire: (t) => listeners.filter((l) => l[0] === t).forEach((l) => l[1]()),
   };
+  window.top = window;    // a page under test is the top window, unless a check says otherwise
+  window.self = window;   // and both names for it agree, as in a browser
   const store = {};
   const localStorage = { getItem: (k) => (k in store ? store[k] : null),
                         setItem: (k, v) => { store[k] = String(v); },
@@ -2450,6 +2452,30 @@ part('the front page, and the screen');
     ok(!P.socks[0].sent.some((m) => m.t === 'create'), 'a screen whose table has gone invents nothing');
     ok(P.gone[0] === 'host.html', 'it asks again  got ' + P.gone[0]);
     ok(P.Net.tables().length === 0, 'and the table it was showing is forgotten');
+  }
+
+  {   // a host screen puts up a fresh table when its own has gone -- on a wall
+    const seed = { 'rcs:tables:v1': JSON.stringify([{ code: 'AB2K', token: 'th', role: 'host' }]) };
+    const P = loadPage('host.js', seed, '?c=AB2K');
+    P.start();
+    P.socks[0].onopen();
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'hello', role: 'host', code: 'AB2K', token: 'th' }) });
+    P.socks[0].sent.length = 0;
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'that table is gone' }) });
+    ok(P.socks[0].sent.some((m) => m.t === 'create'),
+       'a host screen on a wall makes a fresh table when its own has gone');
+
+    // -- but not in a pane: the parent heard the same line and is already
+    // moving on, so a table made here would be a second one.
+    const F = loadPage('host.js', seed, '?c=AB2K');
+    F.dom.window.top = {};                     // inside a frame now
+    F.start();
+    F.socks[0].onopen();
+    F.socks[0].onmessage({ data: JSON.stringify({ t: 'hello', role: 'host', code: 'AB2K', token: 'th' }) });
+    F.socks[0].sent.length = 0;
+    F.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'that table is gone' }) });
+    ok(!F.socks[0].sent.some((m) => m.t === 'create'),
+       'the same screen in a pane of the dev page invents nothing');
   }
 }
 
