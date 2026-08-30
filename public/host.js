@@ -207,6 +207,9 @@ function render() {
   $('#code-badge').textContent = ST.code;
   $('#code-small').textContent = ST.code;
   renderJoin();
+  // In the top bar, so it is where the eye is when a hand is playing itself.
+  // It stands in every phase, so it is drawn here rather than with the game.
+  Round.pause($('#btn-pause'), ST, view());
   $('#subtitle').textContent = (SHOW ? 'Showing ' : '') + (lobby
     ? `Table ${ST.code} · waiting to start`
     : `Table ${ST.code} · ${ST.seats.length} players`);

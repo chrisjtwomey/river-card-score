@@ -160,7 +160,7 @@ function load(W, H, motion, fin) {
   const vals = [dom.window, dom.document, dom.localStorage, Game, Avatar, Chat,
     { log() {}, info() {}, warn() {}, error(...a) { throw new Error('console.error: ' + a.join(' ')); } }];
   if (!fin) { args.splice(5, 0, 'Finale'); vals.splice(5, 0, Finale); }
-  const fn = new Function(...args, src + '\n; return { UI, Stage, Deal, Felt, Table };');
+  const fn = new Function(...args, src + '\n; return { UI, Stage, Deal, Felt, Table, Round };');
   return Object.assign({ dom, talk }, fn(...vals));
 }
 
@@ -2505,7 +2505,58 @@ part('the front page, and the screen');
      control that draws itself and answers a refusal: on a normal server the
      page shows the two things that put a game right and nothing that invents
      data. */
-  part('the dev controls, on each kind of server');
+    /* ---- stopping a table that plays its own hands ----
+     The widget both the host screen and the dev page put a button on. It is
+     offered only where the table has a hand of its own to play, and only to a
+     screen that runs the table. */
+  part('stopping a table that plays itself');
+  {
+    const R = load(1200, 800);
+    const mk = (tag) => R.dom.document.createElement(tag);
+    const sent = [];
+    const boss = { me: -1, boss: true, send: (m) => sent.push(m) };
+    const shows = { me: -1, boss: false, send: (m) => sent.push(m) };
+    const withBot = [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Otter', bot: true }];
+    const ST = (over) => Object.assign({
+      phase: 'bid', idx: 0, paused: false, cfg: { deck: 'virtual' }, seats: withBot,
+      rounds: [{ cards: 3, dealer: 0, bids: [null, null], tricks: null }],
+    }, over || {});
+
+    const btn = mk('button');
+    R.Round.pause(btn, ST(), boss);
+    ok(btn.hidden === false, 'a screen running a table with a bot in it may stop it');
+    ok(btn.textContent === '❚❚ Pause', 'and is offered the stop  got ' + btn.textContent);
+    btn.fire('click');
+    ok(JSON.stringify(sent[0]) === '{"t":"pause","on":true}',
+       'which says so outright  got ' + JSON.stringify(sent[0]));
+
+    R.Round.pause(btn, ST({ paused: true }), boss);
+    ok(btn.textContent === '▶ Play', 'a stopped table is offered the way on');
+    ok(btn.getAttribute('aria-pressed') === 'true', 'and says which it is');
+    btn.fire('click');
+    ok(JSON.stringify(sent[1]) === '{"t":"pause","on":false}',
+       'and the same button lets it go  got ' + JSON.stringify(sent[1]));
+
+    R.Round.pause(btn, ST(), shows);
+    ok(btn.hidden === true, 'a screen that only shows a table cannot stop it');
+    R.Round.pause(btn, ST({ seats: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bob' }] }), boss);
+    ok(btn.hidden === true, 'and a table of people has no hand of its own to stop');
+    R.Round.pause(btn, ST({ phase: 'lobby' }), boss);
+    ok(btn.hidden === true, 'nor is there one before the cards go out');
+
+    // And every screen is told, on the round line it already has.
+    const bar = mk('div');
+    const mark = mk('div'); mark.id = 'round-paused'; bar.appendChild(mark);
+    R.Round.header(bar, ST(), boss);
+    ok(mark.hidden === true, 'a table that is running says nothing');
+    R.Round.header(bar, ST({ paused: true }), boss);
+    ok(mark.hidden === false,
+       'a stopped one is marked, so nobody takes a stopped table for a hung one');
+    R.Round.header(bar, ST({ paused: true, rounds: [] }), boss);
+    ok(mark.hidden === false, 'and it is marked before the round line has anything to say');
+  }
+
+part('the dev controls, on each kind of server');
 
   // A table on the wire: the hello the dev page gets, then a state.
   const devPage = (srv, seats) => {
@@ -2519,7 +2570,7 @@ part('the front page, and the screen');
     }) });
     return P;
   };
-  const devState = (dev) => JSON.stringify({
+  const devState = (dev, over) => JSON.stringify(Object.assign({
     t: 'state', code: 'AAAA', phase: 'bid', dev, idx: 0,
     cfg: { max: 3, pattern: 'down', ones: 2, deck: 'real' },
     seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Bob' }],
@@ -2527,7 +2578,7 @@ part('the front page, and the screen');
     rounds: [{ cards: 3, dealer: 0, bids: [null, null], tricks: null },
              { cards: 2, dealer: 1, bids: null, tricks: null }],
     totals: [0, 0], chat: [],
-  });
+  }, over || {}));
 
   {   // a real game on a normal server: the repair tools, and no more
     const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' },
@@ -2689,6 +2740,44 @@ part('the front page, and the screen');
     ok(JSON.stringify(P.socks[0].sent[0])
        === '{"t":"dev","action":"patch","patch":{"round":{"i":0,"bids":[3,null]}}}',
        'a bid still lands beside the gaps  got ' + JSON.stringify(P.socks[0].sent[0]));
+  }
+
+  {   /* ---- stopping a table that plays itself, and walking it on ----
+         Only where there are hands the table plays for itself. A table of
+         people has nothing to stop, so the controls are not drawn at all. */
+    const bots = { cfg: { max: 3, pattern: 'down', ones: 2, deck: 'virtual' },
+                   seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Otter', bot: true }] };
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }]);
+
+    P.socks[0].onmessage({ data: devState(false) });
+    ok(P.pick('#run-tools').hidden === true,
+       'a table of people playing real cards has nothing to stop');
+
+    P.socks[0].onmessage({ data: devState(false, bots) });
+    ok(P.pick('#run-tools').hidden === false, 'a table with a bot in it does');
+    ok(P.pick('#btn-pause').textContent === '❚❚ Pause', 'and it offers to stop it');
+    ok(P.pick('#btn-step').disabled === true, 'Step is no use until it is stopped');
+
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-pause').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"pause","on":true}',
+       'and says so as the table\'s own message, not a dev one  got '
+       + JSON.stringify(P.socks[0].sent[0]));
+
+    P.socks[0].onmessage({ data: devState(false, Object.assign({ paused: true }, bots)) });
+    ok(P.pick('#btn-pause').textContent === '▶ Play', 'a stopped table offers to go on');
+    ok(P.pick('#btn-step').disabled === false, 'and Step is live');
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-step').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"step"}',
+       'Step asks the table for one move  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.pick('#btn-pause').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[1]) === '{"t":"pause","on":false}',
+       'and the same button lets it go  got ' + JSON.stringify(P.socks[0].sent[1]));
+
+    // Once the game is over there is nothing playing to stop.
+    P.socks[0].onmessage({ data: devState(false, Object.assign({ phase: 'done' }, bots)) });
+    ok(P.pick('#run-tools').hidden === true, 'a game that has ended has nothing to stop');
   }
 
   {   // a table of stand-ins on a dev server: everything, as before

@@ -21,6 +21,8 @@
      one attribute, so nothing is left behind with its separators. */
   .cluster{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
   #repair{flex:none;gap:8px}
+  #run-tools{flex:none;gap:6px}
+  #run-tools .btn{padding:6px 9px;font-size:12px}
   #repair input{width:52px;font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);
     background:var(--bg);color:var(--ink);text-align:center}
 
@@ -147,6 +149,14 @@
       <!-- The repair form, drawn by the page: the one way to move a game on
            where the scrubber is refused. -->
       <span class="cluster" id="repair" hidden></span>
+      <!-- Stopping the table, and walking it on a move at a time. Both are
+           about hands nobody is behind, so both come and go with them. -->
+      <span class="cluster" id="run-tools" hidden>
+        <span class="bandsep"></span>
+        <button class="btn" id="btn-pause" type="button"></button>
+        <button class="btn" id="btn-step" type="button"
+          title="Let the table make one move: one bid, or one card">Step</button>
+      </span>
       <span class="bandsep" id="shots-sep" hidden></span>
       <div class="oneshots" id="shots-dev" hidden>
         <button class="btn" data-act="fillBids" type="button">Fill bids</button>

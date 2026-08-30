@@ -45,6 +45,11 @@ const Round = (function () {
   /* ---------- the round line ---------- */
 
   function header(root, ST, view) {
+    /* The table has been stopped. Every screen says so, on the round line it
+       already has: a hand that is waiting on a bot looks exactly like a hand
+       that has hung, and nobody should have to guess which. */
+    const mark = q(root, '#round-paused');
+    if (mark) mark.hidden = !ST.paused;
     const r = ST.rounds[ST.idx] || null;
     if (!r) {
       text(root, '#round-label', 'Game over');
@@ -308,6 +313,24 @@ const Round = (function () {
 
   // The dealer and whoever runs the table deal again on the spot, so they are
   // asked first. Anybody else is asking the table, which can still be taken back.
+  /* Stop the table playing its own hands, and let it go again. Offered only
+     where there are hands it plays for itself -- a bot's, or a seat handed
+     over to it -- so a table of people never sees it. Being stopped does not
+     take the button away: it is how you start it again. */
+  function pause(root, ST, view) {
+    if (!root) return;
+    const on = view.boss && Game.canPause(ST);
+    root.hidden = !on;
+    if (!on) return;
+    root._now = !!ST.paused;                  // read at the tap, not at the draw
+    root.textContent = root._now ? '▶ Play' : '❚❚ Pause';
+    root.title = root._now
+      ? 'Let the table play the hands nobody is behind again'
+      : 'Stop the table playing the hands nobody is behind. Everybody else plays on.';
+    root.setAttribute('aria-pressed', String(root._now));
+    onClick(root, () => view.send({ t: 'pause', on: !root._now }));
+  }
+
   function bumDeal(view, now) {
     const ask = now
       ? UI.ask('Bum deal?', 'The hand is thrown in. The same dealer deals it again, and the bids so far are lost.', 'Throw the hand in')
@@ -315,5 +338,5 @@ const Round = (function () {
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
-  return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, winner, bum, vote, newGame, bumDeal, undo };
+  return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, winner, bum, vote, pause, newGame, bumDeal, undo };
 })();

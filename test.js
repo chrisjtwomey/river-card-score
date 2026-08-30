@@ -445,6 +445,9 @@ async function bidRound(P) {
     await okBy(() => /DEV=1/.test(h.last()), 'but on a normal server nothing may invent data for it');
     h.send({ t: 'dev', action: 'endGame' }); await h.rt();
     ok(h.state.phase === 'bid', 'and it cannot be played out with made-up rounds');
+    h.send({ t: 'dev', action: 'step' });
+    await okBy(() => /DEV=1/.test(h.last()),
+       'and walking a table on a move at a time is a dev server\'s');
 
     p2.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
     await okBy(() => /only the host/i.test(p2.last()) && h.state.phase === 'bid',
@@ -674,6 +677,37 @@ async function bidRound(P) {
     d.send({ t: 'dev', action: 'state', record: [1, 2] });
     await okBy(() => /not a table/.test(d.last()), 'junk in the editor is refused whole');
     d.send({ t: 'dev', action: 'goto', round: 1, phase: 'bid' }); await d.rt();
+
+    /* ---- a stopped table, walked on one move at a time ----
+       Watching a hand play itself at a bot's pace is no way to read it. With
+       the table stopped, Step is the one move the driver would have made. */
+    {
+      const url3 = `ws://127.0.0.1:${port3}/ws`;
+      const { h: hs, P: [amy] } = await tableOf(['Amy'],
+        { deck: 'virtual', max: 3, pattern: 'down', ones: 1 }, url3);
+      hs.send({ t: 'addbot' }); await until(() => hs.state.seats.length === 2);
+      hs.send({ t: 'addbot' }); await until(() => hs.state.seats.length === 3);
+      hs.send({ t: 'start' });
+      await until(() => hs.state.phase === 'bid');
+      amy.send({ t: 'leave' });                 // every seat is the table's now
+      await until(() => hs.state.seats.every((s) => s.bot || s.left));
+
+      hs.send({ t: 'pause', on: true });
+      await okBy(() => hs.state.paused === true, 'a table of bots can be stopped');
+      await wait(300);
+      const shot = () => JSON.stringify([hs.state.idx, hs.state.phase, hs.state.rounds, hs.state.play]);
+      const held = shot();
+      await wait(500);
+      ok(shot() === held, 'and it stands still');
+
+      hs.send({ t: 'dev', action: 'step' });
+      await okBy(() => shot() !== held, 'Step makes it move');
+      const one = shot();
+      await wait(500);
+      ok(shot() === one, 'and only the once: the table is still stopped');
+
+      hs.ws.close(); amy.ws.close();
+    }
 
     /* ---- a hand stacked on purpose, played over real sockets ----
        What the rules of a trick are is settled in test-rules.js, against the
@@ -1356,6 +1390,19 @@ async function bidRound(P) {
     await okBy(() => h.state.seats.every((s) => s.bot || s.left),
        'the last player leaves, and only bots are in the game');
     ok(h.state.seen === true, 'the screen on the table says somebody is watching');
+
+    /* Watching it play itself is no good without a way to stop it. The screen
+       runs the table, so the screen may. */
+    const snap = (c) => JSON.stringify([c.state.idx, c.state.phase, c.state.rounds, c.state.play]);
+    h.send({ t: 'pause', on: true });
+    await okBy(() => h.state.paused === true, 'the screen stops the table');
+    await wait(300);                       // anything already on its way lands
+    const stopped = snap(h);
+    await wait(600);                       // longer than a bot's think, twice over
+    ok(snap(h) === stopped, 'and it makes no move of its own while it is stopped');
+
+    h.send({ t: 'pause', on: false });
+    await okBy(() => h.state.paused === false, 'and the screen lets it go again');
 
     // Nobody is playing at it, so before this the table stood still.
     await until(() => h.state.phase === 'done', 8000);

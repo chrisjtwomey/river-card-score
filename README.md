@@ -119,6 +119,15 @@ A table of bots alone is worth looking at — a table of stand-ins on the dev
 page, a screen put up to watch one — so it plays while it is looked at. Close
 the last window on it and it stops.
 
+**Stopping it.** A hand playing itself at a bot's pace is not always the pace
+you want to read it at, so the host screen carries a **❚❚ Pause** by the code
+whenever the table has a hand of its own to play — a bot's, or one handed over.
+It stops exactly that: the bots and the handed-over seats. Anybody still at the
+table bids and plays as before. Every screen shows **❚❚ paused** on its round
+line, so a stopped table is never mistaken for a hung one, and the same button
+lets it go again. A table of people playing their own cards never sees the
+button, because it has nothing to stop.
+
 ### A browser holds more than one table
 
 Every table a browser takes a seat at is remembered, newest first, up to eight.
@@ -871,6 +880,8 @@ The controls are one band over the screens, two rows:
 - **Go to** — the whole scorecard as cells: the lobby, every round with its hand size, the finish. Click a round and the game is taken there — the card is rebuilt and played up to it with rounds a real table could make. The **bid / tricks** toggle says where the round lands: waiting for its bids, or with its bids in. So the last round with its bids in — the doorstep of the end of the game — is two clicks, and the end itself one more.
 - **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, **randomise** (shuffles the rules and plays a random number of rounds), and stand-in photos on and off.
 
+- **❚❚ Pause / ▶ Play** and **Step** — on a table that plays a hand of its own. Pause is the same control the host screen has, said the same way. **Step**, which only the dev page has, then lets the table make exactly one move: one bid, or one card. It is how a hand is read at your own pace rather than at a bot's. Step is live only while the table is stopped, and it invents nothing — it is the move the bots were going to make anyway.
+
 **Players ▾** and **State ▾** stand apart from those, at the end of the row: they open a panel rather than move the game on, and the two of them are what is left when the rest is not offered.
 
 - **Players** — a panel under the band, one row a seat: name, who hosts, who deals, bot, left, this round's bid and tricks, a photo on or off. Everything lands as it is changed; the tricks go as one column, once every seat has a number, and the cells still wanted are ringed until they do. It absorbs the old **Round** grid and does what **Force** did for the dealer and the host.
@@ -896,7 +907,7 @@ On a dev server each of those panes carries an **act as** button. It asks the se
 
 The server decides this, not the page:
 
-- Anything that invents data — a table of stand-ins, filled bids, a played-out card — needs `DEV=1`. On a dev server every table takes it; on any other, no table does.
+- Anything that invents data — a table of stand-ins, filled bids, a played-out card — needs `DEV=1`. On a dev server every table takes it; on any other, no table does. **Step** goes with them: it invents nothing, but walking a table on by hand is a developer's tool, and the host screen's **Pause** is the control a real table gets.
 - The list of tables needs `DEV=1`. A table's four characters are its only door, and a listing handed to a page that has not proved anything would open every table at once.
 - Opening the page on a table needs that table's host token, or `DEV=1`. Nothing else: the page cannot ask for a seat.
 - Forcing a state needs only the host or the table host of that table, which is authority they already have. So does reading and rewriting the record whole: it is the same authority, made complete.

@@ -370,6 +370,27 @@ function sendRepair() {
   repairTouched = false;              // it has landed: follow the table again
 }
 
+/* Stopping the table, and walking it on. Both are about the hands nobody is
+   behind, so they come and go with them -- `Game.canPause` is the same
+   question the host screen's button asks, and the same one the message that
+   carries it is guarded on. Step is the dev page's alone: reading a hand a
+   move at a time is nothing a table in a living room wants. */
+function renderRun() {
+  const box = $('#run-tools');
+  if (!box) return;
+  const on = !!ST && Game.canPause(ST);
+  box.hidden = !on;
+  if (!on) return;
+  const btn = $('#btn-pause');
+  btn._now = !!ST.paused;                    // read at the tap, not at the draw
+  btn.textContent = btn._now ? '▶ Play' : '❚❚ Pause';
+  btn.title = btn._now
+    ? 'Let the table play the hands nobody is behind again'
+    : 'Stop the table playing the hands nobody is behind';
+  btn.classList.toggle('primary', btn._now);
+  $('#btn-step').disabled = !btn._now;       // stepping a running table is a race
+}
+
 // Until it is aimed, the form says where the game is, so a tap on Put with
 // one thing changed changes only that thing.
 function fillRepair() {
@@ -534,6 +555,7 @@ function render() {
   renderFrames();
   if (DEVSRV) renderScrub();       // the card it draws is a card only a dev server can fill
   else fillRepair();
+  renderRun();
   renderPlayers();
   const n = ST.seats.length;
 
@@ -647,6 +669,13 @@ document.addEventListener('DOMContentLoaded', () => {
     delete $('#prows').dataset.key;
     if (!panel.hidden && ST) renderPlayers();
   });
+
+  /* Pause is the table's own message, not a dev action: this page holds the
+     host token, so it says it the way the host screen does. Step is the dev
+     page's own, and a dev server's alone. */
+  $('#btn-pause').addEventListener('click', () =>
+    send({ t: 'pause', on: !$('#btn-pause')._now }));
+  $('#btn-step').addEventListener('click', () => act('step'));
 
   $('#btn-rebuild').addEventListener('click', () =>
     act('setup', { players: Number($('#players').value) || 4 }));

@@ -18,6 +18,7 @@
   </div>
   <div class="topbar-actions">
     <span class="netpill" id="netpill" hidden>reconnecting…</span>
+    <button class="btn ghost" id="btn-pause" type="button" hidden></button>
     <button class="btn ghost icon" id="btn-chat" type="button" title="Table talk"
         aria-label="Table talk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.6 3h10.8A2.6 2.6 0 0 1 18 5.6v6.3a2.6 2.6 0 0 1-2.6 2.6H9.1l-3.5 3.1a.7.7 0 0 1-1.2-.52v-2.58H4.6A2.6 2.6 0 0 1 2 11.9V5.6A2.6 2.6 0 0 1 4.6 3z"/></svg><span class="chat-badge" hidden></span></button>
     <button class="btn ghost icon" id="btn-settings" type="button" title="Settings"
@@ -87,6 +88,7 @@
       <div class="round-head">
         <div>
           <div class="eyebrow" id="round-label">Round</div>
+          <div class="paused-mark" id="round-paused" hidden>❚❚ paused</div>
           <div class="cards-big"><span id="round-cards">·</span> <span class="unit">cards</span></div>
         </div>
         <div class="round-meta">

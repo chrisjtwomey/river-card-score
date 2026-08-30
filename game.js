@@ -218,8 +218,24 @@
      nobody asked to be played. `seen` is put on the room by the server, which
      is the only thing that knows what is attached to it. */
   const tablePlaysOn = (state) =>
-    !!state && !!state.seats
+    !!state && !!state.seats && !state.paused
     && (state.seats.some((s) => !s.bot && !s.left) || !!state.seen);
+
+  /* Whether the table has a hand of its own to play at all: a bot's, or one
+     handed over to it. This is what a pause is about, so being paused does not
+     make it untrue -- it is the question a screen asks to know whether the
+     control is worth offering, and `tablePlaysOn` is whether it is running. */
+  const tableSelfPlays = (state) =>
+    !!state && !!state.seats && state.seats.some((s) => tablePlays(s, state.cfg));
+
+  // A hand is out and being played: the two phases a game is live in.
+  const PLAY_PHASES = ['bid', 'tricks'];
+
+  /* Whether stopping the table is something this table can be asked for. The
+     host screen and the dev page both draw a button on it, and the message
+     that carries it is guarded on the same two things. */
+  const canPause = (state) =>
+    !!state && PLAY_PHASES.indexOf(state.phase) >= 0 && tableSelfPlays(state);
 
   // The seat on turn with nobody behind it, or -1: the one seat the table is
   // stopped on and can do nothing about by itself.
@@ -257,7 +273,8 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, onTurn, tablePlays, tablePlaysOn, awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
+                virtual, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, PLAY_PHASES,
+                awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };
 

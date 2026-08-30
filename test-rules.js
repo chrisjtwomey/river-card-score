@@ -889,6 +889,60 @@ part('leaving on purpose, which is not the same as a phone going quiet');
 }
 
 {
+  /* Watching a table play itself is no good without a way to stop it. Pause
+     holds the hands the table plays for itself and nothing else. */
+  const t = table().sit(['Ann']).sit(['Otter'], { bot: true })
+    .rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  ok(G.tableSelfPlays(t.room), 'a table with a bot at it plays a hand of its own');
+  ok(t.Bots.anyAuto(t.room), 'and it is playing it');
+
+  ok(t.say(0, { t: 'pause', on: true }) === null, 'the table host stops the table');
+  ok(t.room.paused === true, 'and it is stopped');
+  ok(!t.Bots.anyAuto(t.room), 'so it plays none of its own hands');
+  t.Bots.nudge(t.room);
+  ok(!t.room.botTimer, 'and nothing is set going');
+  ok(G.tableSelfPlays(t.room),
+     'but it is still a table that plays a hand, so the control stays offered');
+
+  // The pause is the table's own play, and nothing else: a person still acts.
+  const turn = G.turnSeat(t.round(), 2);
+  if (turn === 0) {
+    ok(t.say(0, { t: 'bid', v: 1 }) === null, 'a player at the table bids as before');
+  } else {
+    ok(true, 'a player at the table bids as before (the bot leads this round)');
+  }
+
+  ok(t.say(0, { t: 'pause', on: false }) === null, 'and the table is let go again');
+  ok(!t.room.paused && t.Bots.anyAuto(t.room), 'so it plays on');
+
+  // Said outright, so two screens pressing at once agree where it lands.
+  t.say(0, { t: 'pause', on: true });
+  t.say('host', { t: 'pause', on: true });
+  ok(t.room.paused === true, 'stopping a stopped table leaves it stopped');
+
+  // A pause belongs to the game it was called in.
+  t.Room.startGame(t.room);
+  ok(t.room.paused === false, 'and a new game does not start somebody else\'s pause');
+}
+
+{
+  // no pause where nothing plays itself, and none over real cards
+  const t = table().sit(['Ann', 'Bob']).rules({ max: 3, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  ok(!G.tableSelfPlays(t.room), 'a table of players plays no hand of its own');
+  ok(/real cards/.test(t.say(0, { t: 'pause', on: true }) || ''),
+     'and a table with real cards has nothing to stop');
+
+  const v = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+  v.Room.startGame(v.room);
+  ok(/no hand of its own/.test(v.say(0, { t: 'pause', on: true }) || ''),
+     'nor has a table where every seat has somebody behind it');
+  ok(/only the table host/.test(v.say(1, { t: 'pause', on: true }) || ''),
+     'and a player who does not run the table cannot stop it');
+}
+
+{
   // a phone that is not coming back is handed over by whoever runs the table
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   ok(/only the table host/.test(t.say(2, { t: 'playout' }) || ''), 'no player hands over another\'s seat');
