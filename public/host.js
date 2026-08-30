@@ -428,11 +428,14 @@ document.addEventListener('DOMContentLoaded', () => {
               .then(() => { Net.forget(code); location.href = 'index.html'; });
           });
       } },
-    // Only on a server run with DEV=1: a player found "Fix this game" and
-    // landed on a page built for the developer. Not inside a dev preview
-    // either, where it would only open the page it sits in.
+    /* The way to put this game right, wherever it is running: on a normal
+       server the page opens with the repair form and the record and nothing
+       that invents data. It goes by the host token, so it is offered only
+       where this screen holds one -- without it the link opens a page with no
+       table, which is no use to anybody. Not inside a dev preview either,
+       where it would only open the page it sits in. */
     { kind: 'link', label: 'Dev controls', blank: true,
-      hidden: () => window.top !== window || !(ST && ST.dev),
+      hidden: () => window.top !== window || !(Net.session(CODE) || {}).token,
       href: devLink() },
   ]) });
   $('#btn-reset').addEventListener('click', newGame);

@@ -876,7 +876,7 @@ The filled bids keep the screw-the-dealer rule, the filled tricks always total t
 
 #### Fixing a real game
 
-On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck. The **Tables** list is the other way to the same place: on a dev server the code alone is enough, so no token is typed or pasted.
+The TV screen offers **Dev controls** under ⚙, on any server. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck. It goes by the host token, so it is offered only where that screen holds one — a screen only watching has nothing to open the page with. The **Tables** list is the other way to the same place: on a dev server the code alone is enough, so no token is typed or pasted.
 
 Both doors are one message. A table's host token opens it on any server — it is authority the TV screen already holds — and with `DEV=1` the code alone will do, because that server hands its tables to the page anyway. The page writes the table it is on into its own address, so a reload comes back to it, and a socket that drops and returns re-opens it rather than making another. If the table has gone — the server restarted, the game ended — the page lets it go and makes a table of stand-ins, which is what a page with no table does.
 
@@ -901,7 +901,7 @@ The server decides this, not the page:
 
 On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
-Making a table of stand-ins needs `DEV=1`. On a normal server the page loads and says so. **Dev controls** under ⚙ on the TV screen, the way in to a real table, is offered only with `DEV=1` as well.
+Making a table of stand-ins needs `DEV=1`. On a normal server the page loads and says so — but **Dev controls** under ⚙ on the TV screen, the way in to a real table, is offered wherever that screen holds the host token. That is the point: a game broken by a bug is broken on the server it is running on, not on the one with `DEV=1` set.
 
 ## Test
 
