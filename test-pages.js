@@ -420,6 +420,40 @@ function table(o) {
   ok(!t.overlay.classList.contains('dragging'), 'and the line goes');
 }
 
+/* The line a card is dragged over and the ring round the heading are both gold
+   and dashed. A line running near the box rather than into it read as two marks
+   that had missed each other, so the line lies along the ring's top edge and the
+   word cuts them both in one place. */
+{
+  const t = table();
+  t.made.ST.rounds[0].dealer = t.me;                 // the deal is your own
+  t.L.Felt.sync(t.made.ST, t.me, { send: () => {} });
+  const a = t.pt(1);
+  t.overlay.fire('pointerdown', a);
+  t.overlay.fire('pointermove', { pointerId: 1, clientX: a.clientX, clientY: a.clientY - 40 });
+  const line = t.overlay.querySelector('.felt-line');
+  const ring = t.stage.querySelector('.dring');
+  ok(pxOf(line.style.top) === pxOf(ring.style.top),
+     'the line lies along the top of your own ring  got ' + line.style.top + ' for ' + ring.style.top);
+  ok(pxOf(line.style.top) === Math.round(t.L.Stage.playLine(t.W, t.H)),
+     'and both are the stage\'s one answer');
+  const gap = t.overlay.style.getPropertyValue('--dring-gap');
+  ok(/^[\d.]+px$/.test(gap) && Number(gap.replace('px', '')) > 20,
+     'the line is broken for the word, the way the ring\'s own border is  got ' + JSON.stringify(gap));
+  t.overlay.fire('pointerup', { pointerId: 1, clientX: a.clientX, clientY: a.clientY - 40 });
+}
+{
+  // Somebody else's ring is nowhere near the line, so the line stays whole.
+  const t = table();
+  const a = t.pt(1);
+  t.overlay.fire('pointerdown', a);
+  t.overlay.fire('pointermove', { pointerId: 1, clientX: a.clientX, clientY: a.clientY - 40 });
+  ok(t.overlay.style.getPropertyValue('--dring-gap') === '0px',
+     'a ring at another seat leaves the line unbroken  got '
+     + JSON.stringify(t.overlay.style.getPropertyValue('--dring-gap')));
+  t.overlay.fire('pointerup', { pointerId: 1, clientX: a.clientX, clientY: a.clientY - 40 });
+}
+
 // a push that stops short does not play
 {
   const t = table();

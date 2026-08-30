@@ -78,11 +78,14 @@ const Stage = (function () {
      fixed way down would be reaching into the seat below on a table of eight.
      The reader's own cards are named above their fan instead. Both the deal
      and the table it hands over to write these, so the answer is here. */
+  const OWN_NAME_UP = 66;          // the heading over your own hand, above the fan
+  const RING_PAD = { x: 11, top: 9, bot: 7 };   // the air inside the dealer's ring
+
   function nameAt(el, R, p, own, n, W, H) {
     const z = seatScale(n);
     const s = R.at(p);
     el.style.left = `calc(50% + ${own ? 0 : Math.round(s.x)}px)`;
-    el.style.top = `calc(50% + ${own ? Math.round(fan(1, W, H).y - 66)
+    el.style.top = `calc(50% + ${own ? Math.round(fan(1, W, H).y - OWN_NAME_UP)
                                     : Math.round(s.y + cardSize(W).h * z / 2 + 19)}px)`;
     if (!own) el.style.fontSize = z < 0.9 ? `${Math.max(10, Math.round(13 * z))}px` : '';
   }
@@ -144,16 +147,24 @@ const Stage = (function () {
     return el;
   }
 
+  /* The line a card has to be dragged over to be played: clear of the fan, in
+     the open ground between the hand and the middle of the table.
+
+     It is also the top of the ring round the heading, when the deal is the
+     reader's own. Both are gold and dashed, and a line running near the box
+     rather than into it read as two marks that had missed each other, so they
+     are one answer and meet exactly. */
+  const playLine = (W, H) => fan(1, W, H).y - OWN_NAME_UP - RING_PAD.top;
+
   /* Where that ring is drawn, in offsets from the middle of the stage: `x` the
      middle of the box and `y` its top edge, the way a name is placed. */
   function dealerAt(o) {
     const { R, p, n, W, H } = o;
     const z = seatScale(n), c = cardSize(W);
-    const padX = 11, padTop = 9, padBot = 7;
+    const padX = RING_PAD.x, padTop = RING_PAD.top, padBot = RING_PAD.bot;
     const nameW = (o.nameEl && o.nameEl.offsetWidth) || 0;
     if (o.own) {
-      const top = fan(1, W, H).y - 66;          // where nameAt hangs the heading
-      return { x: 0, y: top - padTop, w: Math.max(nameW, 104) + padX * 2,
+      return { x: 0, y: playLine(W, H), w: Math.max(nameW, 104) + padX * 2,
                h: 16 + padTop + padBot };
     }
     const of = Math.max(1, o.of || 1);
@@ -462,5 +473,5 @@ const Stage = (function () {
   const isOpen = (kind) => !!S.live && (!kind || S.live.kind === kind);
 
   return { S, faceOf, cardEl, tf, rad, fade, parts, head, band, bandOff, close, isOpen,
-           ring, fan, pile, seatScale, cardSize, nameAt, dealerRing, bidRow, settle, peek, stamp };
+           ring, fan, pile, seatScale, cardSize, nameAt, dealerRing, playLine, bidRow, settle, peek, stamp };
 })();

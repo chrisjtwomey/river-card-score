@@ -676,10 +676,18 @@ body.stage-head .toaster{top:var(--stage-band, calc(clamp(48px, 8vh, 78px) + 84p
 /* the tricks a seat has won, in a little stack by its name */
 .deal.table .dcard.gone .face{box-shadow:0 3px 9px rgba(0,0,0,.45)}
 /* the line a card has to clear to be played */
+/* The line a card is dragged over to be played. It lies along the top of the
+   ring round the heading when the deal is the reader's own, so it is broken
+   for the word on that ring exactly as the ring's own border is -- the felt
+   says how wide, and says nothing when the ring is at somebody else's seat. */
 .felt-line{
   position:absolute;z-index:1;left:8%;right:8%;height:0;opacity:0;
   border-top:2px dashed rgba(246,212,136,.45);
   transition:opacity .16s ease-out;pointer-events:none;
+  -webkit-mask:linear-gradient(90deg, #000 0 calc(50% - var(--dring-gap, 0px) / 2),
+    transparent 0 calc(50% + var(--dring-gap, 0px) / 2), #000 0);
+  mask:linear-gradient(90deg, #000 0 calc(50% - var(--dring-gap, 0px) / 2),
+    transparent 0 calc(50% + var(--dring-gap, 0px) / 2), #000 0);
 }
 .deal.dragging .felt-line{opacity:1}
 .deal.dragging.armed .felt-line{border-top-color:rgba(246,212,136,.95)}

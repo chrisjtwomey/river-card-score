@@ -610,9 +610,17 @@ const Felt = (function () {
     T.labels.forEach((el, q) => { if (el) nameAt(el, g, q, q === me); });
     // Who deals, said at the seat rather than in the round line. Placed again
     // with the names, since it is drawn round one of them.
-    Stage.dealerRing(T.stage, { R: g.R, p: r.dealer, n: g.n, W: g.W, H: g.H,
-                                of: r.cards, own: r.dealer === me,
-                                nameEl: T.labels[r.dealer] });
+    const ring = Stage.dealerRing(T.stage, { R: g.R, p: r.dealer, n: g.n, W: g.W, H: g.H,
+                                            of: r.cards, own: r.dealer === me,
+                                            nameEl: T.labels[r.dealer] });
+    /* The line a card is dragged over lies along the top of that ring when the
+       ring is your own, so it is broken for the word in the same place: one
+       line across the table with "dealer" cutting it, rather than a line
+       written through the word. Nobody else's ring is on the line. */
+    if (ring && T.stage.parentNode) {
+      T.stage.parentNode.style.setProperty('--dring-gap',
+        r.dealer === me ? (ring.style.getPropertyValue('--dring-gap') || '0px') : '0px');
+    }
     if (peeking) peekAt(peeking.q, r);   // the pile may lie somewhere else now
   }
 
@@ -1011,12 +1019,16 @@ const Felt = (function () {
     setTimeout(() => el.classList.remove('slow'), 400);
   }
 
-  /* Where the thumb has to get to for the card to be played: clear of the fan,
-     in the open ground between the hand and the pile. It is the thumb that is
-     judged, not the card -- the card rides above the thumb, and judging the
-     card would make the shortest nudge a played card. */
+  /* Where the thumb has to get to for the card to be played. It is the thumb
+     that is judged, not the card -- the card rides above the thumb, and judging
+     the card would make the shortest nudge a played card.
+
+     The height is the stage's: the line is the top of the ring round the
+     heading over your hand, so when the deal is yours the two are one mark
+     rather than two gold dashed marks that have missed each other. It used to
+     be measured off the lowest card of the fan, which sank as the hand grew. */
   function lineY(g) {
-    return g.F.at(0).y - g.ch / 2 - 70;
+    return Stage.playLine(g.W, g.H);
   }
 
   function showLine(on, g) {

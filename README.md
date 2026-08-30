@@ -298,7 +298,9 @@ that band.
   at, because the card nearest the thumb is the one meant.
 - **Push a card up** out of the fan to play it. A dashed line appears; released
   above it the card flies to the middle, released below it drops back. A card
-  already lifted is played by tapping it again, so nothing needs a drag.
+  already lifted is played by tapping it again, so nothing needs a drag. The
+  line lies along the top of the ring round your heading when the deal is
+  yours, so the two read as one mark with **dealer** cutting it.
 - A card you may not play is dimmed, and says why if you try: it shakes, keeps
   its place, and the line at the bottom gives the reason.
 - **The place a hand had stays.** The last card of a hand -- yours, or any
