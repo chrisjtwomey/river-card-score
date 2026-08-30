@@ -587,6 +587,20 @@ async function bidRound(P) {
     const many = d.state.rounds.filter(full).length;
     ok(many >= 1 && many <= d.state.rounds.length, 'fillCard with no number plays a random number of rounds');
 
+    // ---- straight to a round and a phase ----
+    const last = d.state.rounds.length;
+    d.send({ t: 'dev', action: 'goto', round: last, phase: 'tricks' });
+    await okBy(() => d.state.idx === last - 1 && d.state.phase === 'tricks',
+       'goto lands the game at the last round with its bids in');
+    ok(d.state.rounds[last - 1].bids.every((b) => b !== null), 'and every bid of that round is there');
+    ok(d.state.rounds.slice(0, last - 1).every(full), 'and every round before it is played');
+    d.send({ t: 'dev', action: 'nextRound' });
+    await okBy(() => d.state.phase === 'done',
+       'so the end of the game is one click from there');
+    d.send({ t: 'dev', action: 'goto', round: 1, phase: 'bid' });
+    await okBy(() => d.state.idx === 0 && d.state.phase === 'bid' && !d.state.rounds.some(full),
+       'and goto backwards rebuilds the card fresh');
+
     /* ---- a hand stacked on purpose, played over real sockets ----
        What the rules of a trick are is settled in test-rules.js, against the
        deck itself. What is proved here is the wire: hands forced onto a table

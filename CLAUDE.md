@@ -195,7 +195,7 @@ When you do run it:
   restart). Host screen at `/host.html`, a seat at `/` (type a name, *Start a
   table*), the whole table at once at `/dev.html` (needs `DEV=1`, which
   `npm run dev` sets): it seats stand-ins and shows the host screen and every
-  phone side by side, and its *Jump to* and *Force* controls reach any state a
+  phone side by side, and its scrubber and one-shots reach any state a
   real game can. A second phone is a second browser profile or a private window;
   a seat is one browser, so two tabs of `play.html` share it.
 - **What to play through.** Real cards: lobby → bid in turn → anybody taps who takes each trick → a round scores → go back → new game. Dealt on the phones: add a

@@ -859,11 +859,13 @@ The phone of whoever runs the table stands first in that row, ringed in gold. It
 
 It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
-- **Tables** — every table this server is running: its code, how many are at it, what it is doing, and whether it is a real game or a set of stand-ins. Press one and this page opens on it. Under the list, **New table** makes a fresh table of stand-ins with the number of players in the box.
-- **Jump to** — start game, fill bids, fill tricks, next round, end game, bum deal vote, back to lobby, and **randomise**, which shuffles the rules and plays a random number of rounds.
-- **Fill scorecard** — plays whole rounds against the rules in force, and leaves the next round waiting for its bids. Type how many rounds to play, or leave the box empty for a random number. Use it to see a card part way through, or a full one.
+The controls are one band over the screens, two rows:
 
-**Force**, **Round**, **Rules** and **State** were on this page and are being redone. The server still answers every one of them; only the controls are gone.
+- **Tables** — every table this server is running: its code, how many are at it, what it is doing, and whether it is a real game (*real*) or a set of stand-ins (*stand*). Press one and this page opens on it. Beside the strip, **New table** makes a fresh table of stand-ins with the number of players in the box.
+- **Go to** — the whole scorecard as cells: the lobby, every round with its hand size, the finish. Click a round and the game is taken there — the card is rebuilt and played up to it with rounds a real table could make. The **bid / tricks** toggle says where the round lands: waiting for its bids, or with its bids in. So the last round with its bids in — the doorstep of the end of the game — is two clicks, and the end itself one more.
+- **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, **randomise** (shuffles the rules and plays a random number of rounds), and stand-in photos on and off.
+
+**Round**, **Rules** and **State** were on this page and are still to come back — a players panel and a full state editor. The server answers every one of their actions already; only the controls are missing.
 
 The filled bids keep the screw-the-dealer rule, the filled tricks always total the hand size, and every played round gets a trump, so nothing on screen is impossible.
 

@@ -2,13 +2,17 @@
 /* Dev controls. Opens on any table this server is running, or makes one of
    stand-in players, and shows every screen at once. What it may do follows
    the server: with DEV=1 every table takes every control; a normal server
-   answers the state forcer alone, over the table's own host token. */
+   answers the state forcer alone, over the table's own host token.
+
+   The page is one band of controls over the screens: which table, where in
+   the game (the scrubber is the whole scorecard, clickable), and the
+   one-shots. */
 
 const $ = (s) => document.querySelector(s);
 
 let ws = null, ST = null, CODE = null, HOST_TOKEN = null, SEATS = [];
 let topKey = '', seatKey = '', tableKey = '';  // re-draw only when it has to change
-let LIVE = false;                // looking at a real table, not one of stand-ins
+let LIVE = false;                // real players may be behind this table
 let polling = false;             // the list of tables, on a dev server only
 let onTable = false;             // this socket got onto a table
 
@@ -161,28 +165,67 @@ function renderTables(list) {
     b.type = 'button';
     b.className = 'btn trow' + (t.code === CODE ? ' on' : '');
     b.dataset.code = t.code;
+    b.title = 'Take this page onto this table';
     const code = document.createElement('span');
     code.className = 'tcode';
     code.textContent = t.code;
     const what = document.createElement('span');
     what.className = 'twhat';
-    what.textContent = `${t.seats.length} player${t.seats.length === 1 ? '' : 's'} · ${t.phase}`
-      + (t.round ? ` · round ${t.round}/${t.rounds}` : '');
+    what.textContent = `${t.seats.length}p · ${t.phase}` + (t.round ? ` ${t.round}/${t.rounds}` : '');
     const kind = document.createElement('span');
     kind.className = 'tkind';
-    kind.textContent = t.stand ? 'stand-ins' : 'real';
+    kind.textContent = t.stand ? 'stand' : 'real';
     b.append(code, what, kind);
     box.appendChild(b);
   });
-  $('#tables-hint').textContent = list.length
-    ? 'Press one to take this page onto it.'
-    : 'No table is running on this server yet.';
 }
 
-/* ---------- controls ---------- */
+/* ---------- the scrubber ---------- */
+
+// The phase a clicked round lands at: 'bid' or 'tricks'.
+const gotoPhase = () => {
+  const on = document.querySelector('#goto-phase .btn.on');
+  return (on && on.dataset.phase) || 'bid';
+};
+
+/* The whole card as cells: the lobby, every round, the finish. The cell the
+   game is at is marked; the rounds already played are tinted. Click anywhere
+   and the game is taken there. */
+function renderScrub() {
+  const box = $('#scrub');
+  const rounds = ST.rounds.length ? ST.rounds
+    : Game.schedule(ST.cfg.max, ST.cfg.pattern, ST.cfg.ones).map((c) => ({ cards: c }));
+  const played = ST.rounds.length ? Math.min(ST.idx, rounds.length) : 0;
+  const key = `${ST.code}:${rounds.map((r) => r.cards).join(',')}:${played}:${ST.phase}`;
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.innerHTML = '';
+  const cell = (label, sub, cls, jump) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'scell' + (cls ? ' ' + cls : '');
+    b.appendChild(document.createTextNode(label));
+    if (sub) { const s = document.createElement('small'); s.textContent = sub; b.appendChild(s); }
+    b.addEventListener('click', jump);
+    box.appendChild(b);
+    return b;
+  };
+  cell('⌂', 'lobby', ST.phase === 'lobby' ? 'on' : '', () => act('lobby'));
+  rounds.forEach((r, i) => {
+    const here = ST.rounds.length && ST.idx === i && ST.phase !== 'done' && ST.phase !== 'lobby';
+    cell(String(i + 1), `${r.cards}c`, (here ? 'on ' : '') + (i < played ? 'played' : ''),
+         () => act('goto', { round: i + 1, phase: gotoPhase() }));
+  });
+  cell('🏁', 'end', ST.phase === 'done' ? 'on' : '', () => act('endGame'));
+  const on = box.querySelector('.scell.on');
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+/* ---------- render ---------- */
 
 function render() {
   renderFrames();
+  renderScrub();
   const n = ST.seats.length;
 
   $('#code').textContent = ST.code;
@@ -196,13 +239,6 @@ function render() {
 
   // Only a dev server has tables to hand out, so only a dev server is asked.
   if (ST.dev && !polling) { polling = true; askTables(); setInterval(askTables, 5000); }
-
-  // scorecard filler. Before the game starts the card is not built yet, so the
-  // length comes from the rules.
-  const cardLen = ST.rounds.length || Game.schedule(ST.cfg.max, ST.cfg.pattern, ST.cfg.ones).length;
-  $('#fill-rounds').max = String(cardLen);
-  $('#fill-hint').textContent =
-    `The card holds ${cardLen} rounds. Leave it empty for a random number.`;
 }
 
 /* ---------- wiring ---------- */
@@ -214,7 +250,7 @@ function applyMode() {
   $('#live-note').hidden = !LIVE;
   if (LIVE) {
     $('#code').textContent = CODE;
-    $('#subtitle').textContent = `fixing table ${CODE}`;
+    $('#subtitle').textContent = `live table ${CODE}`;
   }
 }
 
@@ -224,6 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelectorAll('[data-act]').forEach((b) =>
     b.addEventListener('click', () => act(b.dataset.act)));
+
+  document.querySelectorAll('#goto-phase .btn').forEach((b) =>
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#goto-phase .btn').forEach((x) => x.classList.toggle('on', x === b));
+    }));
 
   /* Stand-in photos, so the picture on a card can be tested without anybody
      uploading anything. Each seat gets its own colour and its own initial. */
@@ -274,14 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#tablelist').addEventListener('click', (e) => {
     const row = e.target.closest('.trow');
     if (row && row.dataset.code !== CODE) act('open', { code: row.dataset.code });
-  });
-
-  $('#btn-fillcard').addEventListener('click', () => {
-    const v = $('#fill-rounds').value.trim();
-    act('fillCard', v === '' ? {} : { rounds: Number(v) });
-  });
-  $('#fill-rounds').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') $('#btn-fillcard').click();
   });
 
   $('#scale').addEventListener('change', () => { topKey = seatKey = ''; renderFrames(); });

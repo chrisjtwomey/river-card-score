@@ -7,13 +7,49 @@
 <link rel="stylesheet" href="styles.css">
 <style>
   body{padding-bottom:0}
-  .devwrap{display:grid;grid-template-columns:340px 1fr;gap:14px;padding:14px;max-width:none;align-items:start}
-  @media (max-width:1000px){ .devwrap{grid-template-columns:1fr} }
-  .devcol{display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 92px);overflow:auto;padding-right:4px}
-  .devcol .panel{padding:12px;gap:9px}
-  .devcol h2{font-size:12px}
-  .btnrow{display:flex;flex-wrap:wrap;gap:6px}
-  .btnrow .btn{padding:7px 10px;font-size:13px;flex:1 1 auto}
+  .devwrap{display:flex;flex-direction:column;gap:12px;padding:12px;max-width:none}
+
+  /* The band: every control, over the screens. Two rows -- the table row
+     (which table, and the others to hop to) and the game row (where in the
+     game, and the one-shots). */
+  .band{display:flex;flex-direction:column;gap:9px;padding:10px 12px}
+  .bandrow{display:flex;align-items:center;gap:10px;min-width:0}
+  .bandrow .code{font-size:20px;font-weight:800;letter-spacing:.14em;color:var(--gold);flex:none}
+  .bandsep{width:1px;align-self:stretch;background:var(--line);flex:none}
+  .bandlbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);font-weight:700;flex:none}
+
+  .tablestrip{display:flex;gap:6px;overflow-x:auto;min-width:0;flex:1}
+  .trow{display:flex;gap:7px;align-items:baseline;flex:none;font-size:12px;padding:5px 9px;text-align:left}
+  .trow .tcode{font-weight:800;letter-spacing:.08em;color:var(--gold)}
+  .trow .twhat{color:var(--ink-dim);white-space:nowrap}
+  .trow .tkind{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)}
+  .trow.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+
+  .newtable{display:flex;gap:6px;align-items:center;flex:none}
+  .newtable input{width:44px;font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink);text-align:center}
+
+  /* The scrubber: the whole card as cells. Click a round and the game is
+     played up to it; the ends are the lobby and the finish. */
+  .scrub{display:flex;gap:3px;overflow-x:auto;min-width:0;flex:1}
+  .scell{flex:none;min-width:30px;padding:4px 5px;border:1px solid var(--line);border-radius:8px;
+    background:var(--bg2);color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
+  .scell small{font-size:9px;color:var(--ink-dim);font-weight:600}
+  .scell:hover{background:var(--chip)}
+  .scell.played{background:rgba(31,122,77,.14)}
+  .scell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+  .seg{display:flex;flex:none;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg .btn{border:0;border-radius:0;padding:6px 10px;font-size:12px}
+  .seg .btn.on{background:var(--felt);color:#fff}
+
+  .oneshots{display:flex;gap:6px;flex:none;flex-wrap:wrap}
+  .oneshots .btn{padding:6px 9px;font-size:12px}
+
+  .live-note{color:var(--red);font-weight:650;margin:0 2px}
+  body.livemode .topbar{background:linear-gradient(90deg,#5c1a12,#8d2a1c)}
+
+  /* The screens, full width under the band. */
   .frames{display:flex;flex-direction:column;gap:12px;min-width:0}
   .frameset{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
   .frame{flex:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2);box-shadow:var(--shadow)}
@@ -24,18 +60,6 @@
   .frame > header a{color:var(--gold);text-decoration:none}
   .frame .shell{position:relative;overflow:hidden}
   .frame iframe{border:0;display:block;transform-origin:top left;background:var(--bg)}
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .tablelist{display:flex;flex-direction:column;gap:5px}
-  .trow{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:baseline;
-    text-align:left;font-size:13px;padding:7px 9px}
-  .trow .tcode{font-weight:800;letter-spacing:.1em;color:var(--gold)}
-  .trow .twhat{color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .trow .tkind{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)}
-  .trow.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
-  .devbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .devbar .code{font-size:22px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
-  .live-note{color:var(--red);font-weight:650}
-  body.livemode .topbar{background:linear-gradient(90deg,#5c1a12,#8d2a1c)}
 </style>
 </head>
 <body>
@@ -63,57 +87,46 @@
 </header>
 
 <div class="devwrap">
-  <div class="devcol">
-    <p class="err" id="dev-err" hidden></p>
-
-    <div class="panel">
-      <div class="devbar">
-        <span class="code" id="code">····</span>
-        <span class="tally" id="phase">—</span>
-      </div>
-      <p class="hint live-note" id="live-note" hidden>
-        Real players may be at this table, and every control here lands on their game.
-        The phones are watching windows — they show what each player sees without
-        putting anybody at the table.
-      </p>
+  <div class="panel band">
+    <div class="bandrow">
+      <span class="code" id="code">····</span>
+      <span class="tally" id="phase">—</span>
+      <span class="bandsep"></span>
+      <span class="bandlbl">Tables</span>
+      <div class="tablestrip" id="tablelist"></div>
+      <button class="btn ghost" id="btn-tables" type="button" title="Look again">⟳</button>
+      <span class="bandsep"></span>
+      <span class="newtable">
+        <input type="number" id="players" min="2" max="8" value="4" title="Players at the next new table">
+        <button class="btn primary" id="btn-rebuild" type="button">New table</button>
+      </span>
     </div>
-
-    <div class="panel">
-      <div class="entry-head">
-        <h2>Tables</h2>
-        <button class="btn ghost" id="btn-tables" type="button" title="Look again">⟳</button>
+    <div class="bandrow">
+      <span class="bandlbl">Go to</span>
+      <div class="scrub" id="scrub"></div>
+      <div class="seg" id="goto-phase">
+        <button class="btn on" data-phase="bid" type="button" title="Land the round at its bids">bid</button>
+        <button class="btn" data-phase="tricks" type="button" title="Land the round with its bids in">tricks</button>
       </div>
-      <div class="tablelist" id="tablelist"></div>
-      <p class="hint" id="tables-hint">Looking for tables on this server…</p>
-      <div class="row2">
-        <label class="field"><span>Players</span><input type="number" id="players" min="2" max="8" value="4"></label>
-        <label class="field"><span>&nbsp;</span><button class="btn primary" id="btn-rebuild" type="button">New table</button></label>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Jump to</h2>
-      <div class="btnrow">
-        <button class="btn" data-act="startGame" type="button">Start game</button>
+      <span class="bandsep"></span>
+      <div class="oneshots">
         <button class="btn" data-act="fillBids" type="button">Fill bids</button>
         <button class="btn" data-act="fillTricks" type="button">Fill tricks</button>
-        <button class="btn" data-act="nextRound" type="button">Next round</button>
-        <button class="btn" data-act="endGame" type="button">End game</button>
+        <button class="btn" data-act="nextRound" type="button" title="Play this round through">Play round</button>
         <button class="btn" data-act="bumVote" type="button">Bum deal vote</button>
-        <button class="btn" data-act="lobby" type="button">Back to lobby</button>
-        <button class="btn primary" data-act="randomise" type="button">Randomise</button>
-        <button class="btn" id="btn-avatars" type="button">Photos for everyone</button>
+        <button class="btn" data-act="randomise" type="button">Randomise</button>
+        <button class="btn" id="btn-avatars" type="button" title="A stand-in photo on every seat">Photos</button>
         <button class="btn" id="btn-no-avatars" type="button">No photos</button>
       </div>
-      <div class="row2">
-        <label class="field"><span>Rounds played</span>
-          <input type="number" id="fill-rounds" min="0" placeholder="random"></label>
-        <label class="field"><span>&nbsp;</span>
-          <button class="btn" id="btn-fillcard" type="button">Fill scorecard</button></label>
-      </div>
-      <p class="hint" id="fill-hint">Plays that many rounds with bids and tricks the rules allow. Leave it empty for a random number.</p>
     </div>
   </div>
+
+  <p class="err" id="dev-err" hidden></p>
+  <p class="hint live-note" id="live-note" hidden>
+    Real players may be at this table, and every control here lands on their game.
+    The phones are watching windows — they show what each player sees without
+    putting anybody at the table.
+  </p>
 
   <div class="frames">
     <div class="frameset" id="host-frame"></div>
