@@ -388,6 +388,8 @@ function renderRun() {
     ? 'Let the table play the hands nobody is behind again'
     : 'Stop the table playing the hands nobody is behind';
   btn.classList.toggle('primary', btn._now);
+  // Pause is the table's own, so it works anywhere. Stepping is a dev server's.
+  $('#btn-step').hidden = !DEVSRV;
   $('#btn-step').disabled = !btn._now;       // stepping a running table is a race
 }
 

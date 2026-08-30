@@ -2756,7 +2756,8 @@ part('the dev controls, on each kind of server');
     P.socks[0].onmessage({ data: devState(false, bots) });
     ok(P.pick('#run-tools').hidden === false, 'a table with a bot in it does');
     ok(P.pick('#btn-pause').textContent === '❚❚ Pause', 'and it offers to stop it');
-    ok(P.pick('#btn-step').disabled === true, 'Step is no use until it is stopped');
+    ok(P.pick('#btn-step').hidden === true,
+       'but a normal server will not step one, so it is not offered');
 
     P.socks[0].sent.length = 0;
     P.pick('#btn-pause').fire('click');
@@ -2766,14 +2767,10 @@ part('the dev controls, on each kind of server');
 
     P.socks[0].onmessage({ data: devState(false, Object.assign({ paused: true }, bots)) });
     ok(P.pick('#btn-pause').textContent === '▶ Play', 'a stopped table offers to go on');
-    ok(P.pick('#btn-step').disabled === false, 'and Step is live');
     P.socks[0].sent.length = 0;
-    P.pick('#btn-step').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"step"}',
-       'Step asks the table for one move  got ' + JSON.stringify(P.socks[0].sent[0]));
     P.pick('#btn-pause').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[1]) === '{"t":"pause","on":false}',
-       'and the same button lets it go  got ' + JSON.stringify(P.socks[0].sent[1]));
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"pause","on":false}',
+       'and the same button lets it go  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     // Once the game is over there is nothing playing to stop.
     P.socks[0].onmessage({ data: devState(false, Object.assign({ phase: 'done' }, bots)) });
@@ -2792,6 +2789,18 @@ part('the dev controls, on each kind of server');
     ok(P.pick('#scrub').children.length === 4, 'the card is the lobby, both rounds and the finish  got '
        + P.pick('#scrub').children.length);
     ok(P.pick('#ph-photo').textContent === 'photo', 'and the photo column is offered');
+
+    // And on a dev server a stopped table can be walked on a move at a time.
+    P.socks[0].onmessage({ data: devState(true, {
+      paused: true, cfg: { max: 3, pattern: 'down', ones: 2, deck: 'virtual' },
+      seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Otter', bot: true }],
+    }) });
+    ok(P.pick('#btn-step').hidden === false, 'a dev server offers the step');
+    ok(P.pick('#btn-step').disabled === false, 'and it is live on a stopped table');
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-step').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"step"}',
+       'which asks the table for one move  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 }
 
