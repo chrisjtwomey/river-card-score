@@ -105,13 +105,19 @@ already played are that player's. So the seat stays, marked as gone, and
 auto-play takes its hand from there on. That phone can still come back to the seat
 from the front page, and it is a player's again.
 
-**The table plays on only while somebody is at it.** Auto-play and the bots
-are there so a game is not held up for a seat nobody is behind — not so that a
-game plays itself. When the last player leaves, every hand the table was
-holding stops where it is: no bid is made, no card goes down, and the game is
-exactly as it was left when a phone comes back to it. A player alone with bots
-who left used to come back to a game that had bid, played and scored itself
-without them.
+**The table plays on only while somebody is there to see it.** Auto-play and
+the bots are there so a game is not held up for a seat nobody is behind — not
+so that a game plays itself in an empty room. Somebody is a player still in the
+game, or, with none of those left, a screen watching: the TV screen, a screen
+showing the table, a watching window. When the last of them goes, every hand
+the table was holding stops where it is: no bid is made, no card goes down, and
+the game is exactly as it was left when somebody comes back to it. A player
+alone with bots who left used to come back to a game that had bid, played and
+scored itself without them.
+
+A table of bots alone is worth looking at — a table of stand-ins on the dev
+page, a screen put up to watch one — so it plays while it is looked at. Close
+the last window on it and it stops.
 
 ### A browser holds more than one table
 

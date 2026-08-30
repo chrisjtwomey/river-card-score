@@ -865,6 +865,30 @@ part('leaving on purpose, which is not the same as a phone going quiet');
 }
 
 {
+  /* ...and it plays on for somebody watching it, with no player in the game at
+     all. A table of bots is worth looking at -- a screen showing one, or the
+     dev page -- and standing still is no use to whoever is looking. `seen` is
+     the server's word for it; here it is set by hand. */
+  const t = table().sit(['Otter', 'Heron'], { bot: true })
+    .rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  ok(!G.tablePlaysOn(t.room) && !t.Bots.anyAuto(t.room),
+     'a table of bots with nobody at it stands still');
+  t.Bots.nudge(t.room);
+  ok(!t.room.botTimer, 'and nothing is set going');
+
+  t.room.seen = true;                            // a screen opens on it
+  ok(G.tablePlaysOn(t.room) && t.Bots.anyAuto(t.room),
+     'somebody watching is somebody to play it for');
+  t.Bots.nudge(t.room);
+  ok(!!t.room.botTimer, 'so the bots are set going');
+
+  t.room.seen = false;                           // and the last window goes
+  t.Bots.nudge(t.room);
+  ok(!t.room.botTimer, 'and it stands still again when nobody is looking');
+}
+
+{
   // a phone that is not coming back is handed over by whoever runs the table
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   ok(/only the table host/.test(t.say(2, { t: 'playout' }) || ''), 'no player hands over another\'s seat');

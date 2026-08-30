@@ -204,14 +204,22 @@
     !!seat && (!!seat.bot || (!!seat.left && !!cfg && cfg.deck === 'virtual'));
 
   /* Whether the table plays those hands at all. It plays a seat with nobody
-     behind it -- but only while somebody is still in the game to see it done.
-     A player alone with bots who leaves used to come back to a game that had
-     played itself out without them: the bots bid the hand that was left, the
-     bidding closed, and the tricks ran to the last one with nobody watching.
-     So when the last player goes the table stands still, and the game is
-     where they left it when they come back to it. */
+     behind it -- but only while somebody is there to see it done.
+
+     Somebody is a player still in the game, or, with none of those left, a
+     screen watching: a TV screen, a screen showing the table, a watching
+     window. A table of bots alone plays on while it is looked at, and stops
+     when the last window on it goes.
+
+     Both halves earn their keep. A player alone with bots who leaves used to
+     come back to a game that had played itself out without them: the bots bid
+     the hand that was left, the bidding closed, and the tricks ran to the last
+     one with nobody watching. And a table of bots with nobody at it is a table
+     nobody asked to be played. `seen` is put on the room by the server, which
+     is the only thing that knows what is attached to it. */
   const tablePlaysOn = (state) =>
-    !!state && !!state.seats && state.seats.some((s) => !s.bot && !s.left);
+    !!state && !!state.seats
+    && (state.seats.some((s) => !s.bot && !s.left) || !!state.seen);
 
   // The seat on turn with nobody behind it, or -1: the one seat the table is
   // stopped on and can do nothing about by itself.

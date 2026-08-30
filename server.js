@@ -242,6 +242,11 @@ function markPresence(room) {
     s.online = s.bot || (!s.left && Array.from(room.sockets).some(
       (w) => w.ctx && w.ctx.seatId === s.id && w.ctx.role !== 'watch'));
   });
+  /* Somebody is at this table who is not playing at it: a TV screen, a screen
+     showing it, a watching window, the dev page. The rules ask this to decide
+     whether a table of bots plays on, so it is put on the room as a plain fact
+     -- game.js is not given a set of sockets to pick through. */
+  room.seen = Array.from(room.sockets).some((w) => w.ctx && w.ctx.role !== 'player');
 }
 
 /* One card, from a phone or from a bot. The deck says whether it may go and

@@ -1339,6 +1339,57 @@ async function bidRound(P) {
     nowhere.ws.close(); tv.ws.close(); ann.ws.close();
   }
 
+  /* ---- a table of bots plays on for whoever is watching it ----
+     The rule is checked in test-rules.js against `seen` set by hand. What is
+     proved here is the wire: a real socket on the table is what sets it, and
+     the last one leaving is what puts it out. */
+  {
+    console.log('\n-- a table nobody is playing at, with somebody looking --');
+    const { h, P: [ann] } = await tableOf(['Ann'],
+      { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    h.send({ t: 'addbot' });
+    await until(() => h.state.seats.length === 2);
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid');
+
+    ann.send({ t: 'leave' });
+    await okBy(() => h.state.seats.every((s) => s.bot || s.left),
+       'the last player leaves, and only bots are in the game');
+    ok(h.state.seen === true, 'the screen on the table says somebody is watching');
+
+    // Nobody is playing at it, so before this the table stood still.
+    await until(() => h.state.phase === 'done', 8000);
+    ok(h.state.phase === 'done', 'and the table plays itself out for the screen watching it');
+
+    /* And with every window gone it stands still. Bob leaves the game but
+       keeps his page open, so there is still a socket to ask with -- and a
+       phone that has left the game is not somebody watching it. */
+    const { h: h2, P: [bob] } = await tableOf(['Bob'],
+      { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    h2.send({ t: 'addbot' });
+    await until(() => h2.state.seats.length === 2);
+    h2.send({ t: 'start' });
+    await until(() => h2.state.phase === 'bid');
+
+    const watcher = client('eyes'); await watcher.ready;
+    watcher.send({ t: 'screen', code: h2.state.code });
+    await until(() => watcher.state);
+    await okBy(() => watcher.state.seen === true,
+       'a screen only showing the table is watching it too');
+
+    bob.send({ t: 'leave' });
+    await until(() => bob.state && bob.state.seats.every((s) => s.bot || s.left));
+    watcher.ws.close();
+    h2.ws.close();
+    await okBy(() => bob.state.seen === false,
+       'with every window gone, nobody is watching');
+    const at = JSON.stringify(bob.state.rounds);
+    await wait(600);                       // longer than a bot's think, twice over
+    ok(bob.state.phase !== 'done' && JSON.stringify(bob.state.rounds) === at,
+       'and the game is left exactly where it was, for whoever comes back');
+    bob.ws.close();
+  }
+
   /* ---- leaving on purpose, which is not the same as dropping out ---- */
   {
     console.log('\n-- leaving the game --');
