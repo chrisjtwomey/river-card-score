@@ -18,7 +18,9 @@ lib/bots.js        The players the table provides: what a hand is worth, which c
                    and the driver that takes their turn through the same verbs a phone uses.
 lib/messages.js    THE PROTOCOL. A table of every message a seated socket may send: who may
                    send it, when, and which Room verb it calls. Guards are declarative.
-lib/dev.js         The dev controls. Calls Room verbs; invents nothing a real game cannot reach.
+lib/dev.js         The dev controls: what this server is running (`tables`), a way onto any of
+                   it (`open`), and the stand-in tables. Calls Room verbs; invents nothing a real
+                   game cannot reach.
 lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures,
                    and the tables running here (`/tables.json`, to this machine alone).
 lib/games.js       A finished game on disk.

@@ -76,6 +76,7 @@ function client(name, url) {
     else if (m.t === 'hello') { c.hello = m; c.seatId = m.seatId; }
     else if (m.t === 'error') c.errors.push(m.msg);
     else if (m.t === 'pong') c.pongs++;
+    else if (m.t === 'tables') c.tables = m.tables;
     else if (m.t === 'kicked') c.kicked = true;
     else if (m.t === 'left') c.left = true;
   });
@@ -480,6 +481,22 @@ async function bidRound(P) {
     fake.send({ t: 'resume', code, token: bobWatch });
     await okBy(() => /seat is gone/.test(fake.last()) && !fake.state,
        'a watch token cannot be used to take the seat');
+
+    // ---- the way onto a table already in play ----
+    const gate = client('gate'); await gate.ready;
+    gate.send({ t: 'dev', action: 'tables' });
+    await okBy(() => /DEV=1/.test(gate.last()), 'a normal server will not list its tables');
+    gate.send({ t: 'dev', action: 'open', code, token: 'not-the-token' });
+    await okBy(() => /host token/.test(gate.last()), 'and will not open one without its host token');
+    ok(!gate.hello, 'so the page is left where it was');
+    gate.send({ t: 'dev', action: 'open', code, token: h.hello.token });
+    await okBy(() => gate.hello && gate.hello.code === code,
+       'the host token opens the dev page on that table');
+    ok(gate.hello.stand === false && gate.hello.seats.length === 2
+       && gate.hello.seats.every((x) => x.watch && !x.token),
+       'and the phones come with it as watching windows, before anything is pressed');
+    await h.rt();
+    ok(h.state.seats[1].online === false, 'and the page opening on it puts nobody back at the table');
   }
 
   // ---- the dev controls on a server started with DEV=1 ----
@@ -624,6 +641,19 @@ async function bidRound(P) {
        'even with DEV=1, a real table cannot have data invented on it');
     real.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
     await okBy(() => real.state.phase === 'done', 'but its state can still be forced');
+
+    // ---- what this server is running, and a way onto any of it ----
+    real.send({ t: 'dev', action: 'tables' });
+    await okBy(() => real.tables && real.tables.some((t) => t.code === real.hello.code && !t.stand),
+       'a dev server says which tables it is running, and which of them are real games');
+    ok(real.tables.some((t) => t.stand), 'and which are tables of stand-ins');
+    const hop = client('devhop', `ws://127.0.0.1:${port3}/ws`); await hop.ready;
+    hop.send({ t: 'dev', action: 'open', code: real.hello.code });
+    await okBy(() => hop.hello && hop.hello.code === real.hello.code,
+       'and with DEV=1 the code alone opens the dev page on any of them');
+    ok(hop.hello.stand === false, 'which says a real game, so nothing may invent data for it');
+    hop.send({ t: 'dev', action: 'open', code: 'ZZZZ' });
+    await okBy(() => /no table with that code/i.test(hop.last()), 'a code with no table is refused');
     srv3.kill();
   }
 

@@ -1,22 +1,26 @@
 'use strict';
-/* Dev controls. Makes a real table of stand-in players, forces it into any
-   state, and shows every screen at once. The server only answers this with
-   DEV=1. */
+/* Dev controls. Opens on any table this server is running, or makes one of
+   stand-in players, and shows every screen at once. A table of stand-ins may
+   be forced into any state; a real game may only be looked at. The server
+   only answers a table of stand-ins with DEV=1. */
 
 const $ = (s) => document.querySelector(s);
 
 let ws = null, ST = null, CODE = null, HOST_TOKEN = null, SEATS = [];
-let topKey = '', seatKey = '';   // rebuild a preview only when it has to change
-let LIVE = false;                // fixing a real table, not a table of stand-ins
+let topKey = '', seatKey = '', tableKey = '';  // re-draw only when it has to change
+let LIVE = false;                // looking at a real table, not one of stand-ins
+let polling = false;             // the list of tables, on a dev server only
+let onTable = false;             // this socket got onto a table
 
-/* dev.html#c=CODE&t=TOKEN opens the portal on a real table, so a game in play
-   can be put right. With no hash it makes its own table of stand-in players,
-   which the server allows only with DEV=1. */
+/* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
+   lands on the game it was pressed from. The page writes the same hash for
+   whatever table it is on, so a reload comes back to it. With no hash it makes
+   a table of stand-in players, which the server allows only with DEV=1. */
 (function readHash() {
   const q = new URLSearchParams((location.hash || '').replace(/^#/, ''));
   const c = (q.get('c') || '').toUpperCase();
   const t = q.get('t') || '';
-  if (c && t) { LIVE = true; CODE = c; HOST_TOKEN = t; }
+  if (c && t) { CODE = c; HOST_TOKEN = t; }
 })();
 
 /* ---------- socket ---------- */
@@ -24,19 +28,37 @@ let LIVE = false;                // fixing a real table, not a table of stand-in
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   ws = new WebSocket(proto + location.host + '/ws');
-  ws.onopen = () => (LIVE
-    ? send({ t: 'resume', code: CODE, token: HOST_TOKEN })
-    : send({ t: 'dev', action: 'setup', players: Number($('#players').value) || 4 }));
+  onTable = false;
+  // The table it was on, or a new one. A socket that drops and comes back
+  // re-opens the same table rather than making another.
+  ws.onopen = () => ((CODE && HOST_TOKEN)
+    ? act('open', { code: CODE, token: HOST_TOKEN })
+    : act('setup', { players: Number($('#players').value) || 4 }));
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === 'hello') {
       CODE = m.code; HOST_TOKEN = m.token; SEATS = m.seats || [];
+      LIVE = m.stand === false;              // the table says which it is, not the address
+      history.replaceState(null, '', `#c=${CODE}&t=${HOST_TOKEN}`);
+      topKey = seatKey = tableKey = '';      // another table, so every pane is stale
+      applyMode();
+      if (polling) askTables();
+      onTable = true;
       err('');
+    } else if (m.t === 'tables') {
+      renderTables(m.tables || []);
     } else if (m.t === 'state') {
       ST = m; render();
     } else if (m.t === 'error') {
+      /* The table it was on would not open: a server that restarted, a game
+         that ended. Let it go and do what a page with no table does. */
+      if (!onTable && CODE) {
+        CODE = HOST_TOKEN = null;
+        history.replaceState(null, '', location.pathname);
+        return act('setup', { players: Number($('#players').value) || 4 });
+      }
       // No table yet means the stand-in table was refused. Say the other way in.
-      err(!LIVE && !CODE
+      err(!CODE
         ? `${m.msg} To put a real game right, start the server with DEV=1 and open Dev controls under ⚙ on the TV screen.`
         : m.msg);
     }
@@ -120,6 +142,43 @@ function watchFiles() {
   es.onerror = () => { if (es.readyState === 2) es.close(); };   // 2 is CLOSED
 }
 
+/* ---------- the tables this server is running ---------- */
+
+const askTables = () => act('tables');
+
+/* A row a table: its code, what it is doing, and whether it is a game or a
+   set of stand-ins. Pressing one opens this page on it. A dev server hands
+   over any table it holds, so no token is typed here. */
+function renderTables(list) {
+  const key = list.map((t) => `${t.code}/${t.phase}/${t.round}/${t.seats.length}/${t.stand}`)
+    .join('|') + '@' + CODE;
+  if (key === tableKey) return;
+  tableKey = key;
+  const box = $('#tablelist');
+  box.innerHTML = '';
+  list.forEach((t) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn trow' + (t.code === CODE ? ' on' : '');
+    b.dataset.code = t.code;
+    const code = document.createElement('span');
+    code.className = 'tcode';
+    code.textContent = t.code;
+    const what = document.createElement('span');
+    what.className = 'twhat';
+    what.textContent = `${t.seats.length} player${t.seats.length === 1 ? '' : 's'} · ${t.phase}`
+      + (t.round ? ` · round ${t.round}/${t.rounds}` : '');
+    const kind = document.createElement('span');
+    kind.className = 'tkind';
+    kind.textContent = t.stand ? 'stand-ins' : 'real';
+    b.append(code, what, kind);
+    box.appendChild(b);
+  });
+  $('#tables-hint').textContent = list.length
+    ? 'Press one to show its screens here. A real game can be watched, not changed.'
+    : 'No table is running on this server yet.';
+}
+
 /* ---------- controls ---------- */
 
 function render() {
@@ -130,6 +189,9 @@ function render() {
   $('#phase').textContent = ST.phase + (ST.rounds.length ? ` · round ${Math.min(ST.idx + 1, ST.rounds.length)}/${ST.rounds.length}` : '');
   $('#subtitle').textContent = `${LIVE ? 'live ' : ''}table ${ST.code} · ${n} players · ${ST.phase}`;
   if (document.activeElement !== $('#players')) $('#players').value = String(n);
+
+  // Only a dev server has tables to hand out, so only a dev server is asked.
+  if (ST.dev && !polling) { polling = true; askTables(); setInterval(askTables, 5000); }
 
   // scorecard filler. Before the game starts the card is not built yet, so the
   // length comes from the rules.
@@ -205,8 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('#btn-rebuild').addEventListener('click', () =>
     act('setup', { players: Number($('#players').value) || 4 }));
-  $('#players').addEventListener('change', () =>
-    act('players', { players: Number($('#players').value) || 4 }));
+  $('#btn-tables').addEventListener('click', askTables);
+  $('#tablelist').addEventListener('click', (e) => {
+    const row = e.target.closest('.trow');
+    if (row && row.dataset.code !== CODE) act('open', { code: row.dataset.code });
+  });
 
   $('#btn-fillcard').addEventListener('click', () => {
     const v = $('#fill-rounds').value.trim();

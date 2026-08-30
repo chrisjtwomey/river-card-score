@@ -66,7 +66,7 @@ const server = tls ? https.createServer(tls, handler) : http.createServer(handle
    every screen at it is told so and lets it go, the bots stop, and the file it
    would have come back from is removed. */
 function endTable(code) {
-  const room = rooms.get(String(code || '').toUpperCase().trim());
+  const room = roomOf(code);
   if (!room) return false;
   Bots.stop(room);
   // The line every page already knows: it forgets the table and walks away.
@@ -90,6 +90,7 @@ function listTables() {
       cards: (curRound(room) || {}).cards || null,
       round: room.phase === 'lobby' || room.phase === 'done' ? null : room.idx + 1,
       rounds: room.rounds.length || null,
+      stand: !!room.stand,
       seats: room.seats.map((s) => ({ id: s.id, name: s.name, bot: !!s.bot,
                                       left: !!s.left, online: !!s.online })),
     }));
@@ -97,7 +98,7 @@ function listTables() {
 
 // The one thing the HTTP side needs of a room: a seat's picture, or nothing.
 function pictureOf(code, seatId) {
-  const room = rooms.get(String(code || '').toUpperCase());
+  const room = roomOf(code);
   const seat = room && room.seats.find((x) => x.id === seatId);
   return (seat && seat.av) || null;
 }
@@ -123,6 +124,10 @@ function fail(ws, msg) { if (ws) send(ws, { t: 'error', msg: sentence(msg) }); }
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no I, L, O, 0, 1
 const rooms = new Map();
 const token = () => crypto.randomBytes(12).toString('hex');
+
+// Every way in names a table by its code, and a code is typed by people. One
+// trim and one case for all of them, so no door is fussier than another.
+const roomOf = (code) => rooms.get(String(code || '').toUpperCase().trim());
 
 /* ---------------- player pictures ---------------- */
 
@@ -266,7 +271,7 @@ const Bots = require('./lib/bots.js')({
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
-  DEV, G, createRoom, attach, send, fail, broadcast, setAvatar, Room,
+  DEV, G, createRoom, roomOf, listTables, attach, send, fail, broadcast, setAvatar, Room,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
@@ -330,7 +335,7 @@ function handle(ws, m) {
   }
 
   if (m.t === 'join') {
-    const room = rooms.get(String(m.code || '').toUpperCase().trim());
+    const room = roomOf(m.code);
     if (!room) return fail(ws, 'no table with that code');
     const name = String(m.name || '').trim().slice(0, 16) || `Player ${room.seats.length + 1}`;
     const held = room.seats.find((s) => s.name.toLowerCase() === name.toLowerCase());
@@ -365,7 +370,7 @@ function handle(ws, m) {
   }
 
   if (m.t === 'resume') {
-    const room = rooms.get(String(m.code || '').toUpperCase().trim());
+    const room = roomOf(m.code);
     if (!room) return fail(ws, 'that table is gone');
     if (m.token === room.hostToken) {
       attach(ws, room, { role: 'host' });
@@ -385,7 +390,7 @@ function handle(ws, m) {
      the table becomes present because of it. A code is all it needs: the state
      it is given is the state already on show. */
   if (m.t === 'screen') {
-    const room = rooms.get(String(m.code || '').toUpperCase().trim());
+    const room = roomOf(m.code);
     if (!room) return fail(ws, 'no table with that code');
     attach(ws, room, { role: 'screen' });
     send(ws, { t: 'hello', role: 'screen', code: room.code, token: null });
@@ -396,7 +401,7 @@ function handle(ws, m) {
   // off the same state, but it cannot touch the game and it does not count as
   // that player being at the table.
   if (m.t === 'watch') {
-    const room = rooms.get(String(m.code || '').toUpperCase().trim());
+    const room = roomOf(m.code);
     if (!room) return fail(ws, 'that table is gone');
     const tok = String(m.token || '');
     const seat = tok && room.seats.find((x) => x.watch === tok);

@@ -25,6 +25,13 @@
   .frame .shell{position:relative;overflow:hidden}
   .frame iframe{border:0;display:block;transform-origin:top left;background:var(--bg)}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tablelist{display:flex;flex-direction:column;gap:5px}
+  .trow{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:baseline;
+    text-align:left;font-size:13px;padding:7px 9px}
+  .trow .tcode{font-weight:800;letter-spacing:.1em;color:var(--gold)}
+  .trow .twhat{color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .trow .tkind{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)}
+  .trow.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
   .devbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .devbar .code{font-size:22px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
   .live-note{color:var(--red);font-weight:650}
@@ -64,15 +71,24 @@
         <span class="code" id="code">····</span>
         <span class="tally" id="phase">—</span>
       </div>
-      <div class="row2" data-stand>
-        <label class="field"><span>Players</span><input type="number" id="players" min="2" max="8" value="4"></label>
-        <label class="field"><span>&nbsp;</span><button class="btn" id="btn-rebuild" type="button">New table</button></label>
-      </div>
       <p class="hint live-note" id="live-note" hidden>
         A real game, with real players. Nothing here invents data for it: the controls that do
         belong to a table of stand-ins. The phones are watching windows — they show what each
         player sees, but they cannot act and nobody comes online.
       </p>
+    </div>
+
+    <div class="panel">
+      <div class="entry-head">
+        <h2>Tables</h2>
+        <button class="btn ghost" id="btn-tables" type="button" title="Look again">⟳</button>
+      </div>
+      <div class="tablelist" id="tablelist"></div>
+      <p class="hint" id="tables-hint">Looking for tables on this server…</p>
+      <div class="row2">
+        <label class="field"><span>Players</span><input type="number" id="players" min="2" max="8" value="4"></label>
+        <label class="field"><span>&nbsp;</span><button class="btn primary" id="btn-rebuild" type="button">New table</button></label>
+      </div>
     </div>
 
     <div class="panel" data-stand>

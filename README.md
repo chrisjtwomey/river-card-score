@@ -853,29 +853,35 @@ Changes to `server.js` still need a restart, and that ends the games in memory. 
 npm run dev
 ```
 
-Then open **`/dev.html`**. It makes a real table of stand-in players and shows every screen at once: the TV screen across the top, and under it one phone per seat, live, side by side. Press a button and every pane updates together.
+Then open **`/dev.html`**. It opens on a table this server is already running, or makes one of stand-in players, and shows every screen at once: the TV screen across the top, and under it one phone per seat, live, side by side. Press a button and every pane updates together.
 
 The phone of whoever runs the table stands first in that row, ringed in gold. It moves with the job, not with the seating, so the pane that has the table's buttons on it is always in the same place.
 
 It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
+- **Tables** — every table this server is running: its code, how many are at it, what it is doing, and whether it is a real game or a set of stand-ins. Press one and this page opens on it. Under the list, **New table** makes a fresh table of stand-ins with the number of players in the box.
 - **Jump to** — start game, fill bids, fill tricks, next round, end game, bum deal vote, back to lobby, and **randomise**, which shuffles the rules and plays a random number of rounds.
 - **Fill scorecard** — plays whole rounds against the rules in force, and leaves the next round waiting for its bids. Type how many rounds to play, or leave the box empty for a random number. Use it to see a card part way through, or a full one.
+
 **Force**, **Round**, **Rules** and **State** were on this page and are being redone. The server still answers every one of them; only the controls are gone.
 
 The filled bids keep the screw-the-dealer rule, the filled tricks always total the hand size, and every played round gets a trump, so nothing on screen is impossible.
 
 #### Fixing a real game
 
-On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
+On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck. The **Tables** list is the other way to the same place: on a dev server the code alone is enough, so no token is typed or pasted.
 
-A real table gets nothing that invents data — new table, jump to, fill scorecard, randomise are hidden, and the server refuses them even with `DEV=1`. The state editor that put a real game right is being redone, so for now the page shows a real table rather than changes it. The top bar turns red, and the page says the game is real.
+Both doors are one message. A table's host token opens it on any server — it is authority the TV screen already holds — and with `DEV=1` the code alone will do, because that server hands its tables to the page anyway. The page writes the table it is on into its own address, so a reload comes back to it, and a socket that drops and returns re-opens it rather than making another. If the table has gone — the server restarted, the game ended — the page lets it go and makes a table of stand-ins, which is what a page with no table does.
+
+A real table gets nothing that invents data — jump to, fill scorecard and randomise are hidden, and the server refuses them even with `DEV=1`. The state editor that put a real game right is being redone, so for now the page shows a real table rather than changes it. The top bar turns red, and the page says the game is real. **Tables** stays, so the way off a real game is where the way onto it was.
 
 The phones are there, one pane a player, so you can see what each of them sees. On a real table they are **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
 
 The server decides this, not the page:
 
 - Anything that makes or fills a table of stand-ins needs `DEV=1` **and** a table the dev page itself made.
+- The list of tables needs `DEV=1`. A table's four characters are its only door, and a listing handed to a page that has not proved anything would open every table at once.
+- Opening the page on a table needs that table's host token, or `DEV=1`. Nothing else: the page cannot ask for a seat.
 - Forcing a state needs only the host or the table host of that table, which is authority they already have.
 - A real table never hands its seat tokens out. It hands out a watch token a seat instead, which opens that screen and can do nothing else.
 - A watching socket is refused every message but `ping`, and is left out of who counts as online.
