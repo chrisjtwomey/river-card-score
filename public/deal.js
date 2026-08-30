@@ -354,8 +354,11 @@ const Deal = (function () {
       ));
 
       /* ---- what is happening, just above the deck ---- */
-      // Nothing is shuffled under reduced motion, so there is nothing to say.
-      const doing = calm ? '' : (virtual ? 'Shuffling…' : `${names[dealer]} is dealing…`);
+      /* Nothing is shuffled under reduced motion, so there is nothing to say.
+         The deal is the dealer's on either deck, so the line names them on
+         both: the verb is what differs, because with real cards they are
+         dealing the hand and here the deck is still being shuffled. */
+      const doing = calm ? '' : `${names[dealer]} is ${virtual ? 'shuffling' : 'dealing'}…`;
       if (doing) {
         const doingEl = document.createElement('div');
         doingEl.className = 'deal-doing';
