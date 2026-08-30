@@ -53,6 +53,11 @@ const Felt = (function () {
      deck turned, which then goes face down on top of them. A round that ends
      by the table being replaced is a round nobody saw end. */
   const UNWIND = 620;
+
+  /* How long the places stand over the fresh deck before the next round is
+     dealt. Long enough to find your own row and see what the round moved you
+     to; not so long that the game is waiting on a table nobody is playing. */
+  const STAND_HOLD = 2500;
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
@@ -161,7 +166,8 @@ const Felt = (function () {
     if (!overlay) return;
     overlay.classList.remove('table', 'still', 'dragging');
     document.body.classList.remove('felt-up');
-    ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids', '.felt-beat', '.felt-vote'].forEach((s) => {
+    ['.felt-out', '.felt-hint', '.felt-line', '.felt-bids', '.felt-beat', '.felt-vote',
+     '.felt-stands'].forEach((s) => {
       const el = overlay.querySelector(s);
       if (el) el.remove();
     });
@@ -1301,6 +1307,48 @@ const Felt = (function () {
     return tf(0, g.R.cy - lift, 0, face ? 180 : 0, g.ch / heroH(g));
   }
 
+  /* Where the round leaves everybody, held over the deck it has just put
+     away. The rows are the scorecard's own, so the places and the figures
+     read the same way here as on the page underneath, and the scores run up
+     from where they stood before this round rather than simply being the new
+     ones. What each seat was paid is asked of the rule the scorecard asks. */
+  function stands(prev, done) {
+    if (typeof Table === 'undefined' || still() || !UI.fx.on()) return done();
+    const overlay = parts().overlay;
+    let el = overlay.querySelector('.felt-stands');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'felt-stands';
+      overlay.appendChild(el);
+    }
+    el.textContent = '';
+    const box = document.createElement('div');
+    box.className = 'standings';
+    el.appendChild(box);
+    const was = {};
+    ST.seats.forEach((s, i) => {
+      was[s.id] = ST.totals[i] - Game.roundScore(prev.bids[i], prev.tricks[i], ST.cfg);
+    });
+    Table.standings(box, ST, { me, lastTotals: was });
+    el.hidden = false;
+    if (el.animate) {
+      el.animate([{ opacity: 0, transform: 'translate(-50%,-46%)' },
+                  { opacity: 1, transform: 'translate(-50%,-50%)' }],
+        { duration: 240, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' });
+    }
+    const k = key;
+    setTimeout(() => {
+      if (key !== k) return;
+      const off = el.animate
+        ? el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-out', fill: 'forwards' })
+        : null;
+      setTimeout(() => {
+        el.hidden = true;
+        if (key === k) done();
+      }, off ? 260 : 0);
+    }, STAND_HOLD);
+  }
+
   /* A trick taken is a moment: it is named, and only when that has been read
      are the cards gathered to whoever took them. Without it a trick ends by
      the cards simply being somewhere else. */
@@ -1392,8 +1440,12 @@ const Felt = (function () {
           endBeat();
           // What the round paid has been read; now the table is put away.
           unwind(last, r, (carried) => {
-            pausing = false;
-            if (key === k && want && round()) start(round(), carried);
+            // The deck is squared up; where the round leaves everybody stands
+            // over it, and then the next one is shuffled from it.
+            stands(prev, () => {
+              pausing = false;
+              if (key === k && want && round()) start(round(), carried);
+            });
           });
         }, PAID_HOLD);
         return;

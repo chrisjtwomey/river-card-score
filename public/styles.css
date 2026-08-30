@@ -714,6 +714,22 @@ body.stage-head .toaster{top:var(--stage-band, calc(clamp(48px, 8vh, 78px) + 84p
 .felt-beat.trick b{font-size:17px;line-height:1.15}
 .felt-beat.trick span{font-size:11px}
 @keyframes tookin{from{opacity:0;transform:translate(-50%,12px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+/* Where the round leaves everybody, held over the deck it has just put away.
+   The rows are the scorecard's, so the places read the same way on either
+   screen; the panel is the table's, because it stands on the felt and not on
+   the page underneath. */
+.felt-stands{
+  position:absolute;z-index:52;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(86vw,420px);padding:14px 16px;border-radius:16px;color:#fff;
+  background:rgba(7,12,8,.92);border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 18px 50px rgba(0,0,0,.6);pointer-events:none;
+}
+.felt-stands .stand-row{font-size:16px}
+.felt-stands .stand-row .rank{color:rgba(255,255,255,.55)}
+.felt-stands .stand-row .bar{background:rgba(255,255,255,.14)}
+.felt-stands .stand-row .bar i{background:var(--gold)}
+.felt-stands .stand-row.me .name,.felt-stands .stand-row.lead .pts{color:var(--gold)}
+
 /* The bids, held up to be read before the first card. Nothing is in the
    middle of the table yet, so it takes the middle; who leads is a name and
    not a score, so it is not set in the figures a round's result uses. */

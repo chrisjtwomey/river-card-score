@@ -318,10 +318,13 @@ that band.
   the seat that took it, goes round the ring the other way from the way it was
   gathered -- anticlockwise, to whoever deals next -- and squares up in the
   middle, under the card the deck turned. That card goes face down on top of
-  them, and what is left is a deck -- and that deck is the one the next round
-  is shuffled from. The scene carries on from the table rather than opening on
-  one: nothing is wiped, nothing is faded up, and the page behind is never
-  seen between two rounds. With movement off none of this plays.
+  them, and what is left is a deck. Where the round leaves everybody then
+  stands over that deck for two and a half seconds -- the scorecard's own rows,
+  best first, each score running up from where it stood before the round --
+  and fades. Then the next round is shuffled out of the same deck: the scene
+  carries on from the table rather than opening on one, so nothing is wiped,
+  nothing is faded up, and the page behind is never seen between two rounds.
+  With movement off none of this plays.
 - **Bidding** happens on the felt too: the numbers arc above your hand, under
   a heading of their own, and are picked up the same way -- touch to lift, tap
   again to call. Your own bid stays lit and can be changed until the next player bids.

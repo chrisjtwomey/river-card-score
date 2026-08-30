@@ -152,6 +152,24 @@ function load(W, H, motion) {
     { log() {}, info() {}, warn() {}, error(...a) { throw new Error('console.error: ' + a.join(' ')); } }));
 }
 
+/* Drive the timers a scene arms, and the ones those arm in turn, until it
+   stops arming any -- or until `stop` says the next scene has taken over,
+   whose own timers belong to the clock and not to this file. A step between
+   two rounds is four of these deep: what the round paid, the putting away,
+   the places, and the fade off them. */
+function runTimers(go, stop) {
+  const armed = [];
+  const realSet = setTimeout;
+  for (let guard = 0; guard < 8 && go.length; guard++) {
+    armed.length = 0;
+    global.setTimeout = (f, ms) => { armed.push({ fn: f, ms }); return realSet(() => {}, 0); };
+    try { go.slice().sort((a, b) => a.ms - b.ms).forEach((t) => t.fn()); }
+    finally { global.setTimeout = realSet; }
+    if (stop && stop()) return;
+    go = armed.slice();
+  }
+}
+
 // where a card actually sits, read back out of the transform the felt wrote
 function spotOf(el) {
   const N = '(-?[\\d.]+(?:e[-+]?\\d+)?)';
@@ -1034,15 +1052,8 @@ function scored(motion) {
      away it sets going -- the tricks round the ring, the turned card face
      down. Those are all armed in one go, so one more pass runs the lot; what
      the deal arms after them is left to the clock, as it was. */
-  const passes = () => {
-    const first = armed.filter((t) => t.ms > 1000);
-    armed.length = 0;
-    catching(() => first.forEach((t) => t.fn()));
-    const away = armed.slice().sort((a, b) => a.ms - b.ms);
-    armed.length = 0;
-    away.forEach((t) => t.fn());
-    return away;
-  };
+  const passes = () => runTimers(armed.filter((t) => t.ms > 1000),
+    () => !!overlay.querySelector('.dcard.deck'));
   return { L, overlay, armed, passes, beat: () => overlay.querySelector('.felt-beat') };
 }
 {
@@ -1078,6 +1089,7 @@ function scored(motion) {
   next.idx = 1;
   next.rounds = [{ cards, dealer: 0, trump: 'H', bids: [1, 2, 1, 1], tricks: [1, 0, 2, 2] },
                  next.rounds[0]];
+  next.totals = [11, -2, 12, 12];
   const armed = [];
   const realSet = setTimeout;
   const catching = (fn) => {
@@ -1116,8 +1128,28 @@ function scored(motion) {
     return a;
   };
   L.dom.El.prototype.getAnimations = () => [];
-  done.fn();
   const overlay = L.dom.document.getElementById('deal');
+
+  /* Then where the round leaves everybody stands over the deck it just made,
+     in the scorecard's own rows, before the next round is shuffled from it. */
+  const after = [];
+  const realAgain = setTimeout;
+  global.setTimeout = (f, ms) => { after.push({ fn: f, ms }); return realAgain(() => {}, 0); };
+  try { done.fn(); } finally { global.setTimeout = realAgain; }
+  const panel = overlay.querySelector('.felt-stands');
+  ok(!!panel && !panel.hidden, 'the places stand up over the deck the round left');
+  const rows = panel.querySelectorAll('.stand-row');
+  ok(rows.length === 4, 'one row a seat  got ' + rows.length);
+  // The figures are written into the rows' markup, which the fake DOM keeps
+  // the shape of and not the words; the order is the thing to ask about here.
+  ok(rows.map((el) => el.dataset.k).join(',') === 's2,s3,s0,s1',
+     'best first, worst last  got ' + rows.map((el) => el.dataset.k).join(','));
+  ok(rows[3].classList.contains('me'), 'and your own row is marked');
+  ok(!stage.querySelector('.dcard.deck'), 'nothing is shuffled while they are up');
+  ok(after.some((t) => t.ms === 2500),
+     'they are armed to go by themselves  got ' + after.map((t) => t.ms).join(','));
+  runTimers(after, () => !!stage.querySelector('.dcard.deck'));
+  ok(panel.hidden, 'then they go, and the deal has the table');
   ok(stage.querySelectorAll('.dcard.deck').length === 9,
      'the deck is taken over where it lies  got ' + stage.querySelectorAll('.dcard.deck').length);
   ok(tricks().length === 0, 'and what the round left is cleared away under it  got ' + tricks().length);
