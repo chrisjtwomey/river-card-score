@@ -2528,6 +2528,39 @@ part('the front page, and the screen');
     ok(P.pick('#panel-toggles').hidden === false, 'but the panels that put a game right stay');
     ok(P.pick('#live-note').hidden === false, 'and the page says real players may be at the table');
     ok(P.pick('#ph-photo').textContent === '', 'the photo column says nothing it cannot do');
+
+    /* ---- the form that moves a stuck game ----
+       In place of the scrubber, the one control the protocol takes anywhere:
+       a phase and a round, forced, with nothing invented. */
+    const box = P.pick('#repair');
+    ok(box.hidden === false, 'the repair form stands where the scrubber is not allowed');
+    const seg = box.querySelector('.seg');
+    ok(seg && seg.querySelectorAll('.btn').length === 4,
+       'it offers the four phases the table will hold');
+    ok(seg.querySelector('.btn.on').dataset.phase === 'bid',
+       'and says where the game is now  got ' + seg.querySelector('.btn.on').dataset.phase);
+    ok(box.querySelector('input').value === '1', 'with the round it is on');
+
+    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'tricks').fire('click');
+    box.querySelector('input').value = '2';
+    P.socks[0].sent.length = 0;
+    box.querySelectorAll('.btn.primary')[0].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"phase":"tricks","idx":1}}',
+       'and Put forces that phase and that round  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    // A round means nothing in the lobby, so none is sent with it.
+    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'lobby').fire('click');
+    P.socks[0].sent.length = 0;
+    box.querySelectorAll('.btn.primary')[0].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"patch","patch":{"phase":"lobby"}}',
+       'the lobby is put to without a round  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    // While it is aimed, the table moving must not move the form under the hand.
+    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'done').fire('click');
+    P.socks[0].onmessage({ data: devState(false) });
+    ok(seg.querySelector('.btn.on').dataset.phase === 'done',
+       'a state landing mid-aim leaves the form where it was pointed');
   }
 
   {   // a table of stand-ins on a dev server: everything, as before

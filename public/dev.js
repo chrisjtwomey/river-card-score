@@ -54,6 +54,7 @@ function connect() {
       DEVSRV = m.srv !== false;              // an older server said nothing, and took it all
       history.replaceState(null, '', `#c=${CODE}&t=${HOST_TOKEN}`);
       topKey = seatKey = tableKey = '';      // another table, so every pane is stale
+      repairTouched = false;                 // and the form is aimed at nothing yet
       applyMode();
       if (polling) askTables();
       onTable = true;
@@ -277,6 +278,92 @@ function renderScrub() {
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
+/* ---------- the repair form ---------- */
+
+/* Where the scrubber is refused, this is how a game is moved on. It forces a
+   phase and a round and nothing else: no rounds are invented, no bids are made
+   up, so it is the one control a normal server takes. A game stuck in the
+   wrong phase -- bidding that will not close, a finish that came too early --
+   is put right here.
+
+   The four phases are the four the server will hold. The round only travels
+   with a phase a round exists in. */
+const REPAIR_PHASES = ['lobby', 'bid', 'tricks', 'done'];
+let repairTouched = false;      // once it is aimed, stop following the table
+
+function buildRepair() {
+  const box = $('#repair');
+  if (!box || box._wired) return;
+  box._wired = true;
+
+  const lbl = document.createElement('span');
+  lbl.className = 'bandlbl';
+  lbl.textContent = 'Put to';
+
+  const seg = document.createElement('div');
+  seg.className = 'seg';
+  REPAIR_PHASES.forEach((p) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn' + (p === 'bid' ? ' on' : '');
+    b.dataset.phase = p;
+    b.textContent = p;
+    b.addEventListener('click', () => {
+      seg.querySelectorAll('.btn').forEach((x) => x.classList.toggle('on', x === b));
+      repairTouched = true;
+    });
+    seg.appendChild(b);
+  });
+
+  const round = document.createElement('input');
+  round.type = 'number';
+  round.min = '1';
+  round.title = 'The round to put the game at';
+  round.addEventListener('input', () => { repairTouched = true; });
+
+  const go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'btn primary';
+  go.textContent = 'Put';
+  go.title = 'Force the game to this phase and round. Nothing is played or invented.';
+  go.addEventListener('click', sendRepair);
+
+  box.append(lbl, seg, round, go);
+}
+
+// What the form is aimed at, read off the form itself at the tap.
+function sendRepair() {
+  const box = $('#repair');
+  const seg = box && box.querySelector('.seg');
+  const on = seg && seg.querySelector('.btn.on');
+  const phase = (on && on.dataset.phase) || 'bid';
+  const patch = { phase };
+  const el = box && box.querySelector('input');
+  const n = Math.round(Number(el && el.value));
+  // A round means nothing in the lobby, and the finish picks its own.
+  if ((phase === 'bid' || phase === 'tricks') && Number.isFinite(n) && n >= 1) patch.idx = n - 1;
+  act('patch', { patch });
+  repairTouched = false;              // it has landed: follow the table again
+}
+
+// Until it is aimed, the form says where the game is, so a tap on Put with
+// one thing changed changes only that thing.
+function fillRepair() {
+  const box = $('#repair');
+  if (!box || box.hidden || repairTouched || !ST) return;
+  const seg = box.querySelector('.seg');
+  if (seg) {
+    seg.querySelectorAll('.btn').forEach((b) =>
+      b.classList.toggle('on', b.dataset.phase === ST.phase));
+  }
+  const el = box.querySelector('input');
+  if (el && document.activeElement !== el) {
+    const total = ST.rounds.length;
+    el.max = String(total || 1);
+    el.value = String(total ? Math.min(ST.idx + 1, total) : 1);
+  }
+}
+
 /* Stand-in photos, so the picture on a card can be tested without anybody
    uploading anything. Each seat gets its own colour and its own initial. */
 const AV_INK = ['#c0271d', '#1c6b48', '#2b5f9e', '#8a4bb5', '#b8862b', '#0f8a8a',
@@ -402,6 +489,7 @@ function renderPlayers() {
 function render() {
   renderFrames();
   if (DEVSRV) renderScrub();       // the card it draws is a card only a dev server can fill
+  else fillRepair();
   renderPlayers();
   const n = ST.seats.length;
 
@@ -448,6 +536,7 @@ function applyGates() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  buildRepair();
   applyMode();
   UI.wireTheme('#btn-theme');
 
