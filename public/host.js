@@ -436,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
        where it would only open the page it sits in. */
     { kind: 'link', label: 'Dev controls', blank: true,
       hidden: () => window.top !== window || !(Net.session(CODE) || {}).token,
-      href: devLink() },
+      href: devLink },          // read when the menu draws: there is no table yet here
   ]) });
   $('#btn-reset').addEventListener('click', newGame);
   // playDeal() in the console replays it for the current table.

@@ -17,9 +17,12 @@
      { kind: 'link',   label, href }
 
    Any row may carry hidden() to leave itself out. A label may be a function,
-   for a row whose name changes with the game. */
+   for a row whose name changes with the game, and so may an href: the rows are
+   handed over once, when the page is still starting up, so an address built
+   out of the table has nothing to be built from yet. */
 const Settings = (function () {
   const words = (it) => (typeof it.label === 'function' ? it.label() : it.label);
+  const addr = (it) => (typeof it.href === 'function' ? it.href() : it.href);
   const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 
   /* wire(button, opts)
@@ -117,7 +120,7 @@ const Settings = (function () {
       }
       if (it.kind === 'link') {
         const a = el('a', 'menu-row menu-tap');
-        a.href = it.href;
+        a.href = addr(it);
         if (it.blank) { a.target = '_blank'; a.rel = 'noopener'; }
         a.textContent = words(it);
         // The page is left for another: what was typed goes with it.

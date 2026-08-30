@@ -1718,7 +1718,7 @@ part('the settings page');
   btn.appendChild(icon);
   bar.appendChild(btn);
 
-  let ran = 0, tog = false, pick = 'a';
+  let ran = 0, tog = false, pick = 'a', late = 'a.html';
   const page = Settings.wire(btn, { items: [
     { kind: 'group', label: 'Look' },
     { kind: 'choice', label: 'Pick', options: [{ v: 'a', label: 'A' }, { v: 'b', label: 'B' }],
@@ -1727,6 +1727,9 @@ part('the settings page');
     { kind: 'group', label: 'This screen' },
     { kind: 'action', label: 'Do the thing', run: () => { ran += 1; } },
     { kind: 'link', label: 'Front page', href: 'index.html' },
+    // An address built out of the game: there is none when the rows are handed
+    // over, so it has to be read when the row is drawn.
+    { kind: 'link', label: 'Later', href: () => late },
     { kind: 'action', label: 'Never', hidden: () => true, run: () => { ran += 100; } },
   ] });
   const box = page.el;
@@ -1740,8 +1743,19 @@ part('the settings page');
   ok(panels.length === 2, 'a group is a panel of its own  got ' + panels.length);
   ok(panels[0].querySelector('h2').textContent === 'Look'
      && panels[1].querySelector('h2').textContent === 'This screen', 'each with its heading');
-  ok(panels[1].querySelectorAll('.menu-row').length === 2, 'a hidden row leaves itself out  got '
+  ok(panels[1].querySelectorAll('.menu-row').length === 3, 'a hidden row leaves itself out  got '
      + panels[1].querySelectorAll('.menu-row').length);
+
+  /* A link's address is read when the row is drawn, not when the rows are
+     handed over. The host screen's way to the dev page is built out of the
+     table it is showing, and at wiring time there is no table yet. */
+  const linkTo = (t) => (box.querySelectorAll('a').find((a) => a.textContent === t) || {}).href;
+  ok(linkTo('Front page') === 'index.html', 'a link row carries its address');
+  ok(linkTo('Later') === 'a.html', 'and an address that is a function is read as it draws');
+  late = 'b.html';
+  page.refresh();
+  ok(linkTo('Later') === 'b.html',
+     'so a row whose address needs the game gets it once there is one  got ' + linkTo('Later'));
 
   btn.fire('click');
   ok(box.hidden && btn.getAttribute('aria-expanded') === 'false', 'the same button shuts it');
