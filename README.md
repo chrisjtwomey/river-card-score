@@ -299,8 +299,8 @@ that band.
 - **Push a card up** out of the fan to play it. A dashed line appears; released
   above it the card flies to the middle, released below it drops back. A card
   already lifted is played by tapping it again, so nothing needs a drag. The
-  line lies along the top of the ring round your heading when the deal is
-  yours, so the two read as one mark with **dealer** cutting it.
+  line runs at the height the word **dealer** stands at when the deal is yours,
+  and breaks for it, so the word sits in the line.
 - A card you may not play is dimmed, and says why if you try: it shakes, keeps
   its place, and the line at the bottom gives the reason.
 - **The place a hand had stays.** The last card of a hand -- yours, or any
@@ -350,10 +350,11 @@ that band.
   The number screw the dealer forbids is struck through. Another player's bid
   lands the way it does on the TV screen: the number slams onto their pile in
   gold, the pile takes the hit, and the name under it keeps the bid.
-- **Who deals is ringed, not written.** The dealer's cards and the name under
+- **Who deals is marked, not written.** The dealer's cards and the name under
   them stand in a gold dashed outline with **dealer** cutting the line at the
-  top, so the round line above stays the round and the hand size. When you are
-  the dealer the outline is round the heading over your own hand.
+  top, so the round line above stays the round and the hand size. When the deal
+  is yours you get the word alone with no outline round it: a box round the
+  heading over your own hand crowded the hand it belongs to.
 - **The seat the table waits on peeks.** The top card of that player's pile
   tips up on its edge and shivers, every few seconds -- the same peek the TV
   screen gives the player to bid -- through the bidding and whenever a card
@@ -422,7 +423,7 @@ Both screens play the deal animation at the start of every round. On the TV scre
 
 What the deck turned is not said in words: the card is turned face up in the middle of the table and stays there, and the band under the round line is left for what the table has to say.
 
-Who deals is not said in words either. The round line across the top is the round and the hand size -- *Round 3 · 5 cards* -- and the dealer is ringed where they sit: a gold dashed outline round their cards and the name under them, with **dealer** cutting the line at the top. A name in a line has to be read and then matched to a seat; the ring is the answer where the question is asked. When the dealer is you, the outline goes round the heading over your own hand instead -- your cards are a fan across the bottom of the screen, and a box round that would be most of the screen wide and would shrink with every card you played. Every screen that draws seats draws the ring: the TV screen, the deal on a phone, and the felt. It goes when the round does.
+Who deals is not said in words either. The round line across the top is the round and the hand size -- *Round 3 · 5 cards* -- and the dealer is ringed where they sit: a gold dashed outline round their cards and the name under them, with **dealer** cutting the line at the top. A name in a line has to be read and then matched to a seat; the ring is the answer where the question is asked. When the dealer is you, the word stands over the heading of your own hand with no outline round it -- your cards are a fan across the bottom of the screen, a box round that would be most of the screen wide and would shrink with every card you played, and a box round the heading alone crowded the hand. Every screen that draws seats draws the mark: the TV screen, the deal on a phone, and the felt. It goes when the round does.
 
 - On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives -- a bid that lands while the cards are still in the air is stamped once they are down -- the player to act glows and their pile peeks -- the top card tips up and shivers every few seconds -- and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it.
 - On a **phone** at a table with real cards only the shuffle plays: the deck is riffled and squared up, and the scene fades before any card goes out -- the real dealer deals the real cards. A tap skips it. It does not replay when a phone reloads part way through a game.

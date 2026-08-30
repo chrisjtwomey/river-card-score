@@ -107,10 +107,11 @@ const Stage = (function () {
      table -- its cards and the name under them -- and the word cuts the line at
      the top rather than sitting inside it, where the name already is.
 
-     Your own seat is a fan across the bottom and a heading over it, so there
-     the heading alone is ringed: a box round the fan would be most of the
-     screen wide, would shrink with every card played, and would lie over the
-     line a card is dragged across to be played.
+     Your own seat is a fan across the bottom and a heading over it. A box round
+     the fan would be most of the screen wide, would shrink with every card
+     played, and would lie over the line a card is dragged across; a box round
+     the heading alone crowded the hand. So your own seat gets the word and no
+     outline -- the same mark, standing on the line a card is dragged over.
 
      The box is fixed to the round, not to what is left of the pile: a ring that
      followed the cards away would crawl all round the seat as they were played.
@@ -132,6 +133,7 @@ const Stage = (function () {
       // First on the stage: every card lies over it, whatever its z-index.
       stage.insertBefore(el, stage.firstChild);
     }
+    el.classList.toggle('own', !!o.own);          // the word alone, with no box round it
     const b = dealerAt(o);
     el.style.left = `calc(50% + ${Math.round(b.x)}px)`;
     el.style.top = `calc(50% + ${Math.round(b.y)}px)`;

@@ -1594,9 +1594,10 @@ function tookTrick(motion) {
 }
 {
   /* Your own seat is a fan across the bottom of the screen with a heading over
-     it, so the heading alone is ringed: a box round the fan would be most of
-     the screen wide, would shrink with every card played, and would lie over
-     the line a card is dragged across to be played. */
+     it. A box round the fan would be most of the screen wide, would shrink with
+     every card played, and would lie over the line a card is dragged across; a
+     box round the heading alone crowded the hand. So your own mark is the word
+     with no outline, standing where the box's top line would have run. */
   const n = 4, cards = 5, me = 1;
   const made = stateFor(n, cards, me, { bids: [1, null, null, null], turn: 1 });
   made.ST.rounds[0].dealer = me;
@@ -1609,6 +1610,17 @@ function tookTrick(motion) {
   ok(b.y < fanY - 66 && b.y + b.h > fanY - 66, 'the heading is inside it');
   ok(b.y + b.h < fanY - ch / 2, 'and the fan is left outside it');
   ok(b.w < 412 * 0.6, 'so it is a badge over a heading, not a box round the hand  got ' + b.w);
+  const own = overlay.querySelector('.dring');
+  ok(own.classList.contains('own'), 'your own seat is marked as your own');
+  ok(own.querySelector('.dring-tag').textContent === 'dealer', 'and still carries the word');
+}
+{
+  // The stylesheet is what takes the outline off it, and only off your own.
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  ok(/\.dring\.own \.dring-box\{[^}]*display:\s*none/.test(css),
+     'no box is drawn round your own mark');
+  ok(/\n\.dring-box\{[^}]*border:[^;]*dashed/.test(css),
+     'and every other seat still gets one');
 }
 {
   /* The trick comes in the way it went out: each card goes round the ring
