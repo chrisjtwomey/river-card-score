@@ -170,6 +170,9 @@ function runTimers(go, stop) {
   }
 }
 
+// the place a keyframe asks for, read the way a style is read
+function spotOfKf(kf) { return kf && kf.transform ? spotOf({ style: { transform: kf.transform } }) : null; }
+
 // where a card actually sits, read back out of the transform the felt wrote
 function spotOf(el) {
   const N = '(-?[\\d.]+(?:e[-+]?\\d+)?)';
@@ -1096,6 +1099,16 @@ function scored(motion) {
     global.setTimeout = (f, ms) => { armed.push({ fn: f, ms }); return realSet(() => {}, 0); };
     try { fn(); } finally { global.setTimeout = realSet; }
   };
+  // What the cards are asked to do, rather than where they are afterwards: the
+  // way in is one movement now, and a movement is not read off a style.
+  const arcs = [];
+  L.dom.El.prototype.animate = function (kf, opts) {
+    const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {},
+                play() {}, finish() {}, finished: Promise.resolve(), onfinish: null };
+    arcs.push(a);
+    return a;
+  };
+  L.dom.El.prototype.getAnimations = () => [];
   catching(() => L.Felt.sync(next, me, { send: () => {} }));
   ok(tricks().length === 5, 'the round is scored and the table is still standing');
   const paid = armed.filter((t) => t.ms >= 2000);
@@ -1103,28 +1116,70 @@ function scored(motion) {
   catching(() => paid.forEach((t) => t.fn()));
   const steps = armed.slice().sort((a, b) => a.ms - b.ms);
   armed.length = 0;
-  /* Two seats away from the dealer at most, so the longest way round is two
-     steps and every card has one more to come in on. */
-  ok(steps.length > 5, 'every trick is given a way round, step by step  got ' + steps.length);
   const stack = tricks();
-  const where = () => stack.map((el) => JSON.stringify(spotOf(el)));
-  const before = where();
-  const first0 = steps[0].ms;
-  steps.filter((t) => t.ms === first0).forEach((t) => t.fn());
-  const off = where().filter((v, i) => v !== before[i]).length;
-  ok(off === 1, 'they come off the seats one at a time  got ' + off + ' moving at once');
-  ok(tricks().filter(middle).length === 0,
-     'and the first one is only lifted, not put away  got '
-     + tricks().filter(middle).length);
-  /* Lifted where its own seat sits, not onto the ring the trick was played
-     on: that ring is tucked in around the middle, and a card starting there
-     has crossed the table before anybody has seen it leave the pile. */
   const R = L.Stage.ring(n, me, 412, 860);
-  const lifted = stack[where().findIndex((v, i) => v !== before[i])];
-  const at1 = spotOf(lifted), seat0 = R.at(next.rounds[1].dealer);
-  ok(Math.abs(at1.x - seat0.x) < 1 && Math.abs(at1.y - seat0.y) < 1,
-     'and it stands up over the seat it was won at  got ' + JSON.stringify(at1)
-     + ' against ' + JSON.stringify(seat0));
+  const ang = (kf) => {
+    const m = spotOfKf(kf);
+    return m ? Math.atan2((m.y - R.cy) / (R.ry || 1), m.x / (R.rx || 1)) : null;
+  };
+  /* Each trick is drawn one whole movement -- a run of places along an arc --
+     rather than set down at each seat in turn, which reads as hopping. */
+  const runs = arcs.filter((a) => stack.indexOf(a.el) >= 0);
+  ok(runs.length === 5, 'every trick is given a way in  got ' + runs.length);
+  ok(runs.every((a) => a.kf.length > 8),
+     'and it is an arc, not a hop from seat to seat  got '
+     + runs.map((a) => a.kf.length).join(','));
+
+  // One after another: every card takes the same time and starts later.
+  const offs = runs.map((a) => a.opts.delay || 0).sort((x, y) => x - y);
+  ok(new Set(offs).size === offs.length && offs[0] === 0,
+     'they set off one at a time  got ' + offs.join(','));
+  ok(runs.every((a) => a.opts.duration === runs[0].opts.duration),
+     'each taking as long as the last');
+
+  /* Off the pile it was tucked into, out where its own seat sits: a card that
+     starts on the ring the trick was played on has crossed most of the table
+     before anybody has seen it leave. */
+  const home = runs.map((a) => spotOfKf(a.kf[0]));
+  ok(home.every((h) => h && Math.abs(Math.hypot(h.x / R.rx, (h.y - R.cy) / R.ry) - 1) < 0.02),
+     'each one starts out where its seat is  got '
+     + home.map((h) => Math.round(Math.hypot(h.x / R.rx, (h.y - R.cy) / R.ry) * 100) / 100).join(','));
+  ok(runs.every((a) => {
+    const e = spotOfKf(a.kf[a.kf.length - 1]);
+    return e && Math.abs(e.x) < 1 && Math.abs(e.y - R.cy) < 8;
+  }), 'and ends under the card the deck turned');
+
+  /* Anticlockwise, the way round opposite to the way a trick is gathered. The
+     ring runs clockwise as the angle grows, so the angle has to fall. */
+  const turned = runs.map((a) => {
+    // Only over the outer part of the arc: a card closing on the middle has
+    // barely any distance left to take an angle from, and the answer there is
+    // noise rather than a direction.
+    let d = 0;
+    const upto = Math.ceil((a.kf.length - 1) / 3);
+    for (let i = 1; i <= upto; i++) {
+      let step = ang(a.kf[i]) - ang(a.kf[i - 1]);
+      while (step > Math.PI) step -= 2 * Math.PI;
+      while (step < -Math.PI) step += 2 * Math.PI;
+      d += step;
+    }
+    return d;
+  });
+  ok(turned.every((d) => d < -0.5),
+     'and it goes round anticlockwise  got ' + turned.map((d) => Math.round(d * 100) / 100).join(','));
+
+  // It closes on the middle as it goes, rather than crossing and coming back.
+  const closes = runs.every((a) => {
+    const r = a.kf.slice(0, -1).map((f) => {
+      const m = spotOfKf(f);
+      return Math.hypot(m.x / R.rx, (m.y - R.cy) / R.ry);
+    });
+    return r.every((v, i) => i === 0 || v <= r[i - 1] + 1e-9);
+  });
+  ok(closes, 'closing on the middle the whole way, never opening out again');
+
+  // Where the table says its cards are is where they end up, arc or no arc.
+  ok(stack.every(middle), 'the table says they are in the middle from the off');
   const top = Number(hero().style.zIndex || 0);
   ok(stack.every((el) => Number(el.style.zIndex || 0) < top),
      'the turned card stands over them all the way in  got ' + top);

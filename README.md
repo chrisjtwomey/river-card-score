@@ -314,13 +314,14 @@ that band.
   tricks won. The table holds the trick a little longer than that before the
   winner leads, so a lead never cuts the news short (`TRICK_HOLD`).
 - **The round is put away, not replaced.** When the last trick is scored,
-  what the round paid stands for two seconds; then the tricks come in one at a
-  time. Each stands up over the seat that took it -- face up, and at the size
-  of a card in play, so it is seen leaving the little pile it was tucked in --
-  and then goes round the table the other way from the way it was gathered:
-  anticlockwise, starting with whoever deals next and round from there. The
-  names stay until the cards are well on their way, so there is something for
-  them to have come from. They square up in the middle, under the card the
+  what the round paid stands for two seconds; then each seat's pile of tricks
+  unwinds. A card lifts off the little stack beside its seat and spirals in --
+  anticlockwise, the way round the table opposite to the way a trick was
+  gathered -- coming up to the size of a card in play and turning face up as it
+  goes, until it settles under the card the deck turned. One card at a time,
+  and the seats in that same anticlockwise order, so the whole table unwinds
+  one way. The names stay until the cards are well on their way, so there is
+  something for them to have come from. They square up in the middle, under the card the
   deck turned, which stands over them the whole way. Only when the last one is
   in does that card turn face down on top of them, and what is left is a deck.
   A hand of thirteen tricks shortens the wait between cards rather than making

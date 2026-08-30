@@ -58,9 +58,11 @@ const Felt = (function () {
      of four, so it is the interval between cards that gives, not the total. */
   const UNWIND = 1500;
 
-  // How long one card takes to come round, and how far apart two cards may
-  // set off. A card moves at the pace the stylesheet moves a card at.
-  const STEP = 140, LEAD_MIN = 50, LEAD_MAX = 130;
+  /* How long one trick takes to come in, how far apart two of them may set
+     off, how far round the table the arc carries, and how finely it is drawn.
+     Half a turn is enough to read as going round and not as crossing over. */
+  const ARC = 760, ARC_SWEEP = Math.PI, ARC_STEPS = 14;
+  const LEAD_MIN = 60, LEAD_MAX = 150;
 
   /* How long the places stand over the fresh deck before the next round is
      dealt. Long enough to find your own row and see what the round moved you
@@ -1256,83 +1258,107 @@ const Felt = (function () {
     });
   }
 
-  /* The table puts itself away. Every trick won comes off the seat that took
-     it and goes round the ring the other way from the way it was gathered --
-     anticlockwise, to the seat that deals next, who is the one collecting the
-     deck -- and then in to the middle, under the card the deck turned. That
-     card turns face down on top of them, and what is left is a deck: one
-     thing, in one place, ready to be shuffled.
+  /* The table puts itself away. Each seat's pile of tricks unwinds: a card
+     lifts off the little stack beside the seat and spirals in -- anticlockwise,
+     the way round the table opposite to the way a trick was gathered -- coming
+     up to size and turning face up as it goes, until it settles under the card
+     the deck turned. One card at a time, and the seats in the same
+     anticlockwise order, so the whole table unwinds one way.
+
+     The path is drawn rather than stepped between seats: a card set down at
+     each seat in turn travels in straight lines and reads as hopping, and this
+     is meant to read as an arc. The resting place is written to the card as
+     well, so the table is where it says it is even if the arc is cut short.
 
      `last` is the table the round left behind; the felt has already let go of
      it, so this moves elements and reads no state but the round's. */
   function unwind(last, r, done) {
     if (!last || !T0(last) || still() || !UI.fx.on()) return done(false);
-    const g = geom(), n = ST.seats.length, home = r.dealer;
+    const g = geom(), n = ST.seats.length;
     const hero = last.hero;
-    /* The card the deck turned stays on top of everything while the tricks
-       come in under it, and it is still on top when it turns over: what is
-       being built is a deck, and that card is the top of it. */
+    /* The card the deck turned stands over everything while the tricks come in
+       under it, and is still on top when it turns over: what is being built is
+       a deck, and that card is the top of it. */
     if (hero && hero.parentNode) hero.style.zIndex = '40';
 
-    /* One card at a time, seat by seat, going round from the seat that deals
-       next -- their own pile first, then the one before them, and on round the
-       table. A trick with a face shows it on the way in: a card gathered face
-       down says nothing about the hand that was played. A stand-in for a trick
-       this phone never saw has no face to show, so it comes in face down. */
+    /* A trick with a face shows it on the way in: a card put away face down
+       says nothing about the hand that was played. A stand-in for a trick this
+       phone never saw taken has no face to show, so it stays face down. */
     const legs = [];
-    (last.won || []).forEach((stack, q) => (stack || []).slice().reverse().forEach((el) => {
+    (last.won || []).forEach((stack, q) => (stack || []).slice().reverse().forEach((el, k) => {
       if (!el || !el.parentNode) return;
-      legs.push({ el, from: q, steps: (((q - home) % n) + n) % n,
+      legs.push({ el, q, k, turn: ((((seatStep(g, q) === 0 ? 0 : n - seatStep(g, q)) % n) + n) % n),
                   face: el.querySelector('.front .big') ? 0 : 180 });
     }));
-    legs.sort((a, b) => a.steps - b.steps);
+    // Anticlockwise round the table from the reader's own seat, and the top of
+    // each pile first.
+    legs.sort((x, y) => (x.turn - y.turn) || (x.k - y.k));
 
     /* The names and the outlines under the last hand belong to a round that is
        over, so they go -- but not at the moment the first card lifts. A seat
-       whose name goes at the same time as its cards leaves nothing for the
-       cards to have come from. */
-    const fade = (el) => {
+       whose name goes as its cards do leaves nothing for them to have come
+       from. */
+    const away = (el) => {
       if (!el || !el.animate) return;
       el.animate([{ opacity: 1 }, { opacity: 0 }],
         { duration: 320, delay: Math.round(UNWIND * 0.45), easing: 'ease-out', fill: 'forwards' });
     };
-    (last.labels || []).forEach(fade);
-    (last.places || []).forEach(fade);
+    (last.labels || []).forEach(away);
+    (last.places || []).forEach(away);
 
-    /* The furthest card has the longest way round, and every card sets off
-       after the one before it. The whole of that is UNWIND, so a table with
-       many tricks to clear shortens the wait between cards rather than making
-       the round longer. */
-    const most = legs.reduce((a, l) => Math.max(a, l.steps), 0);
-    const way = (most + 1) * STEP;
+    // Every card takes the same time to come in; they set off one after
+    // another, and the whole of that is UNWIND however many there are.
     const lead = legs.length > 1
-      ? Math.max(LEAD_MIN, Math.min(LEAD_MAX, Math.round((UNWIND - way) / (legs.length - 1))))
+      ? Math.max(LEAD_MIN, Math.min(LEAD_MAX, Math.round((UNWIND - ARC) / (legs.length - 1))))
       : 0;
     const k = key;
-    legs.forEach(({ el, from, steps, face }, i) => {
+    legs.forEach(({ el, q, face }, i) => {
       el.style.zIndex = String(3 + i);
       el.classList.remove('slow');
-      // Out where the seats are, not on the ring the trick was played on:
-      // that ring is tucked in around the middle, and a card that starts there
-      // has already crossed the table before it is seen to move.
-      const stops = [overSeat(g, from, face)];
-      for (let sN = 1; sN <= steps; sN++) stops.push(overSeat(g, (((from - sN) % n) + n) % n, face));
-      stops.push(deckAt(g, i, face === 180));     // and in, under the turned card
-      stops.forEach((to, sN) => setTimeout(() => {
-        if (key !== k || !el.parentNode) return;
-        at(el, to);
-      }, i * lead + sN * STEP));
+      const rest = deckAt(g, i, face === 180);
+      el.style.transform = rest;                 // where it is, whatever the arc does
+      if (!el.animate) return;
+      el.animate(arcIn(g, q, face, rest),
+        { duration: ARC, delay: i * lead, easing: 'cubic-bezier(.35,.05,.3,1)', fill: 'both' });
     });
 
     // The last one is in. The turned card goes face down on the pile they have
     // made of themselves, and the deck is whole again.
-    const over = (legs.length ? (legs.length - 1) * lead : 0) + way;
+    const over = Math.max(0, legs.length - 1) * lead + ARC;
     setTimeout(() => {
       if (key !== k || !hero || !hero.parentNode) return;
       hero.classList.add('slow');
       at(hero, deckAt(g, legs.length, true));
     }, over);
     setTimeout(() => { if (key === k) done(true); }, over + 340);
+  }
+
+  // Where a seat sits round the ring, counted clockwise from the reader's own.
+  const seatStep = (g, q) => ((((q - Math.max(0, me)) % g.n) + g.n) % g.n);
+
+  /* The way a trick comes in: from the little pile beside its seat, round the
+     table anticlockwise, closing on the middle as it goes and coming up to the
+     size of a card as it turns face up. Drawn as a run of places along the
+     spiral rather than a hop from seat to seat, so what it reads as is one
+     movement and not a series of them. */
+  function arcIn(g, q, face, rest) {
+    const s = g.R.at(q), z = Stage.seatScale(g.n);
+    const a0 = Math.atan2((s.y - g.R.cy) / (g.R.ry || 1), s.x / (g.R.rx || 1));
+    const to = Stage.cardSize ? (g.ch / heroH(g)) : 1;
+    const kf = [];
+    for (let i = 0; i <= ARC_STEPS; i++) {
+      const u = i / ARC_STEPS;
+      // Anticlockwise: the ring runs clockwise as the angle grows, so this
+      // takes it back the other way.
+      const a = a0 - ARC_SWEEP * u;
+      const out = 1 - u * u;                     // holds its place, then closes in
+      const sc = (0.42 * z) + (to - 0.42 * z) * Math.min(1, u * 1.6);
+      kf.push({ transform: tf(Math.cos(a) * g.R.rx * out,
+                              g.R.cy + Math.sin(a) * g.R.ry * out,
+                              (1 - u) * -4, face, sc) });
+    }
+    kf.push({ transform: rest });
+    return kf;
   }
 
   // Something worth putting away: a table that was never stood up has nothing.
