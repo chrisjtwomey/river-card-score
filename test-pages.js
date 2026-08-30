@@ -1106,16 +1106,28 @@ function scored(motion) {
   /* Two seats away from the dealer at most, so the longest way round is two
      steps and every card has one more to come in on. */
   ok(steps.length > 5, 'every trick is given a way round, step by step  got ' + steps.length);
+  const stack = tricks();
+  const where = () => stack.map((el) => JSON.stringify(spotOf(el)));
+  const before = where();
   const first0 = steps[0].ms;
   steps.filter((t) => t.ms === first0).forEach((t) => t.fn());
+  const off = where().filter((v, i) => v !== before[i]).length;
+  ok(off === 1, 'they come off the seats one at a time  got ' + off + ' moving at once');
   ok(tricks().filter(middle).length === 0,
-     'the first step only lifts them onto the ring, it does not put them away  got '
+     'and the first one is only lifted onto the ring, not put away  got '
      + tricks().filter(middle).length);
+  const top = Number(hero().style.zIndex || 0);
+  ok(stack.every((el) => Number(el.style.zIndex || 0) < top),
+     'the turned card stands over them all the way in  got ' + top);
   const done = steps[steps.length - 1];
   steps.slice(0, -1).forEach((t) => t.fn());
   ok(tricks().filter(middle).length === 5, 'and they all end in the middle  got ' + tricks().filter(middle).length);
   ok(middle(hero()) && spotOf(hero()).face === 180,
      'the card the deck turned goes face down on top of them  got ' + JSON.stringify(spotOf(hero())));
+  /* These stand for tricks this phone never saw taken, so they have no face to
+     show and come in face down. A trick with a face travels face up. */
+  ok(stack.every((el) => spotOf(el).face === 180),
+     'a stand-in for a trick with no face is never turned over to a blank front');
 
   /* And the shuffle carries on from the deck the round left: the stage is not
      wiped and the overlay is not faded up -- that fade was the page behind

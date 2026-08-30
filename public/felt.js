@@ -49,10 +49,18 @@ const Felt = (function () {
   const PAID_HOLD = 2000;
 
   /* How long the table takes to put itself away: the tricks come off the
-     seats, go round the ring the other way, and square up under the card the
-     deck turned, which then goes face down on top of them. A round that ends
-     by the table being replaced is a round nobody saw end. */
-  const UNWIND = 620;
+     seats one at a time, go round the ring the other way, and square up under
+     the card the deck turned, which then goes face down on top of them. A
+     round that ends by the table being replaced is a round nobody saw end.
+
+     It is the whole of the putting away, not the time one card takes: a hand
+     of thirteen tricks must not take three times as long to clear as a hand
+     of four, so it is the interval between cards that gives, not the total. */
+  const UNWIND = 1500;
+
+  // How long one card takes to come round, and how far apart two cards may
+  // set off. A card moves at the pace the stylesheet moves a card at.
+  const STEP = 140, LEAD_MIN = 50, LEAD_MAX = 130;
 
   /* How long the places stand over the fresh deck before the next round is
      dealt. Long enough to find your own row and see what the round moved you
@@ -209,10 +217,10 @@ const Felt = (function () {
   /* A card played lies on the one the deck turned, pushed a little toward
      whoever played it, so a glance says whose it is and a tap can separate
      them. */
-  function trickAt(g, p) {
+  function trickAt(g, p, face) {
     const s = g.R.at(p), d = dirTo(g, p), r = trickRing(g);
     return tf(d.x * r, g.R.cy + d.y * r,
-              (s.x / (g.R.rx || 1)) * 12, 0, Stage.seatScale(g.n));
+              (s.x / (g.R.rx || 1)) * 12, face || 0, Stage.seatScale(g.n));
   }
 
   /* The tricks a seat has won, in a little stack beside its own cards. A real
@@ -1250,10 +1258,24 @@ const Felt = (function () {
   function unwind(last, r, done) {
     if (!last || !T0(last) || still() || !UI.fx.on()) return done(false);
     const g = geom(), n = ST.seats.length, home = r.dealer;
+    const hero = last.hero;
+    /* The card the deck turned stays on top of everything while the tricks
+       come in under it, and it is still on top when it turns over: what is
+       being built is a deck, and that card is the top of it. */
+    if (hero && hero.parentNode) hero.style.zIndex = '40';
+
+    /* One card at a time, seat by seat, going round from the seat that deals
+       next -- their own pile first, then the one before them, and on round the
+       table. A trick with a face shows it on the way in: a card gathered face
+       down says nothing about the hand that was played. A stand-in for a trick
+       this phone never saw has no face to show, so it comes in face down. */
     const legs = [];
-    (last.won || []).forEach((stack, q) => (stack || []).forEach((el) => {
-      if (el && el.parentNode) legs.push({ el, from: q, steps: (((q - home) % n) + n) % n });
+    (last.won || []).forEach((stack, q) => (stack || []).slice().reverse().forEach((el) => {
+      if (!el || !el.parentNode) return;
+      legs.push({ el, from: q, steps: (((q - home) % n) + n) % n,
+                  face: el.querySelector('.front .big') ? 0 : 180 });
     }));
+    legs.sort((a, b) => a.steps - b.steps);
 
     // The names and the outlines under the last hand belong to a round that is
     // over; they go while the cards are still moving, not after.
@@ -1265,33 +1287,35 @@ const Felt = (function () {
     (last.labels || []).forEach(fade);
     (last.places || []).forEach(fade);
 
-    // The longest way round takes the whole unwind, whatever the table size.
+    /* The furthest card has the longest way round, and every card sets off
+       after the one before it. The whole of that is UNWIND, so a table with
+       many tricks to clear shortens the wait between cards rather than making
+       the round longer. */
     const most = legs.reduce((a, l) => Math.max(a, l.steps), 0);
-    const gap = Math.max(60, Math.round(UNWIND / (most + 1)));
+    const way = (most + 1) * STEP;
+    const lead = legs.length > 1
+      ? Math.max(LEAD_MIN, Math.min(LEAD_MAX, Math.round((UNWIND - way) / (legs.length - 1))))
+      : 0;
     const k = key;
-    legs.forEach(({ el, from, steps }, i) => {
+    legs.forEach(({ el, from, steps, face }, i) => {
       el.style.zIndex = String(3 + i);
       el.classList.remove('slow');
-      const way = [trickAt(g, from)];
-      for (let sN = 1; sN <= steps; sN++) way.push(trickAt(g, (((from - sN) % n) + n) % n));
-      way.push(deckAt(g, i));                    // and in, under the turned card
-      way.forEach((to, sN) => setTimeout(() => {
+      const stops = [trickAt(g, from, face)];
+      for (let sN = 1; sN <= steps; sN++) stops.push(trickAt(g, (((from - sN) % n) + n) % n, face));
+      stops.push(deckAt(g, i, face === 180));     // and in, under the turned card
+      stops.forEach((to, sN) => setTimeout(() => {
         if (key !== k || !el.parentNode) return;
         at(el, to);
-      }, sN * gap));
+      }, i * lead + sN * STEP));
     });
 
-    // The turned card goes face down on the pile the tricks have made of
-    // themselves, and the deck is whole again.
-    const over = (most + 1) * gap;
+    // The last one is in. The turned card goes face down on the pile they have
+    // made of themselves, and the deck is whole again.
+    const over = (legs.length ? (legs.length - 1) * lead : 0) + way;
     setTimeout(() => {
-      if (key !== k) return;
-      const hero = last.hero;
-      if (hero && hero.parentNode) {
-        hero.classList.add('slow');
-        hero.style.zIndex = String(3 + legs.length);
-        at(hero, deckAt(g, legs.length, true));
-      }
+      if (key !== k || !hero || !hero.parentNode) return;
+      hero.classList.add('slow');
+      at(hero, deckAt(g, legs.length, true));
     }, over);
     setTimeout(() => { if (key === k) done(true); }, over + 340);
   }
