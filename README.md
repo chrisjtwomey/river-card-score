@@ -861,7 +861,7 @@ It talks the same protocol as a phone, so the states it makes are states a real 
 
 The controls are one band over the screens, two rows:
 
-- **Tables** — every table this server is running: its code, how many are at it, what it is doing, and whether it is a real game (*real*) or a set of stand-ins (*stand*). Press one and this page opens on it. Beside the strip, **New table** makes a fresh table of stand-ins with the number of players in the box.
+- **Tables** — every table this server is running: its code, how many are at it, what it is doing, and whether it is a real game (*real*) or a set of stand-ins (*stand*). Press one and this page opens on it; the ✕ on a row **destroys** that table after a confirm — the same end the machine that runs the server has, so every screen at it is told it is gone and its file goes with it. Destroying the table under this page makes a fresh one of stand-ins. Beside the strip, **New table** does that on its own with the number of players in the box.
 - **Go to** — the whole scorecard as cells: the lobby, every round with its hand size, the finish. Click a round and the game is taken there — the card is rebuilt and played up to it with rounds a real table could make. The **bid / tricks** toggle says where the round lands: waiting for its bids, or with its bids in. So the last round with its bids in — the doorstep of the end of the game — is two clicks, and the end itself one more.
 - **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, **randomise** (shuffles the rules and plays a random number of rounds), and stand-in photos on and off.
 

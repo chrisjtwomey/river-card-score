@@ -271,7 +271,8 @@ const Bots = require('./lib/bots.js')({
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
-  DEV, G, createRoom, roomOf, listTables, attach, send, fail, broadcast, setAvatar, Room, Tables,
+  DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
+  Room, Tables,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.

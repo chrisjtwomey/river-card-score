@@ -501,6 +501,8 @@ async function bidRound(P) {
     ok(h.state.seats[1].online === false, 'and the page opening on it puts nobody back at the table');
     gate.send({ t: 'dev', action: 'seat', id: h.state.seats[0].id });
     await okBy(() => /DEV=1/.test(gate.last()), 'a normal server never hands a seat out');
+    gate.send({ t: 'dev', action: 'end', code });
+    await okBy(() => /DEV=1/.test(gate.last()) && !!h.state, 'and never destroys a table over a code');
   }
 
   // ---- the dev controls on a server started with DEV=1 ----
@@ -726,6 +728,15 @@ async function bidRound(P) {
     actor.send({ t: 'resume', code: real.hello.code, token: hop.seat.token });
     await okBy(() => actor.hello && actor.hello.seatId === sid,
        'and the token it gets opens that very seat');
+
+    // ---- a table destroyed outright ----
+    hop.send({ t: 'dev', action: 'end', code: 'ZZZZ' });
+    await okBy(() => /no table with that code/i.test(hop.last()), 'destroying a table that is not there is refused');
+    hop.send({ t: 'dev', action: 'end', code: real.hello.code });
+    await okBy(() => hop.tables && hop.tables.every((x) => x.code !== real.hello.code),
+       'destroying a table by its code takes it off the list');
+    await okBy(() => /table is gone/i.test(actor.last()),
+       'and every screen at it is told the table is gone');
     srv3.kill();
   }
 

@@ -79,6 +79,12 @@ function connect() {
         history.replaceState(null, '', location.pathname);
         return act('setup', { players: Number($('#players').value) || 4 });
       }
+      if (/table is gone/i.test(m.msg)) {
+        CODE = HOST_TOKEN = null;
+        history.replaceState(null, '', location.pathname);
+        tableKey = '';
+        return act('setup', { players: Number($('#players').value) || 4 });
+      }
       // No table yet means the stand-in table was refused. Say the other way in.
       err(!CODE
         ? `${m.msg} To put a real game right, start the server with DEV=1 and open Dev controls under ⚙ on the TV screen.`
@@ -196,8 +202,7 @@ function renderTables(list) {
   const box = $('#tablelist');
   box.innerHTML = '';
   list.forEach((t) => {
-    const b = document.createElement('button');
-    b.type = 'button';
+    const b = document.createElement('div');
     b.className = 'btn trow' + (t.code === CODE ? ' on' : '');
     b.dataset.code = t.code;
     b.title = 'Take this page onto this table';
@@ -210,7 +215,20 @@ function renderTables(list) {
     const kind = document.createElement('span');
     kind.className = 'tkind';
     kind.textContent = t.stand ? 'stand' : 'real';
-    b.append(code, what, kind);
+    const end = document.createElement('button');
+    end.type = 'button';
+    end.className = 'tend';
+    end.textContent = '✕';
+    end.title = 'Destroy this table: every screen at it is told it is gone';
+    end.addEventListener('click', (e) => {
+      e.stopPropagation();               // destroying is not opening
+      UI.ask(`Destroy table ${t.code}?`,
+             t.stand ? 'A table of stand-ins; nobody loses anything.'
+                     : 'A real table. Every screen at it is thrown off, and its game is not saved.',
+             'Destroy', true)
+        .then((yes) => { if (yes) act('end', { code: t.code }); });
+    });
+    b.append(code, what, kind, end);
     box.appendChild(b);
   });
 }
@@ -466,6 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
     act('setup', { players: Number($('#players').value) || 4 }));
   $('#btn-tables').addEventListener('click', askTables);
   $('#tablelist').addEventListener('click', (e) => {
+    if (e.target.closest('.tend')) return;
     const row = e.target.closest('.trow');
     if (row && row.dataset.code !== CODE) act('open', { code: row.dataset.code });
   });
