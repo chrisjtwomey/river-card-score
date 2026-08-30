@@ -310,14 +310,16 @@ that band.
   seconds, and the cards come in while it is still up -- each one travels
   round the ring clockwise, seat by seat, the way the seats run and the order
   the cards were played, until the whole trick is stacked on the winner's
-  card. Then one card of the trick stays on a little stack beside their seat. The stacks count the
+  card. Then the trick goes to a little fanned stack beside their seat, all of
+  it: those are the cards that were played, and they are what comes back out
+  when the round is put away. The stacks count the
   tricks won. The table holds the trick a little longer than that before the
   winner leads, so a lead never cuts the news short (`TRICK_HOLD`).
 - **The round is put away, not replaced.** When the last trick is scored,
   what the round paid stands for two seconds; then each seat's pile of tricks
-  unwinds. A card lifts off the little stack beside its seat -- the rest of
-  that pile lies where it is, face down, until its own turn comes -- and
-  spirals in --
+  unwinds, a trick at a time. The cards of one trick lift off the little stack
+  beside their seat together, fanned as they go -- the rest of that pile lies
+  where it is, face down, until its own turn comes -- and spiral in --
   anticlockwise, the way round the table opposite to the way a trick was
   gathered -- coming up to the size of a card in play and turning face up as it
   goes, until it settles under the card the deck turned. One card at a time,

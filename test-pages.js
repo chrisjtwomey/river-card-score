@@ -591,10 +591,15 @@ part('the pile in the middle');
   step({ turn: null, pturn: 2, trick: [{ p: 2, card: base.hands[2][1] }], won,
          counts: [played[0], played[1], played[2] - 1, played[3]], hand: hand.slice(1) });
   const stacks = stage.querySelectorAll('.dcard.gone');
-  ok(stacks.length === 1, `a trick gathered leaves one card on the winner's stack (${stacks.length})`);
-  ok(spotOf(stacks[0]).scale < 0.6, 'drawn small, out of the way');
-  ok(spotOf(stacks[0]).face === 180, 'and face down');
-  ok(count() === all - 3, 'and the other three cards of it are off the table');
+  /* The whole trick goes to whoever took it, not one card standing for it:
+     they are the cards that were played, and they are what comes back out
+     when the round is put away. */
+  ok(stacks.length === n, `a trick gathered goes to the winner's stack whole (${stacks.length})`);
+  ok(stacks.every((el) => spotOf(el).scale < 0.6), 'drawn small, out of the way');
+  ok(stacks.every((el) => spotOf(el).face === 180), 'and face down');
+  const spread = stacks.map((el) => spotOf(el).x);
+  ok(new Set(spread).size === n, 'fanned, so it reads as the several cards it is');
+  ok(count() === all, 'and none of the trick is thrown away');
 }
 
 /* The stacks of won tricks have to stay on the screen, off the fan, and out of
@@ -1142,6 +1147,13 @@ function scored(motion) {
      of it: an arc that begins anywhere else is a jump into position first. */
   ok(runs.every((a) => a.kf[0].transform === onPile[stack.indexOf(a.el)]),
      'each one starts off the pile it is lying on');
+  /* A trick at a time: the cards of one trick were played together and come
+     back in together, so they set off together and a hand of thirteen tricks
+     is thirteen movements and not fifty-two. */
+  const byDelay = {};
+  runs.forEach((a) => { const d = a.opts.delay || 0; (byDelay[d] = byDelay[d] || []).push(a); });
+  ok(Object.keys(byDelay).length === 5,
+     'one movement a trick, not one a card  got ' + Object.keys(byDelay).length);
   // And it lies there until its turn: filling an animation backwards would
   // stand every card up the moment the first one set off.
   ok(runs.every((a) => (a.opts.fill || '') === 'forwards'),

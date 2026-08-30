@@ -241,11 +241,14 @@ const Felt = (function () {
      The stack grows upward, not sideways: a seat that wins seven tricks must
      take up no more room than one that wins none, and the middle of the table
      and the fan below it are both already spoken for. */
-  function wonAt(g, p, k) {
+  function wonAt(g, p, t, j) {
     const s = g.R.at(p), z = Stage.seatScale(g.n);
     const side = (s.x + g.cw * 1.6 * z > g.W / 2) ? -1 : 1;   // in, if out would fall off
-    return tf(s.x + side * g.cw * 0.95 * z + k * 0.8, s.y - 4 - k * 1.6,
-              -4 + k * 1.2, 180, 0.42 * z);
+    // `t` steps the stack up a trick at a time; `j` fans that trick's own
+    // cards across it, so a trick reads as the several cards it is.
+    return tf(s.x + side * g.cw * 0.95 * z + t * 0.8 + j * 1.1,
+              s.y - 4 - t * 1.6 - j * 0.5,
+              -4 + t * 1.2 + j * 2.2, 180, 0.42 * z);
   }
 
   /* The card the deck turned lies in the middle of the table, where a turned
@@ -458,9 +461,11 @@ const Felt = (function () {
 
     /* A finished trick leaves the middle, and it does not vanish: it goes to
        whoever took it, face down, and joins the little stack of tricks they
-       have won. One card stands for each trick -- a whole trick a side would be
-       a stack too wide for a phone -- so the first card of the trick makes the
-       journey and the rest go with it. */
+       have won -- all of it, fanned across the trick under it. A card standing
+       for a trick keeps the stack narrow, but then there is nothing to come
+       back out when the round is put away, and a player watching their tricks
+       go is watching a count rather than their cards. The deck is 52 either
+       way: these are cards the deal has already made. */
     const gathered = [];
     T.table.forEach((el, c) => {
       if (onTable.has(c)) return;
@@ -506,13 +511,20 @@ const Felt = (function () {
     for (let q = 0; q < ST.seats.length; q++) {
       T.won[q] = T.won[q] || [];
       const target = Math.max(0, (wonBy[q] || 0) - (holding && p.last.winner === q ? 1 : 0));
-      while (T.won[q].length > target) { const el = T.won[q].pop(); if (el) el.remove(); }
+      while (T.won[q].length > target) {
+        (T.won[q].pop() || []).forEach((el) => el.remove());
+      }
       while (T.won[q].length < target) {
-        let el = (heir === q && gathered.length) ? gathered.shift() : null;
-        if (!el) { el = cardEl(null, ''); T.stage.appendChild(el); }
-        el.classList.remove('mine', 'took', 'up', 'dud', 'drag', 'no');
-        el.classList.add('slow', 'gone');
-        T.won[q].push(el);
+        // The whole trick goes to whoever took it, not one card standing for
+        // it: they are the cards that were played, and they are what comes
+        // back out when the round is put away.
+        let cards = (heir === q && gathered.length) ? gathered.splice(0, ST.seats.length) : [];
+        if (!cards.length) { cards = [cardEl(null, '')]; T.stage.appendChild(cards[0]); }
+        cards.forEach((el) => {
+          el.classList.remove('mine', 'took', 'up', 'dud', 'drag', 'no');
+          el.classList.add('slow', 'gone');
+        });
+        T.won[q].push(cards);
       }
     }
     gathered.forEach((el) => el.remove());     // nobody's: a round thrown in
@@ -569,10 +581,11 @@ const Felt = (function () {
       if (!sweeping) at(el, trickAt(g, x.p));
     });
 
-    (T.won || []).forEach((stack, q) => (stack || []).forEach((el, k) => {
-      el.style.zIndex = String(2);
-      at(el, wonAt(g, q, k));
-    }));
+    (T.won || []).forEach((stack, q) => (stack || []).forEach((trick, t) =>
+      (trick || []).forEach((el, j) => {
+        el.style.zIndex = String(2);
+        at(el, wonAt(g, q, t, j));
+      })));
 
     T.piles.forEach((pile, q) => (pile || []).forEach((el, k) => {
       el.style.zIndex = String(k);
@@ -1284,16 +1297,18 @@ const Felt = (function () {
     /* A trick with a face shows it on the way in: a card put away face down
        says nothing about the hand that was played. A stand-in for a trick this
        phone never saw taken has no face to show, so it stays face down. */
+    /* A trick at a time, not a card at a time: the cards of one trick were
+       played together and they come back in together, fanned, so a hand of
+       thirteen tricks is thirteen movements and not fifty-two. */
     const legs = [];
-    (last.won || []).forEach((stack, q) => (stack || []).forEach((el, k) => {
-      if (!el || !el.parentNode) return;
-      // `k` is where the card lies in its pile, which is where it lifts from.
-      legs.push({ el, q, k, turn: ((((seatStep(g, q) === 0 ? 0 : n - seatStep(g, q)) % n) + n) % n),
-                  face: el.querySelector('.front .big') ? 0 : 180 });
+    (last.won || []).forEach((stack, q) => (stack || []).forEach((trick, t) => {
+      const cards = (trick || []).filter((el) => el && el.parentNode);
+      if (!cards.length) return;
+      legs.push({ cards, q, t, turn: ((((seatStep(g, q) === 0 ? 0 : n - seatStep(g, q)) % n) + n) % n) });
     }));
     // Anticlockwise round the table from the reader's own seat, and the top of
     // each pile first.
-    legs.sort((x, y) => (x.turn - y.turn) || (y.k - x.k));
+    legs.sort((x, y) => (x.turn - y.turn) || (y.t - x.t));
 
     /* The names and the outlines under the last hand belong to a round that is
        over, so they go -- but not at the moment the first card lifts. A seat
@@ -1313,20 +1328,26 @@ const Felt = (function () {
       ? Math.max(LEAD_MIN, Math.min(LEAD_MAX, Math.round((UNWIND - ARC) / (legs.length - 1))))
       : 0;
     const k = key;
-    legs.forEach(({ el, q, k: kIdx, face }, i) => {
-      el.style.zIndex = String(3 + i);
-      el.classList.remove('slow');
-      const rest = deckAt(g, i, face === 180);
-      if (!el.animate) { el.style.transform = rest; return; }
-      /* Forwards, not both: a card holds where the round left it -- on its own
-         pile, face down and small -- until its turn comes. Filling backwards
-         would put every card into its lifted pose the moment the first one
-         set off, so the whole table would turn over at once and then a few
-         cards would trickle in out of poses they had already taken. */
-      el.animate(arcIn(g, q, kIdx, face, rest),
-        { duration: ARC, delay: i * lead, easing: 'cubic-bezier(.35,.05,.3,1)', fill: 'forwards' });
-      // And it is where the table says it is once it has got there.
-      setTimeout(() => { if (key === k) el.style.transform = rest; }, i * lead + ARC);
+    let put = 0;
+    legs.forEach(({ cards, q, t }, i) => {
+      cards.forEach((el, j) => {
+        const face = el.querySelector('.front .big') ? 0 : 180;
+        el.style.zIndex = String(3 + put);
+        el.classList.remove('slow');
+        const rest = deckAt(g, put, face === 180);
+        put += 1;
+        if (!el.animate) { el.style.transform = rest; return; }
+        /* Forwards, not both: a card holds where the round left it -- on its
+           own pile, face down and small -- until its trick's turn comes.
+           Filling backwards would put every card into its lifted pose the
+           moment the first one set off, so the whole table would turn over at
+           once and then a few would trickle in out of poses they had already
+           taken. */
+        el.animate(arcIn(g, q, t, j, face, rest),
+          { duration: ARC, delay: i * lead, easing: 'cubic-bezier(.35,.05,.3,1)', fill: 'forwards' });
+        // And it is where the table says it is once it has got there.
+        setTimeout(() => { if (key === k) el.style.transform = rest; }, i * lead + ARC);
+      });
     });
 
     // The last one is in. The turned card goes face down on the pile they have
@@ -1348,23 +1369,27 @@ const Felt = (function () {
      size of a card as it turns face up. Drawn as a run of places along the
      spiral rather than a hop from seat to seat, so what it reads as is one
      movement and not a series of them. */
-  function arcIn(g, q, kIdx, face, rest) {
+  function arcIn(g, q, t, j, face, rest) {
     const s = g.R.at(q), z = Stage.seatScale(g.n);
     const a0 = Math.atan2((s.y - g.R.cy) / (g.R.ry || 1), s.x / (g.R.rx || 1));
     const to = g.ch / heroH(g);
+    /* The cards of one trick travel as a fan: a little apart along the way
+       round and a little apart across it, so they read as the several cards
+       they are rather than as one card with thick edges. */
+    const lag = j * 0.055, wide = 1 + j * 0.045;
     // Off the pile it is lying on, so the lift is part of the movement and not
     // a jump into it.
-    const kf = [{ transform: wonAt(g, q, kIdx) }];
+    const kf = [{ transform: wonAt(g, q, t, j) }];
     for (let i = 0; i <= ARC_STEPS; i++) {
       const u = i / ARC_STEPS;
       // Anticlockwise: the ring runs clockwise as the angle grows, so this
       // takes it back the other way.
-      const a = a0 - ARC_SWEEP * u;
-      const out = 1 - u * u;                     // holds its place, then closes in
+      const a = a0 - ARC_SWEEP * u + lag * (1 - u);
+      const out = (1 - u * u) * (u < 1 ? wide : 1);   // holds its place, then closes in
       const sc = (0.42 * z) + (to - 0.42 * z) * Math.min(1, u * 1.6);
       kf.push({ transform: tf(Math.cos(a) * g.R.rx * out,
                               g.R.cy + Math.sin(a) * g.R.ry * out,
-                              (1 - u) * -4, face, sc) });
+                              (1 - u) * (-4 + j * 3), face, sc) });
     }
     kf.push({ transform: rest });
     return kf;
