@@ -188,7 +188,11 @@ function render() {
   $('#code').textContent = ST.code;
   $('#phase').textContent = ST.phase + (ST.rounds.length ? ` · round ${Math.min(ST.idx + 1, ST.rounds.length)}/${ST.rounds.length}` : '');
   $('#subtitle').textContent = `${LIVE ? 'live ' : ''}table ${ST.code} · ${n} players · ${ST.phase}`;
-  if (document.activeElement !== $('#players')) $('#players').value = String(n);
+  // The box is the size the next new table gets, so it holds a number that
+  // could make one: a real table with no seats yet must not leave a 0 in it.
+  if (document.activeElement !== $('#players')) {
+    $('#players').value = String(Math.max(2, Math.min(8, n)));
+  }
 
   // Only a dev server has tables to hand out, so only a dev server is asked.
   if (ST.dev && !polling) { polling = true; askTables(); setInterval(askTables, 5000); }
