@@ -108,7 +108,7 @@ function connect() {
       if (stateBusy) { stateBusy = false; return stateErr(m.msg); }
       // No table yet means the stand-in table was refused. Say the other way in.
       err(!CODE
-        ? `${m.msg} To put a real game right, start the server with DEV=1 and open Dev controls under ⚙ on the TV screen.`
+        ? `${m.msg} To put a real game right, open Dev controls under ⚙ on the TV screen showing it.`
         : m.msg);
     }
   };

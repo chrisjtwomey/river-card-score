@@ -403,9 +403,9 @@ television without moving anybody.
 
 - **Text size** under ⚙ scales the page from 100% to 200%, so the table can read
   it from across the room. The size is remembered in that browser.
-- **Dev controls** under ⚙, on a server started with `DEV=1`, opens the dev
-  page on this table, to put a game in play right. See
-  [Fixing a real game](#fixing-a-real-game).
+- **Dev controls** under ⚙ opens the dev page on this table, to put a game in
+  play right. It is offered wherever this screen holds the table's host token.
+  See [Fixing a real game](#fixing-a-real-game).
 - The TV screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
 
 ### Keeping phone screens on
