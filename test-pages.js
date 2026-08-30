@@ -1156,6 +1156,12 @@ function scored(motion) {
   ok(!overlay.hidden, 'the table never goes');
   const up = asked.filter((a) => a.el === overlay && a.kf[0] && a.kf[0].opacity === 0);
   ok(up.length === 0, 'and it is never faded up over the page behind  got ' + up.length);
+  /* Taking the stage over closes the scene that had it, and a scene going out
+     fades the overlay away with the fill kept. Something of ours has to lie
+     over that, or the table is left invisible on a page with no way back. */
+  const held = asked.filter((a) => a.el === overlay && a.kf[a.kf.length - 1]
+    && a.kf[a.kf.length - 1].opacity === 1);
+  ok(held.length > 0, 'the table is held at full against the fade the last scene left  got ' + held.length);
   /* The deck is riffled, of course -- what it is not is landed card by card
      first. A pop fades a card up from nothing; a shuffle never does. */
   const pops = asked.filter((a) => /\bdeck\b/.test(a.el.className || '')

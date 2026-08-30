@@ -413,9 +413,16 @@ const Deal = (function () {
         ));
       }
 
-      // Nothing to fade up when the table was already there: the fade is what
-      // used to let the page behind show through between two rounds.
-      if (!carry) anims.push(overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
+      /* Nothing to fade up when the table was already there: the fade is what
+         used to let the page behind show through between two rounds. The
+         overlay is still held at full, though, and deliberately: taking the
+         stage over closes the scene that had it, and a scene going out fades
+         the overlay away and keeps the fill. Without something of ours over
+         the top of that, the table is left invisible on a page with no way
+         back to it. */
+      anims.push(carry
+        ? overlay.animate([{ opacity: 1 }, { opacity: 1 }], { duration: 1, fill: 'both' })
+        : overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: T.fade, fill: 'both' }));
 
       function finish() {
         if (ended) return;
