@@ -103,6 +103,24 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
     → helpers (`ui`, `net`, `stage`, `deal`, `finale`, `felt`) → `table` → `lobby` →
     `round` → the page. `deal/felt/finale` destructure `Stage` at load time.
 
+## Before you change what a player sees
+
+A change to the experience -- something put on a screen, something taken off it, a
+control that moves or is worded differently, a flow that ends somewhere else -- is
+the user's decision, not yours. **Put up several options first.** Say what each one
+looks like on the screen and what it costs, name the one you would pick, and wait to
+be told. Then build that one.
+
+This holds for a fix as much as for a feature: a bug whose cure is a different screen
+is a design question in a bug's clothes. It does not hold when the user has already
+said which change they want, or has told you to go ahead without asking.
+
+The game has modes -- real cards or dealt on the phones, the host screen or a phone
+in a hand, a screen that only watches -- and they play and look different. They are
+still one game seen from different sides. So weigh every option against all of them:
+say what it does to each, and where it can only land in one, say why the others stay
+as they are. Drift between the modes is the thing being guarded against.
+
 ## How to add things
 
 - **A rule** (e.g. a new scoring option): `game.js` + the `config` row in
