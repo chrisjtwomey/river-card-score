@@ -2496,6 +2496,7 @@ part('the front page, and the screen');
   // A table on the wire: the hello the dev page gets, then a state.
   const devPage = (srv, seats) => {
     const P = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th' });
+    P.pick('#state-panel').hidden = true;        // as the page ships it
     P.start();
     P.socks[0].onopen();
     P.socks[0].onmessage({ data: JSON.stringify({
@@ -2561,6 +2562,45 @@ part('the front page, and the screen');
     P.socks[0].onmessage({ data: devState(false) });
     ok(seg.querySelector('.btn.on').dataset.phase === 'done',
        'a state landing mid-aim leaves the form where it was pointed');
+  }
+
+  {   /* ---- a record the table will not have ----
+         The refusal belongs beside the button that earned it, and the edit
+         has to survive it: it is the thing being put right. */
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }]);
+    P.pick('#state-text').blur = () => {};          // the fake DOM has no focus
+    P.socks[0].onmessage({ data: devState(false) });
+
+    P.pick('#btn-state').fire('click');
+    ok(P.socks[0].sent.some((m) => m.action === 'state' && !('record' in m)),
+       'opening the panel asks for the record');
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'stateRaw', record: { code: 'AAAA', seats: [] } }) });
+
+    const edited = '{"code":"AAAA","seats":[]}';
+    P.pick('#state-text').value = edited;
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-state-apply').fire('click');
+    ok(P.socks[0].sent.length === 1 && 'record' in P.socks[0].sent[0],
+       'Apply sends the record and nothing after it  got ' + JSON.stringify(P.socks[0].sent));
+
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'a table needs its seats' }) });
+    ok(P.pick('#state-err').textContent === 'a table needs its seats'
+       && P.pick('#state-err').hidden === false,
+       'a refused record says why beside the Apply button');
+    ok(P.pick('#dev-err').textContent !== 'a table needs its seats',
+       'and not away at the top of the page');
+    ok(P.pick('#state-text').value === edited, 'and the edit that was refused is still there');
+
+    // The same apply, taken: the table answers with a hello, and only then is
+    // the record read back.
+    P.pick('#btn-state-apply').fire('click');
+    P.socks[0].sent.length = 0;
+    P.socks[0].onmessage({ data: JSON.stringify({
+      t: 'hello', role: 'host', code: 'AAAA', token: 'th', dev: true, srv: false,
+      stand: false, seats: [{ id: 's1', name: 'Ann', watch: 'w1' }],
+    }) });
+    ok(P.socks[0].sent.some((m) => m.action === 'state' && !('record' in m)),
+       'a record the table took is read back once it has landed');
   }
 
   {   // a table of stand-ins on a dev server: everything, as before

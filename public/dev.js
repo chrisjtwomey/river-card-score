@@ -16,6 +16,7 @@ let LIVE = false;                // real players may be behind this table
 let DEVSRV = false;              // this server takes the controls that invent data
 let polling = false;             // the list of tables, on a dev server only
 let onTable = false;             // this socket got onto a table
+let stateBusy = false;           // a record is out, and its answer is the panel's
 
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
    lands on the game it was pressed from. The page writes the same hash for
@@ -59,6 +60,8 @@ function connect() {
       if (polling) askTables();
       onTable = true;
       err('');
+      // The record landed, so read back what the table became.
+      if (stateBusy) { stateBusy = false; act('state'); }
     } else if (m.t === 'tables') {
       renderTables(m.tables || []);
     } else if (m.t === 'stateRaw') {
@@ -66,7 +69,7 @@ function connect() {
       const box = $('#state-text');
       if (box && document.activeElement !== box) {
         box.value = JSON.stringify(m.record, null, 1);
-        $('#state-err').hidden = true;
+        stateErr('');
       }
     } else if (m.t === 'seat') {
       // The seat asked for: put it in the pane, which then acts as the player.
@@ -78,16 +81,22 @@ function connect() {
       /* The table it was on would not open: a server that restarted, a game
          that ended. Let it go and do what a page with no table does. */
       if (!onTable && CODE) {
+        stateBusy = false;
         CODE = HOST_TOKEN = null;
         history.replaceState(null, '', location.pathname);
         return act('setup', { players: Number($('#players').value) || 4 });
       }
       if (/table is gone/i.test(m.msg)) {
+        stateBusy = false;
         CODE = HOST_TOKEN = null;
         history.replaceState(null, '', location.pathname);
         tableKey = '';
         return act('setup', { players: Number($('#players').value) || 4 });
       }
+      /* A refused record is the panel's business, not the page's: the line
+         belongs beside the button that earned it, and the edit stays in the
+         box to be put right. */
+      if (stateBusy) { stateBusy = false; return stateErr(m.msg); }
       // No table yet means the stand-in table was refused. Say the other way in.
       err(!CODE
         ? `${m.msg} To put a real game right, start the server with DEV=1 and open Dev controls under ⚙ on the TV screen.`
@@ -99,6 +108,8 @@ function connect() {
 const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 const act = (action, extra) => send(Object.assign({ t: 'dev', action }, extra || {}));
 const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !msg; };
+// The panel's own line, beside the button that earned it.
+const stateErr = (msg) => { $('#state-err').textContent = msg; $('#state-err').hidden = !msg; };
 
 /* ---------- previews ---------- */
 
@@ -572,15 +583,15 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-state-apply').addEventListener('click', () => {
     let rec;
     try { rec = JSON.parse($('#state-text').value); }
-    catch (e) {
-      $('#state-err').textContent = `Not JSON: ${e.message}`;
-      $('#state-err').hidden = false;
-      return;
-    }
-    $('#state-err').hidden = true;
+    catch (e) { return stateErr(`Not JSON: ${e.message}`); }
+    stateErr('');
     $('#state-text').blur();
+    /* Nothing is read back here. The table answers an apply either way, and a
+       read sent now would land on a refusal and put the unchanged table over
+       the edit that was refused. The answer decides: the hello reads back, the
+       error stays in the panel. */
+    stateBusy = true;
     act('state', { record: rec });
-    act('state');                       // and read back what the table became
   });
 
   $('#btn-players').addEventListener('click', () => {
