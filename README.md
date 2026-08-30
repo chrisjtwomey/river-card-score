@@ -317,9 +317,10 @@ that band.
   winner leads, so a lead never cuts the news short (`TRICK_HOLD`).
 - **The round is put away, not replaced.** When the last trick is scored,
   what the round paid stands for two seconds; then each seat's pile of tricks
-  unwinds, a trick at a time. The cards of one trick lift off the little stack
-  beside their seat together, fanned as they go -- the rest of that pile lies
-  where it is, face down, until its own turn comes -- and spiral in --
+  unwinds. The cards leave one after another in a single stream, evenly spaced,
+  trick by trick and the seats anticlockwise: each lifts off the little stack
+  beside its seat -- the rest of that pile lies where it is, face down, until
+  its own turn comes -- and spirals in --
   anticlockwise, the way round the table opposite to the way a trick was
   gathered -- coming up to the size of a card in play and turning face up as it
   goes, until it settles under the card the deck turned. One card at a time,

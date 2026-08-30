@@ -58,11 +58,15 @@ const Felt = (function () {
      of four, so it is the interval between cards that gives, not the total. */
   const UNWIND = 1500;
 
-  /* How long one trick takes to come in, how far apart two of them may set
-     off, how far round the table the arc carries, and how finely it is drawn.
-     Half a turn is enough to read as going round and not as crossing over. */
+  /* How long one card takes to come in, how far round the table the arc
+     carries it, and how finely that arc is drawn. Half a turn is enough to
+     read as going round the table and not as crossing it. */
   const ARC = 760, ARC_SWEEP = Math.PI, ARC_STEPS = 14;
-  const LEAD_MIN = 60, LEAD_MAX = 150;
+  /* And how far apart two cards set off. They go one after another in one
+     stream rather than a trick at a time in clumps: eight cards of a trick
+     leaving together is a block of cards moving, not cards. Close enough to
+     read as a stream, far enough apart to read as cards. */
+  const LEAD_MIN = 42, LEAD_MAX = 110;
 
   /* How long the places stand over the fresh deck before the next round is
      dealt. Long enough to find your own row and see what the round moved you
@@ -1297,9 +1301,9 @@ const Felt = (function () {
     /* A trick with a face shows it on the way in: a card put away face down
        says nothing about the hand that was played. A stand-in for a trick this
        phone never saw taken has no face to show, so it stays face down. */
-    /* A trick at a time, not a card at a time: the cards of one trick were
-       played together and they come back in together, fanned, so a hand of
-       thirteen tricks is thirteen movements and not fifty-two. */
+    /* Card by card, trick by trick, and the seats anticlockwise: what leaves
+       the table is one stream of cards, each following the last round the same
+       arc, rather than a trick landing whole every so often. */
     const legs = [];
     (last.won || []).forEach((stack, q) => (stack || []).forEach((trick, t) => {
       const cards = (trick || []).filter((el) => el && el.parentNode);
@@ -1322,16 +1326,20 @@ const Felt = (function () {
     (last.labels || []).forEach(away);
     (last.places || []).forEach(away);
 
-    // Every card takes the same time to come in; they set off one after
-    // another, and the whole of that is UNWIND however many there are.
-    const lead = legs.length > 1
-      ? Math.max(LEAD_MIN, Math.min(LEAD_MAX, Math.round((UNWIND - ARC) / (legs.length - 1))))
+    /* Every card takes the same time to come in and sets off after the one
+       before it. The whole of that is UNWIND where it can be: a hand of many
+       tricks closes the gap between cards rather than making the round longer,
+       down to a floor that keeps them cards and not a blur. */
+    const count = legs.reduce((a, l) => a + l.cards.length, 0);
+    const lead = count > 1
+      ? Math.max(LEAD_MIN, Math.min(LEAD_MAX, Math.round((UNWIND - ARC) / (count - 1))))
       : 0;
     const k = key;
     let put = 0;
-    legs.forEach(({ cards, q, t }, i) => {
+    legs.forEach(({ cards, q, t }) => {
       cards.forEach((el, j) => {
         const face = el.querySelector('.front .big') ? 0 : 180;
+        const i = put;
         el.style.zIndex = String(3 + put);
         el.classList.remove('slow');
         const rest = deckAt(g, put, face === 180);
@@ -1352,7 +1360,7 @@ const Felt = (function () {
 
     // The last one is in. The turned card goes face down on the pile they have
     // made of themselves, and the deck is whole again.
-    const over = Math.max(0, legs.length - 1) * lead + ARC;
+    const over = Math.max(0, count - 1) * lead + ARC;
     setTimeout(() => {
       if (key !== k || !hero || !hero.parentNode) return;
       hero.classList.add('slow');
@@ -1373,10 +1381,10 @@ const Felt = (function () {
     const s = g.R.at(q), z = Stage.seatScale(g.n);
     const a0 = Math.atan2((s.y - g.R.cy) / (g.R.ry || 1), s.x / (g.R.rx || 1));
     const to = g.ch / heroH(g);
-    /* The cards of one trick travel as a fan: a little apart along the way
-       round and a little apart across it, so they read as the several cards
-       they are rather than as one card with thick edges. */
-    const lag = j * 0.055, wide = 1 + j * 0.045;
+    /* A card of a trick sits a little wide of the one under it on the way
+       round, so a stream of them is a stream and not a line. What keeps them
+       apart along the arc is that they set off apart, not this. */
+    const wide = 1 + (j % 4) * 0.03;
     // Off the pile it is lying on, so the lift is part of the movement and not
     // a jump into it.
     const kf = [{ transform: wonAt(g, q, t, j) }];
@@ -1384,12 +1392,12 @@ const Felt = (function () {
       const u = i / ARC_STEPS;
       // Anticlockwise: the ring runs clockwise as the angle grows, so this
       // takes it back the other way.
-      const a = a0 - ARC_SWEEP * u + lag * (1 - u);
+      const a = a0 - ARC_SWEEP * u;
       const out = (1 - u * u) * (u < 1 ? wide : 1);   // holds its place, then closes in
       const sc = (0.42 * z) + (to - 0.42 * z) * Math.min(1, u * 1.6);
       kf.push({ transform: tf(Math.cos(a) * g.R.rx * out,
                               g.R.cy + Math.sin(a) * g.R.ry * out,
-                              (1 - u) * (-4 + j * 3), face, sc) });
+                              (1 - u) * (-4 + (j % 4) * 3), face, sc) });
     }
     kf.push({ transform: rest });
     return kf;

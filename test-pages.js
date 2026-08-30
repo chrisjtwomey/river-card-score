@@ -1147,13 +1147,15 @@ function scored(motion) {
      of it: an arc that begins anywhere else is a jump into position first. */
   ok(runs.every((a) => a.kf[0].transform === onPile[stack.indexOf(a.el)]),
      'each one starts off the pile it is lying on');
-  /* A trick at a time: the cards of one trick were played together and come
-     back in together, so they set off together and a hand of thirteen tricks
-     is thirteen movements and not fifty-two. */
-  const byDelay = {};
-  runs.forEach((a) => { const d = a.opts.delay || 0; (byDelay[d] = byDelay[d] || []).push(a); });
-  ok(Object.keys(byDelay).length === 5,
-     'one movement a trick, not one a card  got ' + Object.keys(byDelay).length);
+  /* One stream: every card sets off after the one before it, evenly, so what
+     leaves the table is a run of cards rather than a block of them landing
+     every so often. */
+  const when = runs.map((a) => a.opts.delay || 0).sort((x, y) => x - y);
+  ok(new Set(when).size === when.length && when[0] === 0,
+     'every card has a place of its own in the stream  got ' + when.join(','));
+  const gaps = when.slice(1).map((v, i) => v - when[i]);
+  ok(new Set(gaps).size === 1 && gaps[0] >= 42,
+     'evenly spaced, and far enough apart to read as cards  got ' + gaps.join(','));
   // And it lies there until its turn: filling an animation backwards would
   // stand every card up the moment the first one set off.
   ok(runs.every((a) => (a.opts.fill || '') === 'forwards'),
