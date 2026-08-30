@@ -313,6 +313,12 @@ that band.
   card. Then one card of the trick stays on a little stack beside their seat. The stacks count the
   tricks won. The table holds the trick a little longer than that before the
   winner leads, so a lead never cuts the news short (`TRICK_HOLD`).
+- **The round is put away, not replaced.** When the last trick is scored,
+  what the round paid stands for two seconds; then every trick won comes off
+  the seat that took it, goes round the ring the other way from the way it was
+  gathered -- anticlockwise, to whoever deals next -- and squares up in the
+  middle, under the card the deck turned. That card goes face down on top of
+  them, and what is left is a deck. With movement off none of this plays.
 - **Bidding** happens on the felt too: the numbers arc above your hand, under
   a heading of their own, and are picked up the same way -- touch to lift, tap
   again to call. Your own bid stays lit and can be changed until the next player bids.

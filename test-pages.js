@@ -1024,16 +1024,85 @@ function scored(motion) {
                  next.rounds[0]];
   const armed = [];
   const realSet = setTimeout;
-  global.setTimeout = (fn, ms) => { armed.push({ fn, ms }); return realSet(() => {}, 0); };
-  try { L.Felt.sync(next, me, { send: () => {} }); } finally { global.setTimeout = realSet; }
+  const catching = (fn) => {
+    global.setTimeout = (f, ms) => { armed.push({ fn: f, ms }); return realSet(() => {}, 0); };
+    try { fn(); } finally { global.setTimeout = realSet; }
+  };
+  catching(() => L.Felt.sync(next, me, { send: () => {} }));
   const overlay = L.dom.document.getElementById('deal');
-  // let the moment pass, however long the felt asked for
-  const passes = () => armed.filter((t) => t.ms > 1000).forEach((t) => t.fn());
+  /* Let the moment pass, however long the felt asked for, and then the putting
+     away it sets going -- the tricks round the ring, the turned card face
+     down. Those are all armed in one go, so one more pass runs the lot; what
+     the deal arms after them is left to the clock, as it was. */
+  const passes = () => {
+    const first = armed.filter((t) => t.ms > 1000);
+    armed.length = 0;
+    catching(() => first.forEach((t) => t.fn()));
+    const away = armed.slice().sort((a, b) => a.ms - b.ms);
+    armed.length = 0;
+    away.forEach((t) => t.fn());
+    return away;
+  };
   return { L, overlay, armed, passes, beat: () => overlay.querySelector('.felt-beat') };
 }
 {
   const t = scored('off');
   ok(!t.beat() || t.beat().hidden, 'with animations off the round is not held up');
+}
+{
+  /* The table puts itself away rather than being replaced: every trick won
+     comes off the seat that took it, goes round the ring the other way, and
+     squares up in the middle under the card the deck turned -- which then
+     goes face down on top of them, leaving a deck. */
+  const n = 4, cards = 5, me = 1;
+  const first = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: me,
+                                         bids: [1, 2, 1, 1], won: [1, 0, 2, 2] });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(first.ST, me, { send: () => {} });
+  const stage = L.dom.document.getElementById('deal').querySelector('.deal-stage');
+  const tricks = () => stage.querySelectorAll('.dcard.gone');
+  const hero = () => stage.querySelector('.dcard.hero');
+  /* The middle of the table, where the deck squares up. Both halves are
+     asked: the seats at the top and the foot play onto a spot with no sideways
+     offset either, and those are not the middle. */
+  const cy = L.Stage.ring(n, me, 412, 860).cy;
+  const middle = (el) => {
+    const s = spotOf(el);
+    return !!s && Math.abs(s.x) < 1 && Math.abs(s.y - cy) < 8;
+  };
+  ok(tricks().length === 5, 'a card a trick stands beside the seat that took it  got ' + tricks().length);
+  ok(tricks().filter(middle).length === 0, 'and none of them is in the middle');
+  ok(spotOf(hero()).face === 0, 'the card the deck turned lies face up  got ' + spotOf(hero()).face);
+
+  const next = stateFor(n, 4, me, { phase: 'bid', turn: 2 }).ST;
+  next.idx = 1;
+  next.rounds = [{ cards, dealer: 0, trump: 'H', bids: [1, 2, 1, 1], tricks: [1, 0, 2, 2] },
+                 next.rounds[0]];
+  const armed = [];
+  const realSet = setTimeout;
+  const catching = (fn) => {
+    global.setTimeout = (f, ms) => { armed.push({ fn: f, ms }); return realSet(() => {}, 0); };
+    try { fn(); } finally { global.setTimeout = realSet; }
+  };
+  catching(() => L.Felt.sync(next, me, { send: () => {} }));
+  ok(tricks().length === 5, 'the round is scored and the table is still standing');
+  const paid = armed.filter((t) => t.ms >= 2000);
+  armed.length = 0;
+  catching(() => paid.forEach((t) => t.fn()));
+  const steps = armed.slice().sort((a, b) => a.ms - b.ms);
+  armed.length = 0;
+  /* Two seats away from the dealer at most, so the longest way round is two
+     steps and every card has one more to come in on. */
+  ok(steps.length > 5, 'every trick is given a way round, step by step  got ' + steps.length);
+  const first0 = steps[0].ms;
+  steps.filter((t) => t.ms === first0).forEach((t) => t.fn());
+  ok(tricks().filter(middle).length === 0,
+     'the first step only lifts them onto the ring, it does not put them away  got '
+     + tricks().filter(middle).length);
+  steps.forEach((t) => t.fn());
+  ok(tricks().filter(middle).length === 5, 'and they all end in the middle  got ' + tricks().filter(middle).length);
+  ok(middle(hero()) && spotOf(hero()).face === 180,
+     'the card the deck turned goes face down on top of them  got ' + JSON.stringify(spotOf(hero())));
 }
 {
   const t = scored('full');

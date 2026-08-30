@@ -47,6 +47,12 @@ const Felt = (function () {
      next one. A figure a player has to catch inside two seconds is a figure
      they read once and are not sure of. */
   const PAID_HOLD = 2000;
+
+  /* How long the table takes to put itself away: the tricks come off the
+     seats, go round the ring the other way, and square up under the card the
+     deck turned, which then goes face down on top of them. A round that ends
+     by the table being replaced is a round nobody saw end. */
+  const UNWIND = 620;
   const LIFT = 52;              // how far a card comes up out of the fan
   const BIG = 1.3;              // and how much bigger it gets while it is up
   const DEAD = 16;              // a push this far up means it is being played
@@ -1223,6 +1229,75 @@ const Felt = (function () {
     });
   }
 
+  /* The table puts itself away. Every trick won comes off the seat that took
+     it and goes round the ring the other way from the way it was gathered --
+     anticlockwise, to the seat that deals next, who is the one collecting the
+     deck -- and then in to the middle, under the card the deck turned. That
+     card turns face down on top of them, and what is left is a deck: one
+     thing, in one place, ready to be shuffled.
+
+     `last` is the table the round left behind; the felt has already let go of
+     it, so this moves elements and reads no state but the round's. */
+  function unwind(last, r, done) {
+    if (!last || !T0(last) || still() || !UI.fx.on()) return done();
+    const g = geom(), n = ST.seats.length, home = r.dealer;
+    const legs = [];
+    (last.won || []).forEach((stack, q) => (stack || []).forEach((el) => {
+      if (el && el.parentNode) legs.push({ el, from: q, steps: (((q - home) % n) + n) % n });
+    }));
+
+    // The names and the outlines under the last hand belong to a round that is
+    // over; they go while the cards are still moving, not after.
+    const fade = (el) => {
+      if (!el || !el.animate) return;
+      el.animate([{ opacity: 1 }, { opacity: 0 }],
+        { duration: 260, easing: 'ease-out', fill: 'forwards' });
+    };
+    (last.labels || []).forEach(fade);
+    (last.places || []).forEach(fade);
+
+    // The longest way round takes the whole unwind, whatever the table size.
+    const most = legs.reduce((a, l) => Math.max(a, l.steps), 0);
+    const gap = Math.max(60, Math.round(UNWIND / (most + 1)));
+    const k = key;
+    legs.forEach(({ el, from, steps }, i) => {
+      el.style.zIndex = String(3 + i);
+      el.classList.remove('slow');
+      const way = [trickAt(g, from)];
+      for (let sN = 1; sN <= steps; sN++) way.push(trickAt(g, (((from - sN) % n) + n) % n));
+      way.push(deckAt(g, i));                    // and in, under the turned card
+      way.forEach((to, sN) => setTimeout(() => {
+        if (key !== k || !el.parentNode) return;
+        at(el, to);
+      }, sN * gap));
+    });
+
+    // The turned card goes face down on the pile the tricks have made of
+    // themselves, and the deck is whole again.
+    const over = (most + 1) * gap;
+    setTimeout(() => {
+      if (key !== k) return;
+      const hero = last.hero;
+      if (hero && hero.parentNode) {
+        hero.classList.add('slow');
+        hero.style.zIndex = String(3 + legs.length);
+        at(hero, deckAt(g, legs.length, true));
+      }
+    }, over);
+    setTimeout(() => { if (key === k) done(); }, over + 340);
+  }
+
+  // Something worth putting away: a table that was never stood up has nothing.
+  const T0 = (last) => !!(last && (last.hero || (last.won || []).some((a) => a && a.length)));
+
+  /* Where the deck squares up: the middle of the table, where the turned card
+     already lies, with the cards under it stacked a hair apart so the pile
+     reads as a pile and not as one card. */
+  function deckAt(g, k, face) {
+    const lift = Math.min(6, k * 0.5);
+    return tf(0, g.R.cy - lift, 0, face ? 180 : 0, g.ch / heroH(g));
+  }
+
   /* A trick taken is a moment: it is named, and only when that has been read
      are the cards gathered to whoever took them. Without it a trick ends by
      the cards simply being somewhere else. */
@@ -1295,6 +1370,7 @@ const Felt = (function () {
     const k = `${ST.idx}:${r.redeals || 0}`;
     if (k !== key) {
       const was = key;
+      const last = T;                    // the table this round is leaving behind
       key = k;
       unpeek();
       T = null;
@@ -1309,10 +1385,13 @@ const Felt = (function () {
         pausing = true;
         beat(prev);
         setTimeout(() => {
-          if (!pausing) return;
-          pausing = false;
+          if (!pausing || key !== k) return;
           endBeat();
-          if (key === k && want && round()) start(round());
+          // What the round paid has been read; now the table is put away.
+          unwind(last, r, () => {
+            pausing = false;
+            if (key === k && want && round()) start(round());
+          });
         }, PAID_HOLD);
         return;
       }
