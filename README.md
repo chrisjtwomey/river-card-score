@@ -859,10 +859,7 @@ It talks the same protocol as a phone, so the states it makes are states a real 
 
 - **Jump to** — start game, fill bids, fill tricks, next round, end game, bum deal vote, back to lobby, and **randomise**, which shuffles the rules and plays a random number of rounds.
 - **Fill scorecard** — plays whole rounds against the rules in force, and leaves the next round waiting for its bids. Type how many rounds to play, or leave the box empty for a random number. Use it to see a card part way through, or a full one.
-- **Force** — round number, phase, table host, who deals first, trump, re-deal count.
-- **Round** — pick any round and type each seat's bid and tricks. Scores come from the bids and the tricks, so editing a played round changes the totals.
-- **Rules** — the full set, editable even after the start, which the real game does not allow.
-- **State** — the live JSON the server is sending.
+**Force**, **Round**, **Rules** and **State** were on this page and are being redone. The server still answers every one of them; only the controls are gone.
 
 The filled bids keep the screw-the-dealer rule, the filled tricks always total the hand size, and every played round gets a trump, so nothing on screen is impossible.
 
@@ -870,7 +867,7 @@ The filled bids keep the screw-the-dealer rule, the filled tricks always total t
 
 On a server started with `DEV=1` the TV screen offers **Dev controls** under ⚙. It opens the dev page on **that table**, at `dev.html#c=CODE&t=TOKEN`, so a game in play can be put right: a mistyped trick three rounds back, the wrong dealer, a phase that got stuck.
 
-A real table gets the state editor and nothing else. **Force**, **Round** and **State** work. Everything that invents data — new table, jump to, fill scorecard, randomise — is hidden, and the server refuses it even with `DEV=1`. The top bar turns red, and the page says the game is real.
+A real table gets nothing that invents data — new table, jump to, fill scorecard, randomise are hidden, and the server refuses them even with `DEV=1`. The state editor that put a real game right is being redone, so for now the page shows a real table rather than changes it. The top bar turns red, and the page says the game is real.
 
 The phones are there, one pane a player, so you can see what each of them sees. On a real table they are **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
 

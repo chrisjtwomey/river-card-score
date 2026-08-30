@@ -24,13 +24,6 @@
   .frame > header a{color:var(--gold);text-decoration:none}
   .frame .shell{position:relative;overflow:hidden}
   .frame iframe{border:0;display:block;transform-origin:top left;background:var(--bg)}
-  .seatgrid{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;font-size:13px}
-  .seatgrid input{width:56px;font:inherit;padding:5px 6px;border-radius:8px;border:1px solid var(--line);
-    background:var(--bg);color:var(--ink);text-align:center}
-  .seatgrid .who{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .seatgrid .head{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);font-weight:700;text-align:center}
-  pre.state{margin:0;font-size:11px;line-height:1.35;max-height:320px;overflow:auto;
-    background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px;white-space:pre-wrap}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .devbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .devbar .code{font-size:22px;font-weight:800;letter-spacing:.14em;color:var(--gold)}
@@ -76,8 +69,9 @@
         <label class="field"><span>&nbsp;</span><button class="btn" id="btn-rebuild" type="button">New table</button></label>
       </div>
       <p class="hint live-note" id="live-note" hidden>
-        A real game, with real players. Only the state editor works here: nothing on this page invents data.
-        The phones are watching windows — they show what each player sees, but they cannot act and nobody comes online.
+        A real game, with real players. Nothing here invents data for it: the controls that do
+        belong to a table of stand-ins. The phones are watching windows — they show what each
+        player sees, but they cannot act and nobody comes online.
       </p>
     </div>
 
@@ -103,52 +97,6 @@
       </div>
       <p class="hint" id="fill-hint">Plays that many rounds with bids and tricks the rules allow. Leave it empty for a random number.</p>
     </div>
-
-    <div class="panel">
-      <h2>Force</h2>
-      <div class="row2">
-        <label class="field"><span>Round</span><input type="number" id="f-idx" min="1"></label>
-        <label class="field"><span>Phase</span>
-          <select id="f-phase">
-            <option value="lobby">lobby</option>
-            <option value="bid">bid</option>
-            <option value="tricks">tricks</option>
-            <option value="done">done</option>
-          </select>
-        </label>
-      </div>
-      <div class="row2">
-        <label class="field"><span>Table host</span><select id="f-captain"></select></label>
-        <label class="field"><span>Deals first</span><select id="f-dealer"></select></label>
-      </div>
-      <div class="row2">
-        <label class="field"><span>Trump</span><select id="f-trump"></select></label>
-        <label class="field"><span>Re-deals</span><input type="number" id="f-redeals" min="0" value="0"></label>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="entry-head">
-        <h2>Round</h2>
-        <select id="r-pick" style="max-width:130px"></select>
-      </div>
-      <div class="seatgrid" id="seatgrid"></div>
-      <div class="btnrow">
-        <button class="btn" id="btn-apply" type="button">Apply</button>
-        <button class="btn ghost" id="btn-clear" type="button">Clear round</button>
-      </div>
-      <p class="hint">Scores come from the bids and the tricks, so edit a played round to change a total.</p>
-    </div>
-
-    <div class="panel" data-stand>
-      <h2>Rules</h2>
-      <div id="rules-form"></div>
-    </div>
-
-    <details class="panel">
-      <summary style="cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim)">State</summary>
-      <pre class="state" id="state-json">—</pre>
-    </details>
   </div>
 
   <div class="frames">
@@ -160,8 +108,6 @@
 <script src="/game.js"></script>
 <script src="ui.js"></script>
 <script src="avatar.js"></script>
-<script src="accolades.js"></script>
-<script src="lobby.js"></script>
 <script src="dev.js"></script>
 </body>
 </html>
