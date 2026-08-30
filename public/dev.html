@@ -47,6 +47,19 @@
   .oneshots .btn{padding:6px 9px;font-size:12px}
 
   .live-note{color:var(--red);font-weight:650;margin:0 2px}
+  .btn.tiny{padding:2px 7px;font-size:10px}
+
+  /* The players panel: one row a seat, every control landing as it is used. */
+  .players{padding:10px 12px;gap:6px}
+  .prow{display:grid;grid-template-columns:minmax(130px,220px) 44px 52px 40px 40px 54px 54px 72px 1fr;
+    gap:9px;align-items:center;font-size:13px}
+  .prow.phead span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--ink-dim);font-weight:700}
+  .prow input[type=text],.prow input[type=number]{font:inherit;padding:5px 6px;border-radius:8px;
+    border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+  .prow input[type=number]{text-align:center}
+  .prow .mid{justify-self:center}
+  .prow .pbtns{display:flex;gap:5px}
   body.livemode .topbar{background:linear-gradient(90deg,#5c1a12,#8d2a1c)}
 
   /* The screens, full width under the band. */
@@ -117,6 +130,7 @@
         <button class="btn" data-act="randomise" type="button">Randomise</button>
         <button class="btn" id="btn-avatars" type="button" title="A stand-in photo on every seat">Photos</button>
         <button class="btn" id="btn-no-avatars" type="button">No photos</button>
+        <button class="btn" id="btn-players" type="button" aria-expanded="false">Players ▾</button>
       </div>
     </div>
   </div>
@@ -127,6 +141,15 @@
     The phones are watching windows — they show what each player sees without
     putting anybody at the table.
   </p>
+
+  <div class="panel players" id="players-panel" hidden>
+    <div class="prow phead">
+      <span>seat</span><span>host</span><span>dealer</span><span>bot</span><span>left</span>
+      <span>bid</span><span>won</span><span>photo</span><span></span>
+    </div>
+    <div id="prows" style="display:contents"></div>
+    <p class="hint">Everything lands as it is changed. The won column is kept once every seat has a number.</p>
+  </div>
 
   <div class="frames">
     <div class="frameset" id="host-frame"></div>

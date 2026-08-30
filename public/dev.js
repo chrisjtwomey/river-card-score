@@ -51,6 +51,10 @@ function connect() {
       err('');
     } else if (m.t === 'tables') {
       renderTables(m.tables || []);
+    } else if (m.t === 'seat') {
+      // The seat asked for: put it in the pane, which then acts as the player.
+      const one = seatOf(m.id);
+      if (one) { one.token = m.token; seatKey = ''; renderFrames(); }
     } else if (m.t === 'state') {
       ST = m; render();
     } else if (m.t === 'error') {
@@ -77,22 +81,39 @@ const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !
 
 const SIZES = { host: [1180, 820], seat: [400, 800] };
 
-// A seat frame opens the seat itself on a table of stand-ins, and only watches
-// on a real one. The hash says which: t= is the seat, w= just shows it.
-const seatHash = (s) => (s.watch ? `#c=${CODE}&w=${s.watch}` : `#c=${CODE}&t=${s.token}`);
+// A seat frame opens the seat itself when the page holds it -- always on a
+// table of stand-ins, and on a real table once that seat is taken over. It
+// only watches otherwise: t= is the seat, w= just shows it.
+const seatHash = (s) => (s.token ? `#c=${CODE}&t=${s.token}` : `#c=${CODE}&w=${s.watch}`);
 
-function frame(box, label, page, hash, kind, seatId, boss) {
+function frame(box, label, page, hash, kind, entry, boss) {
   const scale = Number($('#scale').value) || 0.65;
   const [w, h] = SIZES[kind];
   const url = page + hash;
   const el = document.createElement('div');
   el.className = 'frame' + (boss ? ' captain' : '');
-  if (seatId) el.dataset.seat = seatId;
+  if (entry) el.dataset.seat = entry.id;
   el.innerHTML =
     `<header><span class="lbl"></span><a href="${url}" target="_blank" rel="noopener">open</a></header>` +
     `<div class="shell" style="width:${Math.round(w * scale)}px;height:${Math.round(h * scale)}px">` +
     `<iframe src="${url}" width="${w}" height="${h}" style="transform:scale(${scale})"></iframe></div>`;
   el.querySelector('.lbl').textContent = label;
+  // On a real table a pane only watches until it is told to act. The button
+  // swaps the pane between the watch link and the seat itself.
+  if (entry && entry.watch) {
+    const tk = document.createElement('button');
+    tk.type = 'button';
+    tk.className = 'btn tiny';
+    tk.textContent = entry.token ? 'stop acting' : 'act as';
+    tk.title = entry.token
+      ? 'Back to only watching this seat'
+      : 'Put this seat in the pane, so it can bid and play from here';
+    tk.addEventListener('click', () => {
+      if (entry.token) { delete entry.token; seatKey = ''; renderFrames(); }
+      else act('seat', { id: entry.id });
+    });
+    el.querySelector('header').insertBefore(tk, el.querySelector('header a'));
+  }
   box.appendChild(el);
 }
 
@@ -122,7 +143,7 @@ function renderFrames() {
     const box = $('#seat-frames');
     box.innerHTML = '';
     phones.forEach((s) => frame(box, s === cap ? `${s.name} · table host` : s.name,
-                                'play.html', seatHash(s), 'seat', s.id, s === cap));
+                                'play.html', seatHash(s), 'seat', s, s === cap));
   }
 }
 
@@ -221,11 +242,128 @@ function renderScrub() {
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
+/* Stand-in photos, so the picture on a card can be tested without anybody
+   uploading anything. Each seat gets its own colour and its own initial. */
+const AV_INK = ['#c0271d', '#1c6b48', '#2b5f9e', '#8a4bb5', '#b8862b', '#0f8a8a',
+                '#b5426f', '#4a6b1c'];
+function standInAvatar(name, i) {
+  const cv = document.createElement('canvas');
+  cv.width = Avatar.W; cv.height = Avatar.H;
+  const cx = cv.getContext('2d');
+  const ink = AV_INK[i % AV_INK.length];
+  const g = cx.createLinearGradient(0, 0, cv.width, cv.height);
+  g.addColorStop(0, ink);
+  g.addColorStop(1, '#101512');
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, cv.width, cv.height);
+  cx.strokeStyle = 'rgba(255,255,255,.22)';
+  cx.lineWidth = 6;
+  for (let k = -cv.height; k < cv.width; k += 22) {     // a hint of a pattern
+    cx.beginPath(); cx.moveTo(k, 0); cx.lineTo(k + cv.height, cv.height); cx.stroke();
+  }
+  // The initial sits high, so the eye can tell the seats apart in a fan.
+  cx.fillStyle = '#fff';
+  cx.textAlign = 'center';
+  cx.textBaseline = 'middle';
+  cx.font = `700 ${Math.round(cv.width * .58)}px system-ui, sans-serif`;
+  cx.shadowColor = 'rgba(0,0,0,.6)';
+  cx.shadowBlur = 16;
+  cx.fillText((name || '?').trim().charAt(0).toUpperCase(), cv.width / 2, cv.height * .38);
+  cx.shadowBlur = 0;
+  cx.font = `600 ${Math.round(cv.width * .13)}px system-ui, sans-serif`;
+  cx.fillStyle = 'rgba(255,255,255,.8)';
+  cx.fillText(String(name || '').slice(0, 9), cv.width / 2, cv.height * .78);
+  return cv.toDataURL('image/webp', .8);
+}
+
+/* ---------- the players panel ---------- */
+
+/* One row a seat. Every control sends the moment it is used, and the rows
+   are rebuilt only while nothing in them is being typed in. */
+function renderPlayers() {
+  const box = $('#prows');
+  if (!box || $('#players-panel').hidden) return;
+  const r = ST.rounds[Math.min(ST.idx, ST.rounds.length - 1)] || null;
+  const key = ST.seats.map((s, p) =>
+    `${s.name}/${s.bot}/${s.left}/${s.id === ST.captainId}/${r ? r.dealer : ST.firstDealerId}` +
+    `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}`).join('|') + `@${ST.idx}:${ST.phase}`;
+  if (box.dataset.key === key || box.contains(document.activeElement)) return;
+  box.dataset.key = key;
+  box.innerHTML = '';
+
+  // An edited number lands beside the others, not instead of them.
+  const numbers = (k, p, v) => {
+    const out = ST.seats.map((x, q) => {
+      const have = r && r[k] ? r[k][q] : null;
+      return q === p ? v : (have === undefined ? null : have);
+    });
+    act('patch', { patch: { round: { i: ST.idx, [k]: out } } });
+  };
+
+  ST.seats.forEach((s, p) => {
+    const row = document.createElement('div');
+    row.className = 'prow';
+
+    const name = document.createElement('input');
+    name.type = 'text';
+    name.value = s.name;
+    name.addEventListener('change', () => act('patch', { patch: { seat: { i: p, name: name.value } } }));
+
+    const radio = (group, on, fire) => {
+      const el = document.createElement('input');
+      el.type = 'radio'; el.name = group; el.checked = on; el.className = 'mid';
+      el.addEventListener('change', fire);
+      return el;
+    };
+    const host = radio('cap', s.id === ST.captainId,
+      () => act('patch', { patch: { captainId: s.id } }));
+    // Mid-game the dealer belongs to the round on show; before one, to the game.
+    const dealer = radio('deal', r ? r.dealer === p : ST.firstDealerId === s.id,
+      () => act('patch', { patch: r ? { round: { i: ST.idx, dealer: p } } : { firstDealerId: s.id } }));
+
+    const check = (on, k) => {
+      const el = document.createElement('input');
+      el.type = 'checkbox'; el.checked = on; el.className = 'mid';
+      el.addEventListener('change', () => act('patch', { patch: { seat: { i: p, [k]: el.checked } } }));
+      return el;
+    };
+
+    const num = (k, v) => {
+      const el = document.createElement('input');
+      el.type = 'number'; el.min = '0';
+      el.value = v === null || v === undefined ? '' : v;
+      el.disabled = !r;
+      el.addEventListener('change', () =>
+        numbers(k, p, el.value.trim() === '' ? null : Number(el.value)));
+      return el;
+    };
+
+    const pbtns = document.createElement('span');
+    pbtns.className = 'pbtns';
+    const photo = document.createElement('button');
+    photo.type = 'button'; photo.className = 'btn tiny'; photo.textContent = '📷';
+    photo.title = 'A stand-in photo on this seat';
+    photo.addEventListener('click', () => act('avatar', { seat: p, data: standInAvatar(s.name, p) }));
+    const clear = document.createElement('button');
+    clear.type = 'button'; clear.className = 'btn tiny'; clear.textContent = '✕';
+    clear.title = 'No photo on this seat';
+    clear.addEventListener('click', () => act('avatar', { seat: p, data: null }));
+    pbtns.append(photo, clear);
+
+    row.append(name, host, dealer, check(!!s.bot, 'bot'), check(!!s.left, 'left'),
+               num('bids', r && r.bids ? r.bids[p] : null),
+               num('tricks', r && r.tricks ? r.tricks[p] : null),
+               pbtns, document.createElement('span'));
+    box.appendChild(row);
+  });
+}
+
 /* ---------- render ---------- */
 
 function render() {
   renderFrames();
   renderScrub();
+  renderPlayers();
   const n = ST.seats.length;
 
   $('#code').textContent = ST.code;
@@ -266,40 +404,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('#goto-phase .btn').forEach((x) => x.classList.toggle('on', x === b));
     }));
 
-  /* Stand-in photos, so the picture on a card can be tested without anybody
-     uploading anything. Each seat gets its own colour and its own initial. */
-  const AV_INK = ['#c0271d', '#1c6b48', '#2b5f9e', '#8a4bb5', '#b8862b', '#0f8a8a',
-                  '#b5426f', '#4a6b1c'];
-  function standInAvatar(name, i) {
-    const cv = document.createElement('canvas');
-    cv.width = Avatar.W; cv.height = Avatar.H;
-    const cx = cv.getContext('2d');
-    const ink = AV_INK[i % AV_INK.length];
-    const g = cx.createLinearGradient(0, 0, cv.width, cv.height);
-    g.addColorStop(0, ink);
-    g.addColorStop(1, '#101512');
-    cx.fillStyle = g;
-    cx.fillRect(0, 0, cv.width, cv.height);
-    cx.strokeStyle = 'rgba(255,255,255,.22)';
-    cx.lineWidth = 6;
-    for (let k = -cv.height; k < cv.width; k += 22) {     // a hint of a pattern
-      cx.beginPath(); cx.moveTo(k, 0); cx.lineTo(k + cv.height, cv.height); cx.stroke();
-    }
-    // The initial sits high, so the eye can tell the seats apart in a fan.
-    cx.fillStyle = '#fff';
-    cx.textAlign = 'center';
-    cx.textBaseline = 'middle';
-    cx.font = `700 ${Math.round(cv.width * .58)}px system-ui, sans-serif`;
-    cx.shadowColor = 'rgba(0,0,0,.6)';
-    cx.shadowBlur = 16;
-    cx.fillText((name || '?').trim().charAt(0).toUpperCase(), cv.width / 2, cv.height * .38);
-    cx.shadowBlur = 0;
-    cx.font = `600 ${Math.round(cv.width * .13)}px system-ui, sans-serif`;
-    cx.fillStyle = 'rgba(255,255,255,.8)';
-    cx.fillText(String(name || '').slice(0, 9), cv.width / 2, cv.height * .78);
-    return cv.toDataURL('image/webp', .8);
-  }
-
   $('#btn-avatars').addEventListener('click', () => {
     if (!ST || !ST.seats) return;
     ST.seats.forEach((s, i) => act('avatar', { seat: i, data: standInAvatar(s.name, i) }));
@@ -307,6 +411,15 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-no-avatars').addEventListener('click', () => {
     if (!ST || !ST.seats) return;
     ST.seats.forEach((s, i) => act('avatar', { seat: i, data: null }));
+  });
+
+  $('#btn-players').addEventListener('click', () => {
+    const panel = $('#players-panel');
+    panel.hidden = !panel.hidden;
+    $('#btn-players').textContent = panel.hidden ? 'Players ▾' : 'Players ▴';
+    $('#btn-players').setAttribute('aria-expanded', String(!panel.hidden));
+    delete $('#prows').dataset.key;
+    if (!panel.hidden && ST) renderPlayers();
   });
 
   $('#btn-rebuild').addEventListener('click', () =>

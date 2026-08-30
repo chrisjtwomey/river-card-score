@@ -865,7 +865,9 @@ The controls are one band over the screens, two rows:
 - **Go to** — the whole scorecard as cells: the lobby, every round with its hand size, the finish. Click a round and the game is taken there — the card is rebuilt and played up to it with rounds a real table could make. The **bid / tricks** toggle says where the round lands: waiting for its bids, or with its bids in. So the last round with its bids in — the doorstep of the end of the game — is two clicks, and the end itself one more.
 - **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, **randomise** (shuffles the rules and plays a random number of rounds), and stand-in photos on and off.
 
-**Round**, **Rules** and **State** were on this page and are still to come back — a players panel and a full state editor. The server answers every one of their actions already; only the controls are missing.
+- **Players** — a panel under the band, one row a seat: name, who hosts, who deals, bot, left, this round's bid and tricks, a photo on or off. Everything lands as it is changed; the tricks are kept once every seat has a number. It absorbs the old **Round** grid and does what **Force** did for the dealer and the host.
+
+**Rules** and **State** are still to come back — the rules form and a full state editor. The server answers their actions already; only the controls are missing.
 
 The filled bids keep the screw-the-dealer rule, the filled tricks always total the hand size, and every played round gets a trump, so nothing on screen is impossible.
 
@@ -877,7 +879,9 @@ Both doors are one message. A table's host token opens it on any server — it i
 
 What the page may do follows the **server**, not the table. On a server started with `DEV=1` a real table takes every control a table of stand-ins does — jump to, fill scorecard, randomise, all of it. The top bar turns red and the page says real players may be at the table, because every click lands on their game; nothing is taken away. On a normal server the host token opens the state forcer alone, and everything that invents data is refused.
 
-The phones are there, one pane a player, so you can see what each of them sees. On a real table they are **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
+The phones are there, one pane a player, so you can see what each of them sees. On a real table they open as **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
+
+On a dev server each of those panes carries an **act as** button. It asks the server for the seat itself and puts it in the pane, which then bids and plays as that player — the phone that holds the seat is not thrown off, so mind that two screens are then the one player. **Stop acting** puts the pane back to only watching.
 
 The server decides this, not the page:
 

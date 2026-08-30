@@ -77,6 +77,7 @@ function client(name, url) {
     else if (m.t === 'error') c.errors.push(m.msg);
     else if (m.t === 'pong') c.pongs++;
     else if (m.t === 'tables') c.tables = m.tables;
+    else if (m.t === 'seat') c.seat = m;
     else if (m.t === 'kicked') c.kicked = true;
     else if (m.t === 'left') c.left = true;
   });
@@ -497,6 +498,8 @@ async function bidRound(P) {
        'and the phones come with it as watching windows, before anything is pressed');
     await h.rt();
     ok(h.state.seats[1].online === false, 'and the page opening on it puts nobody back at the table');
+    gate.send({ t: 'dev', action: 'seat', id: h.state.seats[0].id });
+    await okBy(() => /DEV=1/.test(gate.last()), 'a normal server never hands a seat out');
   }
 
   // ---- the dev controls on a server started with DEV=1 ----
@@ -601,6 +604,21 @@ async function bidRound(P) {
     await okBy(() => d.state.idx === 0 && d.state.phase === 'bid' && !d.state.rounds.some(full),
        'and goto backwards rebuilds the card fresh');
 
+    // ---- one player at a time ----
+    d.send({ t: 'dev', action: 'patch', patch: { seat: { i: 1, name: 'Hix', bot: true } } });
+    await okBy(() => d.state.seats[1].name === 'Hix' && d.state.seats[1].bot === true,
+       'a seat can be renamed and handed to a bot');
+    d.send({ t: 'dev', action: 'patch', patch: { seat: { i: 1, bot: false } } });
+    await okBy(() => d.state.seats[1].bot === false, 'and handed back');
+    d.send({ t: 'dev', action: 'patch', patch: { seat: { i: 0, left: true } } });
+    await okBy(() => d.state.seats[0].left === true, 'a seat can be stood down');
+    ok(d.state.captainId !== d.state.seats[0].id, 'and the table host job moves off it');
+    d.send({ t: 'dev', action: 'patch', patch: { seat: { i: 0, left: false }, captainId: d.state.seats[0].id } });
+    await okBy(() => d.state.seats[0].left === false && d.state.captainId === d.state.seats[0].id,
+       'and stood back up, with the job handed back');
+    d.send({ t: 'dev', action: 'patch', patch: { round: { i: 0, dealer: 2 } } });
+    await okBy(() => d.state.rounds[0].dealer === 2, 'the round on show can change its dealer');
+
     /* ---- a hand stacked on purpose, played over real sockets ----
        What the rules of a trick are is settled in test-rules.js, against the
        deck itself. What is proved here is the wire: hands forced onto a table
@@ -677,6 +695,16 @@ async function bidRound(P) {
     ok(hop.hello.stand === false, 'which says real players may be behind it');
     hop.send({ t: 'dev', action: 'open', code: 'ZZZZ' });
     await okBy(() => /no table with that code/i.test(hop.last()), 'a code with no table is refused');
+
+    // ---- a pane can take a real seat over ----
+    const sid = hop.hello.seats[0].id;
+    hop.send({ t: 'dev', action: 'seat', id: sid });
+    await okBy(() => hop.seat && hop.seat.id === sid && !!hop.seat.token,
+       'on a dev server the page can ask for a seat to act as');
+    const actor = client('actor', `ws://127.0.0.1:${port3}/ws`); await actor.ready;
+    actor.send({ t: 'resume', code: real.hello.code, token: hop.seat.token });
+    await okBy(() => actor.hello && actor.hello.seatId === sid,
+       'and the token it gets opens that very seat');
     srv3.kill();
   }
 
