@@ -59,6 +59,7 @@ const Felt = (function () {
   let stamped = null;              // the bids on the table at the last paint, or null before the first
   let told = null;                 // the finished trick this screen has announced
   let swept = null;                // and the one it has gathered in
+  let bidsUp = false;              // the bids are up to be read, before the first card
 
   const virtual = () => !!ST && Game.virtual(ST);
   /* A trick that has been taken and is still lying in the middle. The server
@@ -567,6 +568,11 @@ const Felt = (function () {
   function paint(r) {
     const p = ST.play;
     const bidding = ST.phase === 'bid';
+    /* The beat after the last bid, before the first card. The bids are what
+       the table is looking at through it, so the piles keep saying what was
+       bid rather than flipping to won/bid over the moment. */
+    const reading = Game.bidsHeld(ST);
+    const asBids = bidding || reading;
     // A bid landing is stamped onto that seat's pile, as on the deal and on
     // the TV screen. What was already on the table when it was stood up is
     // not: there is nothing to compare it with.
@@ -584,15 +590,17 @@ const Felt = (function () {
       const bid = r.bids ? r.bids[q] : null;
       const won = p ? p.won[q] : null;
       if (q === me) {
-        el.textContent = bidding ? 'Your hand' : `You · ${won}/${bid}`;
+        // Your own bid was the lit number on the rail, and the rail goes with
+        // the bidding, so while the bids are read your label carries it.
+        el.textContent = bidding ? 'Your hand' : reading ? `Your hand · ${bid}` : `You · ${won}/${bid}`;
       } else {
         el.textContent = ST.seats[q].name
-          + (bidding ? (bid === null || bid === undefined ? '' : ` · ${bid}`) : ` · ${won}/${bid}`);
+          + (asBids ? (bid === null || bid === undefined ? '' : ` · ${bid}`) : ` · ${won}/${bid}`);
       }
-      el.classList.toggle('turn', bidding ? ST.turn === q : !!(p && p.turn === q));
+      el.classList.toggle('turn', asBids ? ST.turn === q : !!(p && p.turn === q));
       el.classList.toggle('bidin', bid !== null && bid !== undefined);
     });
-    peekAt(bidding ? ST.turn : (p ? p.turn : null), r);
+    peekAt(asBids ? ST.turn : (p ? p.turn : null), r);
 
     // A card you may not play says so before you try: it is yours to see, so
     // it is dimmed and not hidden.
@@ -802,6 +810,11 @@ const Felt = (function () {
           : `${who.name} is not at the table. The game waits, or the table host bids for them.`);
       }
       return say(`Waiting for ${who.name} to bid.`);
+    }
+    if (Game.bidsHeld(ST)) {
+      const lead = Game.firstLeader(r, ST.seats.length);
+      return say(lead === me ? 'Bids are in. You lead the first trick.'
+        : `Bids are in. ${ST.seats[lead].name} leads the first trick.`);
     }
     if (!p) return say('Dealing…');
     if (sent) return say('…');
@@ -1139,6 +1152,29 @@ const Felt = (function () {
     return el;
   }
 
+  /* The bids, up to be read. What each seat bid is already under its own
+     pile, so this says the two things the table does not: what they come to
+     against the hand, and who leads. The beat is the room's -- there is no
+     clock here, only the state going still and moving on again. */
+  function bidsBeat(r) {
+    const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
+    const lead = Game.firstLeader(r, ST.seats.length);
+    const el = beatEl();
+    el.className = 'felt-beat bids';
+    el.textContent = '';
+    el.append(beatLine('b', 'Bids are in'),
+              beatLine('span', `bids total ${sum} · ${r.cards} trick${r.cards === 1 ? '' : 's'}`),
+              beatLine('i', lead === me ? 'You lead' : `${ST.seats[lead].name} leads`));
+    el.hidden = false;
+  }
+
+  function tellBids(r) {
+    const on = Game.bidsHeld(ST) && !still();
+    if (on === bidsUp) return;
+    bidsUp = on;
+    if (on) bidsBeat(r); else endBeat();
+  }
+
   /* A trick taken is a moment: it is named, and only when that has been read
      are the cards gathered to whoever took them. Without it a trick ends by
      the cards simply being somewhere else. */
@@ -1177,7 +1213,7 @@ const Felt = (function () {
     key = null;
     unpeek();
     pausing = false;
-    told = null; swept = null;
+    told = null; swept = null; bidsUp = false;
     endBeat();
     if (T || dealing) { Stage.close('deal'); T = null; dealing = false; }
     unmount();
@@ -1210,7 +1246,7 @@ const Felt = (function () {
       T = null;
       dealing = false;
       sent = null;
-      told = null; swept = null;
+      told = null; swept = null; bidsUp = false;
       if (!want) return;
       // A round has been played and scored on this table: its result is held up
       // for a moment, over the trick that ended it, before the next deal.
@@ -1242,6 +1278,7 @@ const Felt = (function () {
       return;
     }
     tellTrick(r);
+    tellBids(r);
     if (!T) { build(r); return; }
     reconcile(r);
     paint(r);
@@ -1256,6 +1293,7 @@ const Felt = (function () {
     const overlay = parts().overlay;
     overlay.hidden = false;
     tellTrick(r);
+    tellBids(r);
     if (!T) build(r);
     else { mount(); reconcile(r); paint(r); }
     if (onView) onView(true);

@@ -383,6 +383,13 @@ function renderTurn(r, me) {
   // first.
   const leader = Game.firstLeader(r, ST.seats.length);
   const leads = leader === me ? 'You lead' : `${ST.seats[leader].name} leads`;
+  /* The beat between the last bid and the first card, the same one the TV
+     screen holds. Nothing is tapped or played through it, on either deck. */
+  if (Game.bidsHeld(ST)) {
+    $('#turn-eyebrow').textContent = 'Bids are in';
+    $('#turn-text').textContent = `${leads} the first trick`;
+    return;
+  }
   $('#turn-eyebrow').textContent = 'Tricks won';
   if (Game.virtual(ST)) {                 // the hand is played below
     const p = ST.play;
@@ -409,7 +416,7 @@ function renderBidStrip(r) {
   // Once the cards are out the pills carry what each player has won against
   // what they bid. Only a virtual deck knows that as the hand is played; at a
   // table with real cards the tricks arrive all at once at the end.
-  const play = ST.phase === 'tricks' && ST.play ? ST.play : null;
+  const play = ST.phase === 'tricks' && ST.play && !Game.bidsHeld(ST) ? ST.play : null;
   $('#bid-title').textContent = play ? 'Tricks won' : 'Bids';
   Round.tally($('#bid-tally'), ST, r);      // the same line the TV screen has
 }

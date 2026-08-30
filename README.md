@@ -54,9 +54,15 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 6. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
 7. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
 8. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
-9. **Tricks.** The table counts them as they are taken: after each trick, anybody taps who took it, on their own phone or on the TV screen. Every screen follows — the pills show won against bid, the tally counts the tricks played, a line says who took it — and the last trick scores the round. A wrong tap is undone with **Take back the last trick**.
-10. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
-11. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
+9. **Bids are in.** The last bid does not start the hand. The bids stand for a
+   couple of seconds first, on every screen at once: the TV screen says *Bids
+   are in* with what they total and who leads, the phones say the same, and on
+   the felt it is said over the table. Nobody is on play through it, so no card
+   goes down and no trick is counted — a tap that early is refused and the
+   phone is told why. Then the hand opens by itself.
+10. **Tricks.** The table counts them as they are taken: after each trick, anybody taps who took it, on their own phone or on the TV screen. Every screen follows — the pills show won against bid, the tally counts the tricks played, a line says who took it — and the last trick scores the round. A wrong tap is undone with **Take back the last trick**.
+11. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
+12. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
 
 ### When a phone goes
 
@@ -223,14 +229,18 @@ The table can play without real cards. In the lobby set **Cards** to *Deal on th
 1. It shuffles a 52-card deck and deals the hand to each phone. A hand is a secret: the server sends each socket the table and **its own cards only**, and the TV screen is dealt none.
 2. It turns the next card for trump, before the bidding, so everybody bids knowing it. With nothing left in the deck — four players at thirteen cards — the hand is played at no trumps.
 3. Bidding runs as it always does, in order, with screw the dealer if it is on.
-4. The player left of the dealer leads. On a phone the round is played on the
+4. The bids stand to be read before a card is played, the same beat the whole
+   table holds. The felt says *Bids are in* over the middle, with what they
+   total and who leads, and every pile keeps saying what was bid until the
+   hand opens.
+5. The player left of the dealer leads. On a phone the round is played on the
    felt -- see **The table** below. Cards you may not play are dimmed: you must
    follow the suit led if you hold it. On the TV screen the trick lies in the
    middle, and a card back stands for the seat the table waits on -- peeking,
    the way their pile does on the deal and on the felt -- until their card
    lands on it.
-5. The highest trump takes the trick, or the highest card of the suit led. The trick stays on the table for a second and a half so everybody sees it, then the winner leads.
-6. When the last trick is played the round scores itself. Nobody types anything in.
+6. The highest trump takes the trick, or the highest card of the suit led. The trick stays on the table for a second and a half so everybody sees it, then the winner leads.
+7. When the last trick is played the round scores itself. Nobody types anything in.
 
 The rules are held on the server, so a phone cannot renege, play out of turn, or play a card it does not hold. What changes on a virtual table:
 

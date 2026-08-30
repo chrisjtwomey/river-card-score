@@ -308,6 +308,14 @@ function renderTurn(r, n) {
   }
 
   const leader = ST.seats[Game.firstLeader(r, n)].name;
+  /* The beat between the last bid and the first card. The bids are still up
+     on the strip as bids, so this says what the table is looking at and who
+     is about to lead; the flip to won/bid is the hand starting. */
+  if (Game.bidsHeld(ST)) {
+    $('#turn-title').textContent = 'Bids are in';
+    $('#turn-hint').textContent = `${leader} leads the first trick.`;
+    return;
+  }
   if (Game.virtual(ST)) {                          // the cards below do the counting
     const p = ST.play;
     $('#turn-title').textContent = 'Playing the hand';

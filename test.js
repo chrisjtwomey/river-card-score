@@ -7,17 +7,18 @@ const fs = require('fs');
 const os = require('os');
 // The finished games are written to a folder of their own, thrown away after.
 const DATA_DIR = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-games-'));
-/* The three pauses a game is built around, turned down for the suite.
+/* The four pauses a game is built around, turned down for the suite.
 
    A bot waits a moment before it answers so that a table of them can be read;
-   a trick sits on the table before it is gathered; and a bot bidding a round
-   waits for the phones to say the deal has been watched. Every one of them is
+   the bids stand to be read before the hand is played; a trick sits on the
+   table before it is gathered; and a bot bidding a round waits for the phones
+   to say the deal has been watched. Every one of them is
    seconds, on purpose, and none of them is what these checks are about -- the
    clients here are not phones and never say their table is up, so the last one
    would run its whole course every round. What the pauses actually are is
    checked in test-rules.js, and that each is really waited out is checked on a
    server of its own below. */
-const TUNED = { TRICK_HOLD: '120', BOT_DELAY: '120', BOT_DEAL_WAIT: '150' };
+const TUNED = { TRICK_HOLD: '120', BID_HOLD: '120', BOT_DELAY: '120', BOT_DEAL_WAIT: '150' };
 const srv = spawn('node', [path + '/server.js'],
   { env: { ...process.env, PORT, NO_TLS: '1', DATA_DIR, KEEP_GAMES: '3', CHAT_KEEP: '5', ...TUNED },
     stdio: ['ignore', 'pipe', 'pipe'] });
@@ -237,6 +238,15 @@ async function bidRound(P) {
   ok(host.state.play && host.state.play.won.join() === '0,0,0',
      'and the table opens the count with nobody having taken a trick');
 
+  /* ---- the bids stand before anything is counted ----
+     The beat is the room's, and a phone that taps over it hears why from the
+     table rather than from its own screen. */
+  P[1].send({ t: 'trick', p: 0 });
+  await okBy(() => /bids are still up/.test(P[1].last()),
+     'a trick counted while the bids stand is refused, and the phone is told why');
+  await okBy(() => host.state.play.held === false, 'the bids are read, and the count opens');
+  ok(host.state.play.won.join() === '0,0,0', 'with nothing counted over the moment');
+
   // ---- the tricks are counted by whoever saw one taken ----
   P[1].send({ t: 'trick', p: 0 });
   await okBy(() => host.state.play.won.join() === '1,0,0', 'a player counts a trick');
@@ -312,6 +322,7 @@ async function bidRound(P) {
     const r = seats[0].state.rounds[0];
     await bidRound(seats);
     await okBy(() => seats[0].state.phase === 'tricks', 'and the bidding runs without one');
+    await until(() => seats[0].state.play.held === false);   // the bids are read first
     seats[1 - r.dealer].send({ t: 'trick', p: 0 });   // whoever saw it
     await okBy(() => seats[0].state.idx === 1, 'and the round scores');
     seats[0].send({ t: 'undo' });
@@ -356,6 +367,9 @@ async function bidRound(P) {
     const r0 = P[0].state.rounds[0];
     await bidRound(P);
     await okBy(() => P[0].state.phase === 'tricks', 'the last bid starts the play');
+    ok(P[0].state.play.held === true && P[0].state.play.turn === null,
+       'the bids stand to be read, with nobody yet on play');
+    await okBy(() => P[0].state.play.held === false, 'and then the hand opens');
     ok(P[0].state.play.turn === (r0.dealer + 1) % 3, 'and the player left of the dealer leads');
 
     // ---- one card at a time ----
@@ -949,6 +963,19 @@ async function bidRound(P) {
     you.send({ t: 'dealt' });
     await okBy(() => bids()[1] !== null && bids()[1] !== undefined,
        'the phone says its table is up, and the bot bids  got ' + JSON.stringify(bids()));
+
+    /* This server keeps the real pauses, so it is also where the beat after
+       the last bid is shown to be waited out and not merely declared: the
+       table stands still on its own and starts the hand on its own. */
+    console.log('\n-- and the bids stand before the hand is played --');
+    you.send({ t: 'bid', v: 0 });
+    await okBy(() => you.state.phase === 'tricks', 'the last bid takes the round to tricks');
+    ok(you.state.play.held === true, 'and the bids stand to be read');
+    await wait(1200);           // long enough that a table not holding would have moved
+    ok(you.state.play.held === true, 'they are still standing a second later');
+    await until(() => you.state.play.held === false, 4000);
+    ok(you.state.play.held === false, 'and the table opens the hand by itself');
+    ok(you.state.play.turn !== null, 'with somebody on play  got ' + you.state.play.turn);
 
     h.ws.close(); you.ws.close();
     srv6.kill();

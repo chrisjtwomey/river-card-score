@@ -23,6 +23,12 @@ const Round = (function () {
   };
   const button = (cls, txt) => { const b = make('button', cls, txt); b.type = 'button'; return b; };
   // The part of `root` that matches `sel`; `build` makes it when the page did not.
+  /* The hand as it is being played, or null: before the cards are out, and
+     through the beat in which the bids stand to be read, there is nothing
+     played yet to draw. */
+  const playing = (ST) =>
+    (ST.phase === 'tricks' && ST.play && !Game.bidsHeld(ST)) ? ST.play : null;
+
   function part(root, sel, build) {
     let el = q(root, sel);
     if (!el) { root.appendChild(build()); el = q(root, sel); }
@@ -55,14 +61,16 @@ const Round = (function () {
   /* ---------- the bids, in bidding order ----------
      One pill a seat. While the bids come in it carries the bid; once the
      cards are out on a table that deals them it carries won/bid, and says
-     whether the bid was hit or passed. Returns what the strip showed, which
-     the caller keeps to see what landed on the next state. */
+     whether the bid was hit or passed. While the bids are held up to be read
+     they are still bids: the flip to won/bid is what says the hand has
+     started. Returns what the strip showed, which the caller keeps to see
+     what landed on the next state. */
   function bidStrip(strip, ST, r, view, last) {
     if (!strip) return null;
     strip.innerHTML = '';
     if (!r) return null;
     const n = ST.seats.length;
-    const play = ST.phase === 'tricks' && ST.play ? ST.play : null;
+    const play = playing(ST);
     Game.bidOrder(r.dealer, n).forEach((p) => {
       const bid = r.bids ? r.bids[p] : null;
       const won = play ? play.won[p] : null;
@@ -88,7 +96,7 @@ const Round = (function () {
   function tally(el, ST, r) {
     if (!el) return;
     if (!r) { el.textContent = ''; return; }
-    const play = ST.phase === 'tricks' && ST.play ? ST.play : null;
+    const play = playing(ST);
     const sum = (r.bids || []).reduce((a, v) => a + (v || 0), 0);
     el.textContent = play
       ? `${play.won.reduce((a, v) => a + v, 0)} of ${r.cards} tricks played`
@@ -105,7 +113,7 @@ const Round = (function () {
     if (!root) return;
     const p = ST.play;
     const may = view.me >= 0 || view.boss;
-    const on = may && !!r && ST.phase === 'tricks' && !Game.virtual(ST) && !!p && !!p.log;
+    const on = may && !!r && !!playing(ST) && !Game.virtual(ST) && !!p && !!p.log;
     root.hidden = !on;
     if (!on) return;
     const rows = part(root, '.count-rows', () => make('div', 'count-rows'));

@@ -722,6 +722,10 @@ body.felt-up .toaster{top:calc(clamp(48px, 8vh, 78px) + 84px + env(safe-area-ins
 .felt-beat.trick b{font-size:17px;line-height:1.15}
 .felt-beat.trick span{font-size:11px}
 @keyframes tookin{from{opacity:0;transform:translate(-50%,12px) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+/* The bids, held up to be read before the first card. Nothing is in the
+   middle of the table yet, so it takes the middle; who leads is a name and
+   not a score, so it is not set in the figures a round's result uses. */
+.felt-beat.bids i{font-size:17px;font-weight:800}
 @media (prefers-reduced-motion: reduce){.felt-beat{animation:none}}
 /* what you may do about it, along the bottom where a thumb is not */
 .felt-hint{

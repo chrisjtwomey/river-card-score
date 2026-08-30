@@ -225,6 +225,13 @@
   // The seat left of the dealer bids first and leads the first trick.
   const firstLeader = (round, n) => (round.dealer + 1) % n;
 
+  /* The bids are in and the table is reading them: the round is on tricks,
+     but nobody is on play yet. Both decks hold the same way, so a screen asks
+     this rather than working it out from a turn that is null for two
+     different reasons -- a trick being read is the other one. */
+  const bidsHeld = (state) =>
+    !!state && state.phase === 'tricks' && !!state.play && !!state.play.held;
+
   // The scores with the accolades paid in, once they are.
   function totalsWithBonus(cfg, rounds, n, bonus) {
     return totals(cfg, rounds, n).map((v, i) => v + ((bonus && bonus[i]) || 0));
@@ -232,7 +239,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, onTurn, tablePlays, tablePlaysOn, awaySeat, firstLeader, totalsWithBonus,
+                virtual, onTurn, tablePlays, tablePlaysOn, awaySeat, firstLeader, bidsHeld, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };
 

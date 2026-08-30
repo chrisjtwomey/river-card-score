@@ -188,6 +188,23 @@ function broadcast(room) {
   sayBusy();
   // Whoever is on play now, this is where a bot finds out it is them.
   Bots.nudge(room);
+  // And if the bids have just gone up to be read, this is where the beat
+  // before the first card is started.
+  holdBids(room);
+}
+
+/* The bids are in and the table is reading them. The hold itself is the
+   room's; ending it is here, beside the trick hold, and like that one it
+   re-checks the table it was armed for: a bum deal or a seat going can move
+   the game on while it runs. */
+function holdBids(room) {
+  if (room.bidTimer || !G.bidsHeld(room)) return;
+  const tag = room.play, at = room.idx;
+  room.bidTimer = setTimeout(() => {
+    room.bidTimer = null;
+    if (room.play !== tag || room.idx !== at) return;      // the game moved on
+    if (Room.openPlay(room)) broadcast(room);
+  }, Room.BID_HOLD);
 }
 
 /* The tables this machine had when it was last up. A phone that hosts a game
@@ -207,6 +224,8 @@ function restore() {
     if (G.virtual(room) && room.phase === 'tricks' && room.play && room.play.turn === null && room.play.last) {
       Deck.settleTrick(room, room.play.last.winner);
     }
+    // The same for bids that were up to be read: they have been read by now.
+    Room.openPlay(room);
     rooms.set(room.code, room);
   });
 }

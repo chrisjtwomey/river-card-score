@@ -120,8 +120,13 @@ function table(o) {
     // The moment a finished trick is held up for has passed.
     settle() { while (held.length) Room.Deck.settleTrick(room, held.shift()); return t; },
     holding() { return held.length > 0; },
-    // Bid the whole round through, in turn, never the forbidden number.
-    bidAll(v) {
+    // The moment the bids are held up for has passed, and the hand may be
+    // played. server.js does this on a timer; here it is done by hand.
+    open() { Room.openPlay(room); return t; },
+    /* Bid the whole round through, in turn, never the forbidden number. The
+       last bid leaves the bids standing to be read, as at a real table; pass
+       `hold` to stop there. Every other check wants a playable hand. */
+    bidAll(v, hold) {
       for (let g = 0; g < room.seats.length; g++) {
         const p = G.onTurn(room);
         if (p === null) break;
@@ -129,6 +134,7 @@ function table(o) {
         const want = typeof v === 'number' ? v : 1;
         say(p, { t: 'bid', v: want === no ? (want === 0 ? 1 : want - 1) : want });
       }
+      if (!hold) Room.openPlay(room);
       return t;
     },
   };
@@ -488,6 +494,55 @@ part('one step back');
 }
 
 
+part('the bids stand for a moment before the hand is played');
+
+/* The last bid landing and the first card becoming playable used to be one
+   moment. Now the round goes to tricks with nobody on play: the bids are up
+   to be read, and only then does the hand open. Both decks hold the same
+   way, so every screen has the same still table to say it on. */
+{
+  const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual' });
+  t.bidAll(1, 'hold');
+  ok(t.room.phase === 'tricks', 'the last bid takes the round to tricks');
+  ok(G.bidsHeld(t.room), 'and the bids stand there to be read');
+  ok(t.room.play.turn === null, 'with nobody on play');
+  ok(G.onTurn(t.room) === null, 'so the table is waiting on no one');
+
+  const lead = G.firstLeader(t.round(), 3);
+  ok(t.say(lead, { t: 'play', card: t.room.play.hands[lead][0] }) === 'not your turn',
+     'no card goes down over the moment');
+
+  t.open();
+  ok(!G.bidsHeld(t.room), 'the moment passes');
+  ok(t.room.play.turn === lead, 'and the player left of the dealer leads');
+  ok(t.say(lead, { t: 'play', card: t.room.play.hands[lead][0] }) === null, 'now the card plays');
+  ok(t.Room.openPlay(t.room) === false, 'a table already playing has nothing to open');
+}
+
+{
+  // With real cards nobody holds a hand, so the hold is on the counting.
+  const t = started(['Ann', 'Bob', 'Cal'], { deck: 'physical' });
+  t.bidAll(1, 'hold');
+  ok(G.bidsHeld(t.room), 'a table with real cards holds its bids the same way');
+  ok(t.say(0, { t: 'trick', p: 0 }) === 'the bids are still up', 'and counts no trick over the moment');
+  t.open();
+  ok(!G.bidsHeld(t.room), 'the moment passes here too');
+  ok(t.say(0, { t: 'trick', p: 0 }) === null, 'and then the taps count');
+}
+
+{
+  // A bot is on lead. Nothing is asked of it while the bids are up, because
+  // the table says nobody is on turn.
+  const t = table().sit(['Ann']).rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+  t.say('host', { t: 'addbot' });
+  t.say('host', { t: 'addbot' });
+  t.Room.startGame(t.room);
+  t.bidAll(1, 'hold');
+  ok(G.awaySeat(t.room) === -1, 'no seat is being waited on while the bids stand');
+  ok(t.room.play.hands.every((h) => h.length === t.round().cards),
+     'and every hand is still whole, bots included');
+}
+
 part('the rules of a trick, with the cards stacked on purpose');
 
 /* The lead holds hearts. The next player holds a heart and two diamonds, so
@@ -583,7 +638,11 @@ part('the hands are the table\'s secret');
   ok(seen.turn === G.onTurn(t.room), 'and the seat on turn, while the bidding is on');
   const all = t.room.play.hands.flat().concat(seen.play.upcard);
   ok(new Set(all).size === all.length, 'no card is dealt twice');
-  t.bidAll(1);
+  t.bidAll(1, 'hold');
+  ok(t.Room.publicState(t.room).play.held === true,
+     'a screen is told the bids are standing to be read');
+  t.open();
+  ok(t.Room.publicState(t.room).play.held === false, 'and told when the moment has passed');
   ok(t.Room.publicState(t.room).turn === null,
      'once the play starts the bid turn is nobody: the seat on play is in the play');
 }
@@ -857,11 +916,12 @@ part('table talk');
 
 part('the pauses a game is built around');
 
-/* Three waits are what makes a game readable rather than a flicker: a bot
-   thinks before it answers, a finished trick lies on the table before it is
-   gathered, and a bot bidding a round waits until the phones say the deal has
-   been watched. Each can be turned down for a test, and each has a floor, so
-   turning it down cannot turn it off. */
+/* Four waits are what makes a game readable rather than a flicker: a bot
+   thinks before it answers, the bids stand to be read before the hand is
+   played, a finished trick lies on the table before it is gathered, and a bot
+   bidding a round waits until the phones say the deal has been watched. Each
+   can be turned down for a test, and the bots' two have a floor under them, so
+   turning those down cannot turn them off. */
 {
   const bots = (env) => {
     const was = { BOT_DELAY: process.env.BOT_DELAY, BOT_DEAL_WAIT: process.env.BOT_DEAL_WAIT };
@@ -888,6 +948,16 @@ part('the pauses a game is built around');
   ok(bots({ BOT_DEAL_WAIT: '150' }).DEAL_WAIT === 150, 'and that wait can be turned down too');
   ok(deck({}).TRICK_HOLD === 2300, 'a finished trick lies on the table for a moment  got ' + deck({}).TRICK_HOLD);
   ok(deck({ TRICK_HOLD: '120' }).TRICK_HOLD === 120, 'and that moment can be turned down');
+  const rm = (env) => {
+    const was = process.env.BID_HOLD;
+    if (env.BID_HOLD === undefined) delete process.env.BID_HOLD; else process.env.BID_HOLD = env.BID_HOLD;
+    delete require.cache[require.resolve('./lib/room.js')];
+    const R = require('./lib/room.js')({ G, A, token, saveGame: () => {}, DEV: false });
+    if (was === undefined) delete process.env.BID_HOLD; else process.env.BID_HOLD = was;
+    return R;
+  };
+  ok(rm({}).BID_HOLD === 2300, 'the bids stand for a moment before the hand is played  got ' + rm({}).BID_HOLD);
+  ok(rm({ BID_HOLD: '120' }).BID_HOLD === 120, 'and that moment can be turned down');
   // The felt names who took the trick and gathers it in over TOOK_HOLD; a lead
   // landing while that is still on screen would cut it short.
   const felt = require('fs').readFileSync('./public/felt.js', 'utf8');

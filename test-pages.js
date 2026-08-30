@@ -174,7 +174,8 @@ function stateFor(n, cards, me, o) {
     seats: Array.from({ length: n }, (_, i) => ({ id: 's' + i, name: 'PLR'[0] + (i + 1), online: true, av: null })),
     rounds: [r], idx: 0, turn: 'turn' in o ? o.turn : 1,
     totals: Array(n).fill(0), bonus: Array(n).fill(0),
-    play: { turn: 'pturn' in o ? o.pturn : null, trick: o.trick || [], won: o.won || Array(n).fill(0),
+    play: { turn: 'pturn' in o ? o.pturn : null, held: !!o.held,
+            trick: o.trick || [], won: o.won || Array(n).fill(0),
             last: o.last || null, upcard: up, counts: o.counts || hands.map((h) => h.length) },
     hand: o.hand || hands[me],
   } };
@@ -1128,6 +1129,45 @@ function tookTrick(motion) {
   ok(/^You won/.test(b.querySelectorAll('b')[0].textContent), 'and named as yours');
   ok(!b.querySelectorAll('i').length,
      'and no tally: every seat carries its own under its pile');
+}
+{
+  /* The beat after the last bid. The bids are what the table is looking at
+     through it, so the piles keep saying what was bid and nothing is
+     playable; the felt reads it off the state, and holds no clock of its own. */
+  const n = 4, cards = 5, me = 1;
+  const made = stateFor(n, cards, me, { phase: 'bid', turn: null, bids: [1, 2, 1, 1] });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const reading = JSON.parse(JSON.stringify(made.ST));
+  reading.phase = 'tricks';
+  reading.play.turn = null;
+  reading.play.held = true;
+  L.Felt.sync(reading, me, { send: () => {} });
+  const overlay = L.dom.document.getElementById('deal');
+  const b = overlay.querySelector('.felt-beat');
+  ok(b && !b.hidden && b.classList.contains('bids'), 'the felt names the moment the bids are in');
+  ok(b.querySelectorAll('b')[0].textContent === 'Bids are in',
+     'and says what it is  got ' + b.querySelectorAll('b')[0].textContent);
+  ok(/bids total 5 · 5 tricks/.test(b.querySelectorAll('span')[0].textContent),
+     'with what they come to against the hand  got ' + b.querySelectorAll('span')[0].textContent);
+  ok(b.querySelectorAll('i')[0].textContent === 'You lead',
+     'and who leads  got ' + b.querySelectorAll('i')[0].textContent);
+  ok(/^Bids are in\. You lead the first trick\.$/.test(overlay.querySelector('.felt-hint').textContent),
+     'the line under the table says the same  got ' + overlay.querySelector('.felt-hint').textContent);
+  const names = overlay.querySelectorAll('.dname');
+  ok(names[me].textContent === 'Your hand · 2',
+     'your own bid moves to your label, where the rail was  got ' + names[me].textContent);
+  ok(!/\//.test(names[(me + 1) % n].textContent),
+     'and no seat is showing tricks won against a hand nobody has played  got ' + names[(me + 1) % n].textContent);
+  ok(overlay.querySelectorAll('.dcard.dud').length === 0, 'no card is refused, because none may be played yet');
+
+  const open = JSON.parse(JSON.stringify(reading));
+  open.play.held = false;
+  open.play.turn = me;
+  L.Felt.sync(open, me, { send: () => {} });
+  ok(overlay.querySelector('.felt-beat').hidden === true, 'the moment passes when the table says so');
+  ok(/^You · 0\/2$/.test(overlay.querySelectorAll('.dname')[me].textContent),
+     'and the labels turn to won against bid  got ' + overlay.querySelectorAll('.dname')[me].textContent);
 }
 {
   const t = tookTrick('off');
@@ -2318,6 +2358,50 @@ part('bidding for a seat that is not there, and leaving');
     P.feed(playing); H.feed(playing);
     ok(P.pick('#bid-tally').textContent === '1 of 2 tricks played' && H.pick('#turn-tally').textContent === '1 of 2 tricks played',
        'and once the cards are out both count the tricks played  got ' + P.pick('#bid-tally').textContent + ' / ' + H.pick('#turn-tally').textContent);
+  }
+
+  {   /* the beat after the last bid, on the screens above the felt
+         The hold is the table's, so every screen draws it off the one state
+         and none of them keeps a clock. Real cards here: it is the deck with
+         no felt to say it on, and the one where a tap could land early. */
+    const held = () => {
+      const st = table({ away: false, phase: 'tricks' });
+      st.cfg.deck = 'physical'; st.turn = null;
+      st.rounds[0].bids = [1, 1, 0];
+      st.play = { turn: null, held: true, trick: [], won: [0, 0, 0], last: null,
+                  upcard: null, counts: [2, 2, 2], log: [] };
+      return st;
+    };
+    const opened = () => { const st = held(); st.play.held = false; return st; };
+
+    const H = hostPage('host');
+    H.feed(held());
+    ok(H.pick('#turn-title').textContent === 'Bids are in',
+       'the TV screen names the moment  got ' + H.pick('#turn-title').textContent);
+    ok(/^Ben leads the first trick\.$/.test(H.pick('#turn-hint').textContent),
+       'and says who leads  got ' + H.pick('#turn-hint').textContent);
+    ok(H.pick('#turn-tally').textContent === 'Bids total 2 · 2 tricks',
+       'the tally is still the bids, not a hand nobody has played  got ' + H.pick('#turn-tally').textContent);
+    ok(H.pick('#host-count').hidden === true, 'and no trick can be counted over it');
+    const pillOf = (S) => S.pick('#bidstrip').querySelector('.bidpill').querySelector('.v').textContent;
+    ok(pillOf(H) === '1', 'the pills carry bids while the bids are what is being read  got ' + pillOf(H));
+    H.feed(opened());
+    ok(H.pick('#turn-title').textContent === 'Tricks won', 'then the hand starts');
+    ok(H.pick('#host-count').hidden === false, 'the count opens');
+    ok(pillOf(H) === '0/1', 'and the pills turn to won against bid  got ' + pillOf(H));
+
+    const P = playPage(seed, '?c=TEST');
+    P.feed(held());
+    ok(P.pick('#turn-eyebrow').textContent === 'Bids are in',
+       'the phone names it in the same words  got ' + P.pick('#turn-eyebrow').textContent);
+    ok(/leads the first trick$/.test(P.pick('#turn-text').textContent),
+       'and says who leads  got ' + P.pick('#turn-text').textContent);
+    ok(P.pick('#bid-title').textContent === 'Bids', 'its strip is still the bids  got ' + P.pick('#bid-title').textContent);
+    ok(P.pick('#bid-tally').textContent === 'Bids total 2 · 2 tricks',
+       'tallied as bids  got ' + P.pick('#bid-tally').textContent);
+    P.feed(opened());
+    ok(P.pick('#turn-eyebrow').textContent === 'Tricks won' && P.pick('#bid-title').textContent === 'Tricks won',
+       'and both turn over together when the hand opens');
   }
 
   {   // what the round paid is said on the phone and on the TV screen
