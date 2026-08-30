@@ -1114,8 +1114,17 @@ function scored(motion) {
   const off = where().filter((v, i) => v !== before[i]).length;
   ok(off === 1, 'they come off the seats one at a time  got ' + off + ' moving at once');
   ok(tricks().filter(middle).length === 0,
-     'and the first one is only lifted onto the ring, not put away  got '
+     'and the first one is only lifted, not put away  got '
      + tricks().filter(middle).length);
+  /* Lifted where its own seat sits, not onto the ring the trick was played
+     on: that ring is tucked in around the middle, and a card starting there
+     has crossed the table before anybody has seen it leave the pile. */
+  const R = L.Stage.ring(n, me, 412, 860);
+  const lifted = stack[where().findIndex((v, i) => v !== before[i])];
+  const at1 = spotOf(lifted), seat0 = R.at(next.rounds[1].dealer);
+  ok(Math.abs(at1.x - seat0.x) < 1 && Math.abs(at1.y - seat0.y) < 1,
+     'and it stands up over the seat it was won at  got ' + JSON.stringify(at1)
+     + ' against ' + JSON.stringify(seat0));
   const top = Number(hero().style.zIndex || 0);
   ok(stack.every((el) => Number(el.style.zIndex || 0) < top),
      'the turned card stands over them all the way in  got ' + top);

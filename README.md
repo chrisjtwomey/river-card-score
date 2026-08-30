@@ -315,10 +315,12 @@ that band.
   winner leads, so a lead never cuts the news short (`TRICK_HOLD`).
 - **The round is put away, not replaced.** When the last trick is scored,
   what the round paid stands for two seconds; then the tricks come in one at a
-  time -- face up, so the hand that was played can be seen going away -- each
-  coming off the seat that took it and going round the ring the other way from
-  the way it was gathered: anticlockwise, starting with whoever deals next and
-  round the table from there. They square up in the middle, under the card the
+  time. Each stands up over the seat that took it -- face up, and at the size
+  of a card in play, so it is seen leaving the little pile it was tucked in --
+  and then goes round the table the other way from the way it was gathered:
+  anticlockwise, starting with whoever deals next and round from there. The
+  names stay until the cards are well on their way, so there is something for
+  them to have come from. They square up in the middle, under the card the
   deck turned, which stands over them the whole way. Only when the last one is
   in does that card turn face down on top of them, and what is left is a deck.
   A hand of thirteen tricks shortens the wait between cards rather than making

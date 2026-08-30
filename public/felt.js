@@ -223,6 +223,16 @@ const Felt = (function () {
               (s.x / (g.R.rx || 1)) * 12, face || 0, Stage.seatScale(g.n));
   }
 
+  /* A card lifted off a seat's won pile and stood up where that seat sits.
+     The pile itself is drawn small and tucked in beside the seat, so a card
+     that goes straight from there to the middle has left before anybody saw
+     it go: it comes up to the size of a card in play, over its own seat,
+     and travels from there. */
+  function overSeat(g, q, face) {
+    const s = g.R.at(q);
+    return tf(s.x, s.y, (s.x / (g.R.rx || 1)) * 10, face || 0, Stage.seatScale(g.n));
+  }
+
   /* The tricks a seat has won, in a little stack beside its own cards. A real
      table keeps them there, and they say at a glance who is doing well.
 
@@ -1277,12 +1287,14 @@ const Felt = (function () {
     }));
     legs.sort((a, b) => a.steps - b.steps);
 
-    // The names and the outlines under the last hand belong to a round that is
-    // over; they go while the cards are still moving, not after.
+    /* The names and the outlines under the last hand belong to a round that is
+       over, so they go -- but not at the moment the first card lifts. A seat
+       whose name goes at the same time as its cards leaves nothing for the
+       cards to have come from. */
     const fade = (el) => {
       if (!el || !el.animate) return;
       el.animate([{ opacity: 1 }, { opacity: 0 }],
-        { duration: 260, easing: 'ease-out', fill: 'forwards' });
+        { duration: 320, delay: Math.round(UNWIND * 0.45), easing: 'ease-out', fill: 'forwards' });
     };
     (last.labels || []).forEach(fade);
     (last.places || []).forEach(fade);
@@ -1300,8 +1312,11 @@ const Felt = (function () {
     legs.forEach(({ el, from, steps, face }, i) => {
       el.style.zIndex = String(3 + i);
       el.classList.remove('slow');
-      const stops = [trickAt(g, from, face)];
-      for (let sN = 1; sN <= steps; sN++) stops.push(trickAt(g, (((from - sN) % n) + n) % n, face));
+      // Out where the seats are, not on the ring the trick was played on:
+      // that ring is tucked in around the middle, and a card that starts there
+      // has already crossed the table before it is seen to move.
+      const stops = [overSeat(g, from, face)];
+      for (let sN = 1; sN <= steps; sN++) stops.push(overSeat(g, (((from - sN) % n) + n) % n, face));
       stops.push(deckAt(g, i, face === 180));     // and in, under the turned card
       stops.forEach((to, sN) => setTimeout(() => {
         if (key !== k || !el.parentNode) return;
