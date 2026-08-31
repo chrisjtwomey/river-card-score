@@ -1057,7 +1057,7 @@ Then open **`/dev.html`**. It asks what you are here for before it draws anythin
 
 - **A new table** — stand-ins in every seat, ready to play, in the number the box says. A dev server's alone; on any other the door says so rather than failing when pressed.
 - **A table already in play** — on a dev server, every table this server is running, as a list to press. On any other, its code and its host key, which the TV screen showing it has under ⚙.
-- **A game watched again** — the game a table is playing now, and every game on file. This one needs no table and no key.
+- **Replays** — the game a table is playing now, and every game on file: each one a row saying who won and with what, who was at it, and when it was played. This one needs no table and no key.
 
 A code in the address is that question already answered: `dev.html#c=CODE&t=TOKEN` opens straight onto that table, which is what **Dev controls** under ⚙ on the TV screen writes. `dev.html#g=ID` opens straight onto a game watched again, and the page writes back whichever it lands on, so a reload comes to the same place. **⌂** in the band puts the question back at any time.
 
@@ -1132,7 +1132,7 @@ What a point is put back through is the game's own verbs: a bid through the same
 
 Moving about in it is that same thing from the nearest picture: back to the round, then forward one point at a time. That is the only honest way, because the pictures are the only states the trail actually holds.
 
-On the dev page it is one of the three doors — **A game watched again**, on the card the page opens with, listing the game a table is playing now and every game on file. A game's trail is kept beside its scorecard, so a game whose table went hours ago is watched exactly like one still in play.
+On the dev page it is one of the three doors — **Replays**, on the card the page opens with, listing the game a table is playing now and every game on file. A game's trail is kept beside its scorecard, so a game whose table went hours ago is watched exactly like one still in play.
 
 Pick one and the copy is made, and the page becomes the same page with the verbs of a replay. The band keeps its rows and its places: the **Games** on file stand where the tables stand, the rounds of that game stand in the scorecard's own strip, and the transport — **◀ ▶ Play ▶** — stands where Pause and Step stand. The one-shots go, because a replay invents nothing; the **Players** and **State** panels stay and only read, because what happened is what the trail says.
 

@@ -586,29 +586,45 @@ function renderGames(box, info) {
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.innerHTML = '';
-  const pick = (label, why, on, go) => {
+  const row = (code, said, when, who, why, on, go) => {
     const b = document.createElement('div');
-    b.className = 'btn trow' + (on ? ' on' : '');
+    b.className = 'btn grow' + (on ? ' on' : '');
     b.title = why;
+    const top = document.createElement('div');
+    top.className = 'gtop';
     const c = document.createElement('span');
-    c.className = 'tcode';
-    c.textContent = label;
-    const w = document.createElement('span');
-    w.className = 'twhat';
-    w.textContent = why;
-    b.append(c, w);
+    c.className = 'gcode';
+    c.textContent = code;
+    const s = document.createElement('span');
+    s.className = 'gwon';
+    s.textContent = said;
+    top.append(c, s);
+    if (when) {
+      const t = document.createElement('span');
+      t.className = 'gwhen';
+      t.textContent = when;
+      top.appendChild(t);
+    }
+    b.appendChild(top);
+    if (who) {
+      const p = document.createElement('div');
+      p.className = 'gwho';
+      p.textContent = who;
+      b.appendChild(p);
+    }
     b.addEventListener('click', go);
     box.appendChild(b);
   };
   if (info.here) {
-    pick(info.here, 'the game this table is playing now',
-         !!info.code && !info.game, () => replayAsk({ do: 'open' }));
+    row(info.here, 'playing now', '', '', 'The game this table is playing now',
+        !!info.code && !info.game, () => replayAsk({ do: 'open' }));
   }
   games.forEach((g) => {
-    const when = new Date(g.at);
-    pick(`${g.code} · ${when.getDate()}/${when.getMonth() + 1}`,
-         (g.names || []).join(', '),
-         info.game === g.id, () => replayAsk({ do: 'open', game: g.id }));
+    const names = g.names || [];
+    row(g.code, wonBy(g), gameWhen(g.at),
+        `${names.length} players · ${names.join(', ')}`,
+        'Watch this game again', info.game === g.id,
+        () => replayAsk({ do: 'open', game: g.id }));
   });
   if (!info.here && !games.length) {
     const p = document.createElement('p');
@@ -616,6 +632,23 @@ function renderGames(box, info) {
     p.textContent = 'No game has been written down yet.';
     box.appendChild(p);
   }
+}
+
+// Who took it, and with what. A draw is named as one, the way the finish does.
+function wonBy(g) {
+  const names = g.names || [], won = g.winners || [];
+  if (!won.length) return '';
+  const who = won.map((i) => names[i] || 'somebody').join(' & ');
+  const score = g.totals ? g.totals[won[0]] : null;
+  return `🏆 ${who}` + (score === null || score === undefined ? '' : ` · ${score}`);
+}
+
+// When it was played, short enough to sit at the end of a row.
+function gameWhen(at) {
+  const d = new Date(Number(at) || 0);
+  if (!at || isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) +
+    ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 // The band, on a game that has already happened.
@@ -736,8 +769,8 @@ function renderWays() {
 
   // A game watched again. It reads what is already written down, so it needs
   // no table and no key: the copy is its own table, and goes when this page does.
-  const watch = door('A game watched again',
-    'Put back from what was written down, on a copy of its own. The game it is a copy of is not touched.');
+  const watch = door('Replays',
+    'A game put back from what was written down, on a copy of its own. The game it is a copy of is not touched, and this needs no table and no key.');
   const list = document.createElement('div');
   list.className = 'waylist';
   watch.appendChild(list);

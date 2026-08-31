@@ -3380,7 +3380,8 @@ part('the dev controls, on each kind of server');
         t: 'ways', srv, tables: srv ? [{ code: 'WXYZ', phase: 'bid', round: 2, rounds: 7,
                                          seats: ['a', 'b', 'c', 'd'], stand: true }] : [],
         here: null,
-        games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000, names: ['Cal', 'Dot'] }],
+        games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000,
+                  names: ['Cal', 'Dot'], totals: [31, 47], winners: [1] }],
       }) });
       return P;
     };
@@ -3399,8 +3400,14 @@ part('the dev controls, on each kind of server');
          + doors[1].querySelectorAll('input').length);
       ok(doors[1].querySelectorAll('.waylist').length === 0,
          'and a normal server hands over no list of its tables');
-      const games = doors[2].querySelectorAll('.trow');
+      const games = doors[2].querySelectorAll('.grow');
       ok(games.length === 1, 'a game on file needs neither  got ' + games.length);
+      ok(games[0].querySelector('.gwon').textContent === '🏆 Dot · 47',
+         'a row says who took it and with what  got '
+         + games[0].querySelector('.gwon').textContent);
+      ok(games[0].querySelector('.gwho').textContent === '2 players · Cal, Dot',
+         'and who was at it  got ' + games[0].querySelector('.gwho').textContent);
+      ok(!!games[0].querySelector('.gwhen').textContent, 'and when it was played');
 
       P.socks[0].sent.length = 0;
       games[0].fire('click');

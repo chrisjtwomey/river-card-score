@@ -34,21 +34,40 @@
     cursor:pointer;padding:0 1px;border-radius:5px}
   .trow .tend:hover{color:var(--red)}
 
-  /* The way in: three doors, before there is anything to control. */
-  .ways{display:flex;flex-direction:column;gap:0;padding:0;max-width:620px;margin:6vh auto 0}
-  .way{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
-  .way:first-child{border-top:0}
-  .way h2{margin:0;font-size:15px;font-weight:800;letter-spacing:.01em}
-  .way p{margin:0;font-size:12px;color:var(--ink-dim)}
-  .way .line{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .way .line input{font:inherit;padding:7px 8px;border-radius:8px;border:1px solid var(--line);
+  /* The way in: three doors, before there is anything to control. Roomy on
+     purpose -- this is where a choice is made, not where a game is driven. */
+  .ways{display:flex;flex-direction:column;gap:0;padding:0;max-width:860px;margin:5vh auto 0}
+  .way{display:flex;flex-direction:column;gap:12px;padding:22px 26px}
+  .way + .way{border-top:1px solid var(--line)}
+  .way h2{margin:0;font-size:18px;font-weight:800;letter-spacing:.01em}
+  .way p{margin:0;font-size:13px;line-height:1.5;color:var(--ink-dim);max-width:62ch}
+  .way .line{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .way .line input{font:inherit;padding:8px 9px;border-radius:8px;border:1px solid var(--line);
     background:var(--bg);color:var(--ink)}
-  .way .line input.count{width:52px;text-align:center}
-  .way .line input.code{width:78px;text-transform:uppercase;letter-spacing:.12em;font-weight:700}
-  .way .line input.tok{width:120px}
+  .way .line input.count{width:56px;text-align:center}
+  .way .line input.code{width:84px;text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+  .way .line input.tok{width:150px}
   .way.shut h2,.way.shut p{opacity:.55}
-  .waylist{display:flex;flex-direction:column;gap:5px;max-height:190px;overflow-y:auto}
-  .waylist .trow{width:100%;flex:none}
+  .waylist{display:flex;flex-direction:column;gap:7px;max-height:300px;overflow-y:auto}
+  /* A row in one of those lists. The band's strip is tuned for hopping between
+     things; here there is room, so each row says what it is. */
+  .waylist .trow{width:100%;flex:none;padding:9px 12px;font-size:13px;gap:10px}
+  .waylist .trow .tcode{font-size:14px}
+
+  /* A game on file: what it was, in two lines. The same row goes in the band's
+     strip while one is being watched, where the second line is trimmed off. */
+  .grow{display:flex;flex-direction:column;align-items:stretch;gap:3px;flex:none;
+    padding:9px 12px;text-align:left;font-size:13px;line-height:1.35}
+  .waylist .grow{width:100%}
+  .grow .gtop{display:flex;align-items:baseline;gap:10px;min-width:0}
+  .grow .gcode{font-weight:800;letter-spacing:.08em;color:var(--gold);flex:none}
+  .grow .gwon{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .grow .gwhen{margin-left:auto;font-size:11px;color:var(--ink-dim);flex:none}
+  .grow .gwho{font-size:11px;color:var(--ink-dim);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .grow.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+  #gamelist .grow{padding:5px 9px;font-size:12px}
+  #gamelist .grow .gwho,#gamelist .grow .gwhen{display:none}
 
   /* The scrubber: the whole card as cells. Click a round and the game is
      played up to it; the ends are the lobby and the finish. */
