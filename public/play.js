@@ -121,7 +121,8 @@ function renderAttention(r, me) {
   Round.bidFor($('#bidfor-pad'), ST, r, v);
   Round.playout($('#playout-row'), ST, v);
   Round.playFor($('#playfor-row'), ST, v);
-  const rows = ['#votebox', '#bidfor-pad', '#playfor-row', '#playout-row'];
+  Round.stalled($('#stalled-row'), ST, v);
+  const rows = ['#votebox', '#bidfor-pad', '#playfor-row', '#playout-row', '#stalled-row'];
   $('#attn-panel').hidden = rows.every((sel) => $(sel).hidden);
 }
 

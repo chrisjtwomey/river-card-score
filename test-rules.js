@@ -1054,6 +1054,46 @@ const later = (mins) => Date.now() + mins * 60e3;
   const out = t.Room.sweep(t.room, later(60), MS);
   ok(!out.gone.length && !t.room.seats[1].left, 'a quiet seat at a table with real cards keeps its hand');
   ok(t.room.seats.length === 3, 'and its place');
+  ok(out.changed && t.room.stalled && t.room.stalled.id === t.room.seats[1].id,
+     'the table stops on that seat instead, and says which');
+  ok(t.room.stalled.ms === MS.idle, 'and how long it waited, so every screen can say so');
+  ok(/only the table host/.test(t.say(1, { t: 'carryon' }) || ''), 'no player starts the table again');
+  ok(t.say('host', { t: 'carryon' }) === null, 'whoever runs the table does');
+  ok(!t.room.stalled, 'and the table is not stopped any more');
+  t.Room.sweep(t.room, later(120), MS);
+  ok(!t.room.stalled, 'nor stopped again on the seat the host has looked at');
+  ok(!t.room.seats[1].left && t.room.seats.length === 3, 'and still nothing is taken from it');
+}
+
+/* Once the bids are in and the tricks are being counted, a table with real
+   cards waits on nobody: the only clock running is on a seat with no window on
+   it. These two are that seat, and nothing else. */
+{
+  // the seat comes back by itself, and the table takes its own notice down
+  const t = started(['Ann', 'Bob', 'Cal']);
+  t.bidAll(1);
+  t.room.seats[2].online = false;
+  t.Room.sweep(t.room, later(6), MS);
+  ok(t.room.stalled && t.room.stalled.id === t.room.seats[2].id, 'the table is stopped on the seat that went');
+  t.room.seats[2].online = true;
+  ok(t.Room.sweep(t.room, later(7), MS).changed, 'the player comes back');
+  ok(!t.room.stalled, 'and the table says nothing about it any more');
+  ok(/not stopped on anybody/.test(t.say('host', { t: 'carryon' }) || ''),
+     'there is nothing left to carry on from');
+}
+
+{
+  // and one that comes back and goes again is a fresh question for the host
+  const t = started(['Ann', 'Bob', 'Cal']);
+  t.bidAll(1);
+  t.room.seats[2].online = false;
+  t.Room.sweep(t.room, later(6), MS);
+  t.say('host', { t: 'carryon' });
+  t.room.seats[2].online = true;
+  t.Room.sweep(t.room, later(7), MS);
+  t.room.seats[2].online = false;
+  ok(t.Room.sweep(t.room, later(13), MS).changed && !!t.room.stalled,
+     'a seat somebody came back to and left again stops the table afresh');
 }
 
 {

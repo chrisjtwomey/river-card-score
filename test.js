@@ -1780,6 +1780,20 @@ async function bidRound(P) {
       h.ws.close(); P[0].ws.close(); P[1].ws.close();
     }
 
+    // with real cards nothing can be taken from a seat, so the table stops
+    {
+      const { h, P } = await tableOf(['Eve', 'Fay'], null, url);
+      h.send({ t: 'start' });
+      await until(() => h.state.phase === 'bid');
+      P[1].ws.close(); await P[1].gone;
+      await okBy(() => !!h.state.stalled, 'with real cards the table stops on the seat that went');
+      ok(h.state.stalled.id === h.state.seats[1].id, 'and every screen is told which seat');
+      ok(!h.state.seats[1].left && h.state.seats.length === 2, 'nothing is taken from it');
+      h.send({ t: 'carryon' });
+      await okBy(() => !h.state.stalled, 'whoever runs the table carries on');
+      h.ws.close(); P[0].ws.close();
+    }
+
     // and a phone that does answer keeps its seat, however long it sits there
     {
       const { h, P } = await tableOf(['Cal', 'Dee'],

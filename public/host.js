@@ -288,6 +288,7 @@ function renderTurn(r, n) {
   const vw = view();
   Round.bidFor($('#bidfor-pad'), ST, r, vw);
   Round.playout($('#playout-row'), ST, vw);
+  Round.stalled($('#stalled-row'), ST, vw);
   Round.trickCount($('#host-count'), ST, r, vw);
   lastBids = Round.bidStrip($('#bidstrip'), ST, r, vw, lastBids);
   // While the deal is up, the bid stamps onto that player's card instead.

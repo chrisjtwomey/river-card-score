@@ -113,10 +113,17 @@ bid and not again, and the players are all sat around the table. A minute
 before the clock runs out, a phone that is here is asked **Still there?**, and
 any tap on it is the answer. When it runs out, a lobby seat simply goes — its
 phone lands back on the front page — and in a game the hand is handed to
-auto-play, exactly as if that player had pressed *Leave the game*. With real
-cards the table can hold nobody's hand, so nothing is taken from anybody.
+auto-play, exactly as if that player had pressed *Leave the game*.
 `IDLE_MS`, five minutes by default, is the clock; `IDLE_WARN_MS`, one minute,
 is how long before it the phone is asked. Either at nought turns it off.
+
+**With real cards the table stops instead.** That player's hand is on the table
+in front of them, not on a phone, so nothing can be taken from the seat and
+only the people at the table can say what happens to it. Every screen says
+*Paused — Ann has not answered for 5 minutes*, and whoever runs the table taps
+**Carry on**. The seat is not asked about again until somebody is behind it;
+the bid-for buttons are there in the meantime, as they always are. A player who
+comes back to the seat takes the notice down by arriving.
 
 **The table plays on only while somebody is there to see it.** Auto-play and
 the bots are there so a game is not held up for a seat nobody is behind — not

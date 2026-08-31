@@ -3943,6 +3943,41 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.pick('#playout-row').hidden === true, 'nor for a hand the table already plays');
   }
 
+  {   // the TV screen says it too, and runs the table
+    const H = hostPage('host');
+    const st = table({}); st.stalled = { id: 's2', ms: 300000 };
+    H.feed(st);
+    ok(H.pick('#stalled-row').hidden === false, 'the TV screen says the table is stopped');
+    H.socks[0].sent.length = 0;
+    H.pick('#stalled-row').querySelector('.btn').fire('click');
+    ok(JSON.stringify(H.socks[0].sent[0]) === '{"t":"carryon"}',
+       'and carries on from it  got ' + JSON.stringify(H.socks[0].sent[0]));
+    const S = hostPage('screen');
+    S.feed(st);
+    ok(S.pick('#stalled-row').hidden === false, 'a screen that only shows the table says so as well');
+    ok(S.pick('#stalled-row').querySelector('.row-actions').hidden === true, 'with nothing to tap');
+  }
+
+  {   // the table stopped on a seat, with real cards nobody else can play
+    const P = playPage(seed, '?c=TEST');
+    const stop = (o) => Object.assign(table(o || {}), { stalled: { id: 's2', ms: 300000 } });
+    P.feed(stop());
+    const row = P.pick('#stalled-row');
+    ok(row.hidden === false, 'every screen says the table is stopped');
+    ok(row.querySelector('.hint').textContent === 'Paused. Cal has not answered for 5 minutes.',
+       'naming the seat and how long  got ' + row.querySelector('.hint').textContent);
+    ok(P.pick('#attn-panel').hidden === false, 'and the panel it sits in is up');
+    P.socks[0].sent.length = 0;
+    row.querySelector('.btn').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"carryon"}',
+       'whoever runs the table carries on  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.feed(stop({ boss: false }));
+    ok(row.hidden === false, 'a player who does not run the table still sees it stopped');
+    ok(row.querySelector('.row-actions').hidden === true, 'with nothing to tap');
+    P.feed(table({}));
+    ok(row.hidden === true, 'and it goes when the table is not stopped');
+  }
+
   {   // the table has been waiting on this phone, and asks whether anybody is there
     const P = playPage(seed, '?c=TEST');
     P.feed(table({}));

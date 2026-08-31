@@ -215,6 +215,28 @@ const Round = (function () {
     });
   }
 
+  /* The table has stopped on a seat nobody is behind, at a table with real
+     cards. Nothing can be taken from that player -- their hand is on the table
+     in front of them, not on a phone -- so every screen says the table is
+     stopped, and whoever runs it says when to go on. */
+  function stalled(root, ST, view) {
+    if (!root) return;
+    const p = ST.stalled ? ST.seats.findIndex((s) => s.id === ST.stalled.id) : -1;
+    root.hidden = p < 0;
+    if (p < 0) return;
+    const mins = Math.max(1, Math.round((ST.stalled.ms || 0) / 60000));
+    const hint = part(root, '.hint', () => make('p', 'hint'));
+    hint.textContent = `Paused. ${ST.seats[p].name} has not answered for `
+      + `${mins} minute${mins === 1 ? '' : 's'}.`;
+    const row = part(root, '.row-actions', () => {
+      const r = make('div', 'row-actions');
+      r.appendChild(button('btn ghost', 'Carry on'));
+      return r;
+    });
+    row.hidden = !view.boss;
+    onClick(q(row, '.btn'), () => view.send({ t: 'carryon' }));
+  }
+
   /* ---------- the winner ---------- */
 
   // Who won, what each player is remembered for, and -- where the page has
@@ -338,5 +360,5 @@ const Round = (function () {
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
-  return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, winner, bum, vote, pause, newGame, bumDeal, undo };
+  return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, stalled, winner, bum, vote, pause, newGame, bumDeal, undo };
 })();
