@@ -384,9 +384,29 @@ function renderTables(box, list) {
     b.append(code, what, kind, end);
     box.appendChild(b);
   });
+  fadeStrip(box);
 }
 
 /* ---------- the scrubber ---------- */
+
+/* A strip with more in it than fits says so by fading out on the side there is
+   more on. It replaces the scrollbar, which was a bar of its own across the
+   band saying the same thing louder and taking a row's height to say it.
+
+   It listens to itself once, and is asked again whenever what is in it is
+   redrawn or the window changes shape. */
+function fadeStrip(el) {
+  if (!el) return;
+  if (!el._faded) {
+    el._faded = true;
+    el.addEventListener('scroll', () => fadeStrip(el));
+  }
+  const over = el.scrollWidth - el.clientWidth;
+  const x = el.scrollLeft || 0;
+  el.classList.toggle('more-l', over > 1 && x > 1);
+  el.classList.toggle('more-r', over > 1 && x < over - 1);
+}
+const fadeStrips = () => { fadeStrip($('#scrub')); fadeStrip($('#tablelist')); };
 
 /* How big a hand a round is, in words. The scorecard's rounds and a replay's
    both say it, so it is said once: a round of one card is not "1 cards", and
@@ -430,6 +450,7 @@ function renderScrub() {
   cell('🏁', 'end', ST.phase === 'done' ? 'on' : '', () => act('endGame'));
   const on = box.querySelector('.scell.on');
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  fadeStrip(box);
 }
 
 /* Stopping the table, and walking it on. A stopped table is stopped for
@@ -761,6 +782,7 @@ function renderMarks() {
   });
   const on = box.querySelector('.scell.on');
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  fadeStrip(box);
 }
 
 /* What there is to watch: the game a table is playing now, and every game on
@@ -1381,6 +1403,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-tables').addEventListener('click', askTables);
 
   $('#scale').addEventListener('change', () => { topKey = seatKey = ''; renderFrames(); });
+  // A strip that fits at one width does not at another.
+  window.addEventListener('resize', fadeStrips);
 
   connect();
   watchFiles();

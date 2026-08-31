@@ -3552,6 +3552,29 @@ part('the dev controls, on each kind of server');
     ok(marks[0].querySelector('small').textContent === '3 cards',
        'saying how big a hand it was, in words  got '
        + marks[0].querySelector('small').textContent);
+
+    /* More rounds than fit is said by fading the side there is more on, not by
+       a scrollbar across the band. Nothing is laid out in a fake page, so the
+       strip is given a shape by hand. */
+    const strip = P.pick('#scrub');
+    const shape = (wide, at) => {
+      Object.defineProperty(strip, 'clientWidth', { value: 100, configurable: true });
+      strip.scrollWidth = wide;
+      strip.scrollLeft = at;
+      strip.fire('scroll');
+    };
+    shape(100, 0);
+    ok(!strip.classList.contains('more-l') && !strip.classList.contains('more-r'),
+       'a strip that fits fades on neither side');
+    shape(300, 0);
+    ok(!strip.classList.contains('more-l') && strip.classList.contains('more-r'),
+       'at the left end, only the side there is more on');
+    shape(300, 100);
+    ok(strip.classList.contains('more-l') && strip.classList.contains('more-r'),
+       'part way along, both');
+    shape(300, 200);
+    ok(strip.classList.contains('more-l') && !strip.classList.contains('more-r'),
+       'and at the right end, only the way back');
     ok(marks[0].classList.contains('on'), 'the round it is in is marked');
     ok(marks[1].classList.contains('bum'), 'and a hand thrown in is marked as its own go');
     P.socks[0].sent.length = 0;

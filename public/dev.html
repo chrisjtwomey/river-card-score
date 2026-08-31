@@ -72,6 +72,18 @@
   /* The scrubber: the whole card as cells. Click a round and the game is
      played up to it; the ends are the lobby and the finish. */
   .scrub{display:flex;gap:5px;overflow-x:auto;min-width:0;flex:1}
+  /* A strip with more in it than fits. The scrollbar under one was a bar of
+     its own across the band, so it is taken away and the strip says the same
+     thing by fading out on whichever side there is more on. */
+  .strip{scrollbar-width:none;-ms-overflow-style:none}
+  .strip::-webkit-scrollbar{width:0;height:0;display:none}
+  .strip.more-l{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 30px);
+    mask-image:linear-gradient(90deg,transparent 0,#000 30px)}
+  .strip.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent 100%);
+    mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent 100%)}
+  .strip.more-l.more-r{
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 30px,#000 calc(100% - 30px),transparent 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 30px,#000 calc(100% - 30px),transparent 100%)}
   /* The rounds share the row rather than huddling at the left of it: there is
      room, and a round is easier to hit for having it. Below the width a hand
      size needs they stop shrinking and the strip scrolls instead. */
@@ -213,7 +225,7 @@
       <span class="cluster" id="tables-tools" hidden>
         <span class="bandsep"></span>
         <span class="bandlbl">Tables</span>
-        <div class="tablestrip" id="tablelist"></div>
+        <div class="tablestrip strip" id="tablelist"></div>
         <button class="btn ghost" id="btn-tables" type="button" title="Look again">⟳</button>
         <span class="bandsep"></span>
         <button class="btn primary" id="btn-rebuild" type="button"
@@ -223,7 +235,7 @@
     <div class="bandrow">
       <span class="cluster" id="scrub-tools" hidden>
         <span class="bandlbl">Go to</span>
-        <div class="scrub" id="scrub"></div>
+        <div class="scrub strip" id="scrub"></div>
         <div class="seg" id="goto-phase">
           <button class="btn on" data-phase="bid" type="button" title="Land the round at its bids">bid</button>
           <button class="btn" data-phase="tricks" type="button" title="Land the round with its bids in">tricks</button>
