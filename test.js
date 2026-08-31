@@ -1727,6 +1727,64 @@ async function bidRound(P) {
     back.ws.close(); stay.ws.close(); h.ws.close();
   }
 
+  /* ---- the table controls: a seat given back, and the table stopped ----
+     The rules are checked in test-rules.js. What is proved here is that they
+     reach the phone: the seat comes back to a player who has nothing left --
+     no token, only the name they played under -- and a stopped table refuses
+     a bid to the phone that made it. */
+  {
+    const { h, P, code } = await tableOf(['Ann', 'Ben', 'Cal'],
+      { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid');
+
+    /* Ben's phone goes, and the seat is handed over. Then his browser forgets
+       everything -- a flat battery, a cleared browser -- so his token is no
+       use: the only way back is the name, and the table has to open the seat
+       before that name means anything. */
+    const p = h.state.seats.findIndex((x) => x.name === 'Ben');
+    P[p].ws.close();
+    await until(() => h.state.seats[p].online === false);
+    h.send({ t: 'playout', id: h.state.seats[p].id });
+    await okBy(() => h.state.seats[p].left === true, 'a seat named is handed to the table  ' + JSON.stringify(h.errors));
+
+    const lost = client('ben-again'); await lost.ready;
+    lost.send({ t: 'join', code, name: 'Ben' });
+    await okBy(() => /left the game/.test(lost.last()),
+       'a phone with nothing but the name cannot take a seat the table is playing  got ' + lost.last());
+
+    h.send({ t: 'letback', id: h.state.seats[p].id });
+    await okBy(() => h.state.seats[p].left === false, 'whoever runs the table gives the seat back');
+    await okBy(() => P[0].state.seats[p].left === false, 'and every screen is told');
+    lost.errors.length = 0;
+    lost.send({ t: 'join', code, name: 'Ben' });
+    await okBy(() => lost.hello && lost.hello.seatId === h.state.seats[p].id,
+       'and the name alone is enough to sit back down  got ' + lost.last());
+    await okBy(() => h.state.seats[p].online === true, 'with the table saying he is back');
+
+    // A stopped table is stopped for the phone as well as for the bots.
+    const turn = h.state.turn;
+    h.send({ t: 'pause', on: true });
+    await okBy(() => h.state.paused === true, 'the table is stopped');
+    // Ben's first socket still remembers the seat and is long closed: the phone
+    // behind it now is the one that came back.
+    const sitter = [P[0], P[1], P[2], lost]
+      .find((c) => c.ws.readyState === 1 && c.seatId === h.state.seats[turn].id);
+    sitter.errors.length = 0;
+    sitter.send({ t: 'bid', v: 1 });
+    await okBy(() => /stopped/i.test(sitter.last()),
+       'and the phone on turn is told so, in its own words  got ' + sitter.last());
+    ok(h.state.rounds[0].bids[turn] === null, 'with nothing landing on the table');
+
+    h.send({ t: 'pause', on: false });
+    await okBy(() => h.state.paused === false, 'let go again');
+    sitter.send({ t: 'bid', v: 1 });
+    await okBy(() => h.state.rounds[0].bids[turn] !== null, 'and the same bid lands');
+
+    h.ws.close(); lost.ws.close(); P.forEach((c) => c.ws.close());
+  }
+
+
   // ---- PUBLIC_URL replaces the detected addresses ----
   {
     const port2 = PORT + 1;

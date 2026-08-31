@@ -91,9 +91,20 @@ waiting on them. Three ways back:
 **Auto-play their hand** appears beside the bid-for and play-for buttons
 whenever the game is stopped on an empty seat. The seat keeps its name and
 its column, auto-play takes it from there on, and the phone that holds the
-seat takes it back by coming to the table. Only the seat the game is waiting
-on can be handed over, and only on a table dealt on the phones — with real
-cards there is no hand for auto-play to hold.
+seat takes it back by coming to the table. From the ⋯ on a
+player's standings row any seat nobody is behind can be handed over, not only
+the one the game is standing on — a player who has gone home need not be
+holding the table up for their hand to be one nobody is behind. Either way it
+is a table dealt on the phones: with real cards there is no hand for auto-play
+to hold.
+
+**And handed back.** *Let back in*, on that same ⋯, gives the seat up again. It is not the player's own button, and it cannot be: whoever the table
+is playing for is not there to press anything, and their phone may have
+forgotten the table altogether. Once the seat is open they come back to it the
+way any phone that lost its seat does — the table's code and the name they
+played under. The seat's own clock starts again from that moment, so a seat
+opened and not taken up is handed over again in its own time rather than at
+once.
 
 Every screen calls it **auto-play**: the word "table" is the room the game is
 in, and nothing else.

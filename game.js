@@ -242,6 +242,12 @@
   const canPause = (state) =>
     !!state && PLAY_PHASES.indexOf(state.phase) >= 0;
 
+  /* A seat the table was handed: a player who left, or one the clock gave up
+     on. Never a bot, which was nobody's to begin with. This is the seat that
+     can be given back, whichever deck the table plays with -- `tablePlays`
+     is the narrower question of whether the table holds a hand for it. */
+  const handedOver = (seat) => !!seat && !!seat.left && !seat.bot;
+
   // The seat on turn with nobody behind it, or -1: the one seat the table is
   // stopped on and can do nothing about by itself.
   function awaySeat(state) {
@@ -278,7 +284,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, PLAY_PHASES,
+                virtual, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, handedOver, PLAY_PHASES,
                 awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };

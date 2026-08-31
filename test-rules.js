@@ -973,6 +973,42 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   ok(t.say('host', { t: 'playout' }) === null, 'a seat that is away can be');
   ok(t.room.seats[1].left, 'and it is marked gone, exactly as if that player had left');
   ok(/already has/.test(t.say('host', { t: 'playout' }) || ''), 'once only');
+
+  /* And a seat that is not holding anybody up: a player who has gone home
+     need not be on turn for their hand to be one nobody is behind. */
+  t.room.seats[2].online = false;
+  ok(t.say('host', { t: 'playout', id: t.room.seats[2].id }) === null, 'a seat named is handed over too');
+  ok(t.room.seats[2].left, 'and the table has that hand');
+  ok(/is at the table/.test(t.say('host', { t: 'playout', id: t.room.seats[0].id }) || ''),
+     'but never one somebody is behind');
+  ok(/no such seat/.test(t.say('host', { t: 'playout', id: 'nobody' }) || ''), 'nor one that is not there');
+}
+
+{
+  /* And handed back. The player it belongs to is not there to press anything
+     -- that is the whole reason the table has their hand -- so the seat is
+     opened and they come back to it by name. */
+  const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+  t.room.seats[1].online = false;
+  t.say('host', { t: 'playout' });
+  ok(t.room.seats[1].left, 'the table has Bob\'s hand');
+  ok(G.handedOver(t.room.seats[1]), 'and the rules say it is a seat the table was given');
+
+  const id = t.room.seats[1].id;
+  ok(/only the table host/.test(t.say(2, { t: 'letback', id }) || ''), 'no other player gives it back');
+  ok(t.say('host', { t: 'letback', id }) === null, 'whoever runs the table does');
+  ok(!t.room.seats[1].left, 'and the seat is open again');
+  ok(!t.room.seats[1].online, 'with nobody behind it yet: a window is what puts somebody there');
+  ok(!G.tablePlays(t.room.seats[1], t.room.cfg), 'so the table plays that hand no longer');
+  ok(!G.handedOver(t.room.seats[1]), 'and there is nothing left to give back');
+  ok(/no seat there/.test(t.say('host', { t: 'letback', id }) || ''), 'which it says when asked again');
+
+  // The clock starts again from now, so a seat nobody takes up is handed over
+  // in its own time rather than the moment it is opened.
+  const clock = { idle: 5 * 60e3, warn: 60e3 };
+  ok(!t.Room.sweep(t.room, Date.now(), clock).gone.length, 'a seat just opened is not taken straight back');
+  ok(t.Room.sweep(t.room, Date.now() + 6 * 60e3, clock).gone.length === 1,
+     'but it is once its own clock runs out');
 }
 
 {
