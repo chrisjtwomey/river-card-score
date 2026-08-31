@@ -2826,6 +2826,7 @@ part('the dev controls, on each kind of server');
       seats: [{ id: 's1', name: 'Ann', watch: 'rw1' }, { id: 's2', name: 'Bob', watch: 'rw2' }],
       marks: [{ at: 1, i: 0, cards: 3, w: 'game' }, { at: 6, i: 0, cards: 3, w: 'bum' },
               { at: 11, i: null, w: 'end' }],
+      kinds: 'GRbbscccwΣRbE'.replace('Σ', 'e'),
       where: 'Round 1 of 2 · 3 cards · Ann bids 1',
     }, over || {})) });
 
@@ -2866,6 +2867,20 @@ part('the dev controls, on each kind of server');
     marks[1].fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":6}',
        'pressing one takes the copy there  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* The steps inside the round on show. Discrete, because a game is: each of
+       these either happened or has not. */
+    say({ at: 3 });
+    const steps = P.pick('#replay-steps').querySelectorAll('.scell');
+    ok(steps.length === 5, 'the round on show is its own points  got ' + steps.length);
+    ok(steps[2].classList.contains('on'), 'with the one it is standing on marked');
+    ok(steps[1].classList.contains('done'), 'and the ones behind it done');
+    P.socks[0].sent.length = 0;
+    steps[4].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',
+       'and each of them is a place to go  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(P.pick('#replay-bar').querySelectorAll('input').length === 0,
+       'nothing here is a slider: nothing here is continuous');
 
     const bar = P.pick('#replay-bar').querySelectorAll('button');
     P.socks[0].sent.length = 0;

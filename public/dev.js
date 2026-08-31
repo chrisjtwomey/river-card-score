@@ -415,18 +415,60 @@ function buildReplay() {
   go.id = 'btn-replay-play';
   btn('btn', '▶', 'One point on', () => replayAsk({ do: 'step', by: 1 }));
 
-  const slide = document.createElement('input');
-  slide.type = 'range';
-  slide.min = '0';
-  slide.title = 'Anywhere in the game';
-  slide.addEventListener('change', () => replayAsk({ do: 'seek', at: Number(slide.value) }));
-  bar.appendChild(slide);
-
   const at = document.createElement('span');
   at.className = 'at';
   bar.appendChild(at);
 
   btn('btn ghost', 'Close', 'Let the copy go', () => replayAsk({ do: 'close' }));
+}
+
+/* Every kind of point, as one mark and one plain word. A game is a sequence of
+   these, and the stepper is that sequence made pressable. */
+const STEPS = {
+  R: ['\u25b8', 'the round is dealt'],
+  b: ['b', 'a bid'],
+  s: ['\u00b7', 'a trick opens'],
+  c: ['c', 'a card'],
+  w: ['\u25c6', 'a trick taken'],
+  W: ['\u21ba', 'a trick taken back'],
+  e: ['\u03a3', 'the round is scored'],
+  z: ['\u21a9', 'a step back'],
+  F: ['!', 'the table was forced'],
+  G: ['\u25b8', 'the game starts'],
+  E: ['\ud83c\udfc1', 'the game ends'],
+};
+
+/* The points of the round the copy is standing in, one cell each.
+
+   A game is some hundreds of points, which is why this is two levels and not
+   one: the rounds above pick the round, and this picks the moment inside it.
+   Nothing here is a slider, because nothing here is continuous -- a game is a
+   sequence of things that happened, and each of them either has or has not. */
+function renderSteps() {
+  const box = $('#replay-steps');
+  if (!box || !REPLAY.kinds) return;
+  const marks = REPLAY.marks;
+  let from = 0, to = REPLAY.kinds.length - 1;
+  marks.forEach((m, i) => {
+    if (m.at <= REPLAY.at) { from = m.at; to = marks[i + 1] ? marks[i + 1].at - 1 : REPLAY.kinds.length - 1; }
+  });
+  const key = `${from}-${to}@${REPLAY.at}:${REPLAY.kinds.length}`;
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.innerHTML = '';
+  for (let i = from; i <= to; i++) {
+    const k = REPLAY.kinds[i];
+    const [mark, said] = STEPS[k] || ['?', 'something'];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'scell' + (i === REPLAY.at ? ' on' : '') + (i < REPLAY.at ? ' done' : '');
+    b.textContent = mark;
+    b.title = `${said} — point ${i + 1} of ${REPLAY.kinds.length}`;
+    b.addEventListener('click', () => replayAsk({ do: 'seek', at: i }));
+    box.appendChild(b);
+  }
+  const on = box.querySelector('.scell.on');
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
 /* The rounds, as the marks a scrubber offers. A hand thrown in is a mark of
@@ -509,17 +551,13 @@ function renderReplay() {
   renderGames();
   // A game has to be picked before there is anything to move about in.
   const going = !!REPLAY.code;
-  ['#replay-bar', '#replay-marks'].forEach((sel) => {
+  ['#replay-bar', '#replay-marks', '#replay-steps'].forEach((sel) => {
     if ($(sel)) $(sel).hidden = !going;
   });
   if (!going) { if ($('#replay-where')) $('#replay-where').textContent = ''; return; }
   renderMarks();
   const bar = $('#replay-bar');
-  const slide = bar && bar.querySelector('input');
-  if (slide && document.activeElement !== slide) {
-    slide.max = String(Math.max(0, REPLAY.n - 1));
-    slide.value = String(REPLAY.at);
-  }
+  renderSteps();
   const go = bar && bar.querySelector('.btn.primary');
   if (go) {
     go._now = !!REPLAY.playing;

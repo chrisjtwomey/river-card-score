@@ -76,10 +76,14 @@
   /* Watching a game again: where it is, and the rounds to move about in. */
   .replaybox{padding:10px 12px;gap:8px}
   .replaybar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .replaybar input[type=range]{flex:1;min-width:140px}
   .replaybar .at{font-size:12px;color:var(--ink-dim);font-weight:650;flex:none}
   .replaypick{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
   .replaymarks{display:flex;gap:3px;overflow-x:auto;min-width:0}
+  /* The points of the round on show, one cell each. Nothing here is a slider,
+     because nothing here is continuous. */
+  .replaysteps{display:flex;gap:2px;overflow-x:auto;min-width:0;padding-bottom:2px}
+  .replaysteps .scell{min-width:20px;padding:2px 4px;font-size:11px;flex-direction:row}
+  .replaysteps .scell.done{background:rgba(31,122,77,.14)}
   .rcell{flex:none;min-width:30px;padding:4px 5px;border:1px solid var(--line);border-radius:8px;
     background:var(--bg2);color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;
     display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
@@ -201,6 +205,7 @@
     <div class="replaypick" id="replay-pick"></div>
     <div class="replaybar" id="replay-bar" hidden></div>
     <div class="replaymarks" id="replay-marks" hidden></div>
+    <div class="replaysteps" id="replay-steps" hidden></div>
     <p class="hint" id="replay-where"></p>
     <p class="err" id="replay-err" hidden></p>
   </div>
