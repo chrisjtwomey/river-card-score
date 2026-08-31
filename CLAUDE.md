@@ -11,8 +11,8 @@ game.js            THE RULES. Pure functions over plain data. Runs in Node and i
                    browser (IIFE, `module.exports` or `window.Game`). No DOM, no sockets.
 lib/room.js        THE TABLE. Every verb that moves a game on, once: openRound, startGame,
                    seatBid, closeBidding, scoreRound, bumDeal, undo, toLobby, finishGame,
-                   kickSeat, standDown, sweep, waitingOn, publicState. Owns lib/deck.js.
-                   Never broadcasts.
+                   kickSeat, standDown, letBack, unstick, setDealer, renameSeat, sweep,
+                   waitingOn, publicState. Owns lib/deck.js. Never broadcasts.
 lib/deck.js        The virtual dealer: dealHands, startPlay, refusal, putCard, settleTrick.
                    Arithmetic over the room; no sockets, no timers.
 lib/bots.js        The players the table provides: what a hand is worth, which card to play,
@@ -41,8 +41,15 @@ public/settings.js The settings page behind the ⚙: laid over the page that ope
                    phone, who the player is (name, photo). The front page opens it first
                    when there is no name.
 public/net.js      The socket client: reconnect, sessions, one table per page address.
-public/table.js    The scorecard, standings, winner, vote line, presence and bid toasts, and
-                   what the scenes read off the state (roundKey, dealOpts, finaleOpts).
+public/table.js    The scorecard -- editable for `view.boss`: a figure, a round, or a name at
+                   the head of a column, all through one delegated listener on the table. A
+                   figure and a round open the same sheet, which holds the whole round,
+                   because the check (tricks total the hand) is a row's --
+                   the standings and the seat controls on them (badges, and the ⋯ of what may
+                   be done about one person mid-game -- never the name, which is changed at the
+                   head of its own column), the winner, vote line, presence and bid
+                   toasts, the row menu both lists of people use (`rowMenu`), and what the
+                   scenes read off the state (roundKey, dealOpts, finaleOpts).
 public/lobby.js    Widgets for the lobby: seats, bots, rulesForm, startButton.
 public/round.js    Widgets for a round in play: header, bidStrip, trickCount, bidFor, playFor,
                    playout, winner, and the two dialogs (newGame, bumDeal).
@@ -68,11 +75,15 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
    in `table.js`, `lobby.js` or `round.js`. If you are about to write the same
    `if` in two files, you are in the wrong file.
 2. **Never re-derive a rule.** Ask `Game.onTurn`, `Game.awaySeat`, `Game.tablePlays`,
-   `Game.tablePlaysOn`, `Game.virtual`, `Game.firstLeader`, `Game.forbiddenBid`,
+   `Game.tablePlaysOn`, `Game.tableSelfPlays`, `Game.canPause`, `Game.handedOver`,
+   `Game.virtual`, `Game.firstLeader`, `Game.forbiddenBid`,
    `Game.changeableSeat`, `Game.bidsHeld`, `Game.countingSeat`.
    `cfg.deck === 'virtual'` appears in `game.js` and nowhere else.
-3. **A new message is a row in `lib/messages.js`.** Give it `who`, `phase`, `deck`
-   and `when` guards and a one-line `run` that calls a Room verb. Never put game
+3. **A new message is a row in `lib/messages.js`.** Give it `who`, `phase`, `deck`,
+   `live` and `when` guards and a one-line `run` that calls a Room verb. (`live`
+   means it is refused while the table is stopped: only what moves the hand on
+   carries it, because everything that puts a game right is what a table is
+   stopped for.) Never put game
    logic in a message body. Never add a `trump` message: with real cards nothing is
    recorded (the tests assert it is refused).
 4. **Room verbs are synchronous and silent.** They change the room and return.
@@ -138,7 +149,10 @@ as they are. Drift between the modes is the thing being guarded against.
 - **A step in the game** (a new phase or transition): a Room verb, called from a
   message row; `publicState` if screens need to see it; then the widget that draws it.
 - **A screen control that acts for the table**: a widget in `round.js` gated on
-  `view.boss`, using `Game.awaySeat`/`onTurn` for who it is about.
+  `view.boss`, using `Game.awaySeat`/`onTurn` for who it is about. If it is
+  about one *named* person rather than the seat on turn, it is a row in the
+  standings' ⋯ instead (the item list in `table.js`), which is the one list of
+  everybody a game in play has.
 - **A page setting**: a row from `UI.commonSettings(opts)` or a page-specific item in
   its `Settings.wire` call.
 - **A behaviour that differs by mode** (real cards vs dealt on the phones): a `deck`

@@ -17,6 +17,7 @@ let ending = false;      // this screen has asked for the table to be taken away
 let SHOW = false;        // this screen shows a table it does not run
 let CODE = null;         // the table this screen belongs to
 let seenWho = null;      // who was at the table on the state before
+let stateAt = 0;         // when the last state landed, so a quiet clock counts on from it
 
 // The dev page, opened on this table so a game in play can be put right.
 function devLink() {
@@ -94,7 +95,7 @@ function enter(mode, code) {
       $('#pick-panel').hidden = true;
       pickErr('');
     },
-    onState: (m) => { ST = m; render(); },
+    onState: (m) => { ST = m; stateAt = Date.now(); render(); },
     onError: (msg) => {
       if (ending) return;                             // it is going because this screen said so
       if (!CODE) { pickErr(msg); return; }            // still choosing: say it there
@@ -379,7 +380,9 @@ function renderTable(r) {
 }
 
 function renderStandings() {
-  lastTotals = Table.standings($('#standings'), ST, { lastTotals });
+  // Who is where, and -- for whoever runs the table -- what may be done about
+  // each of them: the one list of everybody a game in play has.
+  lastTotals = Table.standings($('#standings'), ST, { lastTotals, view: view(), quietAt: stateAt });
 }
 
 function renderScorecard() {

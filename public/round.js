@@ -206,13 +206,9 @@ const Round = (function () {
     root._who = ST.seats[p].name;               // read at the tap, not at the draw
     const btn = part(root, '.btn', () => button('btn ghost danger', 'Auto-play that hand'));
     btn.textContent = `Auto-play ${root._who}'s hand`;
-    onClick(btn, () => {
-      const who = root._who || 'that seat';
-      UI.ask(`Auto-play ${who}'s hand?`,
-        `The seat keeps its name and its place on the scorecard, and auto-play takes the hand `
-        + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
-        'Auto-play', true).then((yes) => { if (yes) view.send({ t: 'playout' }); });
-    });
+    // The wording is the standings' too, where any seat can be handed over, so
+    // it is written once, beside the list that names them.
+    onClick(btn, () => Table.handOver(view, root._who || 'that seat'));
   }
 
   /* The table has stopped on a seat nobody is behind, at a table with real

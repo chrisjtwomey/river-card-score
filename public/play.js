@@ -13,6 +13,7 @@ let lastDone = null;           // rounds scored, to catch a round landing
 let lastTrick = null;          // tricks counted, to catch one landing
 let joinAddr = null;           // the address the others should open
 let seenWho = null;            // who was at the table on the state before
+let stateAt = 0;               // when the last state landed, so a quiet clock counts on from it
 
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
@@ -36,7 +37,7 @@ function boot() {
       ? { t: 'watch', code: s.code, token: s.token }
       : { t: 'resume', code: s.code, token: s.token }),
     onHello: (m) => { ME = m.seatId; Net.pin(m.code); },
-    onState: (m) => { ST = m; render(); },
+    onState: (m) => { ST = m; stateAt = Date.now(); render(); },
     onError: (msg) => {
       // The table is over, or this seat is not at it any more. Say which
       // table it was: the front page is otherwise a silent bounce.
@@ -459,7 +460,9 @@ function renderStandings(me) {
   // to it, so the change is readable without hunting for your row.
   const mine = lastTotals ? lastTotals[ST.seats[me].id] : undefined;
   UI.fx.count($('#my-score'), mine === undefined ? t[me] : mine, t[me], { fmt: (v) => `You: ${v}` });
-  lastTotals = Table.standings($('#standings'), ST, { me, lastTotals });
+  // Who is where, and -- on the phone that runs the table -- what may be done
+  // about each of them: the one list of everybody a game in play has.
+  lastTotals = Table.standings($('#standings'), ST, { me, lastTotals, view: view(), quietAt: stateAt });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

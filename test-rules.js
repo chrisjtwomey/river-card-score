@@ -1051,6 +1051,55 @@ part('leaving on purpose, which is not the same as a phone going quiet');
 }
 
 {
+  /* Who deals. With real cards a person did the dealing, and it can have been
+     the wrong one -- so it is put right, while nobody has bid. */
+  const t = table().sit(['Ann', 'Bob', 'Cal']).rules({ max: 2, pattern: 'down', ones: 1 });
+  ok(t.say(0, { t: 'dealer', id: t.room.seats[1].id }) === null, 'in the lobby it is who deals round one');
+  ok(t.room.firstDealerId === t.room.seats[1].id, 'and the table keeps it against the seat');
+  t.Room.startGame(t.room);
+  ok(t.round().dealer === 1, 'so the first round is theirs');
+  ok(/only the table host/.test(t.say(2, { t: 'dealer', id: t.room.seats[0].id }) || ''),
+     'no other player says who deals');
+  ok(t.say('host', { t: 'dealer', id: t.room.seats[2].id }) === null, 'whoever runs the table does');
+  ok(t.round().dealer === 2, 'and this round moves to them');
+  ok(G.turnSeat(t.round(), 3) === 0, 'so the bidding starts left of the new dealer');
+  ok(/no such seat/.test(t.say('host', { t: 'dealer', id: 'nobody' }) || ''), 'never to a seat that is not there');
+  t.say(0, { t: 'bid', v: 1 });
+  ok(/bidding has started/.test(t.say('host', { t: 'dealer', id: t.room.seats[1].id }) || ''),
+     'and not once a bid is in: the order of bidding is the dealer\'s');
+
+  // The cards a virtual deck dealt went where they went.
+  const v = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  ok(/already out/.test(v.say('host', { t: 'dealer', id: v.room.seats[1].id }) || ''),
+     'a table that deals on the phones throws the hand in instead');
+}
+
+{
+  /* A name put right by whoever runs the table, all game: the column on the
+     scorecard follows the name it is under. */
+  const t = started(['Ann', 'Bob'], { max: 2, pattern: 'down', ones: 1 });
+  ok(/names are set/.test(t.say(1, { t: 'rename', name: 'Robert' }) || ''),
+     'a player cannot change their own name once the game has started');
+  ok(/only the table host/.test(t.say(1, { t: 'renameseat', id: t.room.seats[0].id, name: 'X' }) || ''),
+     'and no player renames another');
+  ok(t.say('host', { t: 'renameseat', id: t.room.seats[1].id, name: 'Robert' }) === null,
+     'whoever runs the table can');
+  ok(t.room.seats[1].name === 'Robert', 'and the seat carries it');
+  ok(/taken/.test(t.say('host', { t: 'renameseat', id: t.room.seats[1].id, name: 'ann' }) || ''),
+     'never to a name already at the table, whichever case it is typed in');
+  ok(/type a name/.test(t.say('host', { t: 'renameseat', id: t.room.seats[1].id, name: '   ' }) || ''),
+     'and never to nothing');
+  ok(/no such seat/.test(t.say('host', { t: 'renameseat', id: 'nobody', name: 'X' }) || ''),
+     'nor a seat that is not there');
+
+  // The one rule, reached through the player's own door as well.
+  const q = table().sit(['Ann', 'Bob']);
+  ok(/taken/.test(q.say(1, { t: 'rename', name: 'ANN' }) || ''), 'the lobby door refuses it too');
+  ok(q.say(1, { t: 'rename', name: 'Robert' }) === null, 'and takes a name nobody holds');
+  ok(q.room.seats[1].name === 'Robert', 'which the seat carries');
+}
+
+{
   // the seat that runs the table never goes to somebody who cannot run it
   const t = table().sit(['Ann', 'Bob']).sit(['Bot'], { bot: true });
   ok(t.room.captainId === t.room.seats[0].id, 'Ann runs the table');

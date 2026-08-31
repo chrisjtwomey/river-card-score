@@ -242,49 +242,57 @@ const Table = (function () {
     else box.scrollTop = top;
   }
 
-  /* A name typed into the little sheet the seat menu opens. One name to a
-     table -- the scorecard is a column under it -- and the table says so if
-     the one typed is taken. */
-  function askName(ST, seat, view) {
-    let d = document.getElementById('seat-name');
-    if (!d) {
-      d = document.createElement('dialog');
-      d.id = 'seat-name';
-      document.body.appendChild(d);
-    }
-    while (d.firstChild) d.firstChild.remove();          // built afresh each time
-    const h = document.createElement('h2');
-    h.textContent = `Rename ${seat.name}`;
-    const box = document.createElement('input');
-    box.type = 'text';
-    box.className = 'namebox';
-    box.value = seat.name;
-    box.maxLength = 16;
-    box.setAttribute('aria-label', 'Name');
-    const note = document.createElement('p');
-    note.className = 'hint';
-    note.textContent = 'The scorecard is a column under this name, so it changes with it.';
-    const acts = document.createElement('div');
-    acts.className = 'confirm-actions';
-    const cancel = document.createElement('button');
-    cancel.type = 'button';
-    cancel.className = 'btn ghost';
-    cancel.textContent = 'Cancel';
-    const save = document.createElement('button');
-    save.type = 'button';
-    save.className = 'btn primary';
-    save.textContent = 'Save';
-    const shut = () => { if (d.close) d.close(); else d.hidden = true; };
-    cancel.addEventListener('click', shut);
-    save.addEventListener('click', () => {
-      const want = String(box.value || '').trim();
-      if (want && want !== seat.name) view.send({ t: 'renameseat', id: seat.id, name: want });
-      shut();
+  /* ---------- a ⋯ on a row, and the little menu it opens ---------- */
+
+  /* Two lists of people use one: the seats in the lobby before the game, and
+     the standings once it is on. A menu that opened, closed and read
+     differently in each would be two behaviours to learn for one gesture, so
+     the gesture is written here and each list says only what its rows offer.
+
+     `items` is [{ label, danger, run() }]. A row with nothing to offer gets no
+     button at all: a ⋯ that opens an empty menu is worse than no ⋯. */
+  function rowMenu(row, items, who) {
+    if (!row || !items || !items.length) return null;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mini more';
+    btn.title = 'Options';
+    btn.textContent = '⋯';
+    btn.setAttribute('aria-label', who ? `Options for ${who}` : 'Options');
+    btn.setAttribute('aria-haspopup', 'true');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = row.querySelector('.seatmenu');
+      closeRowMenus();
+      if (open) return;                        // the same button shuts it
+      const menu = document.createElement('div');
+      menu.className = 'menu seatmenu';
+      menu.setAttribute('role', 'menu');
+      items.forEach((it) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'menu-row menu-tap' + (it.danger ? ' danger' : '');
+        const name = document.createElement('span');
+        name.className = 'menu-label';
+        name.textContent = it.label;
+        b.appendChild(name);
+        b.addEventListener('click', (e2) => { e2.stopPropagation(); menu.remove(); it.run(); });
+        menu.appendChild(b);
+      });
+      row.appendChild(menu);
     });
-    acts.append(cancel, save);
-    d.append(h, box, note, acts);
-    if (d.showModal) d.showModal(); else d.hidden = false;
+    return btn;
   }
+
+  function closeRowMenus() {
+    document.querySelectorAll('.seatmenu').forEach((m) => m.remove());
+  }
+
+  // A tap anywhere else is the way out that needs no button.
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.seatmenu, .mini.more')) return;
+    closeRowMenus();
+  });
 
   /* ---------- a card on screen ---------- */
 
@@ -604,8 +612,24 @@ const Table = (function () {
         el.innerHTML = `<span class="rank">${rank + 1}</span><span class="name"></span>` +
           `<span class="pts">${row.v}</span><span class="bar"><i style="width:${w}%"></i></span>`;
         const who = ST.seats[row.i];
-        el.querySelector('.name').textContent = who.name
-          + (row.i === me ? ' (you)' : (who.left ? ' (left)' : ''));
+        el.querySelector('.name').textContent = who.name + (row.i === me ? ' (you)' : '');
+        /* One cell for everything that is not the name or the score: where the
+           seat is, and what may be done about it. It is its own cell so the
+           name still gives before anything else does. */
+        const marks = document.createElement('span');
+        marks.className = 'marks';
+        el.insertBefore(marks, el.querySelector('.pts'));
+        /* Where the seat is, said on the row rather than inside the name: a
+           name with a word after it in brackets is still the name on a
+           scorecard, and "(left)" said nothing about how long ago. */
+        seatMarks(marks, ST, row.i, o.quietAt);
+        /* And what may be done about that person, for whoever runs the table.
+           This is the one list of everybody that a game in play has, so it is
+           where the seat controls live once the lobby is gone. */
+        if (o.view && o.view.boss) {
+          const more = rowMenu(el, seatItems(ST, row.i, o), who.name);
+          if (more) marks.appendChild(more);
+        }
         box.appendChild(el);
       });
     };
@@ -614,6 +638,122 @@ const Table = (function () {
     const now = {};
     ST.seats.forEach((seat, i) => { now[seat.id] = t[i]; });
     return UI.fx.scores(box, now, o.lastTotals, before);
+  }
+
+  /* Where a seat is, in a word: the table has its hand, or nobody is behind it
+     and for how long. The clock is the room's -- `quiet` is how long it had
+     been running when the state left the server -- and `quietAt` is when that
+     state landed here, so a screen that ticks counts on from it and one that
+     does not still says the right minute. */
+  function seatMarks(box, ST, p, quietAt) {
+    const s = ST.seats[p];
+    const mark = (cls, txt, title) => {
+      const b = document.createElement('span');
+      b.className = 'badge soft ' + cls;
+      b.textContent = txt;
+      b.title = title;
+      box.appendChild(b);
+    };
+    if (s.id === ST.captainId) mark('is-host', 'host', 'runs the table');
+    if (s.bot) mark('is-bot', 'bot', 'a player the table provides');
+    if (Game.handedOver(s)) return mark('is-auto', 'auto-play', 'the table has this hand');
+    if (s.online || s.bot) return;
+    const ms = (s.quiet || 0) + (quietAt ? Math.max(0, Date.now() - quietAt) : 0);
+    const mins = Math.floor(ms / 60000);
+    mark('is-away', mins >= 1 ? `away ${mins}m` : 'away',
+      mins >= 1 ? `no window on this seat for ${mins} minute${mins === 1 ? '' : 's'}`
+        : 'no window on this seat');
+  }
+
+  /* What whoever runs the table may do about one person, mid-game. Each row is
+     offered only where it would do something: a seat is never handed what it
+     already is, and a seat with nothing left to offer gets no ⋯ at all. */
+  function seatItems(ST, p, o) {
+    const s = ST.seats[p], view = o.view, out = [];
+    const r = ST.rounds[ST.idx] || null;
+    if (s.id !== ST.captainId && !s.bot && !s.left) {
+      out.push({ label: 'Make table host', run: () => view.send({ t: 'captain', id: s.id }) });
+    }
+    /* A seat the table was given, given back. The player is not there to press
+       anything -- that is why the table has their hand -- and their phone may
+       have forgotten the table, so they come back by the name they played
+       under, which needs the seat opened first. */
+    if (Game.handedOver(s)) {
+      out.push({ label: 'Let back in', run: () => view.send({ t: 'letback', id: s.id }) });
+    } else if (!s.bot && !s.online && Game.virtual(ST) && ST.phase !== 'done') {
+      // A player who has gone home. Only a table that deals the cards has a
+      // hand of theirs the table could hold.
+      out.push({ label: 'Auto-play their hand', danger: true,
+                 run: () => handOver(view, s.name, s.id) });
+    }
+    /* Who dealt. With real cards a person did the dealing and can have been the
+       wrong one -- and only while nobody has bid, because the order of bidding
+       is the dealer's. */
+    if (ST.phase === 'bid' && !Game.virtual(ST) && r && r.dealer !== p
+        && (r.bids || []).every((b) => b === null)) {
+      out.push({ label: 'They dealt this hand', run: () => view.send({ t: 'dealer', id: s.id }) });
+    }
+    /* Not the name. It is the column on the scorecard, and the head of that
+       column is where it is changed -- one place, where the thing being
+       renamed is what you are looking at. */
+    return out;
+  }
+
+  /* A name typed into the little sheet the seat menu opens. One name to a
+     table -- the scorecard is a column under it -- and the table says so if
+     the one typed is taken. */
+  function askName(ST, seat, view) {
+    let d = document.getElementById('seat-name');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'seat-name';
+      document.body.appendChild(d);
+    }
+    while (d.firstChild) d.firstChild.remove();          // built afresh each time
+    const h = document.createElement('h2');
+    h.textContent = `Rename ${seat.name}`;
+    const box = document.createElement('input');
+    box.type = 'text';
+    box.className = 'namebox';
+    box.value = seat.name;
+    box.maxLength = 16;
+    box.setAttribute('aria-label', 'Name');
+    const note = document.createElement('p');
+    note.className = 'hint';
+    note.textContent = 'The scorecard is a column under this name, so it changes with it.';
+    const acts = document.createElement('div');
+    acts.className = 'confirm-actions';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn ghost';
+    cancel.textContent = 'Cancel';
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'btn primary';
+    save.textContent = 'Save';
+    const shut = () => { if (d.close) d.close(); else d.hidden = true; };
+    cancel.addEventListener('click', shut);
+    save.addEventListener('click', () => {
+      const want = String(box.value || '').trim();
+      if (want && want !== seat.name) view.send({ t: 'renameseat', id: seat.id, name: want });
+      shut();
+    });
+    acts.append(cancel, save);
+    d.append(h, box, note, acts);
+    if (d.showModal) d.showModal(); else d.hidden = false;
+  }
+
+  /* A seat handed to the table for good, asked for first and told what it
+     means. The screen the table has stopped offers it for the seat it is
+     stopped on (Round.playout); this offers it for anybody who has gone home.
+     Both say the same thing, because it is the same thing. */
+  function handOver(view, who, id) {
+    return UI.ask(`Auto-play ${who}'s hand?`,
+      `The seat keeps its name and its place on the scorecard, and auto-play takes the hand `
+      + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
+      'Auto-play', true).then((yes) => {
+        if (yes) view.send(id ? { t: 'playout', id } : { t: 'playout' });
+      });
   }
 
   /* Who won, and by how much. The places come back with it, because the host
@@ -644,7 +784,8 @@ const Table = (function () {
   // after it: the finish plays once.
   const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
 
-  return { scorecardHTML, scorecard, editRound, followCurrent, esc, roundKey, dealOpts, finaleOpts,
+  return { scorecardHTML, scorecard, editRound, rowMenu, closeRowMenus, handOver,
+           followCurrent, esc, roundKey, dealOpts, finaleOpts,
            bidsAfter, sayBids, sayPresence, sayRound, sayTrick, cardEl, trickEl,
            sweepTrick, sweepOut, trickIn,
            standings, winner, voteText, justFinished };

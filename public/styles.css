@@ -1095,6 +1095,19 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 .big-chips{gap:10px}
 .big-chips .chip{min-width:60px;height:60px;font-size:20px;border-radius:14px}
 .stand-row.me .name{color:var(--gold)}
+/* Everything on a standings row that is not the name or the score: where the
+   seat is, and the ⋯ of what may be done about it. Its own cell, so the name
+   is still the part that gives when the row is narrow. */
+.stand-row .marks{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.stand-row .marks .badge{flex:none;white-space:nowrap}
+.stand-row .is-away{font-variant-numeric:tabular-nums}
+.stand-row .is-auto{color:var(--gold)}
+.stand-row .menu{top:calc(100% - 2px);right:0;min-width:220px}
+/* A name typed into the little sheet the seat menu opens. */
+.namebox{
+  font:inherit;width:100%;padding:10px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-bottom:8px;
+}
 .round-bar.quiet{opacity:.6}
 /* The table has been stopped: said on the round line, on every screen. */
 .paused-mark{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;

@@ -195,6 +195,38 @@ Every one of them hides itself where there is nothing to do, and the row goes
 when they all have. The bum deal is the only one any player gets; the rest are
 the table host's.
 
+**The seat the table is standing on** keeps its own panel, as it always had:
+*Bid for them*, *Play a card for them*, *Auto-play that hand*, *Carry on*.
+
+**The standings are the list of everybody**, once the lobby is gone, so that is
+where the seat controls live. Each row says where that seat is — **host**,
+**bot**, **auto-play** for one the table was given, **away 4m** for one nobody
+is behind — and carries a ⋯ for whoever runs the table:
+
+- **Let back in** — a seat the table was given, handed back. It cannot be that
+  player's own button: whoever the table is playing for is not there to press
+  anything, and their phone may have forgotten the table altogether. Once the
+  seat is open they come back the way any phone that lost its seat does — the
+  code and the name they played under. The seat's clock starts again from that
+  moment, so a seat opened and not taken up is handed over again in its own
+  time rather than at once.
+- **Auto-play their hand** — a player who has gone home. Any seat nobody is
+  behind, not only the one the table is standing on: they need not be holding
+  the game up for their hand to be one nobody is behind. Only on a table dealt
+  on the phones; with real cards their cards are on the table in front of them.
+- **Make table host** — the table passed on, mid-game. Never to a bot, and
+  never to a seat the table is playing.
+- **They dealt this hand** — who dealt. Only with **real cards**, where a
+  person did the dealing and can have been the wrong one, and only while nobody
+  has bid, because the order of bidding is the dealer's.
+A name is not on that menu. The name is the column on the scorecard, and the
+head of that column is where it is changed — one place, where the thing being
+renamed is the thing being looked at.
+
+Before the game the same controls are on the lobby's own seat list, where they
+have always been, with **Kick** as well — a seat only goes while nothing has
+been played, because after that the scorecard is a column for it.
+
 ### The scorecard is editable
 
 Whoever runs the table taps a **scored round** on the scorecard and retypes it.
@@ -1037,7 +1069,7 @@ The controls are one band over the screens, two rows:
 
 **Players ▾** and **State ▾** stand apart from those, at the end of the row: they open a panel rather than move the game on, and the two of them are what is left when the rest is not offered.
 
-- **Players** — a panel under the band, and where a live game is managed. It opens with the round it is editing named — *Round 3 of 7 · 5 cards* — and the four phases beside it, the one the game is in marked. Press a phase and the game is forced to it, which is the one thing the round's own numbers cannot unstick: every bid in and the phase never turned. Then one row a seat: name, who hosts, who deals, bot, this round's bid and tricks, a photo on or off, and **Hand over**. Everything lands as it is changed; the tricks go as one column, once every seat has a number, and the cells still wanted are ringed until they do.
+- **Players** — a panel under the band. What a live game reaches for is now on the scores page itself — the row of controls under the bids, the ⋯ on each standings row, and the [editable scorecard](#the-scorecard-is-editable) — all of which stay inside the rules. This is the forcing half, for the states the rules cannot reach. It opens with the round it is editing named — *Round 3 of 7 · 5 cards* — and the four phases beside it, the one the game is in marked. Press a phase and the game is forced to it, which is the one thing the round's own numbers cannot unstick: every bid in and the phase never turned. Then one row a seat: name, who hosts, who deals, bot, this round's bid and tricks, a photo on or off, and **Hand over**. Everything lands as it is changed; the tricks go as one column, once every seat has a number, and the cells still wanted are ringed until they do.
 - **Hand over** takes a player out of a game in play. Mid-game the seat cannot simply go — the rounds already played are that player's, and the scorecard is a column for it — so the seat stays, is marked gone, and the table plays its hand from there on. It is a pair: **Take back** gives the seat to whoever holds its phone again. Removing a seat outright is the lobby's business, and the table host's.
 - **State** — the whole table as JSON, the same record it is saved to disk as: rounds, seats, rules, hands, everything. Edit it and press Apply, and the table becomes what the text says; Reload throws the edits away and reads the table afresh. A record the table will not have says why beside the Apply button, and the edit stays in the box to be put right — it is the thing being worked on. **Copy** takes the record to the clipboard, which is how a broken table is kept before it is mended. The table's code, its keys and the pictures stay as they are, whatever the text says. This is the raw way to any state the other controls cannot reach, and it works on any server: it is how a real game nothing else reaches is put right.
 
@@ -1053,7 +1085,7 @@ Both doors are one message. A table's host token opens it on any server — it i
 
 What the page may do follows the **server**, not the table. On a server started with `DEV=1` a real table takes every control a table of stand-ins does — jump to, fill scorecard, randomise, all of it. The top bar turns red and the page says real players may be at the table, because every click lands on their game; nothing is taken away. On a normal server the host token opens the two controls that put a game right and invent nothing: the forced values of the **Players** panel, and the **State** record itself. Everything that makes data up is refused — and, being refused, is not shown. The page is told which kind of server it reached in the same breath as the table, so the tables strip, **New table**, the scrubber and the one-shots are put away before anything is drawn. A control that draws itself and then answers a refusal teaches the limits one click at a time; this way the page offers what works and nothing else.
 
-What is left on a live table is what an admin actually reaches for when a bug has broken the flow of a game, and it is all in one place: the **Players** panel. The round it is editing, the phase to force, and a row a seat — the bid, the tricks, whether the seat is a bot, who runs the table, and taking a player out of it. Nothing there invents anything; every one of them is a forced value, which is what the host token has always been allowed. Anything those cannot reach is the **State** record's job.
+What is left on a live table is the forcing half — for the states the rules themselves cannot reach. (Everything that stays inside the rules is on the scores page, which needs no dev page and no token in a link.) It is all in one place: the **Players** panel. The round it is editing, the phase to force, and a row a seat — the bid, the tricks, whether the seat is a bot, who runs the table, and taking a player out of it. Nothing there invents anything; every one of them is a forced value, which is what the host token has always been allowed. Anything those cannot reach is the **State** record's job.
 
 The phones are there, one pane a player, so you can see what each of them sees. On a real table they open as **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
 
@@ -1151,7 +1183,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/stage.js` — the overlay both scenes are played on, its parts, the slot that says which one is open, and the peek: the one way a screen shows the seat it is waiting on.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
 - `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
-- `public/table.js` — the scorecard, the standings, the winner and the vote line, drawn the same on a TV screen and a phone; and what the deal and the finish read off the state.
+- `public/table.js` — the scorecard (editable, for whoever runs the table), the standings and the seat controls on them, the winner and the vote line, drawn the same on a TV screen and a phone; the ⋯ menu both lists of people use; and what the deal and the finish read off the state.
 - `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the TV screen, the table host's phone and the dev page.
 - `public/round.js` — the round in play: the round line, the bids as they land, the count of tricks taken, the pads for a seat with nobody behind it, and the winner. Each widget takes the element it draws into and a view of who is looking.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.

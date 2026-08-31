@@ -116,50 +116,21 @@ const Lobby = (function () {
      does something: a seat is not offered what it already is, and a seat
      with nothing left to offer has no ⋯ at all. */
   function seatMenu(row, s, i, is, view) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'mini more';
-    btn.textContent = '⋯';
-    btn.title = 'Seat options';
-    btn.setAttribute('aria-label', `Options for ${s.name}`);
-    btn.setAttribute('aria-haspopup', 'true');
     const items = [];
     // Not on the seat that already runs the table: a row that does nothing.
-    if (!s.bot && !is.isCap) items.push({ label: 'Make table host', msg: { t: 'captain', id: s.id } });
-    if (!is.isFirst) items.push({ label: 'Make dealer', msg: { t: 'config', patch: { firstDealer: s.id } } });
-    if (!is.mine) items.push({ label: 'Kick', danger: true, msg: { t: 'kick', id: s.id } });
-    if (!items.length) return null;           // the host's own seat, already dealing: nothing to offer
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = row.querySelector('.seatmenu');
-      closeSeatMenus();
-      if (open) return;                         // the same button shuts it
-      const menu = document.createElement('div');
-      menu.className = 'menu seatmenu';
-      menu.setAttribute('role', 'menu');
-      items.forEach((it) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'menu-row menu-tap' + (it.danger ? ' danger' : '');
-        const name = document.createElement('span');
-        name.className = 'menu-label';
-        name.textContent = it.label;
-        b.appendChild(name);
-        b.addEventListener('click', (e2) => { e2.stopPropagation(); menu.remove(); view.send(it.msg); });
-        menu.appendChild(b);
-      });
-      row.appendChild(menu);
-    });
-    return btn;
+    if (!s.bot && !is.isCap) {
+      items.push({ label: 'Make table host', run: () => view.send({ t: 'captain', id: s.id }) });
+    }
+    if (!is.isFirst) {
+      items.push({ label: 'Make dealer', run: () => view.send({ t: 'dealer', id: s.id }) });
+    }
+    if (!is.mine) {
+      items.push({ label: 'Kick', danger: true, run: () => view.send({ t: 'kick', id: s.id }) });
+    }
+    // The ⋯ itself, how it opens and how it shuts, is every list's alike.
+    return Table.rowMenu(row, items, s.name);
   }
-  function closeSeatMenus() {
-    document.querySelectorAll('.seatmenu').forEach((m) => m.remove());
-  }
-  // A tap anywhere else is the way out that needs no button.
-  document.addEventListener('pointerdown', (e) => {
-    if (e.target && e.target.closest && e.target.closest('.seatmenu, .mini.more')) return;
-    closeSeatMenus();
-  });
+  const closeSeatMenus = Table.closeRowMenus;
 
   /* Players the table provides, for a hand short of people. They hold cards,
      so they belong to a table that deals them. `root` is the row: the button

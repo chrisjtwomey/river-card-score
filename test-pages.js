@@ -2862,6 +2862,124 @@ part('the front page, and the screen');
     ok(row.hidden === true, 'a screen that runs nothing is offered none of it');
   }
 
+  /* ---- who is at the table, on the standings ----
+     Once the lobby is gone the standings are the only list of everybody a game
+     has, so that is where the seat controls live: where the seat is, and what
+     whoever runs the table may do about it. */
+  part('who is at the table, on the standings');
+  {
+    const R = load(900, 800);
+    const sent = [];
+    /* Handing a seat over is asked about first. The real dialog wants a browser
+       to open it in, so the answer here is yes, at once, the way it is
+       everywhere else in this file. */
+    const asked = [];
+    R.UI.ask = (t, b, l) => { asked.push({ t, b, l }); return { then: (f) => f(true) }; };
+    const boss = { me: -1, boss: true, send: (m) => sent.push(m) };
+    const seat = (id, name, over) => Object.assign({ id, name, online: true, quiet: 0 }, over || {});
+    const ST = (over) => Object.assign({
+      code: 'TEST', phase: 'bid', idx: 0,
+      cfg: { deck: 'virtual', trump: false },
+      captainId: 'a',
+      seats: [seat('a', 'Ann'), seat('b', 'Ben'), seat('c', 'Cal')],
+      rounds: [{ cards: 3, dealer: 0, bids: [null, null, null], tricks: null }],
+      totals: [10, 5, 0],
+    }, over || {});
+    const box = R.dom.document.createElement('div');
+    const rowFor = (nm) => Array.prototype.slice.call(box.children)
+      .find((r) => r.querySelector('.name').textContent.indexOf(nm) === 0);
+    const marks = (nm) => rowFor(nm).querySelectorAll('.badge').map((b) => b.textContent);
+    const label = (b) => b.querySelector('.menu-label').textContent;
+    const openMenu = (nm) => {
+      const row = rowFor(nm);
+      row.querySelector('.more').fire('click');
+      return row.querySelector('.seatmenu').querySelectorAll('.menu-tap');
+    };
+
+    R.Table.standings(box, ST(), { view: boss });
+    ok(box.children.length === 3, 'a row a player  got ' + box.children.length);
+    ok(marks('Ann').indexOf('host') >= 0, 'the seat that runs the table says so  got ' + marks('Ann').join('|'));
+    ok(marks('Ben').length === 0, 'a seat with nothing to say says nothing  got ' + marks('Ben').join('|'));
+
+    // A phone that has gone, and how long for: the clock is the room's.
+    const away = ST();
+    away.seats[1].online = false;
+    away.seats[1].quiet = 4 * 60000 + 3000;
+    R.Table.standings(box, away, { view: boss, quietAt: Date.now() });
+    ok(marks('Ben').indexOf('away 4m') >= 0,
+       'a seat nobody is behind says how long for  got ' + marks('Ben').join('|'));
+
+    // And one the table was given.
+    const given = ST();
+    given.seats[1].left = true;
+    given.seats[1].online = false;
+    R.Table.standings(box, given, { view: boss });
+    ok(marks('Ben').indexOf('auto-play') >= 0,
+       'a seat the table is playing says so instead  got ' + marks('Ben').join('|'));
+
+    // What may be done about each of them.
+    sent.length = 0;
+    let rows = openMenu('Ben').map(label);
+    ok(rows.indexOf('Let back in') >= 0, 'a seat the table was given can be given back  got ' + rows.join(' | '));
+    ok(rows.indexOf('Make table host') < 0,
+       'and is never handed the table itself: somebody has to be able to move the game on');
+    openMenu('Ben').find((b) => label(b) === 'Let back in').fire('click');
+    ok(JSON.stringify(sent[0]) === '{"t":"letback","id":"b"}',
+       'and one tap opens it  got ' + JSON.stringify(sent[0]));
+
+    // A phone that has gone home, on a table that deals the cards.
+    R.Table.standings(box, away, { view: boss });
+    rows = openMenu('Ben').map(label);
+    ok(rows.indexOf('Auto-play their hand') >= 0,
+       'a seat nobody is behind can be handed over  got ' + rows.join(' | '));
+    sent.length = 0; asked.length = 0;
+    openMenu('Ben').find((b) => label(b) === 'Auto-play their hand').fire('click');
+    ok(asked.length === 1 && /^Auto-play Ben/.test(asked[0].t),
+       'and is asked about first, by name  got ' + JSON.stringify(asked[0]));
+    ok(JSON.stringify(sent[0]) === '{"t":"playout","id":"b"}',
+       'then handed over by name, not by whose turn it is  got ' + JSON.stringify(sent[0]));
+
+    // With real cards the table holds no hand of anybody's.
+    const real = ST({ cfg: { deck: 'physical', trump: false } });
+    real.seats[1].online = false;
+    R.Table.standings(box, real, { view: boss });
+    rows = openMenu('Ben').map(label);
+    ok(rows.indexOf('Auto-play their hand') < 0,
+       'a table with real cards has no hand of theirs to take  got ' + rows.join(' | '));
+    ok(rows.indexOf('They dealt this hand') >= 0,
+       'but it has a deal that can have gone to the wrong person  got ' + rows.join(' | '));
+    sent.length = 0;
+    openMenu('Ben').find((b) => label(b) === 'They dealt this hand').fire('click');
+    ok(JSON.stringify(sent[0]) === '{"t":"dealer","id":"b"}',
+       'and the seat that really dealt can be said  got ' + JSON.stringify(sent[0]));
+
+    // Once a bid is in, the order of bidding is the dealer's and stands.
+    const bidding = ST({ cfg: { deck: 'physical', trump: false } });
+    bidding.rounds[0].bids = [null, 1, null];
+    R.Table.standings(box, bidding, { view: boss });
+    ok(openMenu('Ben').map(label).indexOf('They dealt this hand') < 0,
+       'a hand already being bid keeps its dealer');
+
+    // The table passed on, and a name put right.
+    R.Table.standings(box, ST(), { view: boss });
+    sent.length = 0;
+    openMenu('Ben').find((b) => label(b) === 'Make table host').fire('click');
+    ok(JSON.stringify(sent[0]) === '{"t":"captain","id":"b"}',
+       'the table is passed on by name  got ' + JSON.stringify(sent[0]));
+    /* Not the name. That is the column on the scorecard, and the head of that
+       column is where it is changed: one place, where the thing being renamed
+       is the thing being looked at. */
+    ok(openMenu('Ben').map(label).indexOf('Rename') < 0,
+       'and never the name: the head of its own column is where that is changed');
+
+    // A screen that runs nothing draws none of it.
+    R.Table.standings(box, ST(), { view: { me: 1, boss: false, send: () => {} } });
+    ok(!rowFor('Ben').querySelector('.more'), 'a screen that runs nothing offers no ⋯');
+    ok(marks('Ann').indexOf('host') >= 0, 'but it still says who runs the table');
+    R.Table.standings(box, ST(), {});
+    ok(!rowFor('Ben').querySelector('.more'), 'and neither does one that was handed no view at all');
+  }
+
   /* ---- the scorecard, put right ----
      A round already scored is the one thing the buttons cannot reach: the game
      has moved past it. So the number is retyped where it is read. */
@@ -3794,8 +3912,9 @@ part('bidding for a seat that is not there, and leaving');
        'with the controls named  got ' + names.join(' | '));
     P.socks[0].sent.length = 0;
     menu.querySelectorAll('.menu-tap').find((b) => label(b) === 'Make dealer').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"firstDealer":"s1"}}',
-       'and a row sends what the glyph sent  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dealer","id":"s1"}',
+       'and a row says who deals, the one way the table hears it  got '
+       + JSON.stringify(P.socks[0].sent[0]));
     ok(!rows[1].querySelector('.seatmenu'), 'the menu shuts on the tap');
     ok(names.indexOf('Move up') < 0 && names.indexOf('Move down') < 0, 'the order is changed by dragging, not from the menu');
     // seat 1 runs the table and deals first, and it is this phone's: nothing to offer
