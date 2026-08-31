@@ -68,11 +68,14 @@ const Felt = (function () {
      a share of the way it has to travel, so every seat bows to the same shape;
      and how much bigger it gets at the top of the bow, which is the card being
      lifted off the stack rather than slid out of it. */
-  const PLAY_BOW = 0.22, PLAY_RISE = 0.09;
+  const PLAY_BOW = 0.22, PLAY_RISE = 0.14;
 
-  // Where in the way over the card turns face up: off the pile first, over
-  // before it is half way, so it lands as a card and not as a card turning.
-  const PLAY_TURN = [0.2, 0.6];
+  /* Where in the movement the card turns over, as a share of the time it
+     takes. It is off the pile before it starts and face up before it lands,
+     and everything between those is the turn: a card has no perspective to
+     turn under here -- the overlay's belongs to the stage, not to the cards on
+     it -- so what says it turned over is how long it takes to do it. */
+  const PLAY_TURN = [0.08, 0.78];
 
   /* How long what the round paid stands before the table is put away for the
      next one. A figure a player has to catch inside two seconds is a figure
@@ -1346,7 +1349,8 @@ const Felt = (function () {
     // The peek rides on the top of a pile, and this was the top of one: let it
     // go, or a filled animation outranks everything that follows.
     own(el, home);
-    el.animate(arcPlay(g, q, k, of, home), { duration: PLAY_IN, easing: ARC_EASE });
+    // Linear: the shaping is in the keyframes. See arcPlay.
+    el.animate(arcPlay(g, q, k, of, home), { duration: PLAY_IN, easing: 'linear' });
   }
 
   /* The way it comes: a bow from where it was lying to where it lands. The
@@ -1368,13 +1372,23 @@ const Felt = (function () {
     const by = (h.y + y1) / 2 - (dx / len) * bow;
     const kf = [{ transform: pileAt(g, q, k, of) }];
     for (let i = 1; i < ARC_STEPS; i++) {
-      const u = i / ARC_STEPS, v = 1 - u;
-      const turn = Math.min(1, Math.max(0, (u - PLAY_TURN[0]) / (PLAY_TURN[1] - PLAY_TURN[0])));
+      /* The steps are even in time and the shaping is done here, so the
+         animation itself runs linear. An easing bends where the card is and
+         when it turns over by the same amount, and the turn is the part that
+         must not be bent: under a curve that starts slowly, the whole of it
+         fell into a twentieth of a second in the middle and read as the card
+         simply being face up already. */
+      const t = i / ARC_STEPS;
+      const u = t * t * (3 - 2 * t);                 // off the pile, along, and settle
+      const v = 1 - u;
+      const turn = Math.min(1, Math.max(0, (t - PLAY_TURN[0]) / (PLAY_TURN[1] - PLAY_TURN[0])));
       kf.push({ transform: tf(v * v * h.x + 2 * v * u * bx + u * u * x1,
                               v * v * h.y + 2 * v * u * by + u * u * y1,
                               h.tilt + (t1 - h.tilt) * u,
                               180 * (1 - turn),
-                              h.z * (1 + PLAY_RISE * Math.sin(Math.PI * u))) });
+                              // Biggest as it comes round, which is what a card
+                              // with no perspective has instead of one.
+                              h.z * (1 + PLAY_RISE * Math.sin(Math.PI * turn))) });
     }
     kf.push({ transform: home });
     return kf;

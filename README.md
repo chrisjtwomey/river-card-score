@@ -325,11 +325,14 @@ that band.
   the card is played. A hand played out to nothing leaves its place, not a
   hole.
 - **Another seat's card is picked up, not produced.** When somebody else
-  plays, the card comes off the top of their pile: it lifts off the stack,
-  grows a little, turns face up, and bows across onto the spot it lands on --
-  clockwise, the way the trick that gathers it comes round. It takes a quarter
-  of a second, because it is the move the table is waiting on and there is one
-  of them per card in the trick. Your own card is different, and unchanged: it
+  plays, the card comes off the top of their pile: it lifts off the stack and
+  bows across onto the spot it lands on -- clockwise, the way the trick that
+  gathers it comes round -- turning face up and swelling as it comes. The turn
+  takes most of the way over rather than a moment in the middle of it: there is
+  no perspective for a card to turn under here, so what says it turned over is
+  how long it takes. The whole of it is a quarter of a second, because it is
+  the move the table is waiting on and there is one of them per card in the
+  trick. Your own card is different, and unchanged: it
   comes out of the fan under your thumb.
 - **A trick taken is said out loud**: *"Otter won that trick"* comes up under
   the pile, so the card that took it is still there to see. It stays for two

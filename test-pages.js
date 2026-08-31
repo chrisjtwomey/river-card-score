@@ -1687,9 +1687,16 @@ function tookTrick(motion) {
   const faces = kf.map((f) => spotOfKf(f).face);
   ok(faces[0] === 180, 'it comes off the pile face down  got ' + faces[0]);
   ok(faces[faces.length - 1] === 0, 'and lands face up');
-  const over = faces.indexOf(0);
-  ok(over > 1 && over <= Math.ceil(faces.length * 0.7),
-     'turning over on the way, not on the pile and not on landing  got ' + faces.join(','));
+  ok(faces.indexOf(0) > 1, 'not on the pile  got ' + faces.join(','));
+  /* And it takes its time over it. The turn used to be squeezed into the fast
+     middle of an eased curve and read as no turn at all, so what is checked is
+     that most of the places named on the way have the card part-turned. */
+  const turning = faces.filter((v) => v > 0 && v < 180).length;
+  ok(turning >= Math.floor(faces.length * 0.5),
+     'turning over across most of the way, not in one step  got ' + turning
+     + ' of ' + faces.length + ' places  ' + faces.map(Math.round).join(','));
+  ok(runs.length > 0 && runs[0].opts.easing === 'linear',
+     'the shaping is in the keyframes, so the turn is not bent by an easing');
 
   /* The bow is across the way it is going, turned the way the table turns:
      clockwise, the same way the trick that gathers it comes round. */
