@@ -4176,37 +4176,44 @@ part('the dev controls, on each kind of server');
        starts it: the panes hold their seats and the bots take their turns.
        There is nothing to start on a copy that is still the game it is a copy
        of -- nothing is played at one of those. */
+    /* On a fork there is one button still, and it means what it always meant:
+       go forward from here. What is in front depends on where the head is --
+       tape while there is tape, and at the end of a fork's own tape a game.
+       Two buttons for that were two clocks wearing one face. */
     const forkBox = () => P.pick('#fork-run').querySelector('.viewer-fork');
-    const go = () => forkBox().querySelector('.vw-run');
     const word = () => forkBox().querySelector('.viewer-held').textContent;
-    ok(forkBox().hidden === true, 'a copy that is still the game has nothing to start');
-    /* And it is never in the transport. The tape's clock and the table's were
-       side by side, both green and both starting with the same mark, which is
-       two clocks wearing one face: press the wrong one and the table sits
-       there while the tape runs. */
-    ok(!run().querySelector('.vw-run'), 'the fork\'s clock is not the tape\'s');
-    ok(P.pick('#replay-fork').hidden === true, 'and its cluster is not there either');
+    ok(forkBox().hidden === true, 'a copy that is still the game has no table of its own');
+    ok(!run().querySelector('.vw-run'), 'and no second clock beside the transport');
 
     const held = (on) => JSON.parse(devState(false, { paused: on }));
-    say({ forked: true, state: held(true) });
-    ok(forkBox().hidden === false && go().textContent === 'Carry on',
-       'a fork offers to be played  got ' + go().textContent);
-    ok(word() === 'stopped', 'and says which way it is  got ' + word());
-    ok(P.pick('#replay-fork').hidden === false, 'in a cluster of its own on the band');
+    say({ forked: true, at: 12, n: 13, state: held(true) });
+    ok(forkBox().hidden === false && word() === 'stopped',
+       'a fork says what its table is doing  got ' + word());
     ok(/changed by hand · stopped/.test(P.pick('#subtitle').textContent),
        'and the head says it too, where the eye already is  got '
        + P.pick('#subtitle').textContent);
+    ok(play.textContent === '▶ Play', 'the one button offers to go forward');
     P.socks[0].sent.length = 0;
-    go().fire('click');
+    play.fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"run","on":true}',
-       'and asks the copy for it  got ' + JSON.stringify(P.socks[0].sent[0]));
-    say({ forked: true, state: held(false) });
-    ok(go().textContent === 'Stop' && word() === 'playing',
-       'a running fork says so and offers to be stopped  got ' + go().textContent);
+       'and at the end of the tape that is the game  got '
+       + JSON.stringify(P.socks[0].sent[0]));
+    say({ forked: true, at: 12, n: 13, state: held(false) });
+    ok(play.textContent === '❚❚ Pause' && word() === 'playing',
+       'a running fork says so, and the same button stops it  got ' + play.textContent);
     P.socks[0].sent.length = 0;
-    go().fire('click');
+    play.fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"run","on":false}',
-       'the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
+       'which stops the table  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* Scrubbed back, there is tape in front of the head again, so going
+       forward is playing it back -- the game is where the tape ends. */
+    say({ forked: true, at: 4, n: 13, state: held(true) });
+    P.socks[0].sent.length = 0;
+    play.fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"play"}',
+       'with tape in front of it, the same button plays the tape  got '
+       + JSON.stringify(P.socks[0].sent[0]));
     say();
 
     say({ playing: true, at: 4 });

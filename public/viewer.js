@@ -225,6 +225,12 @@ const Viewer = (function () {
   // it is carried on.
   const stopped = (R) => !!(R && R.state && R.state.paused);
 
+  /* Whether the one button runs the table rather than the tape. Only a fork
+     has a game of its own to run, and only at the end of its own tape: with
+     tape still in front of the head there is something to play back, and that
+     is what going forward means there. */
+  const runsTable = (R) => !!(R && R.forked && R.at >= R.n - 1);
+
   /* A round back, and a round on. Back part way through a round goes to the top
      of it first, the way a track does: it is the same press for "this one
      again" and "the one before", and which you meant is where you are. On from
@@ -290,8 +296,11 @@ const Viewer = (function () {
       btn(box, 'btn vw-prev', '⏮', 'The top of this round, then the round before',
           () => stepRound(now(), box._view, -1));
       btn(box, 'btn vw-back', '◀', 'One point back', () => ask({ do: 'step', by: -1 }));
-      btn(box, 'btn primary vw-play', '', '',
-          () => ask({ do: now().playing ? 'pause' : 'play' }));
+      btn(box, 'btn primary vw-play', '', '', () => {
+        const R = now();
+        return runsTable(R) ? ask({ do: 'run', on: stopped(R) })
+                            : ask({ do: R.playing ? 'pause' : 'play' });
+      });
       btn(box, 'btn vw-fwd', '▶', 'One point on', () => ask({ do: 'step', by: 1 }));
       btn(box, 'btn vw-next', '⏭', 'The round after',
           () => stepRound(now(), box._view, 1));
@@ -317,10 +326,24 @@ const Viewer = (function () {
     const cur = roundNow(R);
     box.querySelector('.vw-prev').disabled = R.at === 0;
     box.querySelector('.vw-next').disabled = !marks[cur + 1] && R.at >= R.n - 1;
+    /* One button, and it always means the same thing: go forward from here.
+       What is in front depends on where the head is. On a tape there is tape,
+       and it is played back at the pace the table played it. At the end of a
+       fork's own tape there is no tape left -- there is a game -- so the same
+       button carries the table on, and the panes and the bots take it from
+       there. Two buttons for that were two clocks wearing one face. */
     const play = box.querySelector('.vw-play');
-    play.textContent = R.playing ? '❚❚ Pause' : '▶ Play';
-    play.title = R.playing ? 'Stop where it is'
-      : 'Play it back at the pace the table played it';
+    if (runsTable(R)) {
+      const held = stopped(R);
+      play.textContent = held ? '▶ Play' : '❚❚ Pause';
+      play.title = held
+        ? 'Carry the game on from here: the panes hold their seats, and the bots take their turns'
+        : 'Stop the table. No bid, no card and no trick lands until it is started again.';
+    } else {
+      play.textContent = R.playing ? '❚❚ Pause' : '▶ Play';
+      play.title = R.playing ? 'Stop where it is'
+        : 'Play it back at the pace the table played it';
+    }
     box._rates.querySelectorAll('.btn').forEach((b) =>
       b.classList.toggle('on', Number(b.dataset.rate) === (R.rate || 1)));
     box.querySelector('.viewer-at').textContent = `${R.at + 1} of ${R.n}`;
@@ -328,21 +351,17 @@ const Viewer = (function () {
 
   /* ---------- a copy that has been changed ---------- */
 
-  /* A fork's own clock, and never the transport's. The transport plays a tape
-     back; this plays the game. They were side by side in the same cluster,
-     both green and both starting with the same mark, which is two clocks
-     wearing one face -- press the wrong one and the table sits there while the
-     tape runs, and the phones say the table is stopped with nothing on the
-     page agreeing.
+  /* What a fork's own table is doing, in a word. Not a control: the one
+     button in the transport is the control, and this is what tells you which
+     of the two things it will do. Without it a stopped fork looked exactly
+     like a running one, and every card came back "the table is stopped" with
+     nothing on the page agreeing.
 
-     So it stands apart, under a word of its own, and says which way it is. It
-     is not there at all on a copy that is still the game it is a copy of:
-     nothing is played at one of those. */
-  function fork(root, R, view) {
+     Not there at all on a copy that is still the game it is a copy of: that
+     one has no table of its own to be doing anything. */
+  function fork(root, R) {
     if (!root || !R) return;
     const box = part(root, 'viewer-fork');
-    box._R = R;
-    box._view = view;
     if (!box._wired) {
       box._wired = true;
       const lbl = document.createElement('span');
@@ -353,21 +372,16 @@ const Viewer = (function () {
       said.className = 'viewer-held';
       box.appendChild(said);
       box._said = said;
-      btn(box, 'btn vw-run', '', '',
-          () => box._view.send({ do: 'run', on: stopped(box._R) }));
     }
     box.hidden = !R.forked;
     if (!R.forked) return;
     const held = stopped(R);
     box._said.textContent = held ? 'stopped' : 'playing';
     box._said.classList.toggle('on', !held);
-    const go = box.querySelector('.vw-run');
-    go.textContent = held ? 'Carry on' : 'Stop';
-    go.title = held
-      ? 'Play the game from here: the panes hold their seats and the bots take their turns. '
-        + 'This is the table\'s own clock, not the tape\'s.'
-      : 'Stop the table. No bid, no card and no trick lands until you carry it on.';
-    go.classList.toggle('primary', held);
+    box._said.title = held
+      ? 'The table is held. Play carries it on: the panes hold their seats, and the bots '
+        + 'take their turns.'
+      : 'The table is running. Pause stops it.';
   }
 
   /* ---------- the points of the round on show ---------- */
