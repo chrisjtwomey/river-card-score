@@ -136,6 +136,38 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 }
 .selbox::after{position:absolute;right:15px;top:50%;margin-top:-7px;pointer-events:none;transform:rotate(45deg)}
 .field small{font-weight:500;white-space:pre-line}
+/* One rule answered by two regions rather than by a list: what kind of cards
+   the table plays with. It decides what everybody will be doing for the whole
+   game, so both answers stand on the page at once -- an outline each, the mark
+   of the mode at the left and what it means beside it. The radio inside is
+   what a keyboard and a reader use; the outline is what an eye uses. */
+.modepick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mode{
+  position:relative;display:flex;align-items:flex-start;gap:11px;
+  padding:12px;border:1px solid var(--line);border-radius:12px;
+  background:var(--bg);cursor:pointer;transition:.12s border-color,.12s background;
+}
+.mode:hover{background:var(--chip)}
+.mode input{position:absolute;width:0;height:0;margin:0;opacity:0;pointer-events:none}
+.mode-icon{font-size:24px;line-height:1.15;flex:none}
+.mode-said{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mode-said b{font-size:14px;font-weight:700;color:var(--ink)}
+.mode-said small{font-size:12px;font-weight:500;color:var(--ink-dim);line-height:1.35}
+/* The one in force. Two rings and not a fill: the region has to stay readable,
+   and the rules form has no other filled thing on it. */
+.mode.on{border-color:var(--felt);box-shadow:inset 0 0 0 1px var(--felt)}
+.mode:focus-within{outline:2px solid var(--felt);outline-offset:2px}
+/* Nobody but the table host may change it. */
+.modepick.off .mode{cursor:default;opacity:.55}
+.modepick.off .mode:hover{background:var(--bg)}
+.modepick.off .mode.on{opacity:.85}
+/* On a phone the two still stand side by side -- the whole point is seeing
+   both -- and it is the padding that gives way, not the layout. */
+@media (max-width:460px){
+  .mode{padding:10px;gap:8px}
+  .mode-icon{font-size:20px}
+  .mode-said small{font-size:11.5px}
+}
 .toggles{display:flex;flex-direction:column;gap:14px}
 /* The box and the space beside it are named once, so the line under a switch
    starts exactly where its words do. A tick box carries a margin of the

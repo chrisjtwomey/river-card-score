@@ -4380,6 +4380,41 @@ part('bidding for a seat that is not there, and leaving');
     const groups = form.children.filter((g) => g.classList.contains('rules-group'));
     ok(groups.length === 5, 'the rules stand in groups, not one long form  got ' + groups.length);
     ok(!!groups[0].querySelector('#cfg-deck'), 'what the cards are comes first');
+
+    /* And it is not a list to pick from. What kind of cards are on the table
+       decides what everybody will be doing for the whole game, so both answers
+       stand on the page at once: two regions side by side, each an outline
+       with the mark of the mode at its left and what the mode means beside
+       it. There is no line under the rule saying the same thing twice. */
+    const deck = form.querySelector('#cfg-deck');
+    ok(deck.classList.contains('modepick') && deck.tagName !== 'SELECT',
+       'the cards are chosen as regions, not from a list  got ' + deck.tagName);
+    const modes = deck.querySelectorAll('.mode');
+    ok(modes.length === 2, 'one region a mode, and there are two  got ' + modes.length);
+    ok(modes.every((m) => !!m.querySelector('.mode-icon') && !!m.querySelector('b')
+                       && !!m.querySelector('small')),
+       'each carries its mark, its name and what it means');
+    ok(modes.every((m) => (m.querySelector('input') || {}).type === 'radio'),
+       'with a radio inside, for a keyboard and a reader');
+    ok(!form.querySelector('#cfg-deck-hint'),
+       'and nothing under it repeating what the regions already say');
+    // The one in force wears the outline: this table deals on the phones.
+    ok(deck.querySelector('#cfg-deck-virtual').checked
+       && deck.querySelector('#cfg-deck-virtual').parentNode.classList.contains('on'),
+       'the mode in force wears the outline');
+    ok(!deck.querySelector('#cfg-deck-physical').parentNode.classList.contains('on'),
+       'and the other does not');
+    P.socks[0].sent.length = 0;
+    deck.querySelector('#cfg-deck-physical').fire('change');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"config","patch":{"deck":"physical"}}',
+       'pressing a region sends that one rule  got ' + JSON.stringify(P.socks[0].sent[0]));
+    const real = table({ phase: 'lobby' });
+    real.cfg.deck = 'physical';
+    P.feed(real);
+    ok(deck.querySelector('#cfg-deck-physical').parentNode.classList.contains('on')
+       && !deck.querySelector('#cfg-deck-virtual').parentNode.classList.contains('on'),
+       'and the outline moves with the table');
+    P.feed(st);
     ok(!!groups[1].querySelector('#cfg-max') && !!groups[1].querySelector('#cfg-pattern'),
        'then the shape of the game');
     ok(!!groups[2].querySelector('#cfg-miss'), 'then what a bid pays');
@@ -4433,6 +4468,9 @@ part('bidding for a seat that is not there, and leaving');
     ok(form.querySelectorAll('#cfg-max').length === 1, 'and the next state fills the form it has, not a second one');
     P.feed(table({ phase: 'lobby', boss: false }));
     ok(max.disabled === true, 'a player who does not run the table reads the rules and cannot touch them');
+    ok(deck.classList.contains('off')
+       && deck.querySelectorAll('input').every((i) => i.disabled),
+       'the regions with them: one that cannot be pressed should not look as though it can');
   }
 
   {   /* Folded away on a phone, the heading still says what the rules are, and

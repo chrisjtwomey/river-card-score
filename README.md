@@ -680,6 +680,17 @@ Phones reconnect on their own. A player who closes the page and comes back is of
 - Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
 - How many accolades are drawn at the end, from none to five, what each one pays -- 20, 10, 5, or nothing -- and which of the eleven the table plays for at all. See [Accolades](#accolades).
 
+**Cards** is not a list to pick from. It decides what everybody at the table
+will be doing for the whole game -- dealing a real deck between them, or
+watching their own phone -- so both answers stand on the page at once: two
+regions side by side, an outline each, with the mark of the mode at the left
+and what the mode means beside it. The one in force wears the outline, and it
+moves as the table changes. Whoever does not run the table sees both greyed,
+because a region that cannot be pressed should not look as though it can. The
+words live in `MODES` in `public/lobby.js` and nowhere else, so there is no
+line under the rule saying the same thing a second way. A radio sits inside
+each region for a keyboard and a screen reader; the outline is for an eye.
+
 ## Play with no internet
 
 The game never talks to the internet. The pages, the fonts and the QR code all

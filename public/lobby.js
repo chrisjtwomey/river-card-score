@@ -177,15 +177,28 @@ const Lobby = (function () {
     // Short enough for a phone's select; the line under the field says it in full.
     miss: [['atleast', 'Must make it · short pays 0'], ['atleastdiff', 'Must make it · short pays −1 each'],
            ['zero', '0 points'], ['diff', '−1 per trick off'], ['tricks', 'Tricks won only']],
-    deck: [['physical', 'Real cards on the table'], ['virtual', 'Deal on the phones']],
     accoladeCount: [[0, 'none'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']],
     accoladePay: [[20, '20 points'], [10, '10 points'], [5, '5 points'], [0, 'nothing']],
+  };
+  /* A rule answered by two regions rather than by a list. What kind of cards
+     are on the table decides what everybody will be doing for the whole game
+     -- dealing a real deck between them, or watching their own phone -- so
+     both answers stand on the page at once, each saying what it means. The
+     words are here and nowhere else: there is no line under the rule to keep
+     in step with it. */
+  const MODES = {
+    deck: [
+      { v: 'physical', icon: '\uD83C\uDCCF', label: 'Real cards',
+        says: 'You deal a real deck. The dealer types in the tricks at the end of a round.' },
+      { v: 'virtual', icon: '\uD83D\uDCF1', label: 'On the phones',
+        says: 'The server deals to each phone, turns the trump, and counts the tricks.' },
+    ],
   };
   // The field's id, the rule it holds, what kind of field, its label, and a
   // fixed line under it. The lines that depend on the rules are written in
   // rulesForm, into `<id>-hint`.
   const RULES = [
-    { id: 'cfg-deck', key: 'deck', kind: 'select', label: 'Cards' },
+    { id: 'cfg-deck', key: 'deck', kind: 'mode', label: 'Cards' },
     { id: 'cfg-max', key: 'max', kind: 'number', label: 'Biggest hand', min: 1 },
     { id: 'cfg-ones', key: 'ones', kind: 'number', label: 'Rounds of 1 card', min: 1, max: 8,
       hint: 'One per player, so everybody deals it.' },
@@ -257,6 +270,29 @@ const Lobby = (function () {
       box.append(sum, list);
       return box;
     }
+    /* Two regions side by side, each an outline with the mark of the mode at
+       its left and what the mode means beside it. The radio inside is what a
+       keyboard and a reader use; the outline is what an eye uses. */
+    if (r.kind === 'mode') {
+      const wrap = make('div', 'field');
+      wrap.appendChild(make('span', '', r.label));
+      const pick = make('div', 'modepick');
+      pick.id = r.id;
+      MODES[r.key].forEach((m) => {
+        const box = make('label', 'mode');
+        const el = make('input');
+        el.type = 'radio';
+        el.name = r.id;
+        el.value = String(m.v);
+        el.id = r.id + '-' + m.v;
+        const said = make('div', 'mode-said');
+        said.append(make('b', '', m.label), make('small', '', m.says));
+        box.append(el, make('span', 'mode-icon', m.icon), said);
+        pick.appendChild(box);
+      });
+      wrap.appendChild(pick);
+      return wrap;
+    }
     if (r.kind === 'check') {
       const row = make('div', 'switchrow');
       row.id = r.id + '-row';               // the row is what a rule hides itself by
@@ -322,7 +358,7 @@ const Lobby = (function () {
     const max = q(root, '#cfg-max');
     if (max) max.max = String(cap);
     RULES.forEach((r) => {
-      if (r.kind === 'picks') return;              // a list of its own, below
+      if (r.kind === 'picks' || r.kind === 'mode') return;   // each has a filler of its own, below
       const el = q(root, '#' + r.id);
       if (!el) return;
       const v = c[r.key] === undefined ? DEFAULTS[r.key] : c[r.key];
@@ -338,17 +374,39 @@ const Lobby = (function () {
     // With real cards the deck on the table decides everything about trumps.
     const trumpRow = q(root, '#cfg-trump-row');
     if (trumpRow) trumpRow.hidden = !Game.virtual(ST);
-    text(root, '#cfg-deck-hint', Game.virtual(ST)
-      ? 'The server deals to each phone, turns the trump, and counts the tricks.'
-      : 'You deal real cards. The dealer types in the tricks at the end of a round.');
     text(root, '#cfg-max-hint', `Up to ${cap} cards each with ${n} players.`);
     const cards = Game.schedule(c.max, c.pattern, c.ones);
     text(root, '#cfg-pattern-hint', `${cards.length} rounds: ${cards.join(' ')}`);
     const ex = (w) => Game.roundScore(2, w, c);
+    modePicks(root, ST, view);
     accoladePicks(root, ST, view);
     // The rule, then the same rule counted out: two lines, not one long one.
     text(root, '#cfg-miss-hint',
       `${MISS_SAID[c.miss] || ''}\nBid 2: win 3 = ${ex(3)} · win 2 = ${ex(2)} · win 1 = ${ex(1)}`);
+  }
+
+  /* A rule answered by regions. The one in force wears the outline, and a
+     screen that may not run the table wears them both grey: a region that
+     cannot be pressed should not look as though it can. */
+  function modePicks(root, ST, view) {
+    RULES.filter((r) => r.kind === 'mode').forEach((r) => {
+      const pick = q(root, '#' + r.id);
+      if (!pick) return;
+      const now = String(ST.cfg[r.key] === undefined ? DEFAULTS[r.key] : ST.cfg[r.key]);
+      MODES[r.key].forEach((m) => {
+        const el = q(pick, '#' + r.id + '-' + m.v);
+        if (!el) return;
+        const on = String(m.v) === now;
+        el.checked = on;
+        el.disabled = !view.boss;
+        if (el.parentNode) el.parentNode.classList.toggle('on', on);
+        if (!el._wired) {
+          el._wired = true;
+          el.addEventListener('change', () => view.send({ t: 'config', patch: { [r.key]: m.v } }));
+        }
+      });
+      pick.classList.toggle('off', !view.boss);
+    });
   }
 
   /* Which accolades this table hands out. Nothing chosen is all of them, so
