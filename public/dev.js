@@ -91,6 +91,17 @@ function connect() {
       if ((REPLAY && REPLAY.code) !== was) seatKey = topKey = '';
       renderReplay();
       renderFrames();
+    } else if (m.t === 'replayAt') {
+      /* A copy playing itself, saying where it has got to. Only the place
+         moves: the rounds and the points of the round are the trail, and it is
+         being read, not written. A word about a copy this page has let go is
+         not this page's business. */
+      if (REPLAY && REPLAY.code === m.code) {
+        REPLAY.at = m.at;
+        REPLAY.playing = m.playing;
+        REPLAY.where = m.where;
+        renderReplay();
+      }
     } else if (m.t === 'seat') {
       // The seat asked for: put it in the pane, which then acts as the player.
       const one = seatOf(m.id);

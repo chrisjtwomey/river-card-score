@@ -314,16 +314,25 @@ function replayBeat(room, ev) {
   return REPLAY_STEP;
 }
 
+/* The panes on a copy are told by the broadcast, like any other screen. The
+   page holding the controls is not: its socket is on the table the game was
+   played at, not on the copy. So it is told here, and only where the copy has
+   got to -- the rest of what it drew is the trail, which does not move. */
+function sayWhere(room) {
+  if (room.replay && room.replay.to) send(room.replay.to, Replay.at(room));
+}
+
 /* A replay playing itself, one point at a time. The timer is the copy's own --
    nothing else on it has a clock -- and it looks again when it fires, because
    the copy may have been moved or let go in the meantime. */
 function replayTick(room) {
   const tag = room.replay;
   if (!tag || !tag.playing) return;
-  if (tag.at >= tag.n - 1) { tag.playing = false; return broadcast(room); }
+  if (tag.at >= tag.n - 1) { tag.playing = false; broadcast(room); return sayWhere(room); }
   const ev = tag.points[tag.at + 1];
   Replay.step(room, 1);
   broadcast(room);
+  sayWhere(room);
   if (room.replay !== tag || !tag.playing) return;
   room.replayTimer = setTimeout(() => {
     room.replayTimer = null;

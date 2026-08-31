@@ -70,7 +70,7 @@ async function upAt(port, ms = 8000) {
 
 function client(name, url) {
   const ws = new WebSocket(url || `ws://127.0.0.1:${PORT}/ws`);
-  const c = { ws, name, state: null, hello: null, errors: [], seatId: null, pongs: 0 };
+  const c = { ws, name, state: null, hello: null, errors: [], seatId: null, pongs: 0, moved: [] };
   ws.on('message', d => {
     const m = JSON.parse(d);
     if (m.t === 'state') c.state = m;
@@ -81,6 +81,9 @@ function client(name, url) {
     else if (m.t === 'seat') c.seat = m;
     else if (m.t === 'stateRaw') c.raw = m.record;
     else if (m.t === 'replay') c.replay = m;
+    // Where a copy has got to on its own, kept in order: it should arrive
+    // without this socket having asked for it.
+    else if (m.t === 'replayAt') c.moved.push(m);
     else if (m.t === 'kicked') c.kicked = true;
     else if (m.t === 'left') c.left = true;
   });
@@ -530,9 +533,20 @@ async function bidRound(P) {
     h.send({ t: 'dev', action: 'replay', do: 'seek', at: 0 });
     await okBy(() => h.replay.at <= 1,
        'put back to the start, which is the first picture there is  got ' + h.replay.at);
+    h.moved.length = 0;
     h.send({ t: 'dev', action: 'replay', do: 'play' });
     await okBy(() => h.replay.playing === true, 'and set going');
     await okBy(() => h.replay.at > 0, 'it walks itself on  got ' + h.replay.at);
+    /* And it says where it has got to as it goes. This socket is on the table
+       the game was played at, not on the copy -- the panes hold those -- so
+       without a word from the copy the controls stood still while the screens
+       played on. */
+    const walked = () => h.moved.length >= 2 && h.moved[h.moved.length - 1].at > h.moved[0].at;
+    await until(walked);
+    ok(walked(), 'a replay playing itself says where it has got to, unasked  got '
+       + JSON.stringify(h.moved.map((x) => x.at)));
+    ok(h.moved.every((x) => x.code === copy && x.where),
+       'and says which copy, and what is on it');
     h.send({ t: 'dev', action: 'replay', do: 'pause' });
     await okBy(() => h.replay.playing === false, 'and stops where it is');
     const stoodAt = h.replay.at;
