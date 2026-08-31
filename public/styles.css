@@ -1550,5 +1550,10 @@ body.settings-open{overflow:hidden}
 .viewer-points{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
 /* The rounds of the game being watched. */
 .viewer-rounds{display:flex;flex:1;min-width:0}
+/* Whose screen it is watched from. A row rather than a segment, because a
+   table of eight would not fit in one and has to wrap. */
+.viewer-seen{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.viewer-seen .btn{padding:6px 11px;font-size:12px}
+.viewer-seen .btn.on{background:var(--felt);border-color:var(--felt);color:#fff}
 /* The list of what there is to watch. */
 .gamelist{display:flex;flex-direction:column;gap:7px;min-width:0}

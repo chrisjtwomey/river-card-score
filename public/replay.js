@@ -14,21 +14,29 @@ const $ = (s) => document.querySelector(s);
 
 let ws = null;
 let R = null;                    // the copy, and where it stands
-let shown = '';                  // the copy the frame is on, so it is set once
+let copy = '';                   // the copy the frame is on, so a new one starts over
+let at = '';                     // and the address it is at, so it is set once
 const GAME = new URLSearchParams(location.search).get('g') || '';
 
 const err = (msg) => { $('#err').textContent = msg || ''; $('#err').hidden = !msg; };
 const send = (o) => {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify(Object.assign({ t: 'replay' }, o)));
 };
-const view = { send };
+/* How this page acts on the copy, and whose screen it is showing. The screen
+   is nothing to do with the copy -- it is the same moment of the same game,
+   looked at from somewhere else -- so it is held here and not asked for. */
+const view = {
+  send,
+  seen: null,
+  show(id) { view.seen = id || null; draw(); },
+};
 
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   ws = new WebSocket(proto + location.host + '/ws');
   // A copy belongs to the socket that asked for one, so a socket that drops
   // and comes back asks again rather than looking for what went with it.
-  ws.onopen = () => { shown = ''; send({ do: 'open', game: GAME }); };
+  ws.onopen = () => { copy = at = ''; send({ do: 'open', game: GAME }); };
   ws.onmessage = (e) => {
     let m; try { m = JSON.parse(e.data); } catch (x) { return; }
     if (m.t === 'replay') {
@@ -55,13 +63,18 @@ function connect() {
 function draw() {
   const on = !!(R && R.code);
   $('#band').hidden = !on;
+  $('#seen-row').hidden = !on;
   $('#screen-box').hidden = !on;
   if (!on) return;
-  if (shown !== R.code) {
-    shown = R.code;
-    $('#screen').src = `host.html?c=${encodeURIComponent(R.code)}`;
-  }
+  // Another copy is another set of seats, so it starts at the table again.
+  if (copy !== R.code) { copy = R.code; view.seen = null; }
+  /* The address is compared rather than read off the frame: a frame told its
+     own address again loads it again, and the game would start over every time
+     the copy moved a point. */
+  const want = Viewer.screen(R, view.seen);
+  if (at !== want) { at = want; $('#screen').src = want; }
   $('#subtitle').textContent = `table ${R.of} · point ${R.at + 1} of ${R.n}`;
+  Viewer.seen($('#seen'), R, view);
   Viewer.rounds($('#rounds'), R, view);
   Viewer.run($('#transport'), R, view);
   Viewer.points($('#points'), R, view);

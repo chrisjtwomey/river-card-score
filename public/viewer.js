@@ -5,9 +5,12 @@
    Four widgets, in the shape every widget here has -- `(root, R, view)`:
 
      Viewer.games(root, R, view)    what there is to watch, as a list to press
+     Viewer.seen(root, R, view)     whose screen it is watched from
      Viewer.rounds(root, R, view)   the rounds of the game being watched
      Viewer.run(root, R, view)      the transport, and how fast it plays itself
      Viewer.points(root, R, view)   the points of the round on show, and where
+
+   And `Viewer.screen(R, seatId)` is the address that screen is at.
 
    `R` is that message: `{ code, of, at, n, playing, rate, marks, kinds, says,
    faces, where, here, games, game }`. `view = { send }` is how a word gets back
@@ -165,6 +168,37 @@ const Viewer = (function () {
       p.textContent = 'No game has been written down yet.';
       box.appendChild(p);
     }
+  }
+
+  /* ---------- whose screen it is watched from ---------- */
+
+  /* A copy hands over a watching key a seat, and that key opens that seat's own
+     screen: their hand, their turn, what they could see. The table itself is
+     the screen a table is shown on. Nothing here asks the copy for anything --
+     it is the same moment of the same game, looked at from somewhere else.
+
+     `view.seen` is whose screen is on show (a seat id, or nothing for the
+     table) and `view.show(id)` is how this widget says to change it. */
+  function seen(root, R, view) {
+    if (!root || !R || !R.seats) return;
+    const box = part(root, 'viewer-seen');
+    const now = view.seen || null;
+    const key = R.code + ':' + R.seats.map((s) => s.id).join(',') + '@' + (now || '-');
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    box.innerHTML = '';
+    const one = (id, label, why) =>
+      btn(box, 'btn' + (now === id ? ' on' : ''), label, why, () => view.show(id));
+    one(null, 'The table', 'The screen the table was shown on');
+    R.seats.forEach((s) => one(s.id, s.name, `What ${s.name} could see`));
+  }
+
+  /* Where that screen is. A seat is opened by its watching key, which shows
+     that screen without putting anybody at the table -- and a copy has nobody
+     at it to put. */
+  function screen(R, id) {
+    const seat = id && (R.seats || []).find((s) => s.id === id);
+    return seat ? `play.html#c=${R.code}&w=${seat.watch}` : `host.html?c=${R.code}`;
   }
 
   /* ---------- which round ---------- */
@@ -456,5 +490,5 @@ const Viewer = (function () {
     });
   }
 
-  return { games, rounds, run, points, cardsSaid, rate, roundNow };
+  return { games, seen, screen, rounds, run, points, cardsSaid, rate, roundNow };
 })();

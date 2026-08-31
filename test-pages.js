@@ -3252,6 +3252,7 @@ part('watching one game again, on a page of its own');
     says: ['the game starts', 'the round is dealt', 'Ann bids 1', 'Bob bids 0',
            'the round is scored', 'the game ends'],
     faces: ['', '', '1', '0', '', ''],
+    seats: [{ id: 's1', name: 'Ann', watch: 'rw1' }, { id: 's2', name: 'Bob', watch: 'rw2' }],
     where: 'Round 1 of 1 · 2 cards · Ann bids 1',
   }, over || {}));
 
@@ -3287,6 +3288,23 @@ part('watching one game again, on a page of its own');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"step","by":1}',
        'and it asks the copy for things itself  got ' + JSON.stringify(P.socks[0].sent[0]));
 
+    /* Whose screen it is watched from. A seat is opened by its watching key,
+       which shows that screen without putting anybody at the table -- and this
+       asks the copy for nothing: it is the same moment, looked at from
+       somewhere else. */
+    const from = () => P.pick('#seen').querySelectorAll('.btn');
+    ok(from().length === 3, 'the table, and a seat each  got ' + from().length);
+    ok(from()[0].classList.contains('on'), 'the table to start with');
+    P.socks[0].sent.length = 0;
+    from()[1].fire('click');
+    ok(P.pick('#screen').src === 'play.html#c=ZZZZ&w=rw1',
+       'a seat puts that seat\'s screen up  got ' + P.pick('#screen').src);
+    ok(from()[1].classList.contains('on') && !from()[0].classList.contains('on'),
+       'and the row says which it is on');
+    ok(P.socks[0].sent.length === 0, 'with nothing asked of the copy');
+    from()[0].fire('click');
+    ok(P.pick('#screen').src === 'host.html?c=ZZZZ', 'and back to the table');
+
     /* A copy playing itself says where it has got to, unasked. Only the place
        moves: the frame stays on the copy it is already showing. */
     P.socks[0].onmessage({ data: JSON.stringify({
@@ -3294,7 +3312,13 @@ part('watching one game again, on a page of its own');
       where: 'Round 1 of 1 · 2 cards · the round is scored' }) });
     ok(P.pick('#subtitle').textContent === 'table BBBB · point 4 of 6',
        'the head keeps up  got ' + P.pick('#subtitle').textContent);
-    ok(P.pick('#screen').src === 'host.html?c=ZZZZ', 'and the screen stays where it is');
+    /* A frame told its own address again loads it again, so the address is
+       compared rather than set: the game would otherwise start over every time
+       the copy moved a point. */
+    P.pick('#screen').src = 'SET-ONCE';
+    P.socks[0].onmessage({ data: JSON.stringify({
+      t: 'replayAt', code: 'ZZZZ', at: 4, playing: true, rate: 1, where: 'the game ends' }) });
+    ok(P.pick('#screen').src === 'SET-ONCE', 'and the screen is not loaded again');
     ok(P.pick('#transport').querySelector('.vw-play').textContent === '❚❚ Pause',
        'a playing copy offers to stop');
   }

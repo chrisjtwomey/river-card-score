@@ -1140,7 +1140,7 @@ What a point is put back through is the game's own verbs: a bid through the same
 
 Moving about in it is that same thing from the nearest picture: back to the round, then forward one point at a time. That is the only honest way, because the pictures are the only states the trail actually holds. It is also why the game starting carries one: without it a copy had nothing to stand on at the first point there is, and opened on the second. A trail written before that — a game already on file — still opens on its second point, because the state at its first was never written down and a replay stops rather than invents.
 
-**Watch it again**, on a past game's card, opens `replay.html?g=<id>`: the table as it was, on the screen a table is shown on, with the rounds, the transport and the points under it and nothing else on the page. The button is offered only where the table can meet it — the listing at `/games.json` says which games still have a trail beside them, because a scorecard outlives its trail by the cap they share.
+**Watch it again**, on a past game's card, opens `replay.html?g=<id>`: the table as it was, on the screen a table is shown on, with the rounds, the transport and the points under it and nothing else on the page. **Seen from** above it switches whose screen you are watching — the table, or any player's own phone, hand and all. A copy hands over a watching key a seat, and that key opens that seat's screen without putting anybody at the table; changing it asks the copy for nothing, because it is the same moment of the same game looked at from somewhere else. The button is offered only where the table can meet it — the listing at `/games.json` says which games still have a trail beside them, because a scorecard outlives its trail by the cap they share.
 
 It is drawn by `public/viewer.js`, which is the whole of it: what there is to watch, the rounds, the transport and the points, in four widgets that know nothing about the page they are on. The dev page says where each goes and how a word gets back to the copy; anything else that wants a replay does the same.
 
@@ -1232,7 +1232,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
 - `public/viewer.js` — the replay viewer: a game watched again, drawn off the one message the server sends about a copy of it. Four widgets — the games to pick from, the rounds of the one being watched, the transport, and the points of the round on show — each built inside a root the page hands it, and each asking the copy for things through one `send`. It knows nothing about the page it is on.
-- `public/replay.html`, `replay.js` — one game watched again, and nothing else on the page: the table above, on the screen a table is shown on, and the replay viewer below it. `replay.html?g=<id>` is the whole address — no table, no key.
+- `public/replay.html`, `replay.js` — one game watched again, and nothing else on the page: whose screen to watch it from, that screen, and the replay viewer below it. `replay.html?g=<id>` is the whole address — no table, no key.
 - `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, live previews of every screen, and the replay viewer put where it goes.
 - `Dockerfile`, `compose.yaml` — container build and run.
 - `android/` — the Android app: a WebView on the table, and `server.js` running
