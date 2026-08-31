@@ -1635,6 +1635,108 @@ function tookTrick(motion) {
      'and every other seat still gets one');
 }
 {
+  /* A card another seat plays comes off the top of their pile: it lifts, turns
+     over, and bows onto the spot it lands on. A card that slides straight out
+     of a pile was never picked up -- it appears rather than being played. */
+  const n = 4, cards = 5, me = 1, them = 3;
+  const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: them });
+  const L = load(412, 860, 'full');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const stage = L.dom.document.getElementById('deal').querySelector('.deal-stage');
+  const all = () => stage.querySelectorAll('.dcard');
+  // A pile card is face down and is nobody's: your own hand is already .mine.
+  const onPile = all().filter((el) => !el._cls.has('mine') && !el._cls.has('hero'))
+    .map((el) => ({ el, tf: el.style.transform }));
+
+  const arcs = [];
+  L.dom.El.prototype.animate = function (kf, opts) {
+    const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {},
+                play() {}, finish() {}, finished: Promise.resolve(), onfinish: null };
+    arcs.push(a);
+    return a;
+  };
+  L.dom.El.prototype.getAnimations = () => [];
+
+  const next = JSON.parse(JSON.stringify(made.ST));
+  next.play.trick = [{ p: them, card: made.hands[them][0] }];
+  next.play.turn = (them + 1) % n;
+  next.play.counts = made.hands.map((h, q) => h.length - (q === them ? 1 : 0));
+  const armed = [];
+  const realSet = setTimeout;
+  global.setTimeout = (f, ms) => { armed.push({ f, ms }); return realSet(() => {}, 0); };
+  try { L.Felt.sync(next, me, { send: () => {} }); } finally { global.setTimeout = realSet; }
+
+  const was = onPile.find((b) => b.el._cls.has('mine'));
+  ok(!!was, 'the card played is the one that was lying on top of their pile');
+  const played = was && was.el;
+  const runs = arcs.filter((a) => a.el === played);
+  ok(runs.length === 1, 'and it is given one way onto the table  got ' + runs.length);
+  const kf = runs.length ? runs[0].kf : [];
+  ok(kf.length > 5, 'a bow, not a slide  got ' + kf.length);
+  ok(kf.length > 0 && kf[0].transform === was.tf,
+     'it sets off from where it was lying on the pile');
+  ok(kf.length > 0 && kf[kf.length - 1].transform === played.style.transform,
+     'and ends where the table already says it belongs');
+  ok(runs.length > 0 && !runs[0].opts.fill,
+     'nothing fills forwards on a card with a round still to play');
+  ok(runs.length > 0 && runs[0].opts.duration === 260,
+     'and it is the quickest of the three ways round  got '
+     + (runs.length ? runs[0].opts.duration : '-'));
+
+  // Off the pile face down, and over well before it lands.
+  const faces = kf.map((f) => spotOfKf(f).face);
+  ok(faces[0] === 180, 'it comes off the pile face down  got ' + faces[0]);
+  ok(faces[faces.length - 1] === 0, 'and lands face up');
+  const over = faces.indexOf(0);
+  ok(over > 1 && over <= Math.ceil(faces.length * 0.7),
+     'turning over on the way, not on the pile and not on landing  got ' + faces.join(','));
+
+  /* The bow is across the way it is going, turned the way the table turns:
+     clockwise, the same way the trick that gathers it comes round. */
+  const R = L.Stage.ring(n, me, 412, 860);
+  const p0 = spotOfKf(kf[0]), p2 = spotOfKf(kf[kf.length - 1]);
+  const vx = p2.x - p0.x, vy = p2.y - p0.y, vl = Math.hypot(vx, vy);
+  const across = kf.map((f) => {
+    const m = spotOfKf(f);
+    return ((m.x - p0.x) * vy - (m.y - p0.y) * vx) / vl;   // + is clockwise of the line
+  });
+  ok(across.every((v) => v > -0.01), 'it never crosses to the other side of the line  got '
+     + across.map((v) => Math.round(v)).join(','));
+  ok(Math.max(...across) > vl * 0.1,
+     'and bows a real way across it  got ' + Math.round(Math.max(...across)) + ' of ' + Math.round(vl));
+
+  // It comes up a little as it lifts, and lands the size it was.
+  const scale = kf.map((f) => spotOfKf(f).scale);
+  ok(Math.max(...scale) > scale[0] * 1.02 && Math.abs(scale[scale.length - 1] - scale[0]) < 1e-9,
+     'it lifts off the stack and lands the size it was  got '
+     + scale.map((v) => Math.round(v * 100) / 100).join(','));
+}
+{
+  /* A phone that arrives in the middle of a round has cards already played and
+     piles it has never placed. Those belong where they belong: nothing is
+     thrown across the table on the first paint of a round. */
+  const n = 4, cards = 5, me = 1, them = 3;
+  const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: 0 });
+  made.ST.play.trick = [{ p: them, card: made.hands[them][0] }];
+  made.ST.play.counts = made.hands.map((h, q) => h.length - (q === them ? 1 : 0));
+  const L = load(412, 860, 'full');
+  const arcs = [];
+  L.dom.El.prototype.animate = function (kf, opts) {
+    const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {},
+                play() {}, finish() {}, finished: Promise.resolve(), onfinish: null };
+    arcs.push(a);
+    return a;
+  };
+  L.dom.El.prototype.getAnimations = () => [];
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const stage = L.dom.document.getElementById('deal').querySelector('.deal-stage');
+  const on = stage.querySelectorAll('.dcard');
+  // The peek shivers a pile all the while; what must not be here is a way onto
+  // the table, which is the one movement that long.
+  const bows = arcs.filter((a) => on.indexOf(a.el) >= 0 && a.opts.duration === 260);
+  ok(bows.length === 0, 'a table stood up mid-round throws nothing across it  got ' + bows.length);
+}
+{
   /* The trick comes in the way it went out: each card goes round the ring
      clockwise, on a drawn arc, and they meet on the winner's spot before the
      stack goes to the pile. A card that crossed the middle would say nothing

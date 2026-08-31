@@ -28,12 +28,13 @@
    pile up, and a move interrupted half way carries on from where the card
    actually is.
 
-   The two ways round the table are the exception. A trick gathered in and a
-   pile unwound are each drawn as a run of places along an arc, and a
-   transition cannot draw a curve. The gather does not fill: where the card
-   belongs is written to the style before it sets off, so the arc is only the
-   way it gets there and the card is left owing nothing when it arrives. The
-   unwind does fill, because those cards are being put away for good.
+   The three ways a card goes round this table are the exception: a card
+   played off a seat's pile, a trick gathered in, and a pile unwound. Each is
+   drawn as a run of places along an arc, and a transition cannot draw a
+   curve. The first two do not fill -- where the card belongs is written to
+   the style before it sets off, so the arc is only the way it gets there, and
+   a card with a round still to play is left owing nothing when it arrives.
+   The unwind does fill, because those cards are being put away for good.
 */
 const Felt = (function () {
   const { cardEl, tf, faceOf, parts } = Stage;
@@ -55,6 +56,23 @@ const Felt = (function () {
      next to the winner has the shortest way round, and it still has to read
      as a card going round it. */
   const CARD_MOVE = 140;
+
+  /* How long a card another seat plays takes to come off the top of their
+     pile and land. It is the move the table is waiting on, and there are as
+     many of them as there are cards in a trick, so it is the quickest of the
+     three -- long enough to see a card picked up and turned over, and no
+     longer. */
+  const PLAY_IN = 260;
+
+  /* The bow it comes round on: how far across the straight line it swings, as
+     a share of the way it has to travel, so every seat bows to the same shape;
+     and how much bigger it gets at the top of the bow, which is the card being
+     lifted off the stack rather than slid out of it. */
+  const PLAY_BOW = 0.22, PLAY_RISE = 0.09;
+
+  // Where in the way over the card turns face up: off the pile first, over
+  // before it is half way, so it lands as a card and not as a card turning.
+  const PLAY_TURN = [0.2, 0.6];
 
   /* How long what the round paid stands before the table is put away for the
      next one. A figure a player has to catch inside two seconds is a figure
@@ -515,13 +533,26 @@ const Felt = (function () {
     // A play the table would not take comes back to the hand it left.
     T.table.forEach((el, c) => { if (inHand.has(c)) { T.hand.set(c, el); T.table.delete(c); } });
 
+    /* The cards this render watched leave a pile, and the place each was lying
+       in. They are given their way onto the table once everything is placed,
+       so the arc sets off from a table that is already right. */
+    const laid = [];
     shown.forEach((x) => {
       if (T.table.has(x.card)) return;
       // The card that lands is the one that was on top of that seat's pile,
       // turned over. Yours comes out of your own hand, in your own fingers.
       let el = T.hand.get(x.card);
       if (el) T.hand.delete(x.card);
-      else if (x.p !== me && T.piles[x.p] && T.piles[x.p].length) el = T.piles[x.p].pop();
+      else if (x.p !== me && T.piles[x.p] && T.piles[x.p].length) {
+        const k = T.piles[x.p].length - 1;
+        el = T.piles[x.p].pop();
+        /* Only a card this screen watched lying on the pile has anywhere to
+           come from. A table being stood up for the first time -- a phone that
+           arrived in the middle of a round -- has cards already played and
+           piles it has not placed yet, and those simply belong where they
+           belong. */
+        if (el.style.transform) laid.push({ el, q: x.p, k });
+      }
       if (!el) { el = cardEl(faceOf(x.card), ''); T.stage.appendChild(el); }
       el.classList.add('mine');            // face up, and lit like a card in play
       faceInto(el, x.card);
@@ -576,6 +607,7 @@ const Felt = (function () {
     });
 
     layout();
+    laid.forEach(({ el, q, k }) => playIn(el, q, k, r.cards));
   }
 
   // Every card on the table, put where it belongs now.
@@ -1294,6 +1326,58 @@ const Felt = (function () {
     if (on === bidsUp) return;
     bidsUp = on;
     if (on) bidsBeat(r); else endBeat();
+  }
+
+  /* A card another seat plays comes off the top of their pile: it lifts, turns
+     over, and goes round a short bow onto the spot it lands on -- which is
+     where the table has already put it. A card that slides straight out of a
+     pile is a card that was never picked up, and at the pace the rest of the
+     table moves it reads as appearing rather than as being played.
+
+     Like the gather, the arc does not fill. This card has the rest of the
+     round to play: it goes into the trick, on to a pile, and back out again
+     when the table is put away, and it must be left owing nothing.
+
+     `k` is where it was lying in the pile and `of` how many were dealt, which
+     between them are what put it there. */
+  function playIn(el, q, k, of) {
+    if (!el.animate || still() || !UI.fx.on()) return;
+    const g = geom(), home = trickAt(g, q);
+    // The peek rides on the top of a pile, and this was the top of one: let it
+    // go, or a filled animation outranks everything that follows.
+    own(el, home);
+    el.animate(arcPlay(g, q, k, of, home), { duration: PLAY_IN, easing: ARC_EASE });
+  }
+
+  /* The way it comes: a bow from where it was lying to where it lands. The
+     card is going inward, so the bow is across that -- it swings round the
+     table clockwise, the same turn the trick that gathers it takes. Cards come
+     in clockwise and go out anticlockwise, and this is the first of the three.
+
+     One curve rather than a lift, a turn and a move in three: the beats are
+     read off where the card is, and a card put down between them is a card set
+     down and picked up again. */
+  function arcPlay(g, q, k, of, home) {
+    const h = Stage.pile(g.R, Stage.fan(of, g.W, g.H), q, k, g.n);
+    const d = dirTo(g, q), r = trickRing(g);
+    const x1 = d.x * r, y1 = g.R.cy + d.y * r, t1 = trickTilt(g, q);
+    const dx = x1 - h.x, dy = y1 - h.y;
+    const len = Math.max(1, Math.hypot(dx, dy)), bow = len * PLAY_BOW;
+    // Across the way it is going, turned the way the table turns.
+    const bx = (h.x + x1) / 2 + (dy / len) * bow;
+    const by = (h.y + y1) / 2 - (dx / len) * bow;
+    const kf = [{ transform: pileAt(g, q, k, of) }];
+    for (let i = 1; i < ARC_STEPS; i++) {
+      const u = i / ARC_STEPS, v = 1 - u;
+      const turn = Math.min(1, Math.max(0, (u - PLAY_TURN[0]) / (PLAY_TURN[1] - PLAY_TURN[0])));
+      kf.push({ transform: tf(v * v * h.x + 2 * v * u * bx + u * u * x1,
+                              v * v * h.y + 2 * v * u * by + u * u * y1,
+                              h.tilt + (t1 - h.tilt) * u,
+                              180 * (1 - turn),
+                              h.z * (1 + PLAY_RISE * Math.sin(Math.PI * u))) });
+    }
+    kf.push({ transform: home });
+    return kf;
   }
 
   /* The trick comes in the way it went out: each card travels round the ring

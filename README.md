@@ -324,6 +324,13 @@ that band.
   seat's pile -- lies on a dashed outline of itself, and the outline stays when
   the card is played. A hand played out to nothing leaves its place, not a
   hole.
+- **Another seat's card is picked up, not produced.** When somebody else
+  plays, the card comes off the top of their pile: it lifts off the stack,
+  grows a little, turns face up, and bows across onto the spot it lands on --
+  clockwise, the way the trick that gathers it comes round. It takes a quarter
+  of a second, because it is the move the table is waiting on and there is one
+  of them per card in the trick. Your own card is different, and unchanged: it
+  comes out of the fan under your thumb.
 - **A trick taken is said out loud**: *"Otter won that trick"* comes up under
   the pile, so the card that took it is still there to see. It stays for two
   seconds, and the cards come in while it is still up -- each one curves round
