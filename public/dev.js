@@ -338,10 +338,14 @@ function renderScrub() {
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-/* Stopping the table, and walking it on. Both are about the hands nobody is
-   behind, so they come and go with them -- `Game.canPause` is the same
-   question the host screen's button asks, and the same one the message that
-   carries it is guarded on. Step is the dev page's alone: reading a hand a
+/* Stopping the table, and walking it on. A stopped table is stopped for
+   everybody -- no bid, no card, no trick, and none of the hands it plays for
+   itself -- so it is offered wherever a hand is out, a table of people with
+   real cards included. `Game.canPause` is the same question the host screen's
+   button asks, and the same one the message that carries it is guarded on.
+
+   Step is the other half, and a different question: it is about the hands
+   nobody is behind, and it is the dev page's alone, because reading a hand a
    move at a time is nothing a table in a living room wants. */
 function renderRun() {
   const box = $('#run-tools');
@@ -353,11 +357,12 @@ function renderRun() {
   btn._now = !!ST.paused;                    // read at the tap, not at the draw
   btn.textContent = btn._now ? '▶ Play' : '❚❚ Pause';
   btn.title = btn._now
-    ? 'Let the table play the hands nobody is behind again'
-    : 'Stop the table playing the hands nobody is behind';
+    ? 'Start the table again. Bids and cards land as before.'
+    : 'Stop the table. No bid, no card and no trick lands until you start it.';
   btn.classList.toggle('primary', btn._now);
-  // Pause is the table's own, so it works anywhere. Stepping is a dev server's.
-  $('#btn-step').hidden = !DEVSRV;
+  // Pause is the table's own, so it works anywhere. Stepping is a dev server's,
+  // and only where the table has a hand of its own to take a move of.
+  $('#btn-step').hidden = !DEVSRV || !Game.tableSelfPlays(ST);
   $('#btn-step').disabled = !btn._now;       // stepping a running table is a race
 }
 

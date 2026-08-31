@@ -913,13 +913,15 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   ok(G.tableSelfPlays(t.room),
      'but it is still a table that plays a hand, so the control stays offered');
 
-  // The pause is the table's own play, and nothing else: a person still acts.
+  /* A stopped table is stopped for everybody. Whichever seat is on turn --
+     Ann's or the bot's -- nothing lands on it until the table is let go. */
   const turn = G.turnSeat(t.round(), 2);
-  if (turn === 0) {
-    ok(t.say(0, { t: 'bid', v: 1 }) === null, 'a player at the table bids as before');
-  } else {
-    ok(true, 'a player at the table bids as before (the bot leads this round)');
-  }
+  ok(/stopped/.test(t.say(turn, { t: 'bid', v: 1 }) || ''), 'and no bid lands while it is stopped');
+  ok(t.round().bids[turn] === null, 'so the seat on turn has still not bid');
+
+  // But everything that puts a game right does: that is what it was stopped for.
+  ok(t.say(0, { t: 'bumdeal' }) === null, 'a hand can still be thrown in');
+  ok(t.room.paused === true, 'and throwing it in does not let the table go');
 
   ok(t.say(0, { t: 'pause', on: false }) === null, 'and the table is let go again');
   ok(!t.room.paused && t.Bots.anyAuto(t.room), 'so it plays on');
@@ -935,19 +937,31 @@ part('leaving on purpose, which is not the same as a phone going quiet');
 }
 
 {
-  // no pause where nothing plays itself, and none over real cards
+  /* A table of people with real cards has no hand of its own to hold, and it
+     is still the table most likely to want to stop for a moment: the food
+     arrives, or somebody is arguing about a rule. So it stops too, and while
+     it is stopped the count is refused along with everything else. */
   const t = table().sit(['Ann', 'Bob']).rules({ max: 3, pattern: 'down', ones: 1 });
   t.Room.startGame(t.room);
   ok(!G.tableSelfPlays(t.room), 'a table of players plays no hand of its own');
-  ok(/real cards/.test(t.say(0, { t: 'pause', on: true }) || ''),
-     'and a table with real cards has nothing to stop');
+  ok(G.canPause(t.room), 'and it can be stopped all the same');
+  t.bidAll(1);
+  ok(t.say(0, { t: 'pause', on: true }) === null, 'the table host stops it');
+  ok(/stopped/.test(t.say(0, { t: 'trick', p: 0 }) || ''), 'and no trick is counted while it is');
+  ok(t.say(0, { t: 'pause', on: false }) === null, 'let go again');
+  ok(t.say(0, { t: 'trick', p: 0 }) === null, 'and the count goes on');
 
   const v = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   v.Room.startGame(v.room);
-  ok(/no hand of its own/.test(v.say(0, { t: 'pause', on: true }) || ''),
-     'nor has a table where every seat has somebody behind it');
+  ok(v.say(0, { t: 'pause', on: true }) === null,
+     'so does a table where every seat has somebody behind it');
   ok(/only the table host/.test(v.say(1, { t: 'pause', on: true }) || ''),
      'and a player who does not run the table cannot stop it');
+
+  // Nothing to stop before the cards are out, or once they are all in.
+  const q = table().sit(['Ann', 'Bob']).rules({ max: 3, pattern: 'down', ones: 1 });
+  ok(/no hand in play/.test(q.say(0, { t: 'pause', on: true }) || ''),
+     'and a lobby has no hand in play to stop');
 }
 
 {

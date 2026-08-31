@@ -2823,8 +2823,13 @@ part('the front page, and the screen');
 
     R.Round.pause(btn, ST(), shows);
     ok(btn.hidden === true, 'a screen that only shows a table cannot stop it');
+    /* A stopped table is stopped for everybody, so a table of people is a
+       table to stop: it is the one most likely to want a moment. */
     R.Round.pause(btn, ST({ seats: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bob' }] }), boss);
-    ok(btn.hidden === true, 'and a table of people has no hand of its own to stop');
+    ok(btn.hidden === false, 'a table of people is offered it too');
+    R.Round.pause(btn, ST({ cfg: { deck: 'physical' },
+                            seats: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bob' }] }), boss);
+    ok(btn.hidden === false, 'and so is one playing with real cards');
     R.Round.pause(btn, ST({ phase: 'lobby' }), boss);
     ok(btn.hidden === true, 'nor is there one before the cards go out');
 
@@ -3157,19 +3162,21 @@ part('the dev controls, on each kind of server');
     ok(P.pick('#replay-panel').hidden === true, 'and the panel goes with it');
   }
 
-  {   /* ---- stopping a table that plays itself, and walking it on ----
-         Only where there are hands the table plays for itself. A table of
-         people has nothing to stop, so the controls are not drawn at all. */
+  {   /* ---- stopping the table, and walking it on ----
+         Stopping is any table with a hand out. Stepping is the other half:
+         a move out of a hand nobody is behind, and a dev server's alone. */
     const bots = { cfg: { max: 3, pattern: 'down', ones: 2, deck: 'virtual' },
                    seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Otter', bot: true }] };
     const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }]);
 
     P.socks[0].onmessage({ data: devState(false) });
-    ok(P.pick('#run-tools').hidden === true,
-       'a table of people playing real cards has nothing to stop');
+    ok(P.pick('#run-tools').hidden === false,
+       'a table of people playing real cards can be stopped like any other');
+    ok(P.pick('#btn-step').hidden === true,
+       'but it has no hand of its own, so there is no move of one to take');
 
     P.socks[0].onmessage({ data: devState(false, bots) });
-    ok(P.pick('#run-tools').hidden === false, 'a table with a bot in it does');
+    ok(P.pick('#run-tools').hidden === false, 'a table with a bot in it too');
     ok(P.pick('#btn-pause').textContent === '❚❚ Pause', 'and it offers to stop it');
     ok(P.pick('#btn-step').hidden === true,
        'but a normal server will not step one, so it is not offered');

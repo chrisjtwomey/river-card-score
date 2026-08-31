@@ -139,14 +139,19 @@ A table of bots alone is worth looking at — a table of stand-ins on the dev
 page, a screen put up to watch one — so it plays while it is looked at. Close
 the last window on it and it stops.
 
-**Stopping it.** A hand playing itself at a bot's pace is not always the pace
-you want to read it at, so the host screen carries a **❚❚ Pause** by the code
-whenever the table has a hand of its own to play — a bot's, or one handed over.
-It stops exactly that: the bots and the handed-over seats. Anybody still at the
-table bids and plays as before. Every screen shows **❚❚ paused** on its round
-line, so a stopped table is never mistaken for a hung one, and the same button
-lets it go again. A table of people playing their own cards never sees the
-button, because it has nothing to stop.
+**Stopping it.** The host screen and the table host's phone both carry a
+**❚❚ Pause**, in the row of controls under the bids, whenever a hand is out. A stopped
+table is stopped for everybody: it plays none of its own hands — a bot's, or one
+handed over to it — and no bid, no card and no trick lands until it is let go.
+Every screen shows **❚❚ paused** on its round line, so a stopped table is never
+mistaken for a hung one, and the same button lets it go again.
+
+Everything whoever runs the table does to put a game right goes on working
+while it is stopped — a step back, a bum deal, a seat given back, a new game.
+That is what a table is stopped for. A table of people playing with real cards
+can be stopped like any other, and is the one most likely to want a moment: the
+food arrives, or somebody is arguing about a rule.
+
 
 ### A browser holds more than one table
 

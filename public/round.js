@@ -335,10 +335,11 @@ const Round = (function () {
 
   // The dealer and whoever runs the table deal again on the spot, so they are
   // asked first. Anybody else is asking the table, which can still be taken back.
-  /* Stop the table playing its own hands, and let it go again. Offered only
-     where there are hands it plays for itself -- a bot's, or a seat handed
-     over to it -- so a table of people never sees it. Being stopped does not
-     take the button away: it is how you start it again. */
+  /* Stop the table, and let it go again. A stopped table is stopped for
+     everybody -- no bid, no card, no trick, and none of the hands it plays for
+     itself -- so it is offered wherever a hand is out, a table of people with
+     real cards included. Being stopped does not take the button away: it is
+     how you start it again. */
   function pause(root, ST, view) {
     if (!root) return;
     const on = view.boss && Game.canPause(ST);
@@ -347,8 +348,9 @@ const Round = (function () {
     root._now = !!ST.paused;                  // read at the tap, not at the draw
     root.textContent = root._now ? '▶ Play' : '❚❚ Pause';
     root.title = root._now
-      ? 'Let the table play the hands nobody is behind again'
-      : 'Stop the table playing the hands nobody is behind. Everybody else plays on.';
+      ? 'Start the table again. Bids and cards land as before.'
+      : 'Stop the table. No bid, no card and no trick lands, and it plays none '
+        + 'of its own hands, until you start it again.';
     root.setAttribute('aria-pressed', String(root._now));
     onClick(root, () => view.send({ t: 'pause', on: !root._now }));
   }

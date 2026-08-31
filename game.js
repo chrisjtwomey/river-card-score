@@ -231,11 +231,16 @@
   // A hand is out and being played: the two phases a game is live in.
   const PLAY_PHASES = ['bid', 'tricks'];
 
-  /* Whether stopping the table is something this table can be asked for. The
-     host screen and the dev page both draw a button on it, and the message
-     that carries it is guarded on the same two things. */
+  /* Whether stopping the table is something this table can be asked for.
+
+     A stopped table is stopped for everybody: it plays none of its own hands,
+     and nobody may bid, play a card or count a trick until it is let go. So
+     the question is only whether a hand is out -- both decks have one, and a
+     table of people with real cards is exactly the table most likely to want
+     to stop for a moment. The host screen, the phone that runs the table, the
+     dev page and the message that carries it all ask this one question. */
   const canPause = (state) =>
-    !!state && PLAY_PHASES.indexOf(state.phase) >= 0 && tableSelfPlays(state);
+    !!state && PLAY_PHASES.indexOf(state.phase) >= 0;
 
   // The seat on turn with nobody behind it, or -1: the one seat the table is
   // stopped on and can do nothing about by itself.
