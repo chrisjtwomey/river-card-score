@@ -186,6 +186,13 @@
   // server or the state a screen holds: both carry the rules as cfg.
   const virtual = (state) => !!(state && state.cfg && state.cfg.deck === 'virtual');
 
+  /* A table that has no choice about it. A bot has nothing to hold at a table
+     with real cards and nothing it could do, so a seat filled by one puts the
+     deck on the phones and holds it there. Asking for a bot asks for that; the
+     switch back is refused while any are seated, and a screen greys the answer
+     it would be refused. */
+  const mustDeal = (state) => !!(state && (state.seats || []).some((s) => s.bot));
+
   // The seat the table is stopped on, or null. Bidding: the next bidder.
   // Playing: the seat on play. Never the dealer at a table with real cards --
   // typing the tricks in is not a turn, and nobody is waited for.
@@ -284,7 +291,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, handedOver, PLAY_PHASES,
+                virtual, mustDeal, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, handedOver, PLAY_PHASES,
                 awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };

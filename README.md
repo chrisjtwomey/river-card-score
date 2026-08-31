@@ -406,7 +406,7 @@ An accolade is shared when two players earn it, and both are paid. It is not awa
 
 ### Playing with a virtual deck
 
-The table can play without real cards. In the lobby set **Cards** to *Deal on the phones*, and the server becomes the dealer:
+The table can play without real cards. In the lobby set **Cards** to *Virtual cards*, and the server becomes the dealer:
 
 1. It shuffles a 52-card deck and deals the hand to each phone. A hand is a secret: the server sends each socket the table and **its own cards only**, and the TV screen is dealt none.
 2. It turns the next card for trump, before the bidding, so everybody bids knowing it. With nothing left in the deck — four players at thirteen cards — the hand is played at no trumps.
@@ -439,9 +439,12 @@ whoever runs the table taps **Add a bot**. A bot takes a seat like anybody else:
 it has a name, it is dealt a hand, and it bids and plays it. **Kick** it from
 the ⋯ menu beside it, as you would a person.
 
-- A bot needs cards of its own to hold, so adding one sets **Cards** to *Deal on
-  the phones*. At a table with real cards there is nothing for a bot to hold and
-  nothing it could do. The switch back is refused while any are seated.
+- A bot needs cards of its own to hold, so adding one sets **Cards** to *Virtual
+  cards*. At a table with real cards there is nothing for a bot to hold and
+  nothing it could do. The switch back is refused while any are seated, and the
+  *Real cards* region is shut on every screen while one is sitting there --
+  greyed, dashed, and saying why instead of how. `Game.mustDeal` is that rule,
+  asked by the message guard and by the screen alike.
 - A bot is never handed the table: somebody has to be able to start the game.
 - It bids what its hand looks worth -- top trumps, aces and kings, and a void
   when there are trumps to ruff with -- and it will not call the number screw
@@ -682,14 +685,20 @@ Phones reconnect on their own. A player who closes the page and comes back is of
 
 **Cards** is not a list to pick from. It decides what everybody at the table
 will be doing for the whole game -- dealing a real deck between them, or
-watching their own phone -- so both answers stand on the page at once: two
-regions side by side, an outline each, with the mark of the mode at the left
-and what the mode means beside it. The one in force wears the outline, and it
-moves as the table changes. Whoever does not run the table sees both greyed,
-because a region that cannot be pressed should not look as though it can. The
-words live in `MODES` in `public/lobby.js` and nowhere else, so there is no
-line under the rule saying the same thing a second way. A radio sits inside
-each region for a keyboard and a screen reader; the outline is for an eye.
+watching their own phone -- so both answers stand on the page at once: *Real
+cards* and *Virtual cards*, two regions side by side, an outline each, with the
+mark of the mode at the left and what the mode means beside it. The one in
+force wears the outline, and it moves as the table changes. The words live in
+`MODES` in `public/lobby.js` and nowhere else, so there is no line under the
+rule saying the same thing a second way. A radio sits inside each region for a
+keyboard and a screen reader; the outline is for an eye.
+
+Two things grey a region, and they are not the same thing. Whoever does not run
+the table sees both greyed, because a rule they cannot set should not look as
+though they can. A region the *table* would refuse is shut for everybody, the
+table host included: it is dashed as well as grey, it cannot be pressed, and
+its words change from how the mode works to why it is not on offer. One rule
+shuts one region today -- a bot at the table shuts *Real cards*.
 
 ## Play with no internet
 

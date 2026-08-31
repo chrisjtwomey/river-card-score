@@ -161,6 +161,15 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 .modepick.off .mode{cursor:default;opacity:.55}
 .modepick.off .mode:hover{background:var(--bg)}
 .modepick.off .mode.on{opacity:.85}
+/* An answer the table would refuse. A bot has nothing to hold at a table with
+   real cards, so a seat filled by one shuts that region: it says why instead
+   of how, and cannot be pressed. Greyer than a screen that may not act, since
+   this one is shut for everybody, the table host included. */
+.mode.shut,.modepick.off .mode.shut{
+  opacity:.45;cursor:not-allowed;background:var(--chip);border-style:dashed;
+}
+.mode.shut:hover,.modepick.off .mode.shut:hover{background:var(--chip)}
+
 /* On a phone the two still stand side by side -- the whole point is seeing
    both -- and it is the padding that gives way, not the layout. */
 @media (max-width:460px){

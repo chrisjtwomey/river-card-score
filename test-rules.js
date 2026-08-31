@@ -810,6 +810,11 @@ part('who may send what, and when');
   ok(t.room.cfg.deck === 'virtual', 'a bot needs cards to hold, so the deck goes onto the phones');
   ok(/take the bots off the table first/.test(t.say(t.boss(), { t: 'config', patch: { deck: 'physical' } }) || ''),
      'and the table cannot go back to real cards while one is sitting there');
+  /* One rule, asked and not worked out twice: the guard above and the screen
+     that greys the region rather than offer it both ask this. */
+  ok(G.mustDeal(t.room) === true, 'a table with a bot at it must deal the cards');
+  ok(G.mustDeal({ seats: [{}, {}] }) === false && G.mustDeal(null) === false,
+     'and a table of people need not');
   const boss = t.room.captainId;
   ok(t.say(t.boss(), { t: 'kick', id: t.room.seats[2].id }) === null && t.room.seats.length === 2, 'a seat is put out');
   ok(t.say(t.boss(), { t: 'config', patch: { deck: 'physical' } }) === null && t.room.cfg.deck === 'physical',

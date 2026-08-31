@@ -189,8 +189,12 @@ const Lobby = (function () {
   const MODES = {
     deck: [
       { v: 'physical', icon: '\uD83C\uDCCF', label: 'Real cards',
-        says: 'You deal a real deck. The dealer types in the tricks at the end of a round.' },
-      { v: 'virtual', icon: '\uD83D\uDCF1', label: 'On the phones',
+        says: 'You deal a real deck. The dealer types in the tricks at the end of a round.',
+        // The table refuses this one while a bot is seated, so the region says
+        // why instead of how, and cannot be pressed.
+        shut: (ST) => Game.mustDeal(ST),
+        why: 'Not while a player the table provides is sitting there: a bot has no cards to hold.' },
+      { v: 'virtual', icon: '\uD83D\uDCF1', label: 'Virtual cards',
         says: 'The server deals to each phone, turns the trump, and counts the tricks.' },
     ],
   };
@@ -286,7 +290,9 @@ const Lobby = (function () {
         el.value = String(m.v);
         el.id = r.id + '-' + m.v;
         const said = make('div', 'mode-said');
-        said.append(make('b', '', m.label), make('small', '', m.says));
+        const words = make('small', '', m.says);
+        words.id = el.id + '-says';
+        said.append(make('b', '', m.label), words);
         box.append(el, make('span', 'mode-icon', m.icon), said);
         pick.appendChild(box);
       });
@@ -397,9 +403,16 @@ const Lobby = (function () {
         const el = q(pick, '#' + r.id + '-' + m.v);
         if (!el) return;
         const on = String(m.v) === now;
+        // Shut is the table's own answer, not this screen's: what it would
+        // refuse is not offered. A screen that may not act greys them both.
+        const shut = !!(m.shut && m.shut(ST)) && !on;
         el.checked = on;
-        el.disabled = !view.boss;
-        if (el.parentNode) el.parentNode.classList.toggle('on', on);
+        el.disabled = !view.boss || shut;
+        if (el.parentNode) {
+          el.parentNode.classList.toggle('on', on);
+          el.parentNode.classList.toggle('shut', shut);
+        }
+        text(pick, '#' + el.id + '-says', shut ? m.why : m.says);
         if (!el._wired) {
           el._wired = true;
           el.addEventListener('change', () => view.send({ t: 'config', patch: { [r.key]: m.v } }));

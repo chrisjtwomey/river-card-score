@@ -4414,7 +4414,31 @@ part('bidding for a seat that is not there, and leaving');
     ok(deck.querySelector('#cfg-deck-physical').parentNode.classList.contains('on')
        && !deck.querySelector('#cfg-deck-virtual').parentNode.classList.contains('on'),
        'and the outline moves with the table');
+
+    /* A bot has nothing to hold at a table with real cards. The table refuses
+       the switch back while one is seated, so the region is shut rather than
+       offered and refused: it says why instead of how, and cannot be pressed.
+       Asking for a bot put the deck on the phones in the first place, which is
+       the table's doing and reaches the screen as any other change does. */
+    const withBot = table({ phase: 'lobby' });
+    withBot.seats[2].bot = true;
+    P.feed(withBot);
+    const real2 = deck.querySelector('#cfg-deck-physical');
+    ok(real2.parentNode.classList.contains('shut'),
+       'a bot at the table shuts the real cards');
+    ok(real2.disabled === true, 'and it cannot be pressed');
+    ok(/no cards to hold/.test(deck.querySelector('#cfg-deck-physical-says').textContent),
+       'the region says why, not how  got '
+       + deck.querySelector('#cfg-deck-physical-says').textContent);
+    ok(deck.querySelector('#cfg-deck-virtual').parentNode.classList.contains('on')
+       && !deck.querySelector('#cfg-deck-virtual').parentNode.classList.contains('shut'),
+       'and the choice sits on the virtual cards, which is where the table put it');
     P.feed(st);
+    ok(!deck.querySelector('#cfg-deck-physical').parentNode.classList.contains('shut')
+       && deck.querySelector('#cfg-deck-physical').disabled === false,
+       'the bot goes and the real cards come back');
+    ok(/You deal a real deck/.test(deck.querySelector('#cfg-deck-physical-says').textContent),
+       'saying how again  got ' + deck.querySelector('#cfg-deck-physical-says').textContent);
     ok(!!groups[1].querySelector('#cfg-max') && !!groups[1].querySelector('#cfg-pattern'),
        'then the shape of the game');
     ok(!!groups[2].querySelector('#cfg-miss'), 'then what a bid pays');
