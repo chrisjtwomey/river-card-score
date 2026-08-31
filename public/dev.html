@@ -73,6 +73,21 @@
   .prow .mid{justify-self:center}
   .prow .pbtns{display:flex;gap:5px}
 
+  /* Watching a game again: where it is, and the rounds to move about in. */
+  .replaybox{padding:10px 12px;gap:8px}
+  .replaybar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .replaybar input[type=range]{flex:1;min-width:140px}
+  .replaybar .at{font-size:12px;color:var(--ink-dim);font-weight:650;flex:none}
+  .replaymarks{display:flex;gap:3px;overflow-x:auto;min-width:0}
+  .rcell{flex:none;min-width:30px;padding:4px 5px;border:1px solid var(--line);border-radius:8px;
+    background:var(--bg2);color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
+  .rcell small{font-size:9px;color:var(--ink-dim);font-weight:600}
+  .rcell:hover{background:var(--chip)}
+  .rcell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+  .rcell.bum{border-style:dashed}
+  #replay-where{margin:0;font-weight:650;color:var(--ink)}
+
   /* The state panel: the whole table as text. */
   .statebox{padding:10px 12px;gap:8px}
   .statebox textarea{font:12px/1.45 ui-monospace,Menlo,monospace;min-height:320px;resize:vertical;
@@ -165,6 +180,7 @@
       </div>
       <span class="bandsep"></span>
       <div class="oneshots" id="panel-toggles">
+        <button class="btn" id="btn-replay" type="button" aria-expanded="false">Replay ▾</button>
         <button class="btn" id="btn-players" type="button" aria-expanded="false">Players ▾</button>
         <button class="btn" id="btn-state" type="button" aria-expanded="false">State ▾</button>
       </div>
@@ -177,6 +193,15 @@
     The phones are watching windows — they show what each player sees without
     putting anybody at the table.
   </p>
+
+  <!-- Watching the game again, on a copy of the table. Built by the page:
+       the fake DOM the checks run in parses no markup. -->
+  <div class="panel replaybox" id="replay-panel" hidden>
+    <div class="replaybar" id="replay-bar"></div>
+    <div class="replaymarks" id="replay-marks"></div>
+    <p class="hint" id="replay-where"></p>
+    <p class="err" id="replay-err" hidden></p>
+  </div>
 
   <div class="panel players" id="players-panel" hidden>
     <div class="phaserow" id="phase-row"></div>

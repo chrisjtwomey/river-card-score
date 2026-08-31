@@ -19,6 +19,7 @@ let onTable = false;             // this socket got onto a table
 let stateBusy = false;           // a record is out, and its answer is the panel's
 let stateLoaded = false;         // a record is in the box, read at some moment
 let stateReading = false;        // and one was asked for, so a change is not news
+let REPLAY = null;               // a game being watched again, on a copy of the table
 
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
    lands on the game it was pressed from. The page writes the same hash for
@@ -75,6 +76,12 @@ function connect() {
         stateErr('');
         stateStale(false);          // this text is the table, as of now
       }
+    } else if (m.t === 'replay') {
+      // A copy opened, moved about in, or let go. The panes follow it.
+      REPLAY = m.code ? m : null;
+      seatKey = topKey = '';
+      renderReplay();
+      renderFrames();
     } else if (m.t === 'seat') {
       // The seat asked for: put it in the pane, which then acts as the player.
       const one = seatOf(m.id);
@@ -130,12 +137,14 @@ const SIZES = { host: [1180, 820], seat: [400, 800] };
 // A seat frame opens the seat itself when the page holds it -- always on a
 // table of stand-ins, and on a real table once that seat is taken over. It
 // only watches otherwise: t= is the seat, w= just shows it.
-const seatHash = (s) => (s.token ? `#c=${CODE}&t=${s.token}` : `#c=${CODE}&w=${s.watch}`);
+const seatHash = (s, at) => (s.token ? `#c=${at}&t=${s.token}` : `#c=${at}&w=${s.watch}`);
 
-function frame(box, label, page, hash, kind, entry, boss) {
+// `addr` is whatever the page reads itself by: a hash for a seat and for a
+// screen that runs a table, a query for one that is only shown a table.
+function frame(box, label, page, addr, kind, entry, boss) {
   const scale = Number($('#scale').value) || 0.65;
   const [w, h] = SIZES[kind];
-  const url = page + hash;
+  const url = page + addr;
   const el = document.createElement('div');
   el.className = 'frame' + (boss ? ' captain' : '');
   if (entry) el.dataset.seat = entry.id;
@@ -147,7 +156,7 @@ function frame(box, label, page, hash, kind, entry, boss) {
   // On a real table a pane only watches until it is told to act. The button
   // swaps the pane between the watch link and the seat itself, and only a dev
   // server ever hands a seat over, so on any other there is no button.
-  if (entry && entry.watch && DEVSRV) {
+  if (entry && entry.watch && DEVSRV && !REPLAY) {
     const tk = document.createElement('button');
     tk.type = 'button';
     tk.className = 'btn tiny';
@@ -170,27 +179,35 @@ function renderFrames() {
   if (!CODE) return;
   const scale = $('#scale').value;
   const cap = ST ? seatOf(ST.captainId) : null;
+  /* While a game is being watched again the panes are the copy's, not the
+     table's: the whole point of a copy is that it is the thing you look at. */
+  const at = REPLAY ? REPLAY.code : CODE;
+  const label = REPLAY ? `TV screen · replay of ${REPLAY.of}` : `TV screen · table ${CODE}`;
 
   // top row: the big screen, on its own
-  const top = `${CODE}:${HOST_TOKEN}:${scale}`;
+  const top = `${at}:${HOST_TOKEN}:${scale}`;
   if (top !== topKey) {
     topKey = top;
     const box = $('#host-frame');
     box.innerHTML = '';
-    frame(box, `TV screen · table ${CODE}`, 'host.html', `#c=${CODE}&t=${HOST_TOKEN}`, 'host');
+    /* A copy is watched, so the screen on it is one that is only shown a
+       table -- which the host page reads off a query, not a hash. */
+    frame(box, label, 'host.html',
+          REPLAY ? `?c=${at}` : `#c=${CODE}&t=${HOST_TOKEN}`, 'host');
   }
 
   // bottom row: the phones, the one that runs the table always first. Whoever
   // that is, that pane stands in the same place, so the eye is not sent
   // hunting for it. The key follows the order, so a new table host re-draws.
-  const phones = cap ? [cap].concat(SEATS.filter((s) => s.id !== cap.id)) : SEATS;
-  const seats = `${CODE}:${phones.map(seatHash).join(',')}:${scale}:${DEVSRV}`;
+  const list = REPLAY ? REPLAY.seats : SEATS;
+  const phones = (!REPLAY && cap) ? [cap].concat(list.filter((s) => s.id !== cap.id)) : list;
+  const seats = `${at}:${phones.map((s) => seatHash(s, at)).join(',')}:${scale}:${DEVSRV}`;
   if (seats !== seatKey) {
     seatKey = seats;
     const box = $('#seat-frames');
     box.innerHTML = '';
     phones.forEach((s) => frame(box, s === cap ? `${s.name} · table host` : s.name,
-                                'play.html', seatHash(s), 'seat', s, s === cap));
+                                'play.html', seatHash(s, at), 'seat', s, s === cap));
   }
 }
 
@@ -356,6 +373,100 @@ function standInAvatar(name, i) {
   cx.fillStyle = 'rgba(255,255,255,.8)';
   cx.fillText(String(name || '').slice(0, 9), cv.width / 2, cv.height * .78);
   return cv.toDataURL('image/webp', .8);
+}
+
+/* ---------- watching the game again ---------- */
+
+/* The copy, and the way about it. A mark a round, a slider over every point,
+   and a step either way.
+
+   The panel is built here rather than written into the page because the panes
+   are not the only thing that has to follow a replay: what is offered changes
+   with whether one is open at all. */
+const replayAsk = (o) => send(Object.assign({ t: 'dev', action: 'replay' }, o));
+
+function buildReplay() {
+  const bar = $('#replay-bar');
+  if (!bar || bar._wired) return;
+  bar._wired = true;
+
+  const btn = (cls, txt, why, go) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.textContent = txt;
+    b.title = why;
+    b.addEventListener('click', go);
+    bar.appendChild(b);
+    return b;
+  };
+
+  btn('btn', '◀', 'One point back', () => replayAsk({ do: 'step', by: -1 }));
+  btn('btn', '▶', 'One point on', () => replayAsk({ do: 'step', by: 1 }));
+
+  const slide = document.createElement('input');
+  slide.type = 'range';
+  slide.min = '0';
+  slide.title = 'Anywhere in the game';
+  slide.addEventListener('change', () => replayAsk({ do: 'seek', at: Number(slide.value) }));
+  bar.appendChild(slide);
+
+  const at = document.createElement('span');
+  at.className = 'at';
+  bar.appendChild(at);
+
+  btn('btn ghost', 'Close', 'Let the copy go', () => replayAsk({ do: 'close' }));
+}
+
+/* The rounds, as the marks a scrubber offers. A hand thrown in is a mark of
+   its own, because it is a second go at the same round and looked different. */
+function renderMarks() {
+  const box = $('#replay-marks');
+  if (!box) return;
+  const key = REPLAY.marks.map((m) => `${m.at}/${m.w}`).join(',') + '@' + REPLAY.at;
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.innerHTML = '';
+  // The mark the copy is standing in: the last one it has reached, and the
+  // first one before it has reached any.
+  let cur = 0;
+  REPLAY.marks.forEach((m, i) => { if (m.at <= REPLAY.at) cur = i; });
+  REPLAY.marks.forEach((m, i) => {
+    const here = i === cur;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rcell' + (here ? ' on' : '') + (m.w === 'bum' || m.w === 'undo' ? ' bum' : '');
+    b.appendChild(document.createTextNode(m.w === 'end' ? '🏁' : String(m.i + 1)));
+    const s = document.createElement('small');
+    s.textContent = m.w === 'end' ? 'end'
+      : (m.w === 'bum' ? 'again' : (m.w === 'undo' ? 'back' : `${m.cards}c`));
+    b.appendChild(s);
+    b.title = m.w === 'bum' ? 'The hand was thrown in and dealt again'
+      : (m.w === 'undo' ? 'The table stepped back to here' : 'Take the replay to here');
+    b.addEventListener('click', () => replayAsk({ do: 'seek', at: m.at }));
+    box.appendChild(b);
+  });
+}
+
+function renderReplay() {
+  const panel = $('#replay-panel');
+  const open = !!REPLAY;
+  if ($('#btn-replay')) {
+    $('#btn-replay').textContent = open ? 'Replay ▴' : 'Replay ▾';
+    $('#btn-replay').setAttribute('aria-expanded', String(open));
+  }
+  if (panel) panel.hidden = !open;
+  if (!open) return;
+  renderMarks();
+  const bar = $('#replay-bar');
+  const slide = bar && bar.querySelector('input');
+  if (slide && document.activeElement !== slide) {
+    slide.max = String(Math.max(0, REPLAY.n - 1));
+    slide.value = String(REPLAY.at);
+  }
+  const at = bar && bar.querySelector('.at');
+  if (at) at.textContent = `${REPLAY.at + 1} of ${REPLAY.n}`;
+  if ($('#replay-where')) $('#replay-where').textContent = REPLAY.where || '';
 }
 
 /* ---------- the players panel ---------- */
@@ -584,6 +695,7 @@ function applyGates() {
 
 document.addEventListener('DOMContentLoaded', () => {
   buildPhaseRow();
+  buildReplay();
   applyMode();
   UI.wireTheme('#btn-theme');
 
@@ -640,6 +752,13 @@ document.addEventListener('DOMContentLoaded', () => {
        error stays in the panel. */
     stateBusy = true;
     act('state', { record: rec });
+  });
+
+  /* Opening the panel is opening a copy: there is nothing to show until one
+     exists, and closing it lets the copy go. */
+  $('#btn-replay').addEventListener('click', () => {
+    if (REPLAY) return replayAsk({ do: 'close' });
+    replayAsk({ do: 'open' });
   });
 
   $('#btn-players').addEventListener('click', () => {

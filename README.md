@@ -937,6 +937,8 @@ What a point is put back through is the game's own verbs: a bid through the same
 
 Moving about in it is that same thing from the nearest picture: back to the round, then forward one point at a time. That is the only honest way, because the pictures are the only states the trail actually holds.
 
+On the dev page it is a panel of its own, behind **Replay**: a mark a round across the foot — a hand thrown in gets its own, because it was a second go and looked different — a slider over every point in the game, a step either way, and a line saying what is on the table. *Round 1 of 7 · 5 cards · Nia plays 9♠.* Opening the panel opens the copy and closing it lets the copy go. While one is open the panes are the copy's, and none of them can be acted in: the game they show has already been played.
+
 A copy is a table of its own, and everything else on the server leaves it alone: it is never written down, never read back after a restart, never offered as a table to join, and never played at — its seats get a watching key and never a seat's own, and never the keys of the table it is a copy of, which the trail does not carry in the first place. It goes when the page watching it does.
 
 The host token is enough to open one, on any server. It invents nothing: it puts back what already happened, on a copy, out of that table's own record. And it shows nothing the dev page does not already show — a watching window has always been given its seat's hand, which is how the panes show every hand side by side today.
