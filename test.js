@@ -1204,6 +1204,9 @@ async function bidRound(P) {
 
     const list = await fetch(`http://127.0.0.1:${port4}/games.json?code=${d.state.code}`).then((r) => r.json());
     ok(list.games.length === 1 && list.games[0].id === id, 'GET /games.json finds it by table code');
+    /* And whether each can be put back. A scorecard outlives its trail by the
+       cap they share, so a page that offers to watch one has to be told. */
+    ok(list.games[0].trail === true, 'and says it has a trail beside it to watch again');
     ok(!list.games[0].rounds, 'the listing is the headline only');
     const none = await fetch(`http://127.0.0.1:${port4}/games.json?code=ZZZZ`).then((r) => r.json());
     ok(none.games.length === 0, 'and finds nothing for a table that never played');

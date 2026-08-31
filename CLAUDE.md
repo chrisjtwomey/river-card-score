@@ -77,6 +77,8 @@ public/dev.js      The dev page: the way-in card (three doors), then one band ov
                    screen. The band is the same rows in the same places on a table and on a
                    game watched again; only the verbs change, and the replay half of them
                    is `viewer.js` put where it goes.
+public/replay.html/.js  One game watched again: the table as it was in a frame, and the
+                   viewer under it. `?g=<id>` is the whole address.
 public/join.js, history.js   The other pages.
 ```
 

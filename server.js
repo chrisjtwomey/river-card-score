@@ -92,6 +92,7 @@ Trail.sweep();
 // the rooms for a picture and knows nothing else about a game.
 const { handler, lanUrls, hiddenNets, refreshLanAddress } = Http({
   PORT, SCHEME, DEV, ROOT, PUB, pictureOf, readGame, listGames, listTables, endTable,
+  keptIds: () => Trail.keptIds(),
 });
 
 // The socket server rides on this one, so both answer on the same port.

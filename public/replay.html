@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replay — Up the River, Down the River</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{padding-bottom:0}
+  /* The table above, the way about it below, and the page is the two of them:
+     as tall as the window, so the game is what there is to look at. */
+  .replaywrap{display:flex;flex-direction:column;gap:10px;padding:10px;max-width:none;
+    height:calc(100dvh - 68px)}
+  .replay-screen{flex:1;min-height:0;border:1px solid var(--line);border-radius:12px;
+    overflow:hidden;background:var(--bg2);box-shadow:var(--shadow)}
+  .replay-screen iframe{border:0;display:block;width:100%;height:100%;background:var(--bg)}
+  .replay-band{padding:10px 14px;gap:10px;flex:none}
+  @media (max-width:700px){ .replaywrap{height:auto} .replay-screen{height:62vh;flex:none} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="pip">▶</span>
+    <div>
+      <h1>Replay</h1>
+      <p class="sub" id="subtitle">opening…</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <a class="btn ghost" href="history.html">Past games</a>
+    <button class="btn ghost" id="btn-theme" type="button" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<div class="replaywrap">
+  <p class="err" id="err" hidden></p>
+  <div class="replay-screen" id="screen-box" hidden>
+    <iframe id="screen" title="the table, as it was"></iframe>
+  </div>
+  <!-- Built by the replay viewer; this page only says where each part goes. -->
+  <div class="panel replay-band" id="band" hidden>
+    <div class="bandrow">
+      <span class="bandlbl">Go to</span>
+      <div class="viewer-rounds" id="rounds"></div>
+    </div>
+    <div class="bandrow">
+      <div id="transport"></div>
+    </div>
+    <div class="bandrow">
+      <span class="bandlbl">Points</span>
+      <div class="viewer-points" id="points"></div>
+    </div>
+  </div>
+</div>
+
+<script src="ui.js"></script>
+<script src="viewer.js"></script>
+<script src="replay.js"></script>
+</body>
+</html>

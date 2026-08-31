@@ -20,6 +20,7 @@ const when = (ms) => {
 function gameEl(g) {
   const card = document.createElement('article');
   card.className = 'gamecard';
+  card.dataset.game = g.id || '';
   const names = g.seats.map((s) => s.name);
   const best = g.totals.length ? Math.max.apply(null, g.totals) : 0;
   const winners = (g.winners && g.winners.length ? g.winners : g.totals.map((v, i) => (v === best ? i : -1))
@@ -27,14 +28,21 @@ function gameEl(g) {
 
   const head = document.createElement('div');
   head.className = 'panel game-head';
-  head.innerHTML = '<div class="eyebrow">Game over</div><h2 class="game-win"></h2>' +
-    '<p class="hint game-when"></p>';
-  head.querySelector('.game-win').textContent = winners.length > 1
+  const eyebrow = document.createElement('div');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'Game over';
+  const won = document.createElement('h2');
+  won.className = 'game-win';
+  won.textContent = winners.length > 1
     ? `${winners.map((i) => names[i]).join(' & ')} tie on ${best}`
     : `${names[winners[0]] || '—'} wins with ${best}`;
-  head.querySelector('.game-when').textContent =
+  const line = document.createElement('p');
+  line.className = 'hint game-when';
+  line.textContent =
     [when(g.at), `table ${g.code}`, `${names.length} players`].filter(Boolean).join(' · ');
+  head.append(eyebrow, won, line);
   card.appendChild(head);
+  offerReplay(card);
 
   if (g.awards && g.awards.length) {
     const box = document.createElement('div');
@@ -50,15 +58,56 @@ function gameEl(g) {
 
   const sheet = document.createElement('div');
   sheet.className = 'panel';
-  sheet.innerHTML = '<h2>Scorecard</h2><div class="table-wrap"><table></table></div>';
+  const sh = document.createElement('h2');
+  sh.textContent = 'Scorecard';
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  const grid = document.createElement('table');
+  wrap.appendChild(grid);
+  sheet.append(sh, wrap);
   // The scorecard reader wants a state. A finished game is one, with the round
   // marker past the end so every row reads as played.
-  sheet.querySelector('table').innerHTML = Table.scorecardHTML({
+  grid.innerHTML = Table.scorecardHTML({
     seats: g.seats, rounds: g.rounds, cfg: g.cfg, totals: g.totals,
     bonus: g.bonus || [], idx: g.rounds.length,
   }, typeof g.mine === 'number' ? g.mine : -1);
   card.appendChild(sheet);
   return card;
+}
+
+/* ---------- watching one again ---------- */
+
+/* This phone keeps its own copy of every game it sat at, and the table keeps a
+   trail beside each one it still holds -- the same cap, but a shorter memory
+   for the table, which never had the game this phone was at unless it was that
+   table. So the offer is only made where the table says it can be met: the
+   listing says which games it can still put back, and a card with no answer
+   yet, or none at all, simply does not offer it.
+
+   Asked once, for the whole page. A phone with no table to ask gets nothing,
+   which is the same page it has always had. */
+let CAN = null;
+
+function askWhatCanBeWatched() {
+  fetch('/games.json')
+    .then((r) => r.json())
+    .then((d) => {
+      CAN = new Set(((d && d.games) || []).filter((g) => g.trail).map((g) => g.id));
+      $('#deck').querySelectorAll('.gamecard').forEach(offerReplay);
+    }, () => {});
+}
+
+function offerReplay(card) {
+  const id = card.dataset.game;
+  if (!id || !CAN || !CAN.has(id)) return;
+  const head = card.querySelector('.game-head');
+  if (!head || head.querySelector('.watch-again')) return;
+  const go = document.createElement('a');
+  go.className = 'btn primary watch-again';
+  go.href = `replay.html?g=${encodeURIComponent(id)}`;
+  go.textContent = '▶ Watch it again';
+  go.title = 'Play this game back, a point at a time or at the pace it was played';
+  head.appendChild(go);
 }
 
 /* ---------- the swipe ---------- */
@@ -133,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Settings.wire('#btn-settings', { items: UI.commonSettings({ home: true }) });
 
   show(Games.all());
+  askWhatCanBeWatched();
 
   let idle = 0;
   $('#deck').addEventListener('scroll', () => {

@@ -3195,6 +3195,131 @@ part('the front page, and the screen');
     ok(mark.hidden === false, 'and it is marked before the round line has anything to say');
   }
 
+part('past games, and the ones the table can still put back');
+{
+  const one = (id, code) => ({ id, code, at: 1787000000000,
+                               seats: [{ name: 'Ann' }, { name: 'Bob' }],
+                               rounds: [{ cards: 2, dealer: 0, bids: [1, 0], tricks: [2, 0] }],
+                               cfg: { max: 2, pattern: 'down', ones: 1 },
+                               totals: [12, 3], bonus: [0, 0], winners: [0], mine: 0 });
+  const held = JSON.stringify([one('a1b2c3d4e5f6', 'BBBB'), one('f6e5d4c3b2a1', 'QRST')]);
+  const Table = { scorecardHTML: () => '' };
+
+  /* The phone keeps its own copy of every game it sat at; the table keeps a
+     trail beside the ones it still holds, and by a shorter memory. So the
+     offer is made only where the table says it can be met. */
+  const page = (answer) => {
+    const P = loadPage('history.js', { 'river-card-score:games:v1': held }, '',
+                       { real: ['public/games.js'], fetch: answer, given: { Table } });
+    P.start();
+    return P;
+  };
+  const watchers = (P) => P.pick('#deck').querySelectorAll('.watch-again');
+
+  {
+    const asked = [];
+    const P = page((u) => {
+      asked.push(u);
+      return Promise.resolve({ json: () => Promise.resolve({ games: [
+        { id: 'a1b2c3d4e5f6', trail: true }, { id: 'f6e5d4c3b2a1', trail: false }] }) });
+    });
+    ok(asked[0] === '/games.json',
+       'the page asks the table what it can still put back  got ' + asked[0]);
+    ok(P.pick('#deck').querySelectorAll('.gamecard').length === 2,
+       'both games this phone kept are on the page  got '
+       + P.pick('#deck').querySelectorAll('.gamecard').length);
+    ok(watchers(P).length === 0, 'and nothing is offered before the table answers');
+
+    // the answer arrives in a microtask, and the buttons go on in the one after
+    Promise.resolve().then(() => Promise.resolve()).then(() => {
+      const go = watchers(P);
+      ok(go.length === 1, 'the one with a trail beside it is offered  got ' + go.length);
+      ok(go[0].href === 'replay.html?g=a1b2c3d4e5f6',
+         'and the button goes to the replay of that game  got ' + go[0].href);
+      ok(go[0].parentNode.classList.contains('game-head'),
+         'under the line saying which game it is');
+    });
+  }
+}
+
+part('watching one game again, on a page of its own');
+{
+  const REAL = ['public/ui.js', 'public/viewer.js'];
+  const say = (over) => JSON.stringify(Object.assign({
+    t: 'replay', code: 'ZZZZ', of: 'BBBB', at: 0, n: 6, playing: false, rate: 1,
+    marks: [{ at: 1, i: 0, cards: 2, w: 'game' }, { at: 5, i: null, w: 'end' }],
+    kinds: 'GRbbeE',
+    says: ['the game starts', 'the round is dealt', 'Ann bids 1', 'Bob bids 0',
+           'the round is scored', 'the game ends'],
+    faces: ['', '', '1', '0', '', ''],
+    where: 'Round 1 of 1 · 2 cards · Ann bids 1',
+  }, over || {}));
+
+  {   // the whole address is the game: no table, and no key
+    const P = loadPage('replay.js', {}, '?g=a1b2c3d4e5f6', { real: REAL });
+    P.start();
+    P.socks[0].onopen();
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"replay","do":"open","game":"a1b2c3d4e5f6"}',
+       'the page opens the game its address names  got '
+       + JSON.stringify(P.socks[0].sent[0]));
+    ok(P.pick('#band').hidden === true, 'and shows nothing until there is a copy');
+
+    P.socks[0].onmessage({ data: say() });
+    ok(P.pick('#band').hidden === false, 'a copy opened brings the way about it up');
+    ok(P.pick('#screen').src === 'host.html?c=ZZZZ',
+       'and the table is shown on the screen a table is shown on  got ' + P.pick('#screen').src);
+    ok(P.pick('#subtitle').textContent === 'table BBBB · point 1 of 6',
+       'the head says which game, and where in it  got ' + P.pick('#subtitle').textContent);
+
+    // Every part of it is the viewer's; this page only says where each goes.
+    ok(P.pick('#rounds').querySelectorAll('.scell').length === 2,
+       'the rounds are drawn  got ' + P.pick('#rounds').querySelectorAll('.scell').length);
+    ok(!!P.pick('#transport').querySelector('.vw-play'), 'the transport too');
+    ok(P.pick('#points').querySelectorAll('.tick').length === 5,
+       'and the points of the round on show  got '
+       + P.pick('#points').querySelectorAll('.tick').length);
+    ok(P.pick('#points').querySelector('.viewer-where').textContent
+       === 'Round 1 of 1 · 2 cards · Ann bids 1', 'with the line under it');
+
+    P.socks[0].sent.length = 0;
+    P.pick('#transport').querySelector('.vw-fwd').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"step","by":1}',
+       'and it asks the copy for things itself  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* A copy playing itself says where it has got to, unasked. Only the place
+       moves: the frame stays on the copy it is already showing. */
+    P.socks[0].onmessage({ data: JSON.stringify({
+      t: 'replayAt', code: 'ZZZZ', at: 3, playing: true, rate: 1,
+      where: 'Round 1 of 1 · 2 cards · the round is scored' }) });
+    ok(P.pick('#subtitle').textContent === 'table BBBB · point 4 of 6',
+       'the head keeps up  got ' + P.pick('#subtitle').textContent);
+    ok(P.pick('#screen').src === 'host.html?c=ZZZZ', 'and the screen stays where it is');
+    ok(P.pick('#transport').querySelector('.vw-play').textContent === '❚❚ Pause',
+       'a playing copy offers to stop');
+  }
+
+  {   // no game named, and nothing to open
+    const P = loadPage('replay.js', {}, '', { real: REAL });
+    P.start();
+    ok(P.socks.length === 0, 'a page with no game in its address opens no socket');
+    ok(/Past games/.test(P.pick('#err').textContent),
+       'and says where to pick one  got ' + P.pick('#err').textContent);
+  }
+
+  {   /* A game the table can no longer put back. The page says what the
+         server said, and there is nothing to show. */
+    const P = loadPage('replay.js', {}, '?g=a1b2c3d4e5f6', { real: REAL });
+    P.start();
+    P.socks[0].onopen();
+    P.socks[0].onmessage({ data: JSON.stringify({
+      t: 'error', msg: 'Nothing was written down about that game.' }) });
+    ok(P.pick('#err').textContent === 'Nothing was written down about that game.',
+       'the refusal is what the page says  got ' + P.pick('#err').textContent);
+    ok(P.pick('#band').hidden === true, 'and there is no way about a copy there is not');
+  }
+}
+
 part('the dev controls, on each kind of server');
 
   /* The replay half of the page is the viewer's own file, so the checks run

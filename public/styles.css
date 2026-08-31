@@ -1337,6 +1337,9 @@ body.host .scorecard-panel .table-wrap{
 .gamecard > .panel{margin-inline:0}
 .game-head .game-win{margin:2px 0 4px;font-size:clamp(22px,5vw,34px);line-height:1.1}
 .game-head .game-when{margin:0}
+/* Offered only where the table can still put the game back, so it sits under
+   the line that says which game it is rather than beside the heading. */
+.game-head .watch-again{align-self:flex-start;margin-top:10px;text-decoration:none}
 
 /* ---------- table talk ---------- */
 /* A sheet over the game: the hand keeps its place while the talk is read. */
@@ -1534,6 +1537,12 @@ body.settings-open{overflow:hidden}
 .grow .gwho{font-size:11px;color:var(--ink-dim);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 
+
+/* A row of controls over a screen, and the small words that label one. Two
+   pages draw one now: the dev band, and the replay page's. */
+.bandrow{display:flex;align-items:center;gap:10px;min-width:0}
+.bandsep{width:1px;align-self:stretch;background:var(--line);flex:none}
+.bandlbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);font-weight:700;flex:none}
 
 /* The transport, and how fast it plays itself. */
 .viewer-run{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
