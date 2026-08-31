@@ -1041,6 +1041,19 @@ function handEditor(s, p, S) {
   const mine = new Set(hands[p] || []);
   const whose = new Map();
   hands.forEach((h, q) => (h || []).forEach((c) => { if (q !== p) whose.set(c, q); }));
+  /* A round of five is five cards a hand, so a full hand takes no more: the
+     table holds a dealt hand to the round's own size, and a card offered here
+     that the table would drop is a control that lies. */
+  const r = curRound();
+  const most = r ? r.cards : 13;
+  const full = mine.size >= most;
+
+  const said = document.createElement('div');
+  said.className = 'phand-said';
+  said.textContent = `${mine.size} of ${most} cards`
+    + (full ? ' \u00b7 the round holds no more' : '');
+  said.classList.toggle('full', full);
+  box.appendChild(said);
 
   Game.SUITS.filter((x) => x.k !== 'NT').forEach((suit) => {
     const line = document.createElement('div');
@@ -1059,6 +1072,9 @@ function handEditor(s, p, S) {
       if (held !== undefined) {
         b.disabled = true;
         b.title = `${(S.seats[held] || {}).name || 'another seat'} holds it`;
+      } else if (full && !mine.has(card)) {
+        b.disabled = true;
+        b.title = `${s.name} holds ${most} already, which is the whole round`;
       } else {
         b.title = mine.has(card) ? `Take ${Game.cardName(card)} off ${s.name}`
                                  : `Give ${Game.cardName(card)} to ${s.name}`;

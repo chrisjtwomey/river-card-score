@@ -114,6 +114,11 @@
      card another seat holds shut, and the rest there to be taken. */
   .phand{display:flex;flex-direction:column;gap:5px;padding:10px 2px 4px}
   .phand-row{display:flex;gap:5px;align-items:center}
+  /* How many of the round's cards the hand holds, and whether it will take
+     another. A grid of shut cards with nothing saying why is a puzzle. */
+  .phand-said{font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--ink-dim);padding-left:23px}
+  .phand-said.full{color:var(--gold)}
   .phand-suit{width:18px;flex:none;text-align:center;font-size:15px;color:var(--ink)}
   .phand-suit.red{color:var(--red)}
   .phand .btn.card{flex:1 1 0;min-width:0;padding:6px 0;text-align:center;

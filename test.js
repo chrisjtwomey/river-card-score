@@ -963,6 +963,17 @@ async function bidRound(P) {
     ok(JSON.stringify(d.hands[1]) === '["2C"]',
        'and a card an earlier seat already holds is not dealt again  got '
        + JSON.stringify(d.hands[1]));
+
+    /* A round of n is n cards a hand. The table holds a dealt hand to the
+       round's own size, so a hand cannot be given more than the round deals. */
+    const size = d.state.rounds[d.state.idx].cards;
+    const whole = require(path + '/game.js').deck().slice(0, size + 3);
+    d.send({ t: 'dev', action: 'patch', patch: { hands: [whole, [], [], []] } });
+    await d.rt();
+    d.send({ t: 'dev', action: 'hands' });
+    await okBy(() => d.hands && d.hands[0].length === size,
+       'a hand stops at the round\'s own size  got '
+       + (d.hands ? d.hands[0].length : '?') + ' of ' + size);
     d.send({ t: 'dev', action: 'state' });
     await okBy(() => d.raw && d.raw.play && d.raw.play.hands,
        'the record carries them too  got ' + JSON.stringify(d.raw && d.raw.play));

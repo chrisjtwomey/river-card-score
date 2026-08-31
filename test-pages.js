@@ -4385,6 +4385,32 @@ part('the dev controls, on each kind of server');
        && JSON.stringify(laid.patch.hands[1]) === '["2C","QD"]',
        'every hand goes, and only this one changed  got ' + JSON.stringify(laid));
 
+    /* A round of three is three cards a hand. The table holds a dealt hand to
+       the round's own size, so a card offered here that the table would drop
+       is a control that lies: once the hand is full the rest are shut, and the
+       picker says why rather than leaving a grid of dead buttons. */
+    const grid = () => P.pick('#prows').querySelector('.phand');
+    const cardsIn = () => grid().querySelectorAll('.btn.card');
+    ok(grid().querySelector('.phand-said').textContent === '2 of 3 cards',
+       'the picker says how many of the round it holds  got '
+       + grid().querySelector('.phand-said').textContent);
+    ok(cardsIn().filter((b) => b.disabled).length === 2,
+       'and only the two another seat holds are shut  got '
+       + cardsIn().filter((b) => b.disabled).length);
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'handsRaw',
+      hands: [['AS', 'KH', '3S'], ['2C', 'QD']] }) });
+    ok(/3 of 3 cards/.test(grid().querySelector('.phand-said').textContent)
+       && /no more/.test(grid().querySelector('.phand-said').textContent),
+       'a full hand says the round holds no more  got '
+       + grid().querySelector('.phand-said').textContent);
+    ok(cardsIn().filter((b) => !b.disabled).length === 3,
+       'and only the three it holds can still be pressed, to take one off  got '
+       + cardsIn().filter((b) => !b.disabled).length);
+    ok(cardsIn().filter((b) => !b.disabled).every((b) => b.classList.contains('primary')),
+       'which are its own');
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'handsRaw',
+      hands: [['AS', 'KH'], ['2C', 'QD']] }) });
+
     // Only one picker at a time: fifty-two buttons a seat is four hundred.
     P.pick('#prows').querySelectorAll('.ptools')[1]
       .querySelectorAll('button').find((b) => b.textContent === 'Hand \u25be').fire('click');
