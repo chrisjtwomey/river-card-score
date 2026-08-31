@@ -408,6 +408,27 @@ function fadeStrip(el) {
 }
 const fadeStrips = () => { fadeStrip($('#scrub')); fadeStrip($('#tablelist')); };
 
+/* Bring the cell a strip is on into view, and a couple either side of it.
+
+   `scrollIntoView` moves the least it can, which lands the cell hard against
+   the edge it came in from -- and a cell on the edge of a strip says nothing
+   about whether there is anything after it. Two cells of room says there is,
+   and the fade at that edge says there is more still. */
+const LOOK = 2;
+function showCell(box, on) {
+  if (!box || !on || !Number.isFinite(on.offsetLeft) || !box.clientWidth) return;
+  const w = box.clientWidth;
+  const pad = (on.offsetWidth || 0) * LOOK;
+  const end = on.offsetLeft + (on.offsetWidth || 0);
+  let x = box.scrollLeft || 0;
+  if (end + pad > x + w) x = end + pad - w;
+  if (on.offsetLeft - pad < x) x = on.offsetLeft - pad;
+  x = Math.max(0, Math.min(x, Math.max(0, (box.scrollWidth || w) - w)));
+  if (box.scrollTo) box.scrollTo({ left: x, behavior: UI.fx.on() ? 'smooth' : 'auto' });
+  else box.scrollLeft = x;
+  fadeStrip(box);
+}
+
 /* How big a hand a round is, in words. The scorecard's rounds and a replay's
    both say it, so it is said once: a round of one card is not "1 cards", and
    neither of them is going to abbreviate it. */
@@ -448,9 +469,8 @@ function renderScrub() {
          () => act('goto', { round: i + 1, phase: gotoPhase() }));
   });
   cell('🏁', 'end', ST.phase === 'done' ? 'on' : '', () => act('endGame'));
-  const on = box.querySelector('.scell.on');
-  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   fadeStrip(box);
+  showCell(box, box.querySelector('.scell.on'));
 }
 
 /* Stopping the table, and walking it on. A stopped table is stopped for
@@ -780,9 +800,8 @@ function renderMarks() {
     b.addEventListener('click', () => replayAsk({ do: 'seek', at: m.at }));
     box.appendChild(b);
   });
-  const on = box.querySelector('.scell.on');
-  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   fadeStrip(box);
+  showCell(box, box.querySelector('.scell.on'));
 }
 
 /* What there is to watch: the game a table is playing now, and every game on

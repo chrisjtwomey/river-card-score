@@ -3575,6 +3575,24 @@ part('the dev controls, on each kind of server');
     shape(300, 200);
     ok(strip.classList.contains('more-l') && !strip.classList.contains('more-r'),
        'and at the right end, only the way back');
+
+    /* And landing on a round at the edge of the strip brings the next couple
+       into view: a cell hard against the edge says nothing about whether there
+       is anything after it. Laid out by hand, there being no layout here. */
+    const off = (k, v) => Object.defineProperty(P.dom.El.prototype, k,
+                                                { value: v, configurable: true });
+    off('offsetLeft', 700);
+    off('offsetWidth', 60);
+    Object.defineProperty(strip, 'clientWidth', { value: 400, configurable: true });
+    strip.scrollWidth = 900;
+    strip.scrollLeft = 0;
+    say({ at: 8 });
+    ok(strip.scrollLeft === 480,
+       'the strip moves on so two more cells stand past it  got ' + strip.scrollLeft);
+    say({ at: 9 });
+    ok(strip.scrollLeft === 480, 'and stays where it is once they do');
+    delete P.dom.El.prototype.offsetLeft;
+    delete P.dom.El.prototype.offsetWidth;
     ok(marks[0].classList.contains('on'), 'the round it is in is marked');
     ok(marks[1].classList.contains('bum'), 'and a hand thrown in is marked as its own go');
     P.socks[0].sent.length = 0;
