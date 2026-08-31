@@ -3485,16 +3485,71 @@ part('the dev controls, on each kind of server');
     const row = P.pick('#phase-row');
     ok(row.querySelector('.pround').textContent === 'Round 1 of 2 · 3 cards',
        'the panel names the round it is editing  got ' + row.querySelector('.pround').textContent);
-    const seg = row.querySelector('.seg');
+    const seg = row.querySelector('.pphase').querySelector('.seg');
     ok(seg && seg.querySelectorAll('.btn').length === 4,
        'it offers the four phases the table will hold');
-    ok(seg.querySelector('.btn.on').dataset.phase === 'bid',
-       'and marks the one the game is in  got ' + seg.querySelector('.btn.on').dataset.phase);
+    ok(seg.querySelector('.btn.on').dataset.v === 'bid',
+       'and marks the one the game is in  got ' + seg.querySelector('.btn.on').dataset.v);
 
     P.socks[0].sent.length = 0;
-    seg.querySelectorAll('.btn').find((b) => b.dataset.phase === 'tricks').fire('click');
+    seg.querySelectorAll('.btn').find((b) => b.dataset.v === 'tricks').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"patch","patch":{"phase":"tricks"}}',
        'and a phase lands the moment it is pressed  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* The rest of what the round is, above the seats: things that belong to
+       the hand rather than to any one player. A row that does not apply to
+       this table is not there -- a rule the table will not take should not be
+       offered one press at a time. */
+    const trump = row.querySelector('.ptrump');
+    ok(trump && trump.hidden === true,
+       'with real cards the deck on the table decides the trumps, so none is offered');
+    ok(row.querySelector('.ptrick').hidden === true, 'and no trick to count while the bids are up');
+
+    // The bids go in, and the trick is the table's to hand to somebody.
+    P.socks[0].onmessage({ data: devState(false, { phase: 'tricks' }) });
+    const trick = row.querySelector('.ptrick');
+    ok(trick.hidden === false, 'once the hand is on, the trick can be counted to a seat');
+    ok(trick.querySelector('.seg').querySelectorAll('.btn').length === 2,
+       'one button a seat  got ' + trick.querySelector('.seg').querySelectorAll('.btn').length);
+    P.socks[0].sent.length = 0;
+    trick.querySelector('.seg').querySelectorAll('.btn')[1].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"trick","p":1}',
+       'as the table\'s own message, since this page holds the host token  got '
+       + JSON.stringify(P.socks[0].sent[0]));
+    P.socks[0].sent.length = 0;
+    trick.querySelectorAll('button').find((b) => /Take back/.test(b.textContent)).fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"trickback"}', 'and one taken back the same way');
+
+    /* A table that deals the cards turns its own trump and counts its own
+       tricks, so the two rows swap over. */
+    P.socks[0].onmessage({ data: devState(false, {
+      phase: 'tricks', cfg: { max: 3, pattern: 'down', ones: 2, deck: 'virtual' } }) });
+    ok(row.querySelector('.ptrump').hidden === false, 'a table that deals turns a trump');
+    ok(row.querySelector('.ptrick').hidden === true, 'and counts its own tricks');
+    P.socks[0].sent.length = 0;
+    row.querySelector('.ptrump').querySelector('.seg')
+      .querySelectorAll('.btn').find((b) => b.dataset.v === 'H').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"round":{"i":0,"trump":"H"}}}',
+       'the trump lands on the round on show  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.socks[0].sent.length = 0;
+    row.querySelector('.ptrump').querySelectorAll('button')
+      .find((b) => b.textContent === 'Deal again').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"patch","patch":{"round":{"i":0,"redeals":1}}}',
+       'and the redeal count is what makes a fresh deal land  got '
+       + JSON.stringify(P.socks[0].sent[0]));
+    P.socks[0].onmessage({ data: devState(false) });
+
+    const vote = row.querySelector('.pvote');
+    ok(vote && vote.hidden === false && /none open/.test(vote.querySelector('.pstate').textContent),
+       'and a vote says whether one is open  got '
+       + (vote && vote.querySelector('.pstate').textContent));
+    P.socks[0].sent.length = 0;
+    vote.querySelectorAll('button').find((b) => b.textContent === 'Cancel').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"votecancel"}',
+       'and cancelling one is the table\'s own message  got '
+       + JSON.stringify(P.socks[0].sent[0]));
 
     /* ---- what can be done to one seat ----
        A row of verbs under each seat's values. Every one of them is a state a

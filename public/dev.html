@@ -81,8 +81,15 @@
 
   /* The players panel: what the round is, then one row a seat. */
   .players{padding:10px 12px;gap:6px}
-  .phaserow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:2px}
-  .phaserow .pround{font-size:13px;font-weight:700;color:var(--ink);flex:1;min-width:0}
+  /* What the round is, above the seats: the things that belong to the hand
+     rather than to any one player. One line each, so a row that does not apply
+     to this table can simply not be there. */
+  .phaserow{display:flex;flex-direction:column;gap:6px;padding-bottom:6px;
+    border-bottom:1px solid var(--line)}
+  .phaserow .pround{font-size:13px;font-weight:700;color:var(--ink)}
+  .pline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pline > .bandlbl{flex:none;min-width:44px}
+  .pline .pstate{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em}
   .prow{display:grid;grid-template-columns:minmax(130px,220px) 44px 52px 40px 54px 54px 72px 1fr;
     gap:9px;align-items:center;font-size:13px}
   .prow.phead span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;

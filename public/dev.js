@@ -666,46 +666,170 @@ function newTable(n) {
    the row says where the game is as well as where to send it. */
 const PHASES = ['lobby', 'bid', 'tricks', 'done'];
 
+/* What the round is, above the seats: the things that belong to the hand
+   rather than to any one player. Built once; which rows are on show follows
+   the table, because a rule that does not apply should not be offered. */
+const SUITS = [['S', '\u2660'], ['H', '\u2665'], ['D', '\u2666'], ['C', '\u2663'], ['NT', 'NT']];
+
 function buildPhaseRow() {
   const box = $('#phase-row');
   if (!box || box._wired) return;
   box._wired = true;
+  const line = (cls, label) => {
+    const row = document.createElement('div');
+    row.className = 'pline ' + cls;
+    const lbl = document.createElement('span');
+    lbl.className = 'bandlbl';
+    lbl.textContent = label;
+    row.appendChild(lbl);
+    box.appendChild(row);
+    return row;
+  };
+  const seg = (row, items, fire, title) => {
+    const s = document.createElement('div');
+    s.className = 'seg';
+    items.forEach(([v, text]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.dataset.v = String(v);
+      b.textContent = text;
+      if (title) b.title = title(v);
+      b.addEventListener('click', () => fire(v));
+      s.appendChild(b);
+    });
+    row.appendChild(s);
+    return s;
+  };
+
   const at = document.createElement('span');
   at.className = 'pround';
-  const lbl = document.createElement('span');
-  lbl.className = 'bandlbl';
-  lbl.textContent = 'Phase';
-  const seg = document.createElement('div');
-  seg.className = 'seg';
-  PHASES.forEach((p) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn';
-    b.dataset.phase = p;
-    b.textContent = p;
-    b.title = `Force the game to ${p}. Nothing is played or invented.`;
-    b.addEventListener('click', () => act('patch', { patch: { phase: p } }));
-    seg.appendChild(b);
-  });
-  box.append(at, lbl, seg);
+  box.appendChild(at);
+
+  // The phase, forced. The one thing a round's own numbers cannot unstick.
+  seg(line('pphase', 'Phase'), PHASES.map((p) => [p, p]),
+      (p) => act('patch', { patch: { phase: p } }),
+      (p) => `Force the game to ${p}. Nothing is played or invented.`);
+
+  /* The trump for this round. Only where the table turns one: with real cards
+     the deck on the table decides everything about trumps, and the page has no
+     business pretending otherwise. */
+  const tr = line('ptrump', 'Trump');
+  seg(tr, SUITS.concat([['', 'none']]),
+      (v) => act('patch', { patch: { round: { i: roundIdx(), trump: v || null } } }),
+      (v) => (v ? `The round is played in ${v}` : 'The round is played at no trumps'));
+
+  /* How many times this round has been thrown in. Every screen keys its deal
+     on `idx:redeals`, so winding it on is how a fresh deal is made to land. */
+  const again = document.createElement('button');
+  again.type = 'button';
+  again.className = 'btn tiny';
+  again.textContent = 'Deal again';
+  again.title = 'Wind the redeal count on. Every screen keys its deal scene on '
+    + 'round:redeals, so this is what makes a fresh deal land without a bum deal vote.';
+  again.addEventListener('click', () => act('patch',
+    { patch: { round: { i: roundIdx(), redeals: (curRound() ? curRound().redeals || 0 : 0) + 1 } } }));
+  tr.appendChild(again);
+
+  /* Who took the trick on the table. Real cards only -- where the cards are
+     dealt they count themselves, and the tool for a hand there is Play for. */
+  const tk = line('ptrick', 'Trick');
+  tk._seats = document.createElement('div');
+  tk._seats.className = 'seg';
+  tk.appendChild(tk._seats);
+  const undo = document.createElement('button');
+  undo.type = 'button';
+  undo.className = 'btn tiny';
+  undo.textContent = '\u21a9 Take back';
+  undo.title = 'The last trick counted, taken back off whoever got it';
+  undo.addEventListener('click', () => send({ t: 'trickback' }));
+  tk.appendChild(undo);
+
+  // A bum-deal vote, opened and cancelled: the two halves a table has.
+  const vt = line('pvote', 'Vote');
+  const ask = document.createElement('button');
+  ask.type = 'button';
+  ask.className = 'btn tiny';
+  ask.textContent = 'Bum deal vote';
+  ask.title = 'Open a bum-deal vote, asked by somebody who is neither dealer nor host';
+  ask.addEventListener('click', () => act('bumVote'));
+  const drop = document.createElement('button');
+  drop.type = 'button';
+  drop.className = 'btn tiny';
+  drop.textContent = 'Cancel';
+  drop.title = 'Take the vote away, as the table host may';
+  drop.addEventListener('click', () => send({ t: 'votecancel' }));
+  vt.append(ask, drop);
+  vt._said = document.createElement('span');
+  vt._said.className = 'pstate';
+  vt.appendChild(vt._said);
 }
+
+// The round the panel is editing, whichever table is on show.
+const roundIdx = () => { const S = stateNow(); return S ? S.idx : 0; };
+const curRound = () => {
+  const S = stateNow();
+  return S && S.rounds ? S.rounds[Math.min(S.idx, S.rounds.length - 1)] || null : null;
+};
 
 function renderPhaseRow() {
   const box = $('#phase-row');
   const S = stateNow();
   if (!box || !S) return;
-  const r = S.rounds[Math.min(S.idx, S.rounds.length - 1)] || null;
+  const r = curRound();
   const at = box.querySelector('.pround');
   if (at) {
     at.textContent = r
       ? `Round ${Math.min(S.idx + 1, S.rounds.length)} of ${S.rounds.length} · ${r.cards} cards`
       : 'No round in play';
   }
-  const seg = box.querySelector('.seg');
-  if (seg) {
-    seg.hidden = false;
-    seg.querySelectorAll('.btn').forEach((b) =>
-      b.classList.toggle('on', b.dataset.phase === S.phase));
+  const line = (cls) => box.querySelector('.' + cls);
+  const mark = (row, v) => {
+    if (!row) return;
+    const seg = row.querySelector('.seg');
+    if (seg) seg.querySelectorAll('.btn').forEach((b) => b.classList.toggle('on', b.dataset.v === String(v)));
+  };
+  mark(line('pphase'), S.phase);
+
+  /* The trump is the table's to turn, and only where it turns one. With real
+     cards the deck on the table decides everything about trumps, so there is
+     nothing here to set and nothing that would mean anything if there were. */
+  const tr = line('ptrump');
+  if (tr) {
+    tr.hidden = !r || !Game.virtual(S);
+    mark(tr, r && r.trump ? r.trump : '');
+  }
+
+  /* Who took the trick. Where the cards are dealt they count themselves, so
+     this is a real-cards row: the tool for a hand on the phones is Play for. */
+  const tk = line('ptrick');
+  if (tk) {
+    tk.hidden = !r || Game.virtual(S) || S.phase !== 'tricks';
+    if (!tk.hidden && tk._seats && tk._seats.dataset.key !== S.seats.map((x) => x.name).join('|')) {
+      tk._seats.dataset.key = S.seats.map((x) => x.name).join('|');
+      tk._seats.innerHTML = '';
+      S.seats.forEach((x, p) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn';
+        b.textContent = x.name;
+        b.title = `Count this trick to ${x.name}`;
+        b.addEventListener('click', () => send({ t: 'trick', p }));
+        tk._seats.appendChild(b);
+      });
+    }
+  }
+
+  // A vote is the round's, so it goes where the round's things are.
+  const vt = line('pvote');
+  if (vt) {
+    vt.hidden = !r;
+    const v = S.vote;
+    if (vt._said) {
+      vt._said.textContent = !v ? 'none open'
+        : `${(S.seats[v.by] || {}).name || 'somebody'} asked · `
+          + `${(v.yes || []).length} yes, ${(v.no || []).length} no`;
+    }
   }
 }
 
