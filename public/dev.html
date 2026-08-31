@@ -110,6 +110,15 @@
   .pseat{display:flex;flex-direction:column;gap:4px;padding:6px 0}
   .pseat + .pseat{border-top:1px solid var(--line)}
   .ptools{display:flex;gap:5px;flex-wrap:wrap;padding-left:2px}
+  /* The hand a seat holds, as the deck itself: this seat's cards marked, a
+     card another seat holds shut, and the rest there to be taken. */
+  .phand{display:flex;flex-direction:column;gap:3px;padding:6px 2px 2px}
+  .phand-row{display:flex;gap:3px;align-items:center}
+  .phand-suit{width:16px;flex:none;text-align:center;font-size:14px;color:var(--ink)}
+  .phand-suit.red{color:var(--red)}
+  .phand .btn.card{flex:1 1 0;min-width:0;padding:3px 0;text-align:center;
+    font-variant-numeric:tabular-nums}
+  .phand .btn.card:disabled{opacity:.25}
 
 
   /* The state panel: the whole table as text. */

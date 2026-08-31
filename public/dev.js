@@ -868,7 +868,8 @@ function renderPlayers() {
     `${s.name}/${s.bot}/${s.left}/${s.id === S.captainId}/${r ? r.dealer : S.firstDealerId}` +
     `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}` +
     `/${s.online}/${phoneOff(s.id)}`).join('|') +
-    `@${S.idx}:${S.phase}:${invent}:${Game.awaySeat(S)}:${S.play ? S.play.turn : ''}:${!!S.vote}`;
+    `@${S.idx}:${S.phase}:${invent}:${Game.awaySeat(S)}:${S.play ? S.play.turn : ''}:${!!S.vote}` +
+    `:${HAND_OPEN}:${S.play && S.play.hands ? S.play.hands.map((h) => (h || []).join('')).join('/') : ''}`;
   if (box.dataset.key === key || box.contains(document.activeElement)) return;
   box.dataset.key = key;
   box.innerHTML = '';
@@ -942,10 +943,12 @@ function renderPlayers() {
     // What the seat is, in a word. The verbs are the row under this one.
     const how = document.createElement('span');
     how.className = 'pstate';
+    const hand = (S.play && S.play.hands && S.play.hands[p]) || null;
     how.textContent = s.left ? 'the table has this hand'
       : s.bot ? 'a bot'
       : phoneOff(s.id) ? 'phone off'
       : s.online ? 'at the table' : 'quiet';
+    if (hand) how.textContent += ` \u00b7 ${hand.length} cards`;
 
     row.append(name, host, dealer, check(!!s.bot, 'bot'),
                num('bids', r && r.bids ? r.bids[p] : null),
@@ -955,8 +958,61 @@ function renderPlayers() {
     const seat = document.createElement('div');
     seat.className = 'pseat';
     seat.append(row, seatTools(s, p, S));
+    if (HAND_OPEN === s.id && S.play && S.play.hands) seat.appendChild(handEditor(s, p, S));
     box.appendChild(seat);
   });
+}
+
+/* The seat whose hand is open for editing, or null. One at a time, because a
+   picker is fifty-two buttons and every seat carrying one would be four
+   hundred elements redrawn on every state. */
+let HAND_OPEN = null;
+
+/* The hand a seat holds, dealt by hand. A deck is fifty-two cards and no card
+   is in two places, so the picker is the deck itself: this seat's cards are
+   marked, another seat's are shut with a line saying whose, and the rest are
+   there to be taken. What is sent is every hand, because moving a card means
+   two of them change. */
+function handEditor(s, p, S) {
+  const box = document.createElement('div');
+  box.className = 'phand';
+  const hands = (S.play && S.play.hands) || [];
+  const mine = new Set(hands[p] || []);
+  const whose = new Map();
+  hands.forEach((h, q) => (h || []).forEach((c) => { if (q !== p) whose.set(c, q); }));
+
+  Game.SUITS.filter((x) => x.k !== 'NT').forEach((suit) => {
+    const line = document.createElement('div');
+    line.className = 'phand-row';
+    const tag = document.createElement('span');
+    tag.className = 'phand-suit' + (suit.red ? ' red' : '');
+    tag.textContent = suit.g;
+    line.appendChild(tag);
+    Game.RANKS.slice().reverse().forEach((rank) => {
+      const card = rank + suit.k;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn tiny card' + (mine.has(card) ? ' primary' : '');
+      b.textContent = Game.cardFace(card);
+      const held = whose.get(card);
+      if (held !== undefined) {
+        b.disabled = true;
+        b.title = `${(S.seats[held] || {}).name || 'another seat'} holds it`;
+      } else {
+        b.title = mine.has(card) ? `Take ${Game.cardName(card)} off ${s.name}`
+                                 : `Give ${Game.cardName(card)} to ${s.name}`;
+      }
+      b.addEventListener('click', () => {
+        const next = new Set(mine);
+        if (next.has(card)) next.delete(card); else next.add(card);
+        act('patch', { patch: { hands: S.seats.map((x, q) =>
+          (q === p ? Game.sortHand(Array.from(next)) : (hands[q] || []).slice())) } });
+      });
+      line.appendChild(b);
+    });
+    box.appendChild(line);
+  });
+  return box;
 }
 
 /* What can be done to one seat, as a row of verbs under its values. Each is a
@@ -995,15 +1051,17 @@ function seatTools(s, p, S) {
         ? 'What the phone\'s own Leave does in the lobby: the seat goes.'
         : 'What the phone\'s own Leave does mid-game: the seat stays and the table plays its hand.',
       () => doing('leave'));
+  // The table's own two, said the way the host screen says them: their guards
+  // and their words come with them.
   add('Kick', lobby
         ? 'The seat put out. Only in the lobby: mid-game the scorecard is a column for it.'
         : 'A seat only leaves the table in the lobby.',
-      () => doing('kick'), { off: !lobby });
+      () => send({ t: 'kick', id: s.id }), { off: !lobby });
   add('Time out', 'The idle clock run out on this seat, and whatever the table then does '
       + 'about it. A table of stand-ins is never idle, so this is the only way to it.',
       () => doing('out'));
   add('Rejoin', 'A seat the table took over, given back by name.',
-      () => doing('back'), { off: !s.left });
+      () => send({ t: 'letback', id: s.id }), { off: !s.left });
 
   /* Acting for a seat. The table's own two, said the way the host screen says
      them -- so they are offered on exactly the seat the table would take them
@@ -1029,6 +1087,16 @@ function seatTools(s, p, S) {
       const text = window.prompt(`Say something as ${s.name}`);
       if (text) act('seatDo', { id: s.id, do: 'say', text });
     });
+  }
+  /* The hand, where there is one to hold and a server that will take it. With
+     real cards the hand is on the table, and nothing here knows what is in
+     it. */
+  if (DEVSRV && !replaying() && Game.virtual(S) && S.play && S.play.hands) {
+    const open = HAND_OPEN === s.id;
+    add(open ? 'Hand \u25b4' : 'Hand \u25be',
+        `The cards ${s.name} holds, dealt by hand`,
+        () => { HAND_OPEN = open ? null : s.id; delete $('#prows').dataset.key; renderPlayers(); },
+        { on: open });
   }
   return box;
 }

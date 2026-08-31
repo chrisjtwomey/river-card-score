@@ -912,6 +912,55 @@ async function bidRound(P) {
     await okBy(() => JSON.stringify(d.state.rounds[0].bids) === '[1,0,2,1]' && d.state.totals.some((t) => t !== 0),
        'patch forces a round, and the totals follow');
 
+    /* ---- the seat verbs, and the hand ----
+       Everything the players panel can do to one seat goes through a room
+       verb, so the states it reaches are states a real game reaches. */
+    d.send({ t: 'dev', action: 'patch', patch: { idx: 0, phase: 'bid' } });
+    await okBy(() => d.state.idx === 0, 'back to the first round');
+    const names = () => d.state.seats.map((x) => x.name).join(',');
+    const was = names();
+    d.send({ t: 'dev', action: 'seatDo', id: d.state.seats[3].id, do: 'leave' });
+    await okBy(() => d.state.seats[3].left === true,
+       'mid-game Leave keeps the seat and hands the table its hand  got ' + names());
+    ok(names() === was, 'the scorecard keeps its column');
+    /* Kicking a seat and giving one back are the table's own messages, said the
+       way the host screen says them, so their guards come with them: a seat
+       only leaves the table in the lobby, whoever asks. */
+    d.send({ t: 'letback', id: d.state.seats[3].id });
+    await okBy(() => d.state.seats[3].left === false, 'and Rejoin gives it back by name');
+    d.send({ t: 'kick', id: d.state.seats[3].id });
+    await okBy(() => /not allowed now/i.test(d.last()) && d.state.seats.length === 4,
+       'a seat only leaves the table in the lobby  got ' + d.last());
+    d.send({ t: 'dev', action: 'seatDo', id: 'nobody', do: 'leave' });
+    await okBy(() => /no such seat/i.test(d.last()), 'and a seat that is not there is no seat');
+    d.send({ t: 'dev', action: 'seatDo', id: d.state.seats[2].id, do: 'say', text: '  well   played  ' });
+    await okBy(() => (d.state.chat || []).some((c) => c.text === 'well played'
+       && c.name === d.state.seats[2].name),
+       'a line in the talk is said as that seat  got ' + JSON.stringify(d.state.chat));
+
+    /* A deck is fifty-two cards and no card is in two places, so a hand dealt
+       by hand is held to that: what is not a card is dropped, and a card an
+       earlier seat already holds is not dealt again. */
+    /* A round with its bids in and a hand dealt, which is what a hand can be
+       dealt over: forcing the phase alone deals nothing. */
+    d.send({ t: 'config', patch: { deck: 'virtual' } }); await d.rt();
+    d.send({ t: 'dev', action: 'goto', round: 1, phase: 'tricks' });
+    await okBy(() => d.state.phase === 'tricks' && d.state.idx === 0, 'the hand is on');
+    d.send({ t: 'dev', action: 'patch',
+             patch: { hands: [['AS', 'KH', 'AS', 'ZZ'], ['AS', '2C'], [], []] } });
+    await d.rt();
+    d.send({ t: 'dev', action: 'state' });
+    await okBy(() => d.raw && d.raw.play && d.raw.play.hands,
+       'the record carries the hands  got ' + JSON.stringify(d.raw && d.raw.play));
+    ok(JSON.stringify(d.raw.play.hands[0]) === '["AS","KH"]',
+       'a card said twice is held once, and what is not a card is dropped  got '
+       + JSON.stringify(d.raw.play.hands[0]));
+    ok(JSON.stringify(d.raw.play.hands[1]) === '["2C"]',
+       'and a card an earlier seat already holds is not dealt again  got '
+       + JSON.stringify(d.raw.play.hands[1]));
+    d.send({ t: 'dev', action: 'patch', patch: { idx: 1, phase: 'bid' } });
+    await okBy(() => d.state.idx === 1 && d.state.phase === 'bid', 'and back to where the card was');
+
     // ---- a random scorecard ----
     const full = (r) => r.bids && r.bids.every((b) => b !== null) && Array.isArray(r.tricks);
     d.send({ t: 'dev', action: 'fillCard', rounds: 3 });

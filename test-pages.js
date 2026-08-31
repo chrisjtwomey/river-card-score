@@ -3573,6 +3573,16 @@ part('the dev controls, on each kind of server');
        and the scorecard is a column for it -- so Kick says so rather than
        earning a refusal one press at a time. */
     ok(verb(0, 'Kick').disabled === true, 'a seat only leaves the table in the lobby');
+    /* Kicking a seat and giving one back are the table's own messages, said
+       the way the host screen says them: the guards and the words come with
+       them rather than being written out again on this page. */
+    P.socks[0].onmessage({ data: devState(false, { phase: 'lobby' }) });
+    P.socks[0].sent.length = 0;
+    P.pick('#prows').querySelectorAll('.ptools')[0]
+      .querySelectorAll('button').find((b) => b.textContent === 'Kick').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"kick","id":"s1"}',
+       'and in the lobby it goes as the table\'s own  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.socks[0].onmessage({ data: devState(false) });
     ok(verb(0, 'Rejoin').disabled === true, 'and only a seat the table took over comes back');
 
     /* A phone goes quiet by its socket going, which here is its pane not being
@@ -3642,9 +3652,8 @@ part('the dev controls, on each kind of server');
     ok(give && give.disabled === false, 'a seat the table took over can be given back');
     P.socks[0].sent.length = 0;
     give.fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"seatDo","id":"s1","do":"back"}',
-       'by name, to whoever holds its phone  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"letback","id":"s1"}',
+       'as the table\'s own message, by name  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 
   {   /* ---- a record the table will not have ----
@@ -4264,7 +4273,8 @@ part('the dev controls, on each kind of server');
     ok(P.pick('#tables-tools').hidden === false, 'a dev server shows the tables it will hand over');
     ok(P.pick('#scrub-tools').hidden === false, 'and the scrubber');
     ok(P.pick('#shots-dev').hidden === false, 'and the one-shots');
-    ok(P.pick('#phase-row').querySelector('.seg').querySelectorAll('.btn').length === 4,
+    ok(P.pick('#phase-row').querySelector('.pphase').querySelector('.seg')
+         .querySelectorAll('.btn').length === 4,
        'and the panel still carries the phase, which unsticks a flow either way');
     ok(P.pick('#scrub').children.length === 4, 'the card is the lobby, both rounds and the finish  got '
        + P.pick('#scrub').children.length);
@@ -4281,6 +4291,59 @@ part('the dev controls, on each kind of server');
     P.pick('#btn-step').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"step"}',
        'which asks the table for one move  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* ---- the hand a seat holds ----
+       A deck is fifty-two cards and no card is in two places, so the picker is
+       the deck itself: this seat's cards marked, another seat's shut with a
+       line saying whose, and the rest there to be taken. */
+    P.socks[0].onmessage({ data: devState(true, {
+      phase: 'tricks', cfg: { max: 3, pattern: 'down', ones: 2, deck: 'virtual' },
+      seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Bob' }],
+      play: { turn: 0, trick: [], hands: [['AS', 'KH'], ['2C', 'QD']] },
+    }) });
+    const tools0 = () => P.pick('#prows').querySelectorAll('.ptools')[0];
+    const word = (w) => tools0().querySelectorAll('button').find((b) => b.textContent === w);
+    ok(/2 cards/.test(P.pick('#prows').querySelectorAll('.prow')[0]
+         .querySelector('.pstate').textContent),
+       'the row says how many a seat holds  got '
+       + P.pick('#prows').querySelectorAll('.prow')[0].querySelector('.pstate').textContent);
+    const openIt = word('Hand \u25be');
+    ok(!!openIt, 'and offers the cards themselves');
+    ok(!P.pick('#prows').querySelector('.phand'), 'shut until it is asked for');
+    openIt.fire('click');
+    const pick2 = P.pick('#prows').querySelector('.phand');
+    ok(!!pick2, 'the picker opens');
+    ok(pick2.querySelectorAll('.phand-row').length === 4, 'a line a suit  got '
+       + pick2.querySelectorAll('.phand-row').length);
+    const cards = pick2.querySelectorAll('.btn.card');
+    ok(cards.length === 52, 'and the whole deck to choose from  got ' + cards.length);
+    ok(cards.filter((b) => b.classList.contains('primary')).length === 2,
+       'with the two this seat holds marked  got '
+       + cards.filter((b) => b.classList.contains('primary')).length);
+    ok(cards.filter((b) => b.disabled).length === 2,
+       'and the two another seat holds shut  got ' + cards.filter((b) => b.disabled).length);
+
+    /* Moving a card changes two hands, so every hand goes. This one is free,
+       so it lands on Ann and Bob keeps what Bob had. */
+    P.socks[0].sent.length = 0;
+    const free = cards.find((b) => !b.disabled && !b.classList.contains('primary'));
+    free.fire('click');
+    const laid = P.socks[0].sent[0];
+    ok(laid && laid.action === 'patch' && Array.isArray(laid.patch.hands)
+       && laid.patch.hands.length === 2 && laid.patch.hands[0].length === 3
+       && JSON.stringify(laid.patch.hands[1]) === '["2C","QD"]',
+       'every hand goes, and only this one changed  got ' + JSON.stringify(laid));
+
+    // Only one picker at a time: fifty-two buttons a seat is four hundred.
+    P.pick('#prows').querySelectorAll('.ptools')[1]
+      .querySelectorAll('button').find((b) => b.textContent === 'Hand \u25be').fire('click');
+    ok(P.pick('#prows').querySelectorAll('.phand').length === 1,
+       'one hand is open at a time  got ' + P.pick('#prows').querySelectorAll('.phand').length);
+
+    // With real cards the hand is on the table, and nothing here knows it.
+    P.socks[0].onmessage({ data: devState(true, { phase: 'tricks' }) });
+    ok(!tools0().querySelectorAll('button').find((b) => /^Hand/.test(b.textContent)),
+       'and with real cards there is no hand here to deal');
   }
 }
 
