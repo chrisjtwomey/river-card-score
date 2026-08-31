@@ -46,16 +46,6 @@ const stateNow = () => (replaying() ? (REPLAY.state || null) : ST);
 const N_KEY = 'rcs:dev:players';
 let NEW_N = Math.max(2, Math.min(8, Number(localStorage.getItem(N_KEY)) || 4));
 
-/* How fast a replay plays itself, against the pace the table played it. It is
-   remembered, because whoever slows a game down to read it wants the next one
-   slow too. The copy is made at the table's own pace and told this once. */
-const RATE_KEY = 'rcs:dev:rate';
-const RATES = [[0.5, '½×', 'Half the pace the table played it'],
-               [1, '1×', 'The pace the table played it'],
-               [2, '2×', 'Twice the pace'],
-               [4, '4×', 'Four times the pace']];
-let RATE = Number(localStorage.getItem(RATE_KEY)) || 1;
-
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
    lands on the game it was pressed from; #g=ID opens it on a game watched
    again. The page writes back whichever it lands on, so a reload comes to the
@@ -138,10 +128,6 @@ function connect() {
       REPLAY = m.shut ? null : m;
       WANT = (REPLAY && REPLAY.game) || null;
       if (REPLAY) err('');            // a copy that opened is not a line to keep
-      // A new copy is made at the table's own pace: tell it the one picked last.
-      if (REPLAY && REPLAY.code !== was && RATE !== REPLAY.rate) {
-        replayAsk({ do: 'rate', v: RATE });
-      }
       /* Only a different copy is a different pane. Each pane holds a socket on
          the copy, so a step reaches it on its own; tearing them down every step
          reloaded every frame at every press, and made the panel feel dead. */
@@ -384,55 +370,12 @@ function renderTables(box, list) {
     b.append(code, what, kind, end);
     box.appendChild(b);
   });
-  fadeStrip(box);
+  UI.fadeStrip(box);
 }
 
 /* ---------- the scrubber ---------- */
 
-/* A strip with more in it than fits says so by fading out on the side there is
-   more on. It replaces the scrollbar, which was a bar of its own across the
-   band saying the same thing louder and taking a row's height to say it.
-
-   It listens to itself once, and is asked again whenever what is in it is
-   redrawn or the window changes shape. */
-function fadeStrip(el) {
-  if (!el) return;
-  if (!el._faded) {
-    el._faded = true;
-    el.addEventListener('scroll', () => fadeStrip(el));
-  }
-  const over = el.scrollWidth - el.clientWidth;
-  const x = el.scrollLeft || 0;
-  el.classList.toggle('more-l', over > 1 && x > 1);
-  el.classList.toggle('more-r', over > 1 && x < over - 1);
-}
-const fadeStrips = () => { fadeStrip($('#scrub')); fadeStrip($('#tablelist')); };
-
-/* Bring the cell a strip is on into view, and a couple either side of it.
-
-   `scrollIntoView` moves the least it can, which lands the cell hard against
-   the edge it came in from -- and a cell on the edge of a strip says nothing
-   about whether there is anything after it. Two cells of room says there is,
-   and the fade at that edge says there is more still. */
-const LOOK = 2;
-function showCell(box, on) {
-  if (!box || !on || !Number.isFinite(on.offsetLeft) || !box.clientWidth) return;
-  const w = box.clientWidth;
-  const pad = (on.offsetWidth || 0) * LOOK;
-  const end = on.offsetLeft + (on.offsetWidth || 0);
-  let x = box.scrollLeft || 0;
-  if (end + pad > x + w) x = end + pad - w;
-  if (on.offsetLeft - pad < x) x = on.offsetLeft - pad;
-  x = Math.max(0, Math.min(x, Math.max(0, (box.scrollWidth || w) - w)));
-  if (box.scrollTo) box.scrollTo({ left: x, behavior: UI.fx.on() ? 'smooth' : 'auto' });
-  else box.scrollLeft = x;
-  fadeStrip(box);
-}
-
-/* How big a hand a round is, in words. The scorecard's rounds and a replay's
-   both say it, so it is said once: a round of one card is not "1 cards", and
-   neither of them is going to abbreviate it. */
-const cardsSaid = (n) => `${n} card${Number(n) === 1 ? '' : 's'}`;
+const fadeStrips = () => { UI.fadeStrip($('#scrub')); UI.fadeStrip($('#tablelist')); };
 
 // The phase a clicked round lands at: 'bid' or 'tricks'.
 const gotoPhase = () => {
@@ -465,12 +408,12 @@ function renderScrub() {
   cell('⌂', 'lobby', ST.phase === 'lobby' ? 'on' : '', () => act('lobby'));
   rounds.forEach((r, i) => {
     const here = ST.rounds.length && ST.idx === i && ST.phase !== 'done' && ST.phase !== 'lobby';
-    cell(String(i + 1), cardsSaid(r.cards), (here ? 'on ' : '') + (i < played ? 'played' : ''),
+    cell(String(i + 1), Viewer.cardsSaid(r.cards), (here ? 'on ' : '') + (i < played ? 'played' : ''),
          () => act('goto', { round: i + 1, phase: gotoPhase() }));
   });
   cell('🏁', 'end', ST.phase === 'done' ? 'on' : '', () => act('endGame'));
-  fadeStrip(box);
-  showCell(box, box.querySelector('.scell.on'));
+  UI.fadeStrip(box);
+  UI.showCell(box, box.querySelector('.scell.on'));
 }
 
 /* Stopping the table, and walking it on. A stopped table is stopped for
@@ -537,400 +480,18 @@ function standInAvatar(name, i) {
 
 /* ---------- watching the game again ---------- */
 
-/* The copy, and the way about it. It takes the band the table has: the rounds
-   of the game where the scorecard is, and the transport where Pause and Step
-   are. Nothing here invents anything -- a replay puts back what happened, on a
-   copy of its own -- so the one-shots are away and the panels only read.
-
-   The rounds of a replay are drawn into the scrubber the card uses, because
-   they are the same thing: a strip of rounds, one of them where you are.
-
-   There is no way from one game to another here. A game is picked on the way
-   in and then watched; picking another is going back to the way in. A second
-   list of what the card already lists is a second place to keep right. */
+/* All of it is the replay viewer's: the list of what there is to watch, the
+   rounds of the one being watched, the transport and the points of the round on
+   show. This page only says where each of those goes and how a word gets back
+   to the copy. */
 const replayAsk = (o) => send(Object.assign({ t: 'dev', action: 'replay' }, o));
+const watching = { send: replayAsk };
 
-/* Which round's stretch of the trail the head is in, and where that stretch
-   starts. The first round takes everything before it with it: the game
-   starting is the run-up to round one, not a stretch of its own with one point
-   in it. Asked in one place, because the rounds strip, the timeline and the
-   two round buttons all have to agree about it. */
-function roundNow() {
-  let cur = 0;
-  (REPLAY.marks || []).forEach((m, i) => { if (m.at <= REPLAY.at) cur = i; });
-  return cur;
-}
-const topOf = (i) => (i === 0 ? 0 : REPLAY.marks[i].at);
-
-/* A round back, and a round on. Back part way through a round goes to the top
-   of it first, the way a track does: it is the same press for "this one again"
-   and "the one before", and which you meant is where you are. On from the last
-   round is the end of the game, which is the only thing left after it. */
-function stepRound(by) {
-  const marks = REPLAY.marks || [];
-  if (!marks.length) return;
-  const cur = roundNow();
-  if (by > 0) {
-    return replayAsk({ do: 'seek', at: marks[cur + 1] ? marks[cur + 1].at : REPLAY.n - 1 });
-  }
-  const top = topOf(cur);
-  replayAsk({ do: 'seek', at: REPLAY.at > top ? top : topOf(Math.max(0, cur - 1)) });
-}
-
-/* Every kind of point: the icon it wears on the timeline, the plain word it is
-   called where an older server sends no sentence for it, and how big a mark it
-   makes. A round is mostly cards, so a card is a dot in the colour of its suit
-   and a trick opening is a divider; what shapes the round wears an icon, and a
-   bid wears the number that was said. */
-const STEPS = {
-  G: ['\ud83c\udfac', 'the game starts'],
-  R: ['\ud83c\udccf', 'the round is dealt'],
-  b: ['', 'a bid'],                     // a bid wears its own number
-  s: ['', 'a trick opens', 'bar'],
-  c: ['', 'a card', 'wee'],             // a card wears itself
-  w: ['\u2714', 'a trick taken'],
-  W: ['\u21a9', 'a trick taken back'],
-  e: ['\ud83d\udcdd', 'the round is scored'],
-  z: ['\u27f2', 'the round is put back'],
-  F: ['\u26a0\ufe0f', 'the table was forced'],
-  E: ['\ud83c\udfc1', 'the game ends'],
-};
-// A hand thrown in is a round dealt again, and it says so rather than looking
-// like the first go at it.
-const BUM = '\u267b\ufe0f';
-
-/* The round on show as a timeline: a rail, the points marked along it in the
-   order they happened, and a head that can be dragged along.
-
-   A game is some hundreds of points, which is why this is two levels and not
-   one: the rounds above pick the round, and this picks the moment inside it.
-   It is a rail rather than a row of cells because a round runs from one end to
-   the other, and the marks on it are not a slider -- each point either happened
-   or has not, and each is a place to go.
-
-   What a mark wears is what it is: a bid its number, a card itself in the
-   colour of its suit, a trick opening a divider through the rail, and the beats
-   that shape a round an icon. Passing over one says what happened there, in the
-   sentence the server made for it -- the same one the line beside the rail says
-   for the point the copy is standing on. */
-
-// Where the head is being dragged to, before it is let go. Nothing is asked of
-// the server until then: a seek re-seeds the copy and plays it forward, and
-// doing that for every pixel of a drag would make the drag the slowest part.
-let dragAt = null;
-
-function renderSteps() {
-  const box = $('#replay-steps');
-  if (!box || !REPLAY.kinds) return;
-  const marks = REPLAY.marks;
-  const cur = roundNow();
-  const from = topOf(cur);
-  const to = marks[cur + 1] ? marks[cur + 1].at - 1 : REPLAY.kinds.length - 1;
-  const key = `${from}-${to}@${REPLAY.at}:${REPLAY.kinds.length}`;
-  if (box.dataset.key === key) return;
-  box.dataset.key = key;
-  box.innerHTML = '';
-  const bums = {};
-  marks.forEach((m) => { if (m.w) bums[m.at] = m.w; });
-
-  const body = document.createElement('div');
-  body.className = 'tlbody';
-  const rail = document.createElement('div');
-  rail.className = 'rail';
-  const fill = document.createElement('div');
-  fill.className = 'fill';
-  rail.appendChild(fill);
-  body.appendChild(rail);
-  box.appendChild(body);
-
-  // Where a point sits along the rail: the first at one end, the last at the
-  // other. A round of one point has nowhere to go, so it sits in the middle.
-  const span = to - from;
-  const at = (i) => (span > 0 ? ((i - from) / span) * 100 : 50);
-
-  for (let i = from; i <= to; i++) {
-    const k = REPLAY.kinds[i];
-    const [icon, kind, size] = STEPS[k] || ['?', 'something'];
-    const worn = (REPLAY.faces && REPLAY.faces[i])
-      || (k === 'R' && bums[i] === 'bum' ? BUM : icon);
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tick' + (size ? ' ' + size : '')
-      + (i < REPLAY.at ? ' done' : '') + (/[♥♦]/.test(worn) ? ' red' : '');
-    b.style.left = `${at(i)}%`;
-    b.title = saidAt(i);
-    const face = document.createElement('span');
-    face.className = 'face';
-    face.textContent = worn;
-    b.appendChild(face);
-    b.addEventListener('click', () => replayAsk({ do: 'seek', at: i }));
-    b.addEventListener('mouseenter', () => showTip(i));
-    b.addEventListener('mouseleave', () => showTip(null));
-    body.appendChild(b);
-  }
-
-  const head = document.createElement('div');
-  head.className = 'head';
-  const knob = document.createElement('span');
-  knob.className = 'knob';
-  head.appendChild(knob);
-  body.appendChild(head);
-  body._head = head;
-  body._knob = knob;
-  body._span = [from, to];
-  putHead(body, REPLAY.at);
-  wireDrag(body);
-}
-
-// The head, and the fill behind it, at a point. Read from the drag while one
-// is going on, and from the copy the rest of the time.
-function putHead(body, i) {
-  const [from, to] = body._span;
-  const span = to - from;
-  const x = span > 0 ? ((i - from) / span) * 100 : 50;
-  body._head.style.left = `${x}%`;
-  const fill = body.querySelector('.fill');
-  if (fill) fill.style.width = `${x}%`;
-  const k = REPLAY.kinds[i];
-  const [icon] = STEPS[k] || ['?'];
-  body._knob.textContent = (REPLAY.faces && REPLAY.faces[i]) || icon || '·';
-}
-
-// What happened at a point, in words. An older server sends no sentence, so
-// the kind of thing it was stands in for one.
-function saidAt(i) {
-  const kind = (STEPS[REPLAY.kinds[i]] || ['', 'something'])[1];
-  return `${(REPLAY.says && REPLAY.says[i]) || kind} — point ${i + 1} of ${REPLAY.n}`;
-}
-
-/* The tip over the rail. It is the one that follows the pointer; the line
-   beside the rail stays on the point the copy is standing on, so the two
-   answer different questions and never fight over one place. */
-function showTip(i) {
-  const body = $('#replay-steps') && $('#replay-steps').querySelector('.tlbody');
-  if (!body) return;
-  const had = body.querySelector('.tip');
-  if (had) had.remove();
-  if (i === null || i === undefined) return;
-  const [from, to] = body._span;
-  const span = to - from;
-  const tip = document.createElement('div');
-  tip.className = 'tip';
-  tip.textContent = saidAt(i);
-  tip.style.left = `${span > 0 ? ((i - from) / span) * 100 : 50}%`;
-  body.appendChild(tip);
-  /* Half of it hangs to the left of the mark it belongs to, so at the first
-     point on the rail it hangs off the side of the screen -- and at the last,
-     off the other side. Slide it back on once it is up, which is the only
-     moment it can be done: how far it hangs depends on what it says. */
-  const r = tip.getBoundingClientRect();
-  const wide = window.innerWidth || 0;
-  if (!r.width || !wide) return;
-  const edge = 8;
-  const back = Math.max(0, edge - r.left) - Math.max(0, r.right - (wide - edge));
-  if (back) tip.style.marginLeft = `${Math.round(back)}px`;
-}
-
-/* Dragging the head. The rail is a picker, so a press anywhere on it takes the
-   head there and a drag moves it; only letting go asks the copy to follow. */
-function wireDrag(body) {
-  const point = (e) => {
-    const [from, to] = body._span;
-    const r = body.getBoundingClientRect();
-    if (!r.width) return null;                 // nothing laid out to measure
-    const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-    return from + Math.round(f * (to - from));
-  };
-  body.addEventListener('pointerdown', (e) => {
-    const i = point(e);
-    if (i === null) return;
-    // Two clocks on one copy would fight over where it is, so a hand on the
-    // rail stops it playing itself before it moves anything.
-    if (REPLAY.playing) replayAsk({ do: 'pause' });
-    dragAt = i;
-    if (body.setPointerCapture && e.pointerId !== undefined) body.setPointerCapture(e.pointerId);
-    putHead(body, i);
-    showTip(i);
-  });
-  body.addEventListener('pointermove', (e) => {
-    const i = point(e);
-    if (i === null) return;
-    if (dragAt !== null) { dragAt = i; putHead(body, i); }
-    showTip(i);
-  });
-  const drop = () => {
-    if (dragAt === null) return;
-    const i = dragAt;
-    dragAt = null;
-    showTip(null);
-    replayAsk({ do: 'seek', at: i });
-  };
-  body.addEventListener('pointerup', drop);
-  body.addEventListener('pointercancel', drop);
-  body.addEventListener('mouseleave', () => { if (dragAt === null) showTip(null); });
-}
-
-/* The rounds of the game being watched, in the strip a scorecard uses. A hand
-   thrown in is a cell of its own, because it is a second go at the same round
-   and looked different. */
-function renderMarks() {
-  const box = $('#scrub');
-  if (!box) return;
-  const key = 'r:' + REPLAY.marks.map((m) => `${m.at}/${m.w}`).join(',') + '@' + REPLAY.at;
-  if (box.dataset.key === key) return;
-  box.dataset.key = key;
-  box.innerHTML = '';
-  const cur = roundNow();
-  REPLAY.marks.forEach((m, i) => {
-    const again = m.w === 'bum' || m.w === 'reset' || m.w === 'undo';
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'scell' + (i === cur ? ' on' : '') + (again ? ' bum' : '')
-      + (m.at < REPLAY.at ? ' played' : '');
-    b.appendChild(document.createTextNode(m.w === 'end' ? '🏁' : String(m.i + 1)));
-    const sm = document.createElement('small');
-    sm.textContent = m.w === 'end' ? 'end'
-      : (m.w === 'bum' ? 'again'
-        // 'undo' is what older trails on disk call a round put back by hand.
-        : (m.w === 'reset' || m.w === 'undo' ? 'back' : cardsSaid(m.cards)));
-    b.appendChild(sm);
-    b.title = m.w === 'bum' ? 'The hand was thrown in and dealt again'
-      : (m.w === 'reset' || m.w === 'undo'
-        ? 'The round was put back to here' : 'Take the replay to here');
-    b.addEventListener('click', () => replayAsk({ do: 'seek', at: m.at }));
-    box.appendChild(b);
-  });
-  fadeStrip(box);
-  showCell(box, box.querySelector('.scell.on'));
-}
-
-/* What there is to watch: the game a table is playing now, and every game on
-   file. A game's own table may be long gone -- its trail is kept beside its
-   scorecard -- so this is not only one table's.
-
-   `info` is what the server said there was: the way-in card asks for it
-   before anything is open, which is the only place this list is drawn. */
-function renderGames(box, info) {
-  if (!box || !info) return;
-  const games = info.games || [];
-  const key = (info.here || '-') + ':' + games.map((g) => g.id).join(',');
-  if (box.dataset.key === key) return;
-  box.dataset.key = key;
-  box.innerHTML = '';
-  const row = (code, said, when, who, why, go) => {
-    const b = document.createElement('div');
-    b.className = 'btn grow';
-    b.title = why;
-    const top = document.createElement('div');
-    top.className = 'gtop';
-    const c = document.createElement('span');
-    c.className = 'gcode';
-    c.textContent = code;
-    const s = document.createElement('span');
-    s.className = 'gwon';
-    s.textContent = said;
-    top.append(c, s);
-    if (when) {
-      const t = document.createElement('span');
-      t.className = 'gwhen';
-      t.textContent = when;
-      top.appendChild(t);
-    }
-    b.appendChild(top);
-    if (who) {
-      const p = document.createElement('div');
-      p.className = 'gwho';
-      p.textContent = who;
-      b.appendChild(p);
-    }
-    b.addEventListener('click', go);
-    box.appendChild(b);
-  };
-  if (info.here) {
-    row(info.here, 'playing now', '', '', 'The game this table is playing now',
-        () => replayAsk({ do: 'open' }));
-  }
-  games.forEach((g) => {
-    const names = g.names || [];
-    row(g.code, wonBy(g), gameWhen(g.at),
-        `${names.length} players · ${names.join(', ')}`,
-        'Watch this game again', () => replayAsk({ do: 'open', game: g.id }));
-  });
-  if (!info.here && !games.length) {
-    const p = document.createElement('p');
-    p.className = 'hint';
-    p.textContent = 'No game has been written down yet.';
-    box.appendChild(p);
-  }
-}
-
-// Who took it, and with what. A draw is named as one, the way the finish does.
-function wonBy(g) {
-  const names = g.names || [], won = g.winners || [];
-  if (!won.length) return '';
-  const who = won.map((i) => names[i] || 'somebody').join(' & ');
-  const score = g.totals ? g.totals[won[0]] : null;
-  return `🏆 ${who}` + (score === null || score === undefined ? '' : ` · ${score}`);
-}
-
-// When it was played, short enough to sit at the end of a row.
-function gameWhen(at) {
-  const d = new Date(Number(at) || 0);
-  if (!at || isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) +
-    ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-}
-
-/* The speeds it can be played back at. Built here rather than written into the
-   page because the list of them is one thing, and a button a speed written out
-   four times is four places to keep right. */
-function buildRates() {
-  const box = $('#replay-rate');
-  if (!box || box._wired) return;
-  box._wired = true;
-  RATES.forEach(([v, label, why]) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn';
-    b.dataset.rate = String(v);
-    b.textContent = label;
-    b.title = why;
-    b.addEventListener('click', () => setRate(v));
-    box.appendChild(b);
-  });
-}
-
-function setRate(v) {
-  RATE = v;
-  try { localStorage.setItem(RATE_KEY, String(v)); } catch (e) { /* a browser that will not */ }
-  replayAsk({ do: 'rate', v });
-}
-
-// The band, on a game that has already happened.
 function renderReplay() {
   if (!replaying()) return;
-  renderMarks();
-  renderSteps();
-  const rates = $('#replay-rate');
-  if (rates) {
-    rates.querySelectorAll('.btn').forEach((b) =>
-      b.classList.toggle('on', Number(b.dataset.rate) === (REPLAY.rate || 1)));
-  }
-  /* The two round buttons say when there is nowhere to go: at the first point
-     there is nothing behind it, and at the last nothing in front. */
-  const marks = REPLAY.marks || [];
-  const cur = roundNow();
-  if ($('#btn-prev-round')) $('#btn-prev-round').disabled = REPLAY.at === 0;
-  if ($('#btn-next-round')) {
-    $('#btn-next-round').disabled = !marks[cur + 1] && REPLAY.at >= REPLAY.n - 1;
-  }
-  const play = $('#btn-play');
-  play._now = !!REPLAY.playing;             // read at the tap, not at the draw
-  play.textContent = play._now ? '❚❚ Pause' : '▶ Play';
-  play.title = play._now ? 'Stop where it is'
-    : 'Play it back at the pace the table played it';
-  $('#replay-at').textContent = `${REPLAY.at + 1} of ${REPLAY.n}`;
-  $('#replay-where').textContent = REPLAY.where || '';
+  Viewer.rounds($('#replay-rounds'), REPLAY, watching);
+  Viewer.run($('#replay-transport'), REPLAY, watching);
+  Viewer.points($('#replay-points'), REPLAY, watching);
 }
 
 /* ---------- the way in ---------- */
@@ -1041,7 +602,7 @@ function renderWays() {
   const list = document.createElement('div');
   list.className = 'waylist tall';       // the longest of the lists, and the most read
   watch.appendChild(list);
-  renderGames(list, WAYS);
+  Viewer.games(list, WAYS, watching);
 }
 
 // Another table of stand-ins, and the size it was, for the band to repeat.
@@ -1315,12 +876,11 @@ function applyGates() {
   ['#tables-tools', '#shots-dev', '#shots-sep'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = !DEVSRV || going;
   });
-  ['#replay-run', '#steps-row'].forEach((sel) => {
+  ['#rounds-tools', '#replay-run', '#steps-row'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = !going;
   });
-  // The scrubber is the rounds either way; only a table is sent to one.
-  if (el('#scrub-tools')) el('#scrub-tools').hidden = !going && !DEVSRV;
-  if (el('#goto-phase')) el('#goto-phase').hidden = going;
+  // The rounds are a strip either way; a table's is the one you can send to.
+  if (el('#scrub-tools')) el('#scrub-tools').hidden = going || !DEVSRV;
   if (el('#run-tools') && going) el('#run-tools').hidden = true;
   // A copy is read, never written, so there is nothing to apply to it.
   if (el('#btn-state-apply')) el('#btn-state-apply').hidden = going;
@@ -1329,7 +889,6 @@ function applyGates() {
 
 document.addEventListener('DOMContentLoaded', () => {
   buildPhaseRow();
-  buildRates();
   paint();
   UI.wireTheme('#btn-theme');
 
@@ -1404,15 +963,6 @@ document.addEventListener('DOMContentLoaded', () => {
     send({ t: 'pause', on: !$('#btn-pause')._now }));
   $('#btn-step').addEventListener('click', () => act('step'));
 
-  /* The transport, where Pause and Step are on a table. A copy is moved about
-     in by hand or played back at the pace the table played it; either way it
-     is the trail being read, so nothing here can change what happened. */
-  $('#btn-back').addEventListener('click', () => replayAsk({ do: 'step', by: -1 }));
-  $('#btn-fwd').addEventListener('click', () => replayAsk({ do: 'step', by: 1 }));
-  $('#btn-prev-round').addEventListener('click', () => stepRound(-1));
-  $('#btn-next-round').addEventListener('click', () => stepRound(1));
-  $('#btn-play').addEventListener('click', () =>
-    replayAsk({ do: $('#btn-play')._now ? 'pause' : 'play' }));
   // Back to the question. Whatever is open here is let go on the way.
   $('#btn-ways').addEventListener('click', () => toWays(''));
 

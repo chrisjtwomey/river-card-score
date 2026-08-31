@@ -57,47 +57,7 @@
   .waylist .trow{width:100%;flex:none;padding:9px 12px;font-size:13px;gap:10px}
   .waylist .trow .tcode{font-size:14px}
 
-  /* A game on file: what it was, in two lines. */
-  .grow{display:flex;flex-direction:column;align-items:stretch;gap:3px;flex:none;
-    padding:9px 12px;text-align:left;font-size:13px;line-height:1.35}
-  .waylist .grow{width:100%}
-  .grow .gtop{display:flex;align-items:baseline;gap:10px;min-width:0}
-  .grow .gcode{font-weight:800;letter-spacing:.08em;color:var(--gold);flex:none}
-  .grow .gwon{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .grow .gwhen{margin-left:auto;font-size:11px;color:var(--ink-dim);flex:none}
-  .grow .gwho{font-size:11px;color:var(--ink-dim);overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap}
   .grow.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
-
-  /* The scrubber: the whole card as cells. Click a round and the game is
-     played up to it; the ends are the lobby and the finish. */
-  .scrub{display:flex;gap:5px;overflow-x:auto;min-width:0;flex:1}
-  /* A strip with more in it than fits. The scrollbar under one was a bar of
-     its own across the band, so it is taken away and the strip says the same
-     thing by fading out on whichever side there is more on. */
-  .strip{scrollbar-width:none;-ms-overflow-style:none}
-  .strip::-webkit-scrollbar{width:0;height:0;display:none}
-  .strip.more-l{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 30px);
-    mask-image:linear-gradient(90deg,transparent 0,#000 30px)}
-  .strip.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent 100%);
-    mask-image:linear-gradient(90deg,#000 calc(100% - 30px),transparent 100%)}
-  .strip.more-l.more-r{
-    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 30px,#000 calc(100% - 30px),transparent 100%);
-    mask-image:linear-gradient(90deg,transparent 0,#000 30px,#000 calc(100% - 30px),transparent 100%)}
-  /* The rounds share the row rather than huddling at the left of it: there is
-     room, and a round is easier to hit for having it. Below the width a hand
-     size needs they stop shrinking and the strip scrolls instead. */
-  .scell{flex:1 1 0;min-width:58px;padding:8px 6px;border:1px solid var(--line);border-radius:9px;
-    background:var(--bg2);color:var(--ink);font-size:16px;font-weight:700;cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}
-  .scell small{font-size:11px;color:var(--ink-dim);font-weight:600;white-space:nowrap}
-  .scell:hover{background:var(--chip)}
-  .scell.played{background:rgba(31,122,77,.14)}
-  .scell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
-  .scell.bum{border-style:dashed}
-  .seg{display:flex;flex:none;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .seg .btn{border:0;border-radius:0;padding:6px 10px;font-size:12px}
-  .seg .btn.on{background:var(--felt);color:#fff}
 
   .oneshots{display:flex;gap:6px;flex:none;flex-wrap:wrap}
   .oneshots .btn{padding:6px 9px;font-size:12px}
@@ -121,49 +81,6 @@
   .prow .mid{justify-self:center}
   .prow .pbtns{display:flex;gap:5px}
 
-  /* The round on show as a timeline: a rail, the points marked along it in
-     the order they happened, and a head you can drag. What each mark wears is
-     what it is -- a bid wears its number, a card wears itself, and the beats
-     that shape a round wear an icon. The rest is a dot, because a round is
-     mostly cards and forty of them named at once is not a thing to read. */
-  .steps{flex:1;min-width:0;padding:14px 0 4px}
-  .tlbody{position:relative;margin:0 18px;height:24px;touch-action:none;cursor:pointer}
-  .tlbody .rail{position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;
-    border-radius:3px;background:var(--line);pointer-events:none}
-  .tlbody .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;
-    background:var(--gold);pointer-events:none}
-  .tlbody .tick{position:absolute;top:50%;transform:translate(-50%,-50%);border:0;
-    background:none;padding:0;cursor:pointer;display:flex;align-items:center;
-    justify-content:center;height:24px}
-  .tlbody .face{display:flex;align-items:center;justify-content:center;height:19px;
-    min-width:19px;padding:0 4px;border-radius:10px;border:1.5px solid var(--line);
-    background:var(--bg2);color:var(--ink-dim);white-space:nowrap;
-    font:700 10px/1 system-ui,-apple-system,sans-serif}
-  .tlbody .tick.done .face{border-color:var(--gold);color:var(--gold)}
-  /* A card: a dot on the rail, in the colour of its suit. */
-  .tlbody .tick.wee .face{width:7px;height:7px;min-width:0;padding:0;border:0;
-    border-radius:50%;background:var(--ink-dim);font-size:0}
-  .tlbody .tick.wee.red .face{background:var(--red)}
-  .tlbody .tick.wee.done .face{background:var(--gold)}
-  /* A trick opening: a divider through the rail, which is what it is. */
-  .tlbody .tick.bar .face{width:2px;height:12px;min-width:0;padding:0;border:0;
-    border-radius:1px;background:var(--line);font-size:0}
-  .tlbody .tick:hover .face{border-color:var(--gold)}
-  .tlbody .head{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;
-    background:var(--felt);pointer-events:none;border-radius:1px}
-  .tlbody .head .knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-    display:flex;align-items:center;justify-content:center;height:23px;min-width:23px;
-    padding:0 6px;border-radius:12px;background:var(--felt);color:#fff;white-space:nowrap;
-    font:800 11px/1 system-ui,-apple-system,sans-serif;
-    box-shadow:0 0 0 3px rgba(20,96,63,.18)}
-  /* What happened there, over the mark it belongs to. */
-  .tlbody .tip{position:absolute;bottom:calc(100% + 10px);transform:translateX(-50%);
-    white-space:nowrap;font:600 12px/1.25 system-ui,-apple-system,sans-serif;
-    padding:6px 10px;border-radius:8px;background:var(--ink);color:var(--bg);
-    box-shadow:var(--shadow);pointer-events:none;z-index:6}
-  #replay-where{margin:0;font-weight:650;color:var(--ink);min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #replay-at{font-size:12px;color:var(--ink-dim);font-weight:650;flex:none}
 
   /* The state panel: the whole table as text. */
   .statebox{padding:10px 12px;gap:8px}
@@ -249,19 +166,15 @@
         <button class="btn" id="btn-step" type="button"
           title="Let the table make one move: one bid, or one card">Step</button>
       </span>
-      <!-- The same place in the band, for a game that has already happened:
-           back a point, play it at the pace it was played, on a point. -->
+      <!-- The same places in the band, for a game that has already happened.
+           Both are the replay viewer's, which builds what goes in them. -->
+      <span class="cluster" id="rounds-tools" hidden>
+        <span class="bandlbl">Go to</span>
+        <div class="viewer-rounds" id="replay-rounds"></div>
+      </span>
       <span class="cluster" id="replay-run" hidden>
         <span class="bandsep"></span>
-        <button class="btn" id="btn-prev-round" type="button"
-          title="The top of this round, then the round before">⏮</button>
-        <button class="btn" id="btn-back" type="button" title="One point back">◀</button>
-        <button class="btn primary" id="btn-play" type="button"></button>
-        <button class="btn" id="btn-fwd" type="button" title="One point on">▶</button>
-        <button class="btn" id="btn-next-round" type="button"
-          title="The round after">⏭</button>
-        <div class="seg" id="replay-rate"></div>
-        <span id="replay-at"></span>
+        <div id="replay-transport"></div>
       </span>
       <span class="bandsep" id="shots-sep" hidden></span>
       <div class="oneshots" id="shots-dev" hidden>
@@ -283,9 +196,7 @@
          at the one it is standing on. -->
     <div class="bandrow" id="steps-row" hidden>
       <span class="bandlbl">Points</span>
-      <div class="steps" id="replay-steps"></div>
-      <span class="bandsep"></span>
-      <p class="hint" id="replay-where"></p>
+      <div class="viewer-points" id="replay-points"></div>
     </div>
   </div>
 
@@ -327,6 +238,7 @@
 <script src="/game.js"></script>
 <script src="ui.js"></script>
 <script src="avatar.js"></script>
+<script src="viewer.js"></script>
 <script src="dev.js"></script>
 </body>
 </html>

@@ -36,7 +36,8 @@ server.js          Wiring only: http/ws servers, the rooms map, the entry messag
                    hold timer, upkeep.
 
 public/ui.js       Page chrome shared by every page: the settings rows, theme, zoom, wake lock,
-                   full screen, the ask() dialog, the motion setting, the small effects (fx).
+                   full screen, the ask() dialog, the motion and speed settings, a strip that
+                   does not fit (fadeStrip/showCell), the small effects (fx).
 public/settings.js The settings page behind the ⚙: laid over the page that opened it, draws
                    the rows a page hands it (`UI.commonSettings` plus its own) and, on a
                    phone, who the player is (name, photo). The front page opens it first
@@ -63,9 +64,15 @@ public/deal.js     The deal scene.   public/finale.js  The finish.   public/felt
 public/chat.js     Table talk.       public/accolades.js  Shared with the server (A.list/pick/bonus).
 public/host.js     THE HOST FLOW: connect, deal-hold policy, table panel, compose widgets.
 public/play.js     THE PHONE FLOW: connect, felt/deal policy, vote buttons, who you are, compose.
+public/viewer.js   THE REPLAY VIEWER. A game watched again, drawn off the one message the
+                   server sends about a copy: `games`, `rounds`, `run`, `points` -- four
+                   widgets, each `(root, R, view)`, each building what it needs inside the
+                   root it is handed. `view = { send }` asks the copy for something
+                   (`{do:'seek', at}`); how that is addressed is the page's business.
 public/dev.js      The dev page: the way-in card (three doors), then one band over every
                    screen. The band is the same rows in the same places on a table and on a
-                   game watched again; only the verbs change.
+                   game watched again; only the verbs change, and the replay half of them
+                   is `viewer.js` put where it goes.
 public/join.js, history.js   The other pages.
 ```
 

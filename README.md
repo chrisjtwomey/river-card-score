@@ -1140,6 +1140,8 @@ What a point is put back through is the game's own verbs: a bid through the same
 
 Moving about in it is that same thing from the nearest picture: back to the round, then forward one point at a time. That is the only honest way, because the pictures are the only states the trail actually holds. It is also why the game starting carries one: without it a copy had nothing to stand on at the first point there is, and opened on the second. A trail written before that — a game already on file — still opens on its second point, because the state at its first was never written down and a replay stops rather than invents.
 
+It is drawn by `public/viewer.js`, which is the whole of it: what there is to watch, the rounds, the transport and the points, in four widgets that know nothing about the page they are on. The dev page says where each goes and how a word gets back to the copy; anything else that wants a replay does the same.
+
 On the dev page it is one of the three doors — **Replays**, on the card the page opens with, listing the game a table is playing now and every game on file. A game's trail is kept beside its scorecard, so a game whose table went hours ago is watched exactly like one still in play.
 
 Pick one and the copy is made, and the page becomes the same page with the verbs of a replay. The band keeps its rows and its places: the rounds of that game stand in the scorecard's own strip, and the transport — **◀ ▶ Play ▶** — stands where Pause and Step stand. The one-shots go, because a replay invents nothing; the **Players** and **State** panels stay and only read, because what happened is what the trail says.
@@ -1220,7 +1222,8 @@ and lets it off by hand rather than waiting. Run it alone with
 - `test.js` — end-to-end test, over real sockets. `test-pages.js` — the pages, checked without a browser.
 - `make-cert.js` — makes a self-signed certificate so the server can serve https.
 - `public/ui.js` also holds the live reload client, which listens to `/live` when the server runs with `DEV=1`.
-- `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, and live previews of every screen.
+- `public/viewer.js` — the replay viewer: a game watched again, drawn off the one message the server sends about a copy of it. Four widgets — the games to pick from, the rounds of the one being watched, the transport, and the points of the round on show — each built inside a root the page hands it, and each asking the copy for things through one `send`. It knows nothing about the page it is on.
+- `public/dev.html`, `dev.js` — the dev page: stand-in players, forced states, live previews of every screen, and the replay viewer put where it goes.
 - `Dockerfile`, `compose.yaml` — container build and run.
 - `android/` — the Android app: a WebView on the table, and `server.js` running
   inside it on Node.js for Mobile. `android/tools/prepare.sh` assembles it.

@@ -560,6 +560,46 @@ const UI = (function () {
     return a;
   }
 
+  /* ---------- a strip with more in it than fits ---------- */
+
+  /* A row of things too wide for the space it has says so by fading out on the
+     side there is more on. It replaces the scrollbar, which was a bar of its
+     own across the page saying the same thing louder and taking a row's height
+     to say it. The strip listens to itself once, and is asked again whenever
+     what is in it is redrawn or the window changes shape. */
+  function fadeStrip(el) {
+    if (!el) return;
+    if (!el._faded) {
+      el._faded = true;
+      el.addEventListener('scroll', () => fadeStrip(el));
+    }
+    const over = el.scrollWidth - el.clientWidth;
+    const x = el.scrollLeft || 0;
+    el.classList.toggle('more-l', over > 1 && x > 1);
+    el.classList.toggle('more-r', over > 1 && x < over - 1);
+  }
+
+  /* Bring the cell a strip is on into view, and a couple either side of it.
+
+     `scrollIntoView` moves the least it can, which lands the cell hard against
+     the edge it came in from -- and a cell on the edge of a strip says nothing
+     about whether there is anything after it. Two cells of room says there is,
+     and the fade at that edge says there is more still. */
+  const LOOK = 2;
+  function showCell(box, on) {
+    if (!box || !on || !Number.isFinite(on.offsetLeft) || !box.clientWidth) return;
+    const w = box.clientWidth;
+    const pad = (on.offsetWidth || 0) * LOOK;
+    const end = on.offsetLeft + (on.offsetWidth || 0);
+    let x = box.scrollLeft || 0;
+    if (end + pad > x + w) x = end + pad - w;
+    if (on.offsetLeft - pad < x) x = on.offsetLeft - pad;
+    x = Math.max(0, Math.min(x, Math.max(0, (box.scrollWidth || w) - w)));
+    if (box.scrollTo) box.scrollTo({ left: x, behavior: motionOK() ? 'smooth' : 'auto' });
+    else box.scrollLeft = x;
+    fadeStrip(box);
+  }
+
   /* ---------- small movements ---------- */
 
   // The flourishes play with motion on in full. 'reduced' keeps the scenes,
@@ -778,7 +818,8 @@ const UI = (function () {
   // The same, and for the same reason: the stylesheet cannot read a setting.
   stampSpeed();
 
-  return { motion, setMotion, speed, ownSpeed, setSpeed, setPlayed, ms, hold, paced, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
+  return { motion, setMotion, speed, ownSpeed, setSpeed, setPlayed, ms, hold, paced,
+           fadeStrip, showCell, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
            keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask, tell, endTable,

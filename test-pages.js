@@ -2416,7 +2416,7 @@ part('the front page, and the screen');
     WebSocket.prototype.close = function () { this.readyState = 3; };
     const src = ['public/net.js'].concat(o.real || []).concat(['public/' + file])
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
-    const names = ['UI', 'Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round']
+    const names = ['UI', 'Settings', 'Scan', 'Avatar', 'Chat', 'Deal', 'Games', 'Table', 'Accolades', 'Finale', 'Stage', 'Felt', 'Lobby', 'Round', 'Viewer']
       .filter((n) => !(o.real || []).some((f) => f.toLowerCase().indexOf(n.toLowerCase() + '.js') >= 0));
     /* Two stand-ins that cannot simply answer everything. A page reads the
        photo off Avatar as a string, so this one answers "no photo"; and it
@@ -3173,9 +3173,14 @@ part('the front page, and the screen');
 
 part('the dev controls, on each kind of server');
 
+  /* The replay half of the page is the viewer's own file, so the checks run
+     the real one: what they are proving is that the page puts it where it
+     goes and that it draws what the server said. */
+  const VIEWER = ['public/ui.js', 'public/viewer.js'];
+
   // A table on the wire: the hello the dev page gets, then a state.
   const devPage = (srv, seats) => {
-    const P = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th' });
+    const P = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th', real: VIEWER });
     P.pick('#state-panel').hidden = true;        // as the page ships it
     P.start();
     P.socks[0].onopen();
@@ -3369,7 +3374,7 @@ part('the dev controls, on each kind of server');
          open follows the server; a code in the address answers the question
          before it is put. */
     const cold = (srv) => {
-      const P = loadPage('dev.js', {}, '', {});
+      const P = loadPage('dev.js', {}, '', { real: VIEWER });
       P.pick('#state-panel').hidden = true;
       P.start();
       P.socks[0].onopen();
@@ -3447,7 +3452,7 @@ part('the dev controls, on each kind of server');
     {   /* A server older than this page does not know the question, so nothing
            will answer it. The card is still drawn off what the page knows on
            its own: a blank panel with a line and no doors is no way in. */
-      const P = loadPage('dev.js', {}, '', {});
+      const P = loadPage('dev.js', {}, '', { real: VIEWER });
       P.pick('#state-panel').hidden = true;
       P.start();
       P.socks[0].onopen();
@@ -3533,21 +3538,24 @@ part('the dev controls, on each kind of server');
 
     /* ---- a copy open: the band it takes over ---- */
     say();
+    const run = () => P.pick('#replay-transport').querySelector('.viewer-run');
+    const tl = () => P.pick('#replay-points').querySelector('.tlbody');
+    const where = () => P.pick('#replay-points').querySelector('.viewer-where').textContent;
+    const strip = () => P.pick('#replay-rounds').querySelector('.scrub');
     ok(P.pick('#replay-run').hidden === false, 'a copy opened brings the transport up');
+    ok(P.pick('#rounds-tools').hidden === false, 'and its rounds where a table\'s are');
     ok(P.pick('#tables-tools').hidden === true, 'the tables go: a copy is not a table to hop to');
-    ok(P.pick('#gamelist').children.length === 0,
-       'and no second list of games: one is picked on the way in, and that is where another is');
+    ok(P.pick('#scrub-tools').hidden === true,
+       'and so does the strip that sends a table to a round');
     ok(P.pick('#shots-dev').hidden === true, 'nothing here invents anything');
     ok(P.pick('#run-tools').hidden === true, 'and a game already played is not stopped, it is stepped');
-    ok(P.pick('#goto-phase').hidden === true, 'nor is it sent to a phase');
-    ok(P.pick('#replay-where').textContent === 'Round 1 of 2 · 3 cards · Ann bids 1',
-       'a line says what is on the table');
-    ok(P.pick('#replay-at').textContent === '1 of 13',
-       'and where in the game it is  got ' + P.pick('#replay-at').textContent);
+    ok(where() === 'Round 1 of 2 · 3 cards · Ann bids 1', 'a line says what is on the table');
+    ok(run().querySelector('.viewer-at').textContent === '1 of 13',
+       'and where in the game it is  got ' + run().querySelector('.viewer-at').textContent);
     ok(P.pick('#code').textContent === 'AAAA', 'the head names the table it is a copy of');
 
     /* The rounds go in the strip a scorecard uses: they are the same thing. */
-    const marks = P.pick('#scrub').querySelectorAll('.scell');
+    const marks = strip().querySelectorAll('.scell');
     ok(marks.length === 3, 'a mark a round, and the finish  got ' + marks.length);
     ok(marks[0].querySelector('small').textContent === '3 cards',
        'saying how big a hand it was, in words  got '
@@ -3556,24 +3564,24 @@ part('the dev controls, on each kind of server');
     /* More rounds than fit is said by fading the side there is more on, not by
        a scrollbar across the band. Nothing is laid out in a fake page, so the
        strip is given a shape by hand. */
-    const strip = P.pick('#scrub');
+    const bar = strip();
     const shape = (wide, at) => {
-      Object.defineProperty(strip, 'clientWidth', { value: 100, configurable: true });
-      strip.scrollWidth = wide;
-      strip.scrollLeft = at;
-      strip.fire('scroll');
+      Object.defineProperty(bar, 'clientWidth', { value: 100, configurable: true });
+      bar.scrollWidth = wide;
+      bar.scrollLeft = at;
+      bar.fire('scroll');
     };
     shape(100, 0);
-    ok(!strip.classList.contains('more-l') && !strip.classList.contains('more-r'),
+    ok(!bar.classList.contains('more-l') && !bar.classList.contains('more-r'),
        'a strip that fits fades on neither side');
     shape(300, 0);
-    ok(!strip.classList.contains('more-l') && strip.classList.contains('more-r'),
+    ok(!bar.classList.contains('more-l') && bar.classList.contains('more-r'),
        'at the left end, only the side there is more on');
     shape(300, 100);
-    ok(strip.classList.contains('more-l') && strip.classList.contains('more-r'),
+    ok(bar.classList.contains('more-l') && bar.classList.contains('more-r'),
        'part way along, both');
     shape(300, 200);
-    ok(strip.classList.contains('more-l') && !strip.classList.contains('more-r'),
+    ok(bar.classList.contains('more-l') && !bar.classList.contains('more-r'),
        'and at the right end, only the way back');
 
     /* And landing on a round at the edge of the strip brings the next couple
@@ -3583,14 +3591,14 @@ part('the dev controls, on each kind of server');
                                                 { value: v, configurable: true });
     off('offsetLeft', 700);
     off('offsetWidth', 60);
-    Object.defineProperty(strip, 'clientWidth', { value: 400, configurable: true });
-    strip.scrollWidth = 900;
-    strip.scrollLeft = 0;
+    Object.defineProperty(bar, 'clientWidth', { value: 400, configurable: true });
+    bar.scrollWidth = 900;
+    bar.scrollLeft = 0;
     say({ at: 8 });
-    ok(strip.scrollLeft === 480,
-       'the strip moves on so two more cells stand past it  got ' + strip.scrollLeft);
+    ok(bar.scrollLeft === 480,
+       'the strip moves on so two more cells stand past it  got ' + bar.scrollLeft);
     say({ at: 9 });
-    ok(strip.scrollLeft === 480, 'and stays where it is once they do');
+    ok(bar.scrollLeft === 480, 'and stays where it is once they do');
     delete P.dom.El.prototype.offsetLeft;
     delete P.dom.El.prototype.offsetWidth;
     ok(marks[0].classList.contains('on'), 'the round it is in is marked');
@@ -3603,8 +3611,7 @@ part('the dev controls, on each kind of server');
     /* The steps inside the round on show. Discrete, because a game is: each of
        these either happened or has not. */
     say({ at: 3 });
-    const tl = P.pick('#replay-steps').querySelector('.tlbody');
-    const steps = tl.querySelectorAll('.tick');
+    const steps = tl().querySelectorAll('.tick');
     /* The round on show is its own points, and the first round takes the game
        starting with it: that point is the run-up to round one, not a timeline
        of its own with one mark on it. */
@@ -3613,12 +3620,12 @@ part('the dev controls, on each kind of server');
        'laid along the rail, first to last  got ' + steps[0].style.left + '..' + steps[5].style.left);
     ok(steps[2].classList.contains('done'), 'the ones behind the head are done');
     ok(!steps[3].classList.contains('done'), 'and the one it stands on is not');
-    ok(tl.querySelector('.fill').style.width === '60%',
-       'the rail is filled to the head  got ' + tl.querySelector('.fill').style.width);
-    ok(tl.querySelector('.head').style.left === '60%',
-       'which is where the head is  got ' + tl.querySelector('.head').style.left);
-    ok(tl.querySelector('.knob').textContent === '2',
-       'and the head wears the point it is on  got ' + tl.querySelector('.knob').textContent);
+    ok(tl().querySelector('.fill').style.width === '60%',
+       'the rail is filled to the head  got ' + tl().querySelector('.fill').style.width);
+    ok(tl().querySelector('.head').style.left === '60%',
+       'which is where the head is  got ' + tl().querySelector('.head').style.left);
+    ok(tl().querySelector('.knob').textContent === '2',
+       'and the head wears the point it is on  got ' + tl().querySelector('.knob').textContent);
 
     /* What a mark wears is what it is: a bid its number, a card itself, a
        trick opening a divider, and the beats that shape a round an icon. */
@@ -3637,14 +3644,14 @@ part('the dev controls, on each kind of server');
     ok(steps[3].title === 'Bob bids 2 — point 4 of 13',
        'a mark names its own point  got ' + steps[3].title);
     steps[4].fire('mouseenter');
-    ok(tl.querySelector('.tip').textContent === 'a trick opens — point 5 of 13',
+    ok(tl().querySelector('.tip').textContent === 'a trick opens — point 5 of 13',
        'passing over one says what happened there  got '
-       + (tl.querySelector('.tip') || {}).textContent);
-    ok(tl.querySelector('.tip').style.left === '80%', 'over the mark it belongs to');
-    ok(P.pick('#replay-where').textContent === 'Round 1 of 2 · 3 cards · Ann bids 1',
-       'and the line beside it stays where the copy is');
+       + (tl().querySelector('.tip') || {}).textContent);
+    ok(tl().querySelector('.tip').style.left === '80%', 'over the mark it belongs to');
+    ok(where() === 'Round 1 of 2 · 3 cards · Ann bids 1',
+       'and the line beside it stays where the copy is  got ' + where());
     steps[4].fire('mouseleave');
-    ok(!tl.querySelector('.tip'), 'leaving it takes the tip away');
+    ok(!tl().querySelector('.tip'), 'leaving it takes the tip away');
 
     /* Half a tip hangs to the left of the mark it belongs to, so at the first
        point on the rail it hangs off the side of the screen. It slides back on
@@ -3653,9 +3660,9 @@ part('the dev controls, on each kind of server');
     P.dom.El.prototype.getBoundingClientRect =
       () => ({ left: -80, right: 80, width: 160, top: 0, bottom: 20, height: 20 });
     steps[0].fire('mouseenter');
-    ok(tl.querySelector('.tip').style.marginLeft === '88px',
+    ok(tl().querySelector('.tip').style.marginLeft === '88px',
        'a tip against the edge of the screen slides back on  got '
-       + tl.querySelector('.tip').style.marginLeft);
+       + tl().querySelector('.tip').style.marginLeft);
     steps[0].fire('mouseleave');
     P.dom.El.prototype.getBoundingClientRect = rect;
 
@@ -3669,25 +3676,26 @@ part('the dev controls, on each kind of server');
     /* The rail is a picker: a press takes the head there and a drag moves it,
        and only letting go asks the copy to follow. Nothing is measured in a
        fake page, so the drag is walked by hand. */
-    tl.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 24,
-                                        right: 100, bottom: 24 });
+    const body = tl();
+    body.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 24,
+                                          right: 100, bottom: 24 });
     P.socks[0].sent.length = 0;
-    tl.fire('pointerdown', { clientX: 0, pointerId: 1 });
-    ok(tl.querySelector('.head').style.left === '0%',
-       'a press takes the head to where it landed  got ' + tl.querySelector('.head').style.left);
-    tl.fire('pointermove', { clientX: 100, pointerId: 1 });
-    ok(tl.querySelector('.head').style.left === '100%', 'and a drag moves it along');
+    body.fire('pointerdown', { clientX: 0, pointerId: 1 });
+    ok(body.querySelector('.head').style.left === '0%',
+       'a press takes the head to where it landed  got ' + body.querySelector('.head').style.left);
+    body.fire('pointermove', { clientX: 100, pointerId: 1 });
+    ok(body.querySelector('.head').style.left === '100%', 'and a drag moves it along');
     ok(P.socks[0].sent.length === 0, 'with nothing asked of the copy while it is moving');
-    tl.fire('pointerup', { clientX: 100, pointerId: 1 });
+    body.fire('pointerup', { clientX: 100, pointerId: 1 });
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',
        'letting go takes the copy there  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     P.socks[0].sent.length = 0;
-    P.pick('#btn-fwd').fire('click');
+    run().querySelector('.vw-fwd').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":1}',
        'it can be walked a point at a time  got ' + JSON.stringify(P.socks[0].sent[0]));
     P.socks[0].sent.length = 0;
-    P.pick('#btn-back').fire('click');
+    run().querySelector('.vw-back').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":-1}',
        'either way  got ' + JSON.stringify(P.socks[0].sent[0]));
 
@@ -3698,7 +3706,7 @@ part('the dev controls, on each kind of server');
     const roundGoes = (from, btn, want, why) => {
       say({ at: from });
       P.socks[0].sent.length = 0;
-      P.pick(btn === 'back' ? '#btn-prev-round' : '#btn-next-round').fire('click');
+      run().querySelector(btn === 'back' ? '.vw-prev' : '.vw-next').fire('click');
       ok(JSON.stringify(P.socks[0].sent[0])
          === `{"t":"dev","action":"replay","do":"seek","at":${want}}`,
          why + '  got ' + JSON.stringify(P.socks[0].sent[0]));
@@ -3711,15 +3719,15 @@ part('the dev controls, on each kind of server');
     roundGoes(11, 'on', 12, 'and past the last round there is only the end');
 
     say({ at: 0 });
-    ok(P.pick('#btn-prev-round').disabled === true,
+    ok(run().querySelector('.vw-prev').disabled === true,
        'at the first point there is no round behind it');
-    ok(P.pick('#btn-next-round').disabled === false, 'but there is one in front');
+    ok(run().querySelector('.vw-next').disabled === false, 'but there is one in front');
     say({ at: 12 });
-    ok(P.pick('#btn-next-round').disabled === true, 'and at the last there is none');
+    ok(run().querySelector('.vw-next').disabled === true, 'and at the last there is none');
     say();
 
     // Playing it back: one button, saying what it will do.
-    const play = P.pick('#btn-play');
+    const play = run().querySelector('.vw-play');
     ok(play.textContent === '▶ Play', 'a stopped replay offers to play  got ' + play.textContent);
     P.socks[0].sent.length = 0;
     play.fire('click');
@@ -3736,7 +3744,7 @@ part('the dev controls, on each kind of server');
     /* How fast it plays itself. The table's own pace is one of the speeds, and
        the one it is set to is marked, so the row says where it is as well as
        where to send it. */
-    const rates = P.pick('#replay-rate').querySelectorAll('.btn');
+    const rates = run().querySelector('.vw-rate').querySelectorAll('.btn');
     ok(rates.length === 4, 'four speeds to play it back at  got ' + rates.length);
     ok(rates[1].classList.contains('on'),
        'the table\'s own pace to start with  got ' + rates.map((b) => b.className).join('|'));
