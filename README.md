@@ -929,6 +929,18 @@ A point is the thing that happened and not a picture of the table — twenty-odd
 
 It goes in a file of its own, `data/trail/CODE.jsonl`, one line a point, appended. That is not tidiness: a table's own record is rewritten whole after every broadcast, so a trail kept there would be written again for every card — some hundreds of megabytes over one game, on a machine that may well be a phone. Appending a line costs the line.
 
+#### Watching a game again
+
+The trail says what happened; a **replay** puts it back. Never onto the table it happened at — a real game has people at it, and taking their screens over to look at the past would be its own kind of bug. A copy of the table is made instead, seeded from the trail, and the dev page points its screens at that. The game carries on beside it, untouched.
+
+What a point is put back through is the game's own verbs: a bid through the same door a phone's bid goes through, a card through the deck, a round scored the way a round scores. So a replayed table is one the rules could have reached, and a replay that could not happen is one that stops rather than one that lies. The only points set outright are the ones carrying a picture, and they carry one exactly because the game could not be worked out again without it — the deal, and the accolades at the finish.
+
+Moving about in it is that same thing from the nearest picture: back to the round, then forward one point at a time. That is the only honest way, because the pictures are the only states the trail actually holds.
+
+A copy is a table of its own, and everything else on the server leaves it alone: it is never written down, never read back after a restart, never offered as a table to join, and never played at — its seats get a watching key and never a seat's own, and never the keys of the table it is a copy of, which the trail does not carry in the first place. It goes when the page watching it does.
+
+The host token is enough to open one, on any server. It invents nothing: it puts back what already happened, on a copy, out of that table's own record. And it shows nothing the dev page does not already show — a watching window has always been given its seat's hand, which is how the panes show every hand side by side today.
+
 One game at a time: a new game starts the file over, because a table lives six hours and plays several. A game that finishes keeps its trail, copied beside its scorecard and under the same name, so it falls off by the same cap the scorecards do. A live table's trail goes when its table goes, by the same six-hour rule. Neither can outlive the thing it is a trail of. `TRAIL_MAX` (4 MB) is the point at which a table stops writing rather than filling the disk — a whole game is about ninety kilobytes, so reaching it means something is wrong.
 
 ## Test

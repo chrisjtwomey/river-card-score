@@ -17,6 +17,7 @@ const Dev = require('./lib/dev.js');
 const Messages = require('./lib/messages.js');
 const RoomOf = require('./lib/room.js');
 const TrailOf = require('./lib/trail.js');
+const ReplayOf = require('./lib/replay.js');
 
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = __dirname;
@@ -102,6 +103,7 @@ function listTables() {
       round: room.phase === 'lobby' || room.phase === 'done' ? null : room.idx + 1,
       rounds: room.rounds.length || null,
       stand: !!room.stand,
+      replay: room.replay ? room.replay.of : null,
       seats: room.seats.map((s) => ({ id: s.id, name: s.name, bot: !!s.bot,
                                       left: !!s.left, online: !!s.online })),
     }));
@@ -175,7 +177,7 @@ function newCode() {
    table plays on and starts a fresh trail at its next game, so this copy is the
    only one that outlives it. */
 const Room = RoomOf({ G, A, token, DEV, Trail,
-                      saveGame: (room) => { saveGame(room); Trail.keep(room); } });
+                      saveGame: (room) => { if (room.replay) return; saveGame(room); Trail.keep(room); } });
 const { curRound, seatIndex, Deck } = Room;
 
 function createRoom() {
@@ -220,6 +222,7 @@ function broadcast(room) {
    re-checks the table it was armed for: a bum deal or a seat going can move
    the game on while it runs. */
 function holdBids(room) {
+  if (room.replay) return;          // a replay has one clock, and it is not this one
   if (room.bidTimer || !G.bidsHeld(room)) return;
   const tag = room.play, at = room.idx;
   room.bidTimer = setTimeout(() => {
@@ -290,11 +293,26 @@ const Bots = require('./lib/bots.js')({
   G, curRound, broadcast, seatBid: Room.seatBid, playCard, bumDeal: Room.bumDeal,
 });
 
+/* A game put back on a table of its own, from what was written down about it.
+   It knows only the room's verbs: a replayed table is one the rules could have
+   reached, and that is the point of it. */
+const Replay = ReplayOf({ Room, G, token });
+
+/* A copy of a table, let go. Nothing is filed and nothing is told: it was
+   never a game, and every screen at it is the page that opened it. */
+function dropRoom(code) {
+  const room = roomOf(code);
+  if (!room) return;
+  Bots.stop(room);
+  room.sockets.forEach((ws) => { if (ws.ctx) ws.ctx.room = null; });
+  rooms.delete(room.code);
+}
+
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
   DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
-  Room, Tables, Bots, Trail,
+  Room, Tables, Bots, Trail, Replay, dropRoom,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
@@ -329,6 +347,9 @@ wss.on('connection', (ws) => {
     const room = ws.ctx && ws.ctx.room;
     if (!room) return;
     room.sockets.delete(ws);
+    /* A copy of a table belongs to the page watching it. With that page gone
+       there is nobody it could be for, and nothing on disk to come back to. */
+    if (room.replay && room.sockets.size === 0) { rooms.delete(room.code); return; }
     markPresence(room);
     broadcast(room);
   });

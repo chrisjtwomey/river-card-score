@@ -79,6 +79,7 @@ function client(name, url) {
     else if (m.t === 'tables') c.tables = m.tables;
     else if (m.t === 'seat') c.seat = m;
     else if (m.t === 'stateRaw') c.raw = m.record;
+    else if (m.t === 'replay') c.replay = m;
     else if (m.t === 'kicked') c.kicked = true;
     else if (m.t === 'left') c.left = true;
   });
@@ -490,6 +491,42 @@ async function bidRound(P) {
     await okBy(() => /not a table/.test(h.last()), 'junk in the editor is refused whole');
     seatBack.ws.close();
     after.ws.close();
+
+    /* ---- a game watched again, on a table of its own ----
+       What a replay is, is settled in test-rules.js. What is proved here is
+       that it is a copy: a table of its own that nobody can reach, nobody can
+       play at, and that goes when the page watching it does. */
+    h.send({ t: 'dev', action: 'replay', do: 'open' });
+    await okBy(() => h.replay && h.replay.code, 'the host token opens a replay on a normal server');
+    const copy = h.replay.code;
+    ok(copy !== code, 'and it is a table of its own  got ' + copy);
+    ok(h.replay.of === code, 'which says what it is a copy of');
+    ok(h.replay.seats.every((s) => s.watch), 'its seats are watched, never played');
+    ok(h.replay.n > 0 && h.replay.marks.length > 0, 'with the rounds to move about in');
+
+    const eye2 = client('atcopy'); await eye2.ready;
+    eye2.send({ t: 'watch', code: copy, token: h.replay.seats[0].watch });
+    await okBy(() => eye2.state && eye2.state.code === copy, 'a window can watch the copy');
+    eye2.send({ t: 'bid', v: 1 });
+    await okBy(() => /only watching/i.test(eye2.last()),
+       'but nothing can be played at it: a watch token is the only way in  got ' + eye2.last());
+
+    const seen = await (await fetch(`http://127.0.0.1:${PORT}/tables.json`)).json();
+    ok(!seen.tables.some((x) => x.code === copy),
+       'and it is never offered as a table to go to');
+
+    const wasPhase = h.state.phase, wasIdx = h.state.idx;
+    h.send({ t: 'dev', action: 'replay', do: 'seek', at: 1 });
+    await okBy(() => h.replay.at === 1, 'the replay can be moved about in');
+    await h.rt();
+    ok(h.state.phase === wasPhase && h.state.idx === wasIdx,
+       'and the table it copies does not move with it');
+
+    h.send({ t: 'dev', action: 'replay', do: 'close' });
+    await okBy(() => h.replay.code === null, 'the replay can be let go');
+    const after2 = await (await fetch(`http://127.0.0.1:${PORT}/tables.json`)).json();
+    ok(!after2.tables.some((x) => x.code === copy), 'and the copy goes with it');
+    eye2.ws.close();
 
     // ---- the seats come back as watching windows, not as seats ----
     const seats = h.hello.seats;

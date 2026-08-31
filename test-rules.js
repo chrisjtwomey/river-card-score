@@ -1120,6 +1120,175 @@ part('a table writes down what happened to it');
      'with the accolades it drew, which it would not draw the same way twice');
 }
 
+part('a game put back on a table of its own');
+
+/* The whole of it: a game played, then put back point by point on a copy, and
+   the copy asked whether it is where the real one was. Every point goes back
+   through the game's own verbs, so this is also what proves a replayed table is
+   one the rules could have reached.
+
+   The places worth asking about are the ones with no picture to fall back on --
+   part way through a round -- because those are the ones the copy has to play
+   its way to. */
+{
+  const ReplayOf = require('./lib/replay.js');
+
+  function played(cfg) {
+    const t = table().sit(['Ann', 'Bob', 'Cal']).rules(cfg);
+    t.Room.startGame(t.room);
+    let guard = 400;
+    while (guard-- > 0 && t.room.phase !== 'done') {
+      const p = G.turnSeat(t.round(), 3);
+      if (p !== null) { t.Room.seatBid(t.room, p, 0); continue; }
+      if (!t.room.play) break;
+      t.Room.openPlay(t.room);                 // the bids have had their moment
+      if (t.room.play.real) { t.Room.countTrick(t.room, guard % 3); continue; }
+      const on = t.room.play.turn;
+      if (on === null) {
+        if (!t.room.play.last) break;
+        t.Room.Deck.settleTrick(t.room, t.room.play.last.winner);
+        continue;
+      }
+      const can = G.legalPlays(t.room.play.hands[on], t.Room.Deck.ledSuit(t.room.play));
+      const w = t.Room.Deck.putCard(t.room, on, can[0]);
+      if (w !== null) t.Room.Deck.settleTrick(t.room, w);
+    }
+    return t;
+  }
+
+  const copyOf = (t, at) => {
+    const Replay = ReplayOf({ Room: t.Room, G, token: () => 'wtok' });
+    const copy = t.Room.create('COPY', 'ht');
+    Replay.open(copy, 'TEST', t.room.trail.slice());
+    Replay.seek(copy, at);
+    return copy;
+  };
+
+  {
+    const t = played({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    const trail = t.room.trail;
+    ok(t.room.phase === 'done' && trail.filter((e) => e.k === 'c').length >= 9,
+       'a whole game is played, cards and all  got ' + trail.map((e) => e.k).join(''));
+
+    /* The bids of the first round, which the copy can only have by having said
+       them: the picture it starts from has none. */
+    const bids = trail.map((e, at) => (e.k === 'b' ? at : -1)).filter((at) => at >= 0);
+    const bidding = copyOf(t, bids[2]);
+    ok(JSON.stringify(bidding.rounds[0].bids) === JSON.stringify([0, 0, 0]),
+       'three bids in, the copy has the three that were bid  got '
+       + JSON.stringify(bidding.rounds[0].bids));
+    const oneBid = copyOf(t, bids[0]);
+    ok(oneBid.rounds[0].bids.filter((b) => b !== null).length === 1,
+       'and one bid in, exactly one  got ' + JSON.stringify(oneBid.rounds[0].bids));
+
+    /* Part way through the first trick: two cards down, nothing scored. There
+       is no picture at this point, so the copy can only be here by having
+       played the cards itself. */
+    const cards = trail.map((e, at) => (e.k === 'c' ? at : -1)).filter((at) => at >= 0);
+    const copy = copyOf(t, cards[1]);
+    const down = copy.play.trick.map((x) => x.card);
+    ok(JSON.stringify(down) === JSON.stringify([trail[cards[0]].x, trail[cards[1]].x]),
+       'two cards in, the copy holds the two that were played  got ' + JSON.stringify(down));
+    ok(copy.play.hands.every((h, i) => h.length === 2 - down.filter((_, k) => trail[cards[k]].p === i).length),
+       'and every hand is short by exactly what it put down');
+    ok(copy.idx === 0 && copy.rounds[0].tricks === null, 'with the round still unscored');
+
+    // A whole round in: the tricks are the trail's, taken by the same seats.
+    const scored = trail.findIndex((e) => e.k === 'e');
+    const after = copyOf(t, scored);
+    ok(JSON.stringify(after.rounds[0].tricks) === JSON.stringify(trail[scored].v),
+       'a round put back scores what it scored  got ' + JSON.stringify(after.rounds[0].tricks));
+
+    // And the end, which does have a picture: the whole card, and the awards.
+    const end = copyOf(t, trail.length - 1);
+    ok(JSON.stringify(end.rounds.map((r) => [r.bids, r.tricks]))
+       === JSON.stringify(t.room.rounds.map((r) => [r.bids, r.tricks])),
+       'played to the end, the copy has the table\'s card, bid for bid');
+    ok(JSON.stringify(end.awards) === JSON.stringify(t.room.awards),
+       'and the accolades it drew, which it would not draw the same way twice');
+  }
+
+  {
+    // Real cards: no cards to put back, but the taps are the game.
+    const t = played({ max: 2, pattern: 'down', ones: 1 });
+    const trail = t.room.trail;
+    ok(t.room.phase === 'done' && trail.filter((e) => e.k === 'w').length >= 3,
+       'a game of real cards is played, tap by tap  got ' + trail.map((e) => e.k).join(''));
+    ok(trail.every((e) => e.k !== 'c'), 'and never a card: there are none');
+    /* Part way through the taps, where there is no picture: the copy can only
+       have the tally by having tapped it in itself. */
+    const taps = trail.map((e, at) => (e.k === 'w' ? at : -1)).filter((at) => at >= 0);
+    const mid = copyOf(t, taps[0]);
+    const want = [0, 0, 0];
+    want[trail[taps[0]].p] += 1;
+    ok(JSON.stringify(mid.play.won) === JSON.stringify(want),
+       'one trick tapped, the copy has it against the seat that took it  got '
+       + JSON.stringify(mid.play.won));
+    ok(mid.rounds[0].tricks === null, 'and the round is not scored until it is');
+
+    const scored = trail.findIndex((e) => e.k === 'e');
+    const copy = copyOf(t, scored);
+    ok(JSON.stringify(copy.rounds[0].tricks) === JSON.stringify(trail[scored].v),
+       'a round of taps put back scores what it scored  got ' + JSON.stringify(copy.rounds[0].tricks));
+  }
+
+  {
+    // The deal is the thing that could not be worked out again.
+    const t = played({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    const opened = t.room.trail.findIndex((e) => e.k === 'R');
+    const copy = copyOf(t, opened);
+    ok(JSON.stringify(copy.play.hands) === JSON.stringify(t.room.trail[opened].f.play.hands),
+       'a copy is dealt the hands the table was dealt, not a fresh shuffle');
+    ok(copy.seats.every((s) => s.watch && !s.token),
+       'and its seats are watched, never played: no seat of the table it copies');
+    ok(copy.replay.of === 'TEST' && copy.paused === true,
+       'it says what it is a copy of, and plays nothing by itself');
+    ok(!copy.trail || copy.trail.length === 0, 'and writes nothing down of its own');
+  }
+
+  {
+    /* A copy is watched, never played at. Nothing can reach one but a watching
+       window, which is refused everything anyway -- so this is the belt under
+       the braces, and it is the one that says why. */
+    const t = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    t.Room.startGame(t.room);
+    t.room.replay = { of: 'REAL', at: 0, n: 1, playing: false, points: [] };
+    ok(/replay of another/.test(t.say(0, { t: 'bid', v: 1 }) || ''),
+       'a copy refuses a bid, and says what it is  got ' + t.say(0, { t: 'bid', v: 1 }));
+    ok(/replay of another/.test(t.say('host', { t: 'start' }) || ''),
+       'and refuses the table host too: what happened has already happened');
+  }
+
+  {
+    /* A step back is part of what happened too. With real cards nothing is
+       dealt afterwards, so there is no picture to land on: the copy can only
+       be here by having stepped back itself. */
+    const t = table().sit(['Ann', 'Bob']).rules({ max: 2, pattern: 'down', ones: 1 });
+    t.Room.startGame(t.room);
+    let p = G.turnSeat(t.round(), 2);
+    while (p !== null) { t.Room.seatBid(t.room, p, 1); p = G.turnSeat(t.round(), 2); }
+    ok(t.room.phase === 'tricks', 'the bids are in and the hand is on');
+    t.Room.undo(t.room);
+    const copy = copyOf(t, t.room.trail.length - 1);
+    ok(copy.phase === 'bid' && copy.rounds[0].bids.every((b) => b === null),
+       'a step back put back takes the bids back with it  got '
+       + copy.phase + ' ' + JSON.stringify(copy.rounds[0].bids));
+  }
+
+  {
+    // A hand thrown in is part of what happened, so it is part of the replay.
+    const t = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    t.Room.startGame(t.room);
+    t.Room.seatBid(t.room, G.turnSeat(t.round(), 2), 1);
+    t.Room.bumDeal(t.room);
+    const copy = copyOf(t, t.room.trail.length - 1);
+    ok(copy.rounds[0].redeals === 1 && JSON.stringify(copy.rounds[0].bids) === '[null,null]',
+       'a hand thrown in is thrown in again, and the bids with it');
+    ok(JSON.stringify(copy.play.hands) === JSON.stringify(t.room.play.hands),
+       'and the second deal is the second deal, not a third');
+  }
+}
+
 part('a table becomes a record of one');
 
 /* The whole table replaced by a record -- what the dev page's State panel does,
