@@ -3806,9 +3806,12 @@ part('bidding for a seat that is not there, and leaving');
   const asked = [];
   // and tell() is tapped away at once, the way a player taps it
   const telling = [];
+  // The speed the table says it is going at, as each screen is told it.
+  const played = [];
   const uiReal = { fx, ask: (t, b, l) => { asked.push({ t, b, l }); return { then: (f) => f(true) }; },
                    tell: (t, b, l) => { telling.push({ t, b, l }); return { then: (f) => f() }; },
                    keepAwake: () => ({ then: () => {} }),
+                   setPlayed: (v) => { played.push(v); },
                    // a real list, so a page can add its own rows to it
                    commonSettings: () => [] };
   const UI = new Proxy(uiReal, { get: (t, k) => (k in t ? t[k] : anything) });
@@ -3929,6 +3932,27 @@ part('bidding for a seat that is not there, and leaving');
     if (o.phase) ST.phase = o.phase;
     return ST;
   };
+
+  {   /* A screen on a copy draws at the speed the copy is being played back at.
+         The table is what says so: nothing on a screen knows what a replay is,
+         and a real table says nothing and is drawn at the speed it is. */
+    const P = hostPage('host');
+    played.length = 0;
+    P.feed(table({}));
+    ok(played[played.length - 1] === 1,
+       'a real table is drawn at the speed it is  got ' + played[played.length - 1]);
+    played.length = 0;
+    P.feed(Object.assign(table({}), { rate: 0.5 }));
+    ok(played[played.length - 1] === 0.5,
+       'a copy played back at half speed is drawn at half speed  got '
+       + played[played.length - 1]);
+
+    const Q = playPage(seed, '?c=TEST');
+    played.length = 0;
+    Q.feed(Object.assign(table({}), { rate: 2 }));
+    ok(played[played.length - 1] === 2,
+       'and the phones on it draw at it too  got ' + played[played.length - 1]);
+  }
 
   {   // the table host sees the pad
     const P = playPage(seed, '?c=TEST');

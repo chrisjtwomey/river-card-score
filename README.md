@@ -568,6 +568,14 @@ that band.
   moves is how this screen draws what happened, never what happened or when
   the table allowed it.
 
+  The one thing the table does have a say in is a **replay**. A copy of a game
+  being watched again tells every screen on it how fast it is being played
+  back, and the two multiply: a screen set to `0.5×` watching a replay at `2×`
+  draws at `1×`, which is what both of them asked for. A real table says
+  nothing here -- what happened, happened when it did -- so it is always `1×`,
+  and the settings row goes on showing this screen's own choice and nothing
+  else.
+
   That is also why it cannot slow everything down. A beat this screen holds
   while the table waits for it -- a trick left up to be read, what a round
   paid, the places at the end of one -- sits inside a window the table grants:
@@ -1142,7 +1150,7 @@ What a mark wears is what it is. A bid wears the number that was said, a card we
 
 Pass over a mark and it says what happened there — *Nia plays 9♠ — point 42 of 214* — over the mark itself. That sentence is made once, on the server, when the copy is made, and the line beside the rail says the same one for the point the copy is standing on, so the two never drift apart and never fight over one place. **⌂ Stop watching** lets the copy go. While one is open the panes are the copy's, and none of them can be acted in: the game they show has already been played.
 
-**Play** runs it back at the pace the table played it, and **Pause** stops it where it stands. **½× 1× 2× 4×** beside them is how fast: the speed divides every beat, the game's own ones included, so half speed is the whole game slowed down rather than the gaps between the cards stretched. It is the copy's own, and the browser remembers the last one picked — whoever slows a game down to read it wants the next one slow too. A speed changed while it is playing lands on the next point rather than the one already being waited out: clearing that timer to shorten it would step a point. A copy playing itself says where it has got to as it goes, so the step it is on, the line under it and the button all keep up — and when it runs out of trail it says that too. Only the place is sent: the rounds and the points are the trail, and the trail is being read, not written. The beats are the game's own, not a metronome: a finished trick sits for as long as a real one sits, the bids stand to be read before the hand opens, and a scored round is left up long enough to read. Only the beat between two ordinary points is the replay's own, `REPLAY_STEP`. Moving about in it by hand stops it playing itself, because two clocks on one copy would fight over where it is.
+**Play** runs it back at the pace the table played it, and **Pause** stops it where it stands. **½× 1× 2× 4×** beside them is how fast: the speed divides every beat, the game's own ones included, so half speed is the whole game slowed down rather than the gaps between the cards stretched. The panes draw at it too — the copy tells every screen on it how fast it is going, and each multiplies that by its own [Game speed](#game-speed) setting. A hand played out at half speed with the cards still flying about at full pelt reads as a fault rather than as slow motion. It is the copy's own, and the browser remembers the last one picked — whoever slows a game down to read it wants the next one slow too. A speed changed while it is playing lands on the next point rather than the one already being waited out: clearing that timer to shorten it would step a point. A copy playing itself says where it has got to as it goes, so the step it is on, the line under it and the button all keep up — and when it runs out of trail it says that too. Only the place is sent: the rounds and the points are the trail, and the trail is being read, not written. The beats are the game's own, not a metronome: a finished trick sits for as long as a real one sits, the bids stand to be read before the hand opens, and a scored round is left up long enough to read. Only the beat between two ordinary points is the replay's own, `REPLAY_STEP`. Moving about in it by hand stops it playing itself, because two clocks on one copy would fight over where it is.
 
 A copy is a table of its own, and everything else on the server leaves it alone: it is never written down, never read back after a restart, never offered as a table to join, and never played at — its seats get a watching key and never a seat's own, and never the keys of the table it is a copy of, which the trail does not carry in the first place. It goes when the page that asked for it does — that page, and not its panes: the panes are windows the dev page draws, and it throws them away and draws them again whenever it redraws.
 

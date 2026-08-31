@@ -221,7 +221,7 @@ const UI = (function () {
       list.push({ kind: 'choice',
         label: 'Game speed',
         options: [{ v: 0.5, label: '0.5\u00d7' }, { v: 1, label: '1\u00d7' }, { v: 2, label: '2\u00d7' }],
-        get: speed,
+        get: ownSpeed,
         set: setSpeed });
     }
     list.push({ kind: 'group', label: 'This screen' });
@@ -491,7 +491,7 @@ const UI = (function () {
      have a different one, and none of them changes the game for anybody
      else: what it moves is how this screen draws what happened, never what
      happened or when the table let it. */
-  function speed() {
+  function ownSpeed() {
     let saved = null;
     try { saved = localStorage.getItem(KEY_SPEED); } catch (e) {}
     const q = new URLSearchParams(window.location.search).get('speed');
@@ -503,7 +503,25 @@ const UI = (function () {
     return SPEEDS.indexOf(v) >= 0 ? v : 1;
   }
 
-  // From the settings menu.
+  /* And how fast the table itself is going, which is not this screen's to
+     choose. A real table goes at one: what happened, happened when it did. A
+     game watched again goes at whatever the replay is being played back at, so
+     a hand played out at half speed is drawn at half speed as well -- the
+     cards would otherwise fly about at full pelt between beats twice as long,
+     which reads as a fault rather than as slow motion.
+
+     It multiplies rather than replaces: a screen set to 0.5x watching a replay
+     at 2x draws at 1x, which is what both of those asked for. */
+  let PLAYED = 1;
+  const setPlayed = (v) => {
+    const was = PLAYED;
+    PLAYED = Math.max(0.25, Math.min(8, Number(v) || 1));
+    if (PLAYED !== was) stampSpeed();
+  };
+
+  const speed = () => ownSpeed() * PLAYED;
+
+  // From the settings menu, which offers this screen's own and nothing else.
   function setSpeed(v) {
     if (SPEEDS.indexOf(Number(v)) < 0) return;
     try { localStorage.setItem(KEY_SPEED, String(Number(v))); } catch (e) {}
@@ -760,7 +778,7 @@ const UI = (function () {
   // The same, and for the same reason: the stylesheet cannot read a setting.
   stampSpeed();
 
-  return { motion, setMotion, speed, setSpeed, ms, hold, paced, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
+  return { motion, setMotion, speed, ownSpeed, setSpeed, setPlayed, ms, hold, paced, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
            keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask, tell, endTable,

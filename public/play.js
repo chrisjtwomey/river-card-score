@@ -61,6 +61,9 @@ function boot() {
 }
 
 function render() {
+  // A copy of a game being watched again is played back at a speed, and this
+  // screen draws at it: the table says so, and nothing else here has to know.
+  UI.setPlayed(ST.rate || 1);
   const me = mySeat();
   if (me < 0) {
     if (!ME) return;                   // the hello has not arrived yet

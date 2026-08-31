@@ -191,6 +191,9 @@ function dealWatch() {
 }
 
 function render() {
+  // A copy of a game being watched again is played back at a speed, and this
+  // screen draws at it: the table says so, and nothing else here has to know.
+  UI.setPlayed(ST.rate || 1);
   Chat.update(ST, null);
   seenWho = Table.sayPresence(ST, -1, seenWho);   // who came, who went
   const lobby = ST.phase === 'lobby';

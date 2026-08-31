@@ -1505,6 +1505,15 @@ part('a game put back on a table of its own');
        the table played it, and it is held inside what a clock can do. */
     const paced = copyOf(t, 0);
     ok(paced.replay.rate === 1, 'a copy plays back at the pace it was played');
+    /* And every screen on the copy is told it, so the cards are drawn at the
+       speed the hand is being played back at. A real table says nothing here:
+       what happened, happened when it did. */
+    paced.Replay.rate(paced, 2);
+    ok(t.Room.publicState(paced).rate === 2,
+       'and says so to every screen on it  got ' + t.Room.publicState(paced).rate);
+    ok(!('rate' in t.Room.publicState(t.room)),
+       'while a real table says nothing about a speed at all');
+    paced.Replay.rate(paced, 1);
     ok(paced.Replay.rate(paced, 0.5) === 0.5, 'and can be slowed to read it');
     ok(paced.Replay.rate(paced, 99) === 8 && paced.Replay.rate(paced, -3) === 0.25,
        'but not to a speed no clock could keep  got ' + paced.replay.rate);
