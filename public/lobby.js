@@ -148,10 +148,11 @@ const Lobby = (function () {
       onClick(btn, () => view.send({ t: 'addbot' }));
     }
     /* Nothing at all before the first one is added: what a bot is, is plain
-       from the button, and the rules below say what the cards are doing. */
+       from the button, and the rules above say what the cards are doing. Only
+       once there are bots is there something the button does not say -- how
+       many of the seats are playing themselves. */
     text(root, '#bot-hint', full ? 'The table is full.'
       : count ? `${count} of the ${ST.seats.length} seats play themselves.`
-      : Game.virtual(ST) ? 'It plays its own hand. Kick it from its ⋯ menu.'
       : '');
   }
 
