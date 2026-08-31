@@ -4176,18 +4176,33 @@ part('the dev controls, on each kind of server');
        starts it: the panes hold their seats and the bots take their turns.
        There is nothing to start on a copy that is still the game it is a copy
        of -- nothing is played at one of those. */
-    const go = () => run().querySelector('.vw-run');
-    ok(go().hidden === true, 'a copy that is still the game has nothing to start');
+    const forkBox = () => P.pick('#fork-run').querySelector('.viewer-fork');
+    const go = () => forkBox().querySelector('.vw-run');
+    const word = () => forkBox().querySelector('.viewer-held').textContent;
+    ok(forkBox().hidden === true, 'a copy that is still the game has nothing to start');
+    /* And it is never in the transport. The tape's clock and the table's were
+       side by side, both green and both starting with the same mark, which is
+       two clocks wearing one face: press the wrong one and the table sits
+       there while the tape runs. */
+    ok(!run().querySelector('.vw-run'), 'the fork\'s clock is not the tape\'s');
+    ok(P.pick('#replay-fork').hidden === true, 'and its cluster is not there either');
+
     const held = (on) => JSON.parse(devState(false, { paused: on }));
     say({ forked: true, state: held(true) });
-    ok(go().hidden === false && go().textContent === '▶ Carry on',
+    ok(forkBox().hidden === false && go().textContent === 'Carry on',
        'a fork offers to be played  got ' + go().textContent);
+    ok(word() === 'stopped', 'and says which way it is  got ' + word());
+    ok(P.pick('#replay-fork').hidden === false, 'in a cluster of its own on the band');
+    ok(/changed by hand · stopped/.test(P.pick('#subtitle').textContent),
+       'and the head says it too, where the eye already is  got '
+       + P.pick('#subtitle').textContent);
     P.socks[0].sent.length = 0;
     go().fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"run","on":true}',
        'and asks the copy for it  got ' + JSON.stringify(P.socks[0].sent[0]));
     say({ forked: true, state: held(false) });
-    ok(go().textContent === '❚❚ Stop', 'a running fork offers to be stopped');
+    ok(go().textContent === 'Stop' && word() === 'playing',
+       'a running fork says so and offers to be stopped  got ' + go().textContent);
     P.socks[0].sent.length = 0;
     go().fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"run","on":false}',

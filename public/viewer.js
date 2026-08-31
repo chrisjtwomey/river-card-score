@@ -303,13 +303,6 @@ const Viewer = (function () {
       });
       box.appendChild(seg);
       box._rates = seg;
-      /* A copy that has been changed is a table of its own, and this is what
-         starts it: the panes on it can play the hand you set up, and the bots
-         take their turns. It is stopped when it is made -- forking is setting
-         a game up, not starting one -- so this is always the next thing to
-         press, and it is not there at all on a copy that is still the game it
-         is a copy of. */
-      btn(box, 'btn vw-run', '', '', () => ask({ do: 'run', on: stopped(now()) }));
       const at = document.createElement('span');
       at.className = 'viewer-at';
       box.appendChild(at);
@@ -330,17 +323,51 @@ const Viewer = (function () {
       : 'Play it back at the pace the table played it';
     box._rates.querySelectorAll('.btn').forEach((b) =>
       b.classList.toggle('on', Number(b.dataset.rate) === (R.rate || 1)));
-    const go = box.querySelector('.vw-run');
-    go.hidden = !R.forked;
-    if (R.forked) {
-      const held = stopped(R);
-      go.textContent = held ? '▶ Carry on' : '❚❚ Stop';
-      go.title = held
-        ? 'Play from here: the panes hold their seats, and the bots take their turns'
-        : 'Stop the table. No bid, no card and no trick lands until you carry it on.';
-      go.classList.toggle('primary', held);
-    }
     box.querySelector('.viewer-at').textContent = `${R.at + 1} of ${R.n}`;
+  }
+
+  /* ---------- a copy that has been changed ---------- */
+
+  /* A fork's own clock, and never the transport's. The transport plays a tape
+     back; this plays the game. They were side by side in the same cluster,
+     both green and both starting with the same mark, which is two clocks
+     wearing one face -- press the wrong one and the table sits there while the
+     tape runs, and the phones say the table is stopped with nothing on the
+     page agreeing.
+
+     So it stands apart, under a word of its own, and says which way it is. It
+     is not there at all on a copy that is still the game it is a copy of:
+     nothing is played at one of those. */
+  function fork(root, R, view) {
+    if (!root || !R) return;
+    const box = part(root, 'viewer-fork');
+    box._R = R;
+    box._view = view;
+    if (!box._wired) {
+      box._wired = true;
+      const lbl = document.createElement('span');
+      lbl.className = 'bandlbl';
+      lbl.textContent = 'Fork';
+      box.appendChild(lbl);
+      const said = document.createElement('span');
+      said.className = 'viewer-held';
+      box.appendChild(said);
+      box._said = said;
+      btn(box, 'btn vw-run', '', '',
+          () => box._view.send({ do: 'run', on: stopped(box._R) }));
+    }
+    box.hidden = !R.forked;
+    if (!R.forked) return;
+    const held = stopped(R);
+    box._said.textContent = held ? 'stopped' : 'playing';
+    box._said.classList.toggle('on', !held);
+    const go = box.querySelector('.vw-run');
+    go.textContent = held ? 'Carry on' : 'Stop';
+    go.title = held
+      ? 'Play the game from here: the panes hold their seats and the bots take their turns. '
+        + 'This is the table\'s own clock, not the tape\'s.'
+      : 'Stop the table. No bid, no card and no trick lands until you carry it on.';
+    go.classList.toggle('primary', held);
   }
 
   /* ---------- the points of the round on show ---------- */
@@ -517,5 +544,5 @@ const Viewer = (function () {
     });
   }
 
-  return { games, seen, screen, rounds, run, points, cardsSaid, rate, roundNow };
+  return { games, seen, screen, rounds, run, fork, points, cardsSaid, rate, roundNow };
 })();

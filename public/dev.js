@@ -565,6 +565,7 @@ function renderReplay() {
   if (!replaying()) return;
   Viewer.rounds($('#replay-rounds'), REPLAY, watching);
   Viewer.run($('#replay-transport'), REPLAY, watching);
+  Viewer.fork($('#fork-run'), REPLAY, watching);
   Viewer.points($('#replay-points'), REPLAY, watching);
 }
 
@@ -1212,8 +1213,10 @@ function renderHead() {
     /* A copy that has been changed is no longer the game that was played, and
        saying "watching table X again" over one would be a lie. What is on show
        is a copy that went its own way at the point it is standing on. */
+    const held = !!(S && S.paused);
     $('#subtitle').textContent = REPLAY.forked
-      ? `table ${REPLAY.of}, changed by hand · point ${REPLAY.at + 1} of ${REPLAY.n}`
+      ? `table ${REPLAY.of}, changed by hand · ${held ? 'stopped' : 'playing'}`
+        + ` · point ${REPLAY.at + 1} of ${REPLAY.n}`
       : `watching table ${REPLAY.of} again · point ${REPLAY.at + 1} of ${REPLAY.n}`;
     return;
   }
@@ -1281,6 +1284,8 @@ function applyGates() {
   ['#rounds-tools', '#replay-run', '#steps-row'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = !going;
   });
+  // A copy that has not been changed has no game of its own to run.
+  if (el('#replay-fork')) el('#replay-fork').hidden = !going || !REPLAY.forked;
   // The rounds are a strip either way; a table's is the one you can send to.
   if (el('#scrub-tools')) el('#scrub-tools').hidden = going || !DEVSRV;
   if (el('#run-tools') && going) el('#run-tools').hidden = true;
