@@ -1513,6 +1513,17 @@ part('a game put back on a table of its own');
     ok(bidding.Replay.say(bidding).says.length === trail.length,
        'and they go to the page with the rest of the copy');
 
+    /* And what each point has to show for itself, which is the value it
+       carried: a bid its number, a card the card. The rest is a kind of thing
+       rather than a value, and wears the icon its kind wears on the page. */
+    const faces = bidding.replay.faces;
+    ok(faces[bids[0]] === String(trail[bids[0]].v),
+       'a bid shows the number that was said  got ' + faces[bids[0]]);
+    ok(faces[oneCard] === G.cardName(trail[oneCard].x),
+       'a card shows itself  got ' + faces[oneCard]);
+    ok(faces[0] === '' && faces[faces.length - 1] === '',
+       'and a point that is a thing happening shows nothing of its own');
+
     const cards = trail.map((e, at) => (e.k === 'c' ? at : -1)).filter((at) => at >= 0);
     const copy = copyOf(t, cards[1]);
     const down = copy.play.trick.map((x) => x.card);

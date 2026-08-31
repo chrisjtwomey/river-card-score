@@ -106,27 +106,46 @@
   .prow .mid{justify-self:center}
   .prow .pbtns{display:flex;gap:5px}
 
-  /* The points of the round on show: a bar with a bubble on it a point. It is
-     a bar because a round is a run from one end to the other, and bubbles
-     because nothing in it is continuous -- each point either happened or has
-     not, and each of them is a place to go. */
-  .steps{position:relative;display:flex;align-items:center;flex:1;min-width:0;
-    padding:7px 0;gap:0}
-  .steps .track,.steps .fill{position:absolute;top:50%;height:3px;margin-top:-1.5px;
-    border-radius:2px;pointer-events:none}
-  .steps .track{left:0;right:0;background:var(--line)}
-  .steps .fill{left:0;background:var(--gold);transition:width .18s ease}
-  /* A cell a point, so the bubbles sit at even spacing however many there are
-     and the bar behind them ends under the one it has reached. */
-  .steps .pip{position:relative;flex:1 1 0;min-width:0;display:flex;justify-content:center;
-    border:0;background:none;padding:0;cursor:pointer}
-  .steps .dot{width:19px;height:19px;flex:none;border-radius:50%;border:2px solid var(--line);
-    background:var(--bg2);color:var(--ink-dim);display:flex;align-items:center;
-    justify-content:center;font:700 10px/1 ui-monospace,Menlo,monospace}
-  .steps .pip.done .dot{border-color:var(--gold);background:var(--gold);color:#fff}
-  .steps .pip.on .dot{width:23px;height:23px;font-size:11px;border-color:var(--gold);
-    background:var(--bg2);color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,43,.25)}
-  .steps .pip:hover .dot{border-color:var(--gold)}
+  /* The round on show as a timeline: a rail, the points marked along it in
+     the order they happened, and a head you can drag. What each mark wears is
+     what it is -- a bid wears its number, a card wears itself, and the beats
+     that shape a round wear an icon. The rest is a dot, because a round is
+     mostly cards and forty of them named at once is not a thing to read. */
+  .steps{flex:1;min-width:0;padding:14px 0 4px}
+  .tlbody{position:relative;margin:0 18px;height:24px;touch-action:none;cursor:pointer}
+  .tlbody .rail{position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;
+    border-radius:3px;background:var(--line);pointer-events:none}
+  .tlbody .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;
+    background:var(--gold);pointer-events:none}
+  .tlbody .tick{position:absolute;top:50%;transform:translate(-50%,-50%);border:0;
+    background:none;padding:0;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;height:24px}
+  .tlbody .face{display:flex;align-items:center;justify-content:center;height:19px;
+    min-width:19px;padding:0 4px;border-radius:10px;border:1.5px solid var(--line);
+    background:var(--bg2);color:var(--ink-dim);white-space:nowrap;
+    font:700 10px/1 system-ui,-apple-system,sans-serif}
+  .tlbody .tick.done .face{border-color:var(--gold);color:var(--gold)}
+  /* A card: a dot on the rail, in the colour of its suit. */
+  .tlbody .tick.wee .face{width:7px;height:7px;min-width:0;padding:0;border:0;
+    border-radius:50%;background:var(--ink-dim);font-size:0}
+  .tlbody .tick.wee.red .face{background:var(--red)}
+  .tlbody .tick.wee.done .face{background:var(--gold)}
+  /* A trick opening: a divider through the rail, which is what it is. */
+  .tlbody .tick.bar .face{width:2px;height:12px;min-width:0;padding:0;border:0;
+    border-radius:1px;background:var(--line);font-size:0}
+  .tlbody .tick:hover .face{border-color:var(--gold)}
+  .tlbody .head{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;
+    background:var(--felt);pointer-events:none;border-radius:1px}
+  .tlbody .head .knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    display:flex;align-items:center;justify-content:center;height:23px;min-width:23px;
+    padding:0 6px;border-radius:12px;background:var(--felt);color:#fff;white-space:nowrap;
+    font:800 11px/1 system-ui,-apple-system,sans-serif;
+    box-shadow:0 0 0 3px rgba(20,96,63,.18)}
+  /* What happened there, over the mark it belongs to. */
+  .tlbody .tip{position:absolute;bottom:calc(100% + 10px);transform:translateX(-50%);
+    white-space:nowrap;font:600 12px/1.25 system-ui,-apple-system,sans-serif;
+    padding:6px 10px;border-radius:8px;background:var(--ink);color:var(--bg);
+    box-shadow:var(--shadow);pointer-events:none;z-index:6}
   #replay-where{margin:0;font-weight:650;color:var(--ink);min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #replay-at{font-size:12px;color:var(--ink-dim);font-weight:650;flex:none}

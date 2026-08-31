@@ -489,35 +489,48 @@ function standInAvatar(name, i) {
    list of what the card already lists is a second place to keep right. */
 const replayAsk = (o) => send(Object.assign({ t: 'dev', action: 'replay' }, o));
 
-/* Every kind of point, as one mark and one plain word. A game is a sequence of
-   these, and the stepper is that sequence made pressable. */
+/* Every kind of point: the icon it wears on the timeline, the plain word it is
+   called where an older server sends no sentence for it, and how big a mark it
+   makes. A round is mostly cards, so a card is a dot in the colour of its suit
+   and a trick opening is a divider; what shapes the round wears an icon, and a
+   bid wears the number that was said. */
 const STEPS = {
-  R: ['\u25b8', 'the round is dealt'],
-  b: ['b', 'a bid'],
-  s: ['\u00b7', 'a trick opens'],
-  c: ['c', 'a card'],
-  w: ['\u25c6', 'a trick taken'],
-  W: ['\u21ba', 'a trick taken back'],
-  e: ['\u03a3', 'the round is scored'],
-  z: ['\u21a9', 'a step back'],
-  F: ['!', 'the table was forced'],
-  G: ['\u25b8', 'the game starts'],
+  G: ['\ud83c\udfac', 'the game starts'],
+  R: ['\ud83c\udccf', 'the round is dealt'],
+  b: ['', 'a bid'],                     // a bid wears its own number
+  s: ['', 'a trick opens', 'bar'],
+  c: ['', 'a card', 'wee'],             // a card wears itself
+  w: ['\u2714', 'a trick taken'],
+  W: ['\u21a9', 'a trick taken back'],
+  e: ['\ud83d\udcdd', 'the round is scored'],
+  z: ['\u27f2', 'the round is put back'],
+  F: ['\u26a0\ufe0f', 'the table was forced'],
   E: ['\ud83c\udfc1', 'the game ends'],
 };
+// A hand thrown in is a round dealt again, and it says so rather than looking
+// like the first go at it.
+const BUM = '\u267b\ufe0f';
 
-/* The points of the round the copy is standing in: a bar, with a bubble on it
-   a point, filled up to the one it is standing on.
+/* The round on show as a timeline: a rail, the points marked along it in the
+   order they happened, and a head that can be dragged along.
 
    A game is some hundreds of points, which is why this is two levels and not
    one: the rounds above pick the round, and this picks the moment inside it.
-   The bubbles are not a slider, because nothing here is continuous -- a game is
-   a sequence of things that happened, and each of them either has or has not.
+   It is a rail rather than a row of cells because a round runs from one end to
+   the other, and the marks on it are not a slider -- each point either happened
+   or has not, and each is a place to go.
 
-   Passing over one says what happened there, twice over: on the line beside the
-   bar, which is instant, and as the browser's own tip under the pointer. Both
-   are the sentence the server made for that point, so the line the copy is
-   standing on and the line a bubble gives are the same words about the same
-   thing. */
+   What a mark wears is what it is: a bid its number, a card itself in the
+   colour of its suit, a trick opening a divider through the rail, and the beats
+   that shape a round an icon. Passing over one says what happened there, in the
+   sentence the server made for it -- the same one the line beside the rail says
+   for the point the copy is standing on. */
+
+// Where the head is being dragged to, before it is let go. Nothing is asked of
+// the server until then: a seek re-seeds the copy and plays it forward, and
+// doing that for every pixel of a drag would make the drag the slowest part.
+let dragAt = null;
+
 function renderSteps() {
   const box = $('#replay-steps');
   if (!box || !REPLAY.kinds) return;
@@ -530,43 +543,134 @@ function renderSteps() {
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.innerHTML = '';
-  const n = to - from + 1;
-  const track = document.createElement('span');
-  track.className = 'track';
-  /* The bar stops under the middle of the bubble it has reached, which is where
-     each bubble sits in its own cell: one of n, so (i + a half) of n across. */
-  const fill = document.createElement('span');
+  const bums = {};
+  marks.forEach((m) => { if (m.w) bums[m.at] = m.w; });
+
+  const body = document.createElement('div');
+  body.className = 'tlbody';
+  const rail = document.createElement('div');
+  rail.className = 'rail';
+  const fill = document.createElement('div');
   fill.className = 'fill';
-  const done = Math.max(0, Math.min(REPLAY.at - from, n - 1));
-  fill.style.width = `${((done + 0.5) / n) * 100}%`;
-  box.append(track, fill);
+  rail.appendChild(fill);
+  body.appendChild(rail);
+  box.appendChild(body);
+
+  // Where a point sits along the rail: the first at one end, the last at the
+  // other. A round of one point has nowhere to go, so it sits in the middle.
+  const span = to - from;
+  const at = (i) => (span > 0 ? ((i - from) / span) * 100 : 50);
+
   for (let i = from; i <= to; i++) {
     const k = REPLAY.kinds[i];
-    const [mark, kind] = STEPS[k] || ['?', 'something'];
-    // An older server sends no words, so the kind of point stands in for them.
-    const said = (REPLAY.says && REPLAY.says[i]) || kind;
+    const [icon, kind, size] = STEPS[k] || ['?', 'something'];
+    const worn = (REPLAY.faces && REPLAY.faces[i])
+      || (k === 'R' && bums[i] === 'bum' ? BUM : icon);
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'pip' + (i === REPLAY.at ? ' on' : '') + (i < REPLAY.at ? ' done' : '');
-    b.title = `${said} — point ${i + 1} of ${REPLAY.kinds.length}`;
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    dot.textContent = mark;
-    b.appendChild(dot);
+    b.className = 'tick' + (size ? ' ' + size : '')
+      + (i < REPLAY.at ? ' done' : '') + (/[♥♦]/.test(worn) ? ' red' : '');
+    b.style.left = `${at(i)}%`;
+    b.title = saidAt(i);
+    const face = document.createElement('span');
+    face.className = 'face';
+    face.textContent = worn;
+    b.appendChild(face);
     b.addEventListener('click', () => replayAsk({ do: 'seek', at: i }));
-    b.addEventListener('mouseenter', () => sayWhere(said));
-    b.addEventListener('mouseleave', () => sayWhere(''));
-    box.appendChild(b);
+    b.addEventListener('mouseenter', () => showTip(i));
+    b.addEventListener('mouseleave', () => showTip(null));
+    body.appendChild(b);
   }
-  const on = box.querySelector('.pip.on');
-  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+  const head = document.createElement('div');
+  head.className = 'head';
+  const knob = document.createElement('span');
+  knob.className = 'knob';
+  head.appendChild(knob);
+  body.appendChild(head);
+  body._head = head;
+  body._knob = knob;
+  body._span = [from, to];
+  putHead(body, REPLAY.at);
+  wireDrag(body);
 }
 
-/* The line beside the bar. It says what is on the table, or what a bubble being
-   passed over was -- one line, so the eye has one place to read either from. */
-function sayWhere(said) {
-  const el = $('#replay-where');
-  if (el) el.textContent = said || (REPLAY && REPLAY.where) || '';
+// The head, and the fill behind it, at a point. Read from the drag while one
+// is going on, and from the copy the rest of the time.
+function putHead(body, i) {
+  const [from, to] = body._span;
+  const span = to - from;
+  const x = span > 0 ? ((i - from) / span) * 100 : 50;
+  body._head.style.left = `${x}%`;
+  const fill = body.querySelector('.fill');
+  if (fill) fill.style.width = `${x}%`;
+  const k = REPLAY.kinds[i];
+  const [icon] = STEPS[k] || ['?'];
+  body._knob.textContent = (REPLAY.faces && REPLAY.faces[i]) || icon || '·';
+}
+
+// What happened at a point, in words. An older server sends no sentence, so
+// the kind of thing it was stands in for one.
+function saidAt(i) {
+  const kind = (STEPS[REPLAY.kinds[i]] || ['', 'something'])[1];
+  return `${(REPLAY.says && REPLAY.says[i]) || kind} — point ${i + 1} of ${REPLAY.n}`;
+}
+
+/* The tip over the rail. It is the one that follows the pointer; the line
+   beside the rail stays on the point the copy is standing on, so the two
+   answer different questions and never fight over one place. */
+function showTip(i) {
+  const body = $('#replay-steps') && $('#replay-steps').querySelector('.tlbody');
+  if (!body) return;
+  const had = body.querySelector('.tip');
+  if (had) had.remove();
+  if (i === null || i === undefined) return;
+  const [from, to] = body._span;
+  const span = to - from;
+  const tip = document.createElement('div');
+  tip.className = 'tip';
+  tip.textContent = saidAt(i);
+  tip.style.left = `${span > 0 ? ((i - from) / span) * 100 : 50}%`;
+  body.appendChild(tip);
+}
+
+/* Dragging the head. The rail is a picker, so a press anywhere on it takes the
+   head there and a drag moves it; only letting go asks the copy to follow. */
+function wireDrag(body) {
+  const point = (e) => {
+    const [from, to] = body._span;
+    const r = body.getBoundingClientRect();
+    if (!r.width) return null;                 // nothing laid out to measure
+    const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    return from + Math.round(f * (to - from));
+  };
+  body.addEventListener('pointerdown', (e) => {
+    const i = point(e);
+    if (i === null) return;
+    // Two clocks on one copy would fight over where it is, so a hand on the
+    // rail stops it playing itself before it moves anything.
+    if (REPLAY.playing) replayAsk({ do: 'pause' });
+    dragAt = i;
+    if (body.setPointerCapture && e.pointerId !== undefined) body.setPointerCapture(e.pointerId);
+    putHead(body, i);
+    showTip(i);
+  });
+  body.addEventListener('pointermove', (e) => {
+    const i = point(e);
+    if (i === null) return;
+    if (dragAt !== null) { dragAt = i; putHead(body, i); }
+    showTip(i);
+  });
+  const drop = () => {
+    if (dragAt === null) return;
+    const i = dragAt;
+    dragAt = null;
+    showTip(null);
+    replayAsk({ do: 'seek', at: i });
+  };
+  body.addEventListener('pointerup', drop);
+  body.addEventListener('pointercancel', drop);
+  body.addEventListener('mouseleave', () => { if (dragAt === null) showTip(null); });
 }
 
 /* The rounds of the game being watched, in the strip a scorecard uses. A hand
@@ -694,7 +798,7 @@ function renderReplay() {
   play.title = play._now ? 'Stop where it is'
     : 'Play it back at the pace the table played it';
   $('#replay-at').textContent = `${REPLAY.at + 1} of ${REPLAY.n}`;
-  sayWhere('');
+  $('#replay-where').textContent = REPLAY.where || '';
 }
 
 /* ---------- the way in ---------- */
