@@ -71,11 +71,14 @@
 
   /* The scrubber: the whole card as cells. Click a round and the game is
      played up to it; the ends are the lobby and the finish. */
-  .scrub{display:flex;gap:3px;overflow-x:auto;min-width:0;flex:1}
-  .scell{flex:none;min-width:30px;padding:4px 5px;border:1px solid var(--line);border-radius:8px;
-    background:var(--bg2);color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
-  .scell small{font-size:9px;color:var(--ink-dim);font-weight:600}
+  .scrub{display:flex;gap:5px;overflow-x:auto;min-width:0;flex:1}
+  /* The rounds share the row rather than huddling at the left of it: there is
+     room, and a round is easier to hit for having it. Below the width a hand
+     size needs they stop shrinking and the strip scrolls instead. */
+  .scell{flex:1 1 0;min-width:58px;padding:8px 6px;border:1px solid var(--line);border-radius:9px;
+    background:var(--bg2);color:var(--ink);font-size:16px;font-weight:700;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15}
+  .scell small{font-size:11px;color:var(--ink-dim);font-weight:600;white-space:nowrap}
   .scell:hover{background:var(--chip)}
   .scell.played{background:rgba(31,122,77,.14)}
   .scell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}

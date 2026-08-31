@@ -388,6 +388,11 @@ function renderTables(box, list) {
 
 /* ---------- the scrubber ---------- */
 
+/* How big a hand a round is, in words. The scorecard's rounds and a replay's
+   both say it, so it is said once: a round of one card is not "1 cards", and
+   neither of them is going to abbreviate it. */
+const cardsSaid = (n) => `${n} card${Number(n) === 1 ? '' : 's'}`;
+
 // The phase a clicked round lands at: 'bid' or 'tricks'.
 const gotoPhase = () => {
   const on = document.querySelector('#goto-phase .btn.on');
@@ -419,7 +424,7 @@ function renderScrub() {
   cell('⌂', 'lobby', ST.phase === 'lobby' ? 'on' : '', () => act('lobby'));
   rounds.forEach((r, i) => {
     const here = ST.rounds.length && ST.idx === i && ST.phase !== 'done' && ST.phase !== 'lobby';
-    cell(String(i + 1), `${r.cards}c`, (here ? 'on ' : '') + (i < played ? 'played' : ''),
+    cell(String(i + 1), cardsSaid(r.cards), (here ? 'on ' : '') + (i < played ? 'played' : ''),
          () => act('goto', { round: i + 1, phase: gotoPhase() }));
   });
   cell('🏁', 'end', ST.phase === 'done' ? 'on' : '', () => act('endGame'));
@@ -746,7 +751,7 @@ function renderMarks() {
     sm.textContent = m.w === 'end' ? 'end'
       : (m.w === 'bum' ? 'again'
         // 'undo' is what older trails on disk call a round put back by hand.
-        : (m.w === 'reset' || m.w === 'undo' ? 'back' : `${m.cards}c`));
+        : (m.w === 'reset' || m.w === 'undo' ? 'back' : cardsSaid(m.cards)));
     b.appendChild(sm);
     b.title = m.w === 'bum' ? 'The hand was thrown in and dealt again'
       : (m.w === 'reset' || m.w === 'undo'

@@ -3549,6 +3549,9 @@ part('the dev controls, on each kind of server');
     /* The rounds go in the strip a scorecard uses: they are the same thing. */
     const marks = P.pick('#scrub').querySelectorAll('.scell');
     ok(marks.length === 3, 'a mark a round, and the finish  got ' + marks.length);
+    ok(marks[0].querySelector('small').textContent === '3 cards',
+       'saying how big a hand it was, in words  got '
+       + marks[0].querySelector('small').textContent);
     ok(marks[0].classList.contains('on'), 'the round it is in is marked');
     ok(marks[1].classList.contains('bum'), 'and a hand thrown in is marked as its own go');
     P.socks[0].sent.length = 0;
