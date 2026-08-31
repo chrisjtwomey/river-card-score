@@ -1053,21 +1053,31 @@ Changes to `server.js` still need a restart, and that ends the games in memory. 
 npm run dev
 ```
 
-Then open **`/dev.html`**. It opens on a table this server is already running, or makes one of stand-in players, and shows every screen at once: the TV screen across the top, and under it one phone per seat, live, side by side. Press a button and every pane updates together.
+Then open **`/dev.html`**. It asks what you are here for before it draws anything else — three doors on one card:
+
+- **A new table** — stand-ins in every seat, ready to play, in the number the box says. A dev server's alone; on any other the door says so rather than failing when pressed.
+- **A table already in play** — on a dev server, every table this server is running, as a list to press. On any other, its code and its host key, which the TV screen showing it has under ⚙.
+- **A game watched again** — the game a table is playing now, and every game on file. This one needs no table and no key.
+
+A code in the address is that question already answered: `dev.html#c=CODE&t=TOKEN` opens straight onto that table, which is what **Dev controls** under ⚙ on the TV screen writes. `dev.html#g=ID` opens straight onto a game watched again, and the page writes back whichever it lands on, so a reload comes to the same place. **⌂** in the band puts the question back at any time.
+
+Whichever door it is, what follows is the same page: every screen at once, the TV screen across the top and under it one phone per seat, live, side by side. Press a button and every pane updates together.
 
 The phone of whoever runs the table stands first in that row, ringed in gold. It moves with the job, not with the seating, so the pane that has the table's buttons on it is always in the same place.
 
 It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
-The controls are one band over the screens, two rows:
+The controls are one band over the screens, three rows — the same rows in the same places whether the page is on a table or on a game watched again. What changes is the verbs:
 
-- **Tables** — every table this server is running: its code, how many are at it, what it is doing, and whether it is a real game (*real*) or a set of stand-ins (*stand*). Press one and this page opens on it; the ✕ on a row **destroys** that table after a confirm — the same end the machine that runs the server has, so every screen at it is told it is gone and its file goes with it. Destroying the table under this page makes a fresh one of stand-ins. Beside the strip, **New table** does that on its own with the number of players in the box.
+- **Tables** — every table this server is running: its code, how many are at it, what it is doing, and whether it is a real game (*real*) or a set of stand-ins (*stand*). Press one and this page opens on it; the ✕ on a row **destroys** that table after a confirm — the same end the machine that runs the server has, so every screen at it is told it is gone and its file goes with it. Beside the strip, **New table** makes another the size of the one on show — the number itself is asked for once, on the way-in card. Watching a game again, **Games** stands in the same place: the games on file, to hop between.
 - **Go to** — the whole scorecard as cells: the lobby, every round with its hand size, the finish. Click a round and the game is taken there — the card is rebuilt and played up to it with rounds a real table could make. The **bid / tricks** toggle says where the round lands: waiting for its bids, or with its bids in. So the last round with its bids in — the doorstep of the end of the game — is two clicks, and the end itself one more.
 - **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, **randomise** (shuffles the rules and plays a random number of rounds), and stand-in photos on and off.
 
 - **❚❚ Pause / ▶ Play** and **Step** — on a table that plays a hand of its own. Pause is the same control the host screen has, said the same way. **Step**, which only the dev page has, then lets the table make exactly one move: one bid, or one card. It is how a hand is read at your own pace rather than at a bot's. Step is live only while the table is stopped, and it invents nothing — it is the move the bots were going to make anyway.
 
-**Players ▾** and **State ▾** stand apart from those, at the end of the row: they open a panel rather than move the game on, and the two of them are what is left when the rest is not offered.
+- **◀ ▶ Play ▶** — the same place in the band, for a game watched again: back a point, on a point, or played back at the pace the table played it. Under it, the points of the round on show.
+
+**Players ▾** and **State ▾** stand apart from those, at the end of the row: they open a panel rather than move the game on, and the two of them are what is left when the rest is not offered. On a game watched again they read the copy and only read it.
 
 - **Players** — a panel under the band. What a live game reaches for is now on the scores page itself — the row of controls under the bids, the ⋯ on each standings row, and the [editable scorecard](#the-scorecard-is-editable) — all of which stay inside the rules. This is the forcing half, for the states the rules cannot reach. It opens with the round it is editing named — *Round 3 of 7 · 5 cards* — and the four phases beside it, the one the game is in marked. Press a phase and the game is forced to it, which is the one thing the round's own numbers cannot unstick: every bid in and the phase never turned. Then one row a seat: name, who hosts, who deals, bot, this round's bid and tricks, a photo on or off, and **Hand over**. Everything lands as it is changed; the tricks go as one column, once every seat has a number, and the cells still wanted are ringed until they do.
 - **Hand over** takes a player out of a game in play. Mid-game the seat cannot simply go — the rounds already played are that player's, and the scorecard is a column for it — so the seat stays, is marked gone, and the table plays its hand from there on. It is a pair: **Take back** gives the seat to whoever holds its phone again. Removing a seat outright is the lobby's business, and the table host's.
@@ -1104,7 +1114,7 @@ The server decides this, not the page:
 
 On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
 
-Making a table of stand-ins needs `DEV=1`. On a normal server the page loads and says so — but **Dev controls** under ⚙ on the TV screen, the way in to a real table, is offered wherever that screen holds the host token. That is the point: a game broken by a bug is broken on the server it is running on, not on the one with `DEV=1` set.
+Making a table of stand-ins needs `DEV=1`. On a normal server the way-in card shows that door shut and says why — but the other two are open: **Dev controls** under ⚙ on the TV screen is the way in to a real table, offered wherever that screen holds the host token, and a game on file is watched back with nothing at all. That is the point: a game broken by a bug is broken on the server it is running on, not on the one with `DEV=1` set.
 
 #### The trail a table leaves
 
@@ -1122,15 +1132,17 @@ What a point is put back through is the game's own verbs: a bid through the same
 
 Moving about in it is that same thing from the nearest picture: back to the round, then forward one point at a time. That is the only honest way, because the pictures are the only states the trail actually holds.
 
-On the dev page it is a panel of its own, behind **Replay**. It opens on what there is to watch: the game this table is playing now, and every game on file. A game's trail is kept beside its scorecard, so a game whose table went hours ago is watched exactly like one still in play — the dev page has to be on some table to have a socket, but not on *that* one.
+On the dev page it is one of the three doors — **A game watched again**, on the card the page opens with, listing the game a table is playing now and every game on file. A game's trail is kept beside its scorecard, so a game whose table went hours ago is watched exactly like one still in play.
 
-Pick one and the copy is made. Then two levels of moving about in it, because a game is two levels: a mark a round across the foot — a hand thrown in gets its own, because it was a second go and looked different — and under it the points of the round on show, one cell each: a bid, a card, a trick taken, the score. Nothing is a slider, because nothing here is continuous; each of those either happened or has not. A step either way, and a line saying where it is. *Round 1 of 7 · 5 cards · Nia plays 9♠.* Closing the panel lets the copy go. While one is open the panes are the copy's, and none of them can be acted in: the game they show has already been played.
+Pick one and the copy is made, and the page becomes the same page with the verbs of a replay. The band keeps its rows and its places: the **Games** on file stand where the tables stand, the rounds of that game stand in the scorecard's own strip, and the transport — **◀ ▶ Play ▶** — stands where Pause and Step stand. The one-shots go, because a replay invents nothing; the **Players** and **State** panels stay and only read, because what happened is what the trail says.
+
+Two levels of moving about in it, because a game is two levels: a mark a round in the strip — a hand thrown in gets its own, because it was a second go and looked different — and under it the points of the round on show, one cell each: a bid, a card, a trick taken, the score. Nothing is a slider, because nothing here is continuous; each of those either happened or has not. A step either way, and a line saying where it is. *Round 1 of 7 · 5 cards · Nia plays 9♠.* **⌂ Stop watching** lets the copy go. While one is open the panes are the copy's, and none of them can be acted in: the game they show has already been played.
 
 **Play** runs it back at the pace the table played it, and **Pause** stops it where it stands. A copy playing itself says where it has got to as it goes, so the step it is on, the line under it and the button all keep up — and when it runs out of trail it says that too. Only the place is sent: the rounds and the points are the trail, and the trail is being read, not written. The beats are the game's own, not a metronome: a finished trick sits for as long as a real one sits, the bids stand to be read before the hand opens, and a scored round is left up long enough to read. Only the beat between two ordinary points is the replay's own, `REPLAY_STEP`. Moving about in it by hand stops it playing itself, because two clocks on one copy would fight over where it is.
 
 A copy is a table of its own, and everything else on the server leaves it alone: it is never written down, never read back after a restart, never offered as a table to join, and never played at — its seats get a watching key and never a seat's own, and never the keys of the table it is a copy of, which the trail does not carry in the first place. It goes when the page that asked for it does — that page, and not its panes: the panes are windows the dev page draws, and it throws them away and draws them again whenever it redraws.
 
-The host token is enough to open one, on any server. It invents nothing: it puts back what already happened, on a copy, out of that table's own record. And it shows nothing the dev page does not already show — a watching window has always been given its seat's hand, which is how the panes show every hand side by side today.
+A **game on file** needs nothing at all to watch back: no table, no host token, on any server. It is finished, and its scorecard is already served to anybody who asks at `/games.json` and on the history page; putting it back adds only the order it happened in. A **table still in play** is the one thing that stays behind the host token, because its trail holds the cards in every hand — a phone at that table is told *only the host can watch this table back*. Either way it invents nothing: it puts back what already happened, on a copy.
 
 One game at a time: a new game starts the file over, because a table lives six hours and plays several. A game that finishes keeps its trail, copied beside its scorecard and under the same name, so it falls off by the same cap the scorecards do. A live table's trail goes when its table goes, by the same six-hour rule. Neither can outlive the thing it is a trail of. `TRAIL_MAX` (4 MB) is the point at which a table stops writing rather than filling the disk — a whole game is about ninety kilobytes, so reaching it means something is wrong.
 

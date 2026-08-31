@@ -9,9 +9,10 @@
   body{padding-bottom:0}
   .devwrap{display:flex;flex-direction:column;gap:12px;padding:12px;max-width:none}
 
-  /* The band: every control, over the screens. Two rows -- the table row
-     (which table, and the others to hop to) and the game row (where in the
-     game, and the one-shots). */
+  /* The band: every control, over the screens. Three rows -- the table row
+     (which table or which game, and the others to hop to), the game row (where
+     in it, and what may be done there), and, while a game is being watched
+     again, the points of the round on show. */
   .band{display:flex;flex-direction:column;gap:9px;padding:10px 12px}
   .bandrow{display:flex;align-items:center;gap:10px;min-width:0}
   .bandrow .code{font-size:20px;font-weight:800;letter-spacing:.14em;color:var(--gold);flex:none}
@@ -33,9 +34,21 @@
     cursor:pointer;padding:0 1px;border-radius:5px}
   .trow .tend:hover{color:var(--red)}
 
-  .newtable{display:flex;gap:6px;align-items:center;flex:none}
-  .newtable input{width:44px;font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);
-    background:var(--bg);color:var(--ink);text-align:center}
+  /* The way in: three doors, before there is anything to control. */
+  .ways{display:flex;flex-direction:column;gap:0;padding:0;max-width:620px;margin:6vh auto 0}
+  .way{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+  .way:first-child{border-top:0}
+  .way h2{margin:0;font-size:15px;font-weight:800;letter-spacing:.01em}
+  .way p{margin:0;font-size:12px;color:var(--ink-dim)}
+  .way .line{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .way .line input{font:inherit;padding:7px 8px;border-radius:8px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink)}
+  .way .line input.count{width:52px;text-align:center}
+  .way .line input.code{width:78px;text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+  .way .line input.tok{width:120px}
+  .way.shut h2,.way.shut p{opacity:.55}
+  .waylist{display:flex;flex-direction:column;gap:5px;max-height:190px;overflow-y:auto}
+  .waylist .trow{width:100%;flex:none}
 
   /* The scrubber: the whole card as cells. Click a round and the game is
      played up to it; the ends are the lobby and the finish. */
@@ -47,6 +60,7 @@
   .scell:hover{background:var(--chip)}
   .scell.played{background:rgba(31,122,77,.14)}
   .scell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
+  .scell.bum{border-style:dashed}
   .seg{display:flex;flex:none;border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .seg .btn{border:0;border-radius:0;padding:6px 10px;font-size:12px}
   .seg .btn.on{background:var(--felt);color:#fff}
@@ -73,25 +87,14 @@
   .prow .mid{justify-self:center}
   .prow .pbtns{display:flex;gap:5px}
 
-  /* Watching a game again: where it is, and the rounds to move about in. */
-  .replaybox{padding:10px 12px;gap:8px}
-  .replaybar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .replaybar .at{font-size:12px;color:var(--ink-dim);font-weight:650;flex:none}
-  .replaypick{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .replaymarks{display:flex;gap:3px;overflow-x:auto;min-width:0}
   /* The points of the round on show, one cell each. Nothing here is a slider,
      because nothing here is continuous. */
-  .replaysteps{display:flex;gap:2px;overflow-x:auto;min-width:0;padding-bottom:2px}
+  .replaysteps{display:flex;gap:2px;overflow-x:auto;min-width:0;padding-bottom:2px;flex:1}
   .replaysteps .scell{min-width:20px;padding:2px 4px;font-size:11px;flex-direction:row}
   .replaysteps .scell.done{background:rgba(31,122,77,.14)}
-  .rcell{flex:none;min-width:30px;padding:4px 5px;border:1px solid var(--line);border-radius:8px;
-    background:var(--bg2);color:var(--ink);font-size:12px;font-weight:650;cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
-  .rcell small{font-size:9px;color:var(--ink-dim);font-weight:600}
-  .rcell:hover{background:var(--chip)}
-  .rcell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
-  .rcell.bum{border-style:dashed}
-  #replay-where{margin:0;font-weight:650;color:var(--ink)}
+  #replay-where{margin:0;font-weight:650;color:var(--ink);min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #replay-at{font-size:12px;color:var(--ink-dim);font-weight:650;flex:none}
 
   /* The state panel: the whole table as text. */
   .statebox{padding:10px 12px;gap:8px}
@@ -140,20 +143,30 @@
 </header>
 
 <div class="devwrap">
-  <div class="panel band">
+  <!-- The way in: what this page is for, before it is for anything. Built by
+       the page, because what it may offer follows the server. -->
+  <div class="panel ways" id="ways" hidden></div>
+
+  <div class="panel band" id="band" hidden>
     <div class="bandrow">
       <span class="code" id="code">····</span>
       <span class="tally" id="phase">—</span>
+      <button class="btn ghost" id="btn-ways" type="button"
+        title="Back to the way in">⌂</button>
       <span class="cluster" id="tables-tools" hidden>
         <span class="bandsep"></span>
         <span class="bandlbl">Tables</span>
         <div class="tablestrip" id="tablelist"></div>
         <button class="btn ghost" id="btn-tables" type="button" title="Look again">⟳</button>
         <span class="bandsep"></span>
-        <span class="newtable">
-          <input type="number" id="players" min="2" max="8" value="4" title="Players at the next new table">
-          <button class="btn primary" id="btn-rebuild" type="button">New table</button>
-        </span>
+        <button class="btn primary" id="btn-rebuild" type="button"
+          title="Another table the same size">New table</button>
+      </span>
+      <!-- Watching: the games to hop between, where the tables are. -->
+      <span class="cluster" id="games-tools" hidden>
+        <span class="bandsep"></span>
+        <span class="bandlbl">Games</span>
+        <div class="tablestrip" id="gamelist"></div>
       </span>
     </div>
     <div class="bandrow">
@@ -173,6 +186,15 @@
         <button class="btn" id="btn-step" type="button"
           title="Let the table make one move: one bid, or one card">Step</button>
       </span>
+      <!-- The same place in the band, for a game that has already happened:
+           back a point, play it at the pace it was played, on a point. -->
+      <span class="cluster" id="replay-run" hidden>
+        <span class="bandsep"></span>
+        <button class="btn" id="btn-back" type="button" title="One point back">◀</button>
+        <button class="btn primary" id="btn-play" type="button"></button>
+        <button class="btn" id="btn-fwd" type="button" title="One point on">▶</button>
+        <span id="replay-at"></span>
+      </span>
       <span class="bandsep" id="shots-sep" hidden></span>
       <div class="oneshots" id="shots-dev" hidden>
         <button class="btn" data-act="fillBids" type="button">Fill bids</button>
@@ -185,10 +207,17 @@
       </div>
       <span class="bandsep"></span>
       <div class="oneshots" id="panel-toggles">
-        <button class="btn" id="btn-replay" type="button" aria-expanded="false">Replay ▾</button>
         <button class="btn" id="btn-players" type="button" aria-expanded="false">Players ▾</button>
         <button class="btn" id="btn-state" type="button" aria-expanded="false">State ▾</button>
       </div>
+    </div>
+    <!-- Watching: the points of the round on show, and what is on the table
+         at the one it is standing on. -->
+    <div class="bandrow" id="steps-row" hidden>
+      <span class="bandlbl">Points</span>
+      <div class="replaysteps" id="replay-steps"></div>
+      <span class="bandsep"></span>
+      <p class="hint" id="replay-where"></p>
     </div>
   </div>
 
@@ -198,17 +227,6 @@
     The phones are watching windows — they show what each player sees without
     putting anybody at the table.
   </p>
-
-  <!-- Watching the game again, on a copy of the table. Built by the page:
-       the fake DOM the checks run in parses no markup. -->
-  <div class="panel replaybox" id="replay-panel" hidden>
-    <div class="replaypick" id="replay-pick"></div>
-    <div class="replaybar" id="replay-bar" hidden></div>
-    <div class="replaymarks" id="replay-marks" hidden></div>
-    <div class="replaysteps" id="replay-steps" hidden></div>
-    <p class="hint" id="replay-where"></p>
-    <p class="err" id="replay-err" hidden></p>
-  </div>
 
   <div class="panel players" id="players-panel" hidden>
     <div class="phaserow" id="phase-row"></div>

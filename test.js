@@ -81,6 +81,7 @@ function client(name, url) {
     else if (m.t === 'seat') c.seat = m;
     else if (m.t === 'stateRaw') c.raw = m.record;
     else if (m.t === 'replay') c.replay = m;
+    else if (m.t === 'ways') c.ways = m;
     // Where a copy has got to on its own, kept in order: it should arrive
     // without this socket having asked for it.
     else if (m.t === 'replayAt') c.moved.push(m);
@@ -667,6 +668,56 @@ async function bidRound(P) {
     await okBy(() => /DEV=1/.test(gate.last()), 'a normal server never hands a seat out');
     gate.send({ t: 'dev', action: 'end', code });
     await okBy(() => /DEV=1/.test(gate.last()) && !!h.state, 'and never destroys a table over a code');
+  }
+
+  /* ---- the three ways in ----
+     What a page with nothing in its address may do, and the one of the three
+     that needs no table at all. */
+  {
+    const cold = client('cold'); await cold.ready;
+    cold.send({ t: 'dev', action: 'ways' });
+    await okBy(() => cold.ways, 'a page with no table asks what it may do');
+    ok(cold.ways.srv === false, 'a normal server says it invents nothing');
+    ok(cold.ways.tables.length === 0, 'so it lists none of the tables it is running');
+    ok(cold.ways.here === null, 'and a page on no table has no live trail to put back');
+
+    // A game on file, put there the way a game that ends gets there.
+    const done = await tableOf(['Eve', 'Fay'], { max: 1, pattern: 'down', ones: 2 });
+    done.h.send({ t: 'start' });
+    await okBy(() => done.h.state.phase === 'bid', 'a game starts, and is written down as it goes');
+    done.h.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
+    await okBy(() => done.h.state.gameId, 'and is filed when it ends');
+
+    cold.send({ t: 'dev', action: 'ways' });
+    await okBy(() => cold.ways.games.some((g) => g.code === done.code),
+       'and is offered to a page that has opened nothing');
+    const filed = cold.ways.games.find((g) => g.code === done.code).id;
+
+    cold.send({ t: 'dev', action: 'replay', do: 'open', game: filed });
+    await okBy(() => cold.replay && cold.replay.code,
+       'which watches it back with no table and no host key  got ' + cold.last());
+    ok(cold.replay.of === done.code, 'on a copy that says what it is a copy of');
+    ok(cold.replay.state && cold.replay.state.seats.length === 2,
+       'and the copy comes with it, so the page can draw its band off the same state');
+    cold.send({ t: 'dev', action: 'state', replay: true });
+    await okBy(() => cold.raw && cold.raw.seats, 'the copy can be read as a record');
+    cold.send({ t: 'dev', action: 'state', replay: true, record: cold.raw });
+    await okBy(() => /read, not written/.test(cold.last()), 'and never written back');
+
+    /* The one trail that is not public is a table still in play: it holds the
+       cards in every hand, so putting that one back stays the host's. */
+    const live = await tableOf(['Gus', 'Hal'], { max: 1, pattern: 'down', ones: 2 });
+    live.h.send({ t: 'start' });
+    await okBy(() => live.h.state.phase === 'bid', 'a table in play is being written down');
+    live.P[1].send({ t: 'dev', action: 'replay', do: 'open' });
+    await okBy(() => /only the host/i.test(live.P[1].last()),
+       'a phone at that table may not put it back  got ' + live.P[1].last());
+    live.h.send({ t: 'dev', action: 'replay', do: 'open' });
+    await okBy(() => live.h.replay && live.h.replay.code, 'the screen that runs it may');
+
+    cold.ws.close(); done.h.ws.close(); live.h.ws.close();
+    done.P.forEach((x) => x.ws.close());
+    live.P.forEach((x) => x.ws.close());
   }
 
   // ---- the dev controls on a server started with DEV=1 ----

@@ -1,17 +1,22 @@
 'use strict';
-/* Dev controls. Opens on any table this server is running, or makes one of
-   stand-in players, and shows every screen at once. What it may do follows
-   the server: with DEV=1 every table takes every control; a normal server
-   answers the state forcer alone, over the table's own host token.
+/* Dev controls. Three ways in, asked before anything else is drawn: a new
+   table of stand-ins, a table already in play, or a game watched again. A code
+   in the address is the second of those, already answered; #g=ID is the third.
 
-   The page is one band of controls over the screens: which table, where in
-   the game (the scrubber is the whole scorecard, clickable), and the
-   one-shots. */
+   Whichever it is, what follows is the same page: one band of controls over
+   the screens. On a table the band is the tables this server is running, the
+   scorecard as a strip of rounds, and the one-shots. On a game watched again
+   it is the games on file, the rounds of that game, and the transport -- the
+   same rows in the same places, with the verbs of a replay.
+
+   What may be done follows the server: with DEV=1 every table takes every
+   control; a normal server answers the state forcer over the table's own host
+   token, and a replay, which invents nothing. */
 
 const $ = (s) => document.querySelector(s);
 
 let ws = null, ST = null, CODE = null, HOST_TOKEN = null, SEATS = [];
-let topKey = '', seatKey = '', tableKey = '';  // re-draw only when it has to change
+let topKey = '', seatKey = '';  // re-draw the panes only when they have to change
 let LIVE = false;                // real players may be behind this table
 let DEVSRV = false;              // this server takes the controls that invent data
 let polling = false;             // the list of tables, on a dev server only
@@ -19,21 +24,41 @@ let onTable = false;             // this socket got onto a table
 let stateBusy = false;           // a record is out, and its answer is the panel's
 let stateLoaded = false;         // a record is in the box, read at some moment
 let stateReading = false;        // and one was asked for, so a change is not news
-let REPLAY = null;               // the replay panel: what there is to watch, and any copy open
-// A copy is only being watched once one has been picked and made. Until then
-// the panel is a list, and the panes are still the table's.
+let REPLAY = null;               // the copy being watched, and where it stands
+let WAYS = null;                 // what this server will take, and what to open with it
+let WANT = null;                 // a game named in the address, to open on arrival
+
+// A copy is only being watched once one has been made. Until then the games
+// are a list to pick from, and the panes are still the table's.
 const replaying = () => !!(REPLAY && REPLAY.code);
+// Nothing picked yet: no table and no copy. The way in is the whole page.
+const choosing = () => !CODE && !replaying();
+/* The one state the band and the panels are drawn off. On a table it is the
+   table's; on a copy it is the copy's, which arrives with every replay
+   message because this page is not at the copy's table -- the panes are. */
+const stateNow = () => (replaying() ? (REPLAY.state || null) : ST);
+
+// The size of the last table made here, so the band can make another like it.
+const N_KEY = 'rcs:dev:players';
+let NEW_N = Math.max(2, Math.min(8, Number(localStorage.getItem(N_KEY)) || 4));
 
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
-   lands on the game it was pressed from. The page writes the same hash for
-   whatever table it is on, so a reload comes back to it. With no hash it makes
-   a table of stand-in players, which the server allows only with DEV=1. */
+   lands on the game it was pressed from; #g=ID opens it on a game watched
+   again. The page writes back whichever it lands on, so a reload comes to the
+   same place. With neither, it asks what you are here for. */
 (function readHash() {
   const q = new URLSearchParams((location.hash || '').replace(/^#/, ''));
   const c = (q.get('c') || '').toUpperCase();
-  const t = q.get('t') || '';
-  if (c && t) { CODE = c; HOST_TOKEN = t; }
+  // A dev server opens a table on its code alone, so the key is not required.
+  if (c) { CODE = c; HOST_TOKEN = q.get('t') || ''; }
+  else if (q.get('g')) WANT = q.get('g');
 })();
+
+function writeHash() {
+  const at = replaying() ? (REPLAY.game ? `#g=${REPLAY.game}` : '')
+    : (CODE ? `#c=${CODE}&t=${HOST_TOKEN}` : '');
+  history.replaceState(null, '', at || location.pathname);
+}
 
 /* ---------- socket ---------- */
 
@@ -41,14 +66,23 @@ function connect() {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   ws = new WebSocket(proto + location.host + '/ws');
   onTable = false;
-  // The table it was on, or a new one. A socket that drops and comes back
-  // re-opens the same table rather than making another.
-  ws.onopen = () => ((CODE && HOST_TOKEN)
-    ? act('open', { code: CODE, token: HOST_TOKEN })
-    : act('setup', { players: Number($('#players').value) || 4 }));
+  /* Where the page already is, or the question. A socket that drops and comes
+     back opens the same table, or the same game again -- a copy belongs to the
+     socket that asked for one, so it went when this one did. */
+  ws.onopen = () => {
+    if (CODE) return act('open', { code: CODE, token: HOST_TOKEN });
+    if (WANT) return replayAsk({ do: 'open', game: WANT });
+    act('ways');
+  };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.t === 'hello') {
+    if (m.t === 'ways') {
+      /* What this server will take, and what there is to open with it. It
+         comes before anything is drawn, because the way in is what it offers. */
+      WAYS = m;
+      DEVSRV = m.srv !== false;
+      paint();
+    } else if (m.t === 'hello') {
       /* Every dev action answers with a hello, and its seat list arrives
          without the seats this page has taken over -- a real table never
          volunteers them. Carry those tokens across, or pressing any control
@@ -59,16 +93,18 @@ function connect() {
       SEATS.forEach((x) => { if (held.has(x.id)) x.token = held.get(x.id); });
       LIVE = m.stand === false;              // the table says which it is, not the address
       DEVSRV = m.srv !== false;              // an older server said nothing, and took it all
-      history.replaceState(null, '', `#c=${CODE}&t=${HOST_TOKEN}`);
-      topKey = seatKey = tableKey = '';      // another table, so every pane is stale
-      applyMode();
-      if (polling) askTables();
+      writeHash();
+      topKey = seatKey = '';                 // another table, so every pane is stale
       onTable = true;
       err('');
+      paint();
+      if (polling) askTables();
       // The record landed, so read back what the table became.
       if (stateBusy) { stateBusy = false; askState(); }
     } else if (m.t === 'tables') {
-      renderTables(m.tables || []);
+      if (WAYS) WAYS.tables = m.tables || [];
+      renderTables($('#tablelist'), m.tables || []);
+      if (choosing()) renderWays();
     } else if (m.t === 'stateRaw') {
       // The record to edit. Never over what is being typed: Reload asks again.
       stateReading = false;
@@ -80,27 +116,29 @@ function connect() {
         stateStale(false);          // this text is the table, as of now
       }
     } else if (m.t === 'replay') {
-      /* A copy opened, moved about in, or let go -- and either way, what there
-         is to watch. Closing is the panel going; a list with no copy is the
-         panel open with nothing picked yet. */
+      /* A copy opened, moved about in, or let go. Letting go is said plainly;
+         anything else is a copy to draw the band off. */
       const was = REPLAY && REPLAY.code;
       REPLAY = m.shut ? null : m;
+      WANT = (REPLAY && REPLAY.game) || null;
+      if (REPLAY) err('');            // a copy that opened is not a line to keep
       /* Only a different copy is a different pane. Each pane holds a socket on
          the copy, so a step reaches it on its own; tearing them down every step
          reloaded every frame at every press, and made the panel feel dead. */
       if ((REPLAY && REPLAY.code) !== was) seatKey = topKey = '';
-      renderReplay();
-      renderFrames();
+      writeHash();
+      paint();
     } else if (m.t === 'replayAt') {
-      /* A copy playing itself, saying where it has got to. Only the place
-         moves: the rounds and the points of the round are the trail, and it is
-         being read, not written. A word about a copy this page has let go is
-         not this page's business. */
+      /* A copy playing itself, saying where it has got to. Only the place and
+         the table move: the rounds and the points of the round are the trail,
+         and it is being read, not written. A word about a copy this page has
+         let go is not this page's business. */
       if (REPLAY && REPLAY.code === m.code) {
         REPLAY.at = m.at;
         REPLAY.playing = m.playing;
         REPLAY.where = m.where;
-        renderReplay();
+        REPLAY.state = m.state;
+        paint();
       }
     } else if (m.t === 'seat') {
       // The seat asked for: put it in the pane, which then acts as the player.
@@ -111,31 +149,24 @@ function connect() {
          put that move back the way it was, so say so rather than let it
          happen quietly. A read already asked for is not the table moving. */
       if (stateLoaded && !stateReading && !$('#state-panel').hidden) stateStale(true);
-      ST = m; render();
+      ST = m;
+      // Only a dev server has tables to hand out, so only a dev server is asked.
+      if (ST.dev && !polling) { polling = true; askTables(); setInterval(askTables, 5000); }
+      paint();
     } else if (m.t === 'error') {
-      /* The table it was on would not open: a server that restarted, a game
-         that ended. Let it go and do what a page with no table does. */
-      if (!onTable && CODE) {
+      /* The way in did not work out: a server that restarted, a game that
+         ended, a code that was never here. Let it go and ask again. */
+      if ((!onTable && CODE) || /table is gone/i.test(m.msg)) {
         stateBusy = false;
-        CODE = HOST_TOKEN = null;
-        history.replaceState(null, '', location.pathname);
-        return act('setup', { players: Number($('#players').value) || 4 });
+        toWays(m.msg);
+        return;
       }
-      if (/table is gone/i.test(m.msg)) {
-        stateBusy = false;
-        CODE = HOST_TOKEN = null;
-        history.replaceState(null, '', location.pathname);
-        tableKey = '';
-        return act('setup', { players: Number($('#players').value) || 4 });
-      }
+      if (WANT && !replaying()) { WANT = null; toWays(m.msg); return; }
       /* A refused record is the panel's business, not the page's: the line
          belongs beside the button that earned it, and the edit stays in the
          box to be put right. */
       if (stateBusy) { stateBusy = false; return stateErr(m.msg); }
-      // No table yet means the stand-in table was refused. Say the other way in.
-      err(!CODE
-        ? `${m.msg} To put a real game right, open Dev controls under ⚙ on the TV screen showing it.`
-        : m.msg);
+      err(m.msg);
     }
   };
   ws.onclose = () => setTimeout(connect, 1000);
@@ -148,7 +179,25 @@ const stateErr = (msg) => { $('#state-err').textContent = msg; $('#state-err').h
 const stateStale = (on) => { if ($('#state-stale')) $('#state-stale').hidden = !on; };
 // Reading is asked for in one place, so a change arriving in the meantime is
 // the answer coming, not the table moving under the text.
-const askState = () => { stateReading = true; act('state'); };
+const askState = () => { stateReading = true; act('state', replaying() ? { replay: true } : null); };
+
+/* Back to the question. The table is let go here and the copy on the server,
+   so what the page offers next is what is actually there. */
+function toWays(msg) {
+  if (replaying()) replayAsk({ do: 'close' });
+  CODE = HOST_TOKEN = null;
+  WANT = null;
+  REPLAY = null;
+  ST = null;
+  SEATS = [];
+  onTable = false;
+  stateLoaded = false;
+  topKey = seatKey = '';
+  writeHash();
+  err(msg || '');
+  act('ways');
+  paint();
+}
 
 /* ---------- previews ---------- */
 
@@ -196,7 +245,7 @@ function frame(box, label, page, addr, kind, entry, boss) {
 const seatOf = (id) => SEATS.find((s) => s.id === id) || null;
 
 function renderFrames() {
-  if (!CODE) return;
+  if (!CODE && !replaying()) return;
   const scale = $('#scale').value;
   const cap = ST ? seatOf(ST.captainId) : null;
   /* While a game is being watched again the panes are the copy's, not the
@@ -257,13 +306,16 @@ const askTables = () => act('tables');
 
 /* A row a table: its code, what it is doing, and whether it is a game or a
    set of stand-ins. Pressing one opens this page on it. A dev server hands
-   over any table it holds, so no token is typed here. */
-function renderTables(list) {
+   over any table it holds, so no token is typed here.
+
+   The strip in the band and the list on the way-in card are the same rows, so
+   the box is handed in and each keeps its own reason to redraw. */
+function renderTables(box, list) {
+  if (!box) return;
   const key = list.map((t) => `${t.code}/${t.phase}/${t.round}/${t.seats.length}/${t.stand}`)
     .join('|') + '@' + CODE;
-  if (key === tableKey) return;
-  tableKey = key;
-  const box = $('#tablelist');
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
   box.innerHTML = '';
   list.forEach((t) => {
     const b = document.createElement('div');
@@ -291,6 +343,9 @@ function renderTables(list) {
                      : 'A real table. Every screen at it is thrown off, and its game is not saved.',
              'Destroy', true)
         .then((yes) => { if (yes) act('end', { code: t.code }); });
+    });
+    b.addEventListener('click', () => {
+      if (t.code !== CODE) act('open', { code: t.code });
     });
     b.append(code, what, kind, end);
     box.appendChild(b);
@@ -402,44 +457,15 @@ function standInAvatar(name, i) {
 
 /* ---------- watching the game again ---------- */
 
-/* The copy, and the way about it. A mark a round, a slider over every point,
-   and a step either way.
+/* The copy, and the way about it. It takes the band the table has: the games
+   on file where the tables are, the rounds of the game where the scorecard is,
+   and the transport where Pause and Step are. Nothing here invents anything --
+   a replay puts back what happened, on a copy of its own -- so the one-shots
+   are away and the panels only read.
 
-   The panel is built here rather than written into the page because the panes
-   are not the only thing that has to follow a replay: what is offered changes
-   with whether one is open at all. */
+   The rounds of a replay are drawn into the scrubber the card uses, because
+   they are the same thing: a strip of rounds, one of them where you are. */
 const replayAsk = (o) => send(Object.assign({ t: 'dev', action: 'replay' }, o));
-
-function buildReplay() {
-  const bar = $('#replay-bar');
-  if (!bar || bar._wired) return;
-  bar._wired = true;
-
-  const btn = (cls, txt, why, go) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = cls;
-    b.textContent = txt;
-    b.title = why;
-    b.addEventListener('click', go);
-    bar.appendChild(b);
-    return b;
-  };
-
-  btn('btn', '◀', 'One point back', () => replayAsk({ do: 'step', by: -1 }));
-  /* Playing it back at the pace the table played it. Read at the tap, not at
-     the draw, so the button says what it will do rather than what it did. */
-  const go = btn('btn primary', '▶ Play', '', () =>
-    replayAsk({ do: go._now ? 'pause' : 'play' }));
-  go.id = 'btn-replay-play';
-  btn('btn', '▶', 'One point on', () => replayAsk({ do: 'step', by: 1 }));
-
-  const at = document.createElement('span');
-  at.className = 'at';
-  bar.appendChild(at);
-
-  btn('btn ghost', 'Close', 'Let the copy go', () => replayAsk({ do: 'close' }));
-}
 
 /* Every kind of point, as one mark and one plain word. A game is a sequence of
    these, and the stepper is that sequence made pressable. */
@@ -490,12 +516,13 @@ function renderSteps() {
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-/* The rounds, as the marks a scrubber offers. A hand thrown in is a mark of
-   its own, because it is a second go at the same round and looked different. */
+/* The rounds of the game being watched, in the strip a scorecard uses. A hand
+   thrown in is a cell of its own, because it is a second go at the same round
+   and looked different. */
 function renderMarks() {
-  const box = $('#replay-marks');
+  const box = $('#scrub');
   if (!box) return;
-  const key = REPLAY.marks.map((m) => `${m.at}/${m.w}`).join(',') + '@' + REPLAY.at;
+  const key = 'r:' + REPLAY.marks.map((m) => `${m.at}/${m.w}`).join(',') + '@' + REPLAY.at;
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.innerHTML = '';
@@ -504,92 +531,205 @@ function renderMarks() {
   let cur = 0;
   REPLAY.marks.forEach((m, i) => { if (m.at <= REPLAY.at) cur = i; });
   REPLAY.marks.forEach((m, i) => {
-    const here = i === cur;
+    const again = m.w === 'bum' || m.w === 'reset' || m.w === 'undo';
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'rcell' + (here ? ' on' : '')
-      + (m.w === 'bum' || m.w === 'reset' || m.w === 'undo' ? ' bum' : '');
+    b.className = 'scell' + (i === cur ? ' on' : '') + (again ? ' bum' : '')
+      + (m.at < REPLAY.at ? ' played' : '');
     b.appendChild(document.createTextNode(m.w === 'end' ? '🏁' : String(m.i + 1)));
-    const s = document.createElement('small');
-    s.textContent = m.w === 'end' ? 'end'
+    const sm = document.createElement('small');
+    sm.textContent = m.w === 'end' ? 'end'
       : (m.w === 'bum' ? 'again'
         // 'undo' is what older trails on disk call a round put back by hand.
         : (m.w === 'reset' || m.w === 'undo' ? 'back' : `${m.cards}c`));
-    b.appendChild(s);
+    b.appendChild(sm);
     b.title = m.w === 'bum' ? 'The hand was thrown in and dealt again'
       : (m.w === 'reset' || m.w === 'undo'
         ? 'The round was put back to here' : 'Take the replay to here');
     b.addEventListener('click', () => replayAsk({ do: 'seek', at: m.at }));
     box.appendChild(b);
   });
+  const on = box.querySelector('.scell.on');
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-/* What there is to watch: the game this table is playing, and every game on
+/* What there is to watch: the game a table is playing now, and every game on
    file. A game's own table may be long gone -- its trail is kept beside its
-   scorecard -- so this is not only this table's. */
-function renderGames() {
-  const box = $('#replay-pick');
-  if (!box || !REPLAY) return;
-  const games = REPLAY.games || [];
-  const key = (REPLAY.here || '-') + ':' + games.map((g) => g.id).join(',') + '@' + (REPLAY.game || REPLAY.code || '');
+   scorecard -- so this is not only one table's.
+
+   `info` is whatever knows: the way-in card asks the server for it before
+   anything is open, and the band reads it off the copy it is already on. */
+function renderGames(box, info) {
+  if (!box || !info) return;
+  const games = info.games || [];
+  const key = (info.here || '-') + ':' + games.map((g) => g.id).join(',')
+    + '@' + (info.game || info.code || '');
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.innerHTML = '';
   const pick = (label, why, on, go) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn tiny' + (on ? ' primary' : '');
-    b.textContent = label;
+    const b = document.createElement('div');
+    b.className = 'btn trow' + (on ? ' on' : '');
     b.title = why;
+    const c = document.createElement('span');
+    c.className = 'tcode';
+    c.textContent = label;
+    const w = document.createElement('span');
+    w.className = 'twhat';
+    w.textContent = why;
+    b.append(c, w);
     b.addEventListener('click', go);
     box.appendChild(b);
   };
-  if (REPLAY.here) {
-    pick(`This table · ${REPLAY.here}`, 'The game this table is playing now',
-         !!REPLAY.code && !REPLAY.game, () => replayAsk({ do: 'open' }));
+  if (info.here) {
+    pick(info.here, 'the game this table is playing now',
+         !!info.code && !info.game, () => replayAsk({ do: 'open' }));
   }
   games.forEach((g) => {
     const when = new Date(g.at);
-    const day = `${when.getDate()}/${when.getMonth() + 1}`;
-    pick(`${g.code} · ${day}`, `${(g.names || []).join(', ')} — played at table ${g.code}`,
-         REPLAY.game === g.id, () => replayAsk({ do: 'open', game: g.id }));
+    pick(`${g.code} · ${when.getDate()}/${when.getMonth() + 1}`,
+         (g.names || []).join(', '),
+         info.game === g.id, () => replayAsk({ do: 'open', game: g.id }));
   });
-  if (!REPLAY.here && !games.length) {
-    const p = document.createElement('span');
+  if (!info.here && !games.length) {
+    const p = document.createElement('p');
     p.className = 'hint';
     p.textContent = 'No game has been written down yet.';
     box.appendChild(p);
   }
 }
 
+// The band, on a game that has already happened.
 function renderReplay() {
-  const panel = $('#replay-panel');
-  const shown = !!REPLAY;
-  if ($('#btn-replay')) {
-    $('#btn-replay').textContent = shown ? 'Replay ▴' : 'Replay ▾';
-    $('#btn-replay').setAttribute('aria-expanded', String(shown));
-  }
-  if (panel) panel.hidden = !shown;
-  if (!shown) return;
-  renderGames();
-  // A game has to be picked before there is anything to move about in.
-  const going = !!REPLAY.code;
-  ['#replay-bar', '#replay-marks', '#replay-steps'].forEach((sel) => {
-    if ($(sel)) $(sel).hidden = !going;
-  });
-  if (!going) { if ($('#replay-where')) $('#replay-where').textContent = ''; return; }
+  if (!replaying()) return;
+  renderGames($('#gamelist'), REPLAY);
   renderMarks();
-  const bar = $('#replay-bar');
   renderSteps();
-  const go = bar && bar.querySelector('.btn.primary');
-  if (go) {
-    go._now = !!REPLAY.playing;
-    go.textContent = go._now ? '❚❚ Pause' : '▶ Play';
-    go.title = go._now ? 'Stop where it is' : 'Play it back at the pace the table played it';
+  const play = $('#btn-play');
+  play._now = !!REPLAY.playing;             // read at the tap, not at the draw
+  play.textContent = play._now ? '❚❚ Pause' : '▶ Play';
+  play.title = play._now ? 'Stop where it is'
+    : 'Play it back at the pace the table played it';
+  $('#replay-at').textContent = `${REPLAY.at + 1} of ${REPLAY.n}`;
+  $('#replay-where').textContent = REPLAY.where || '';
+}
+
+/* ---------- the way in ---------- */
+
+/* Three doors, and what each of them needs. What this server will take decides
+   which of them are open: a table of stand-ins is a dev server's alone, a
+   table in play needs its code, and a game on file needs nothing at all. */
+function renderWays() {
+  const box = $('#ways');
+  if (!box) return;
+  const on = choosing();
+  box.hidden = !on;
+  if ($('#band')) $('#band').hidden = on;
+  if (!on || !WAYS) return;
+  const tables = WAYS.tables || [], games = WAYS.games || [];
+  const key = `${DEVSRV}:${tables.map((t) => t.code + t.phase).join(',')}` +
+              `:${games.map((g) => g.id).join(',')}:${WAYS.here || ''}`;
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  while (box.firstChild) box.firstChild.remove();
+
+  const door = (title, said, shut) => {
+    const d = document.createElement('div');
+    d.className = 'way' + (shut ? ' shut' : '');
+    const h = document.createElement('h2');
+    h.textContent = title;
+    const p = document.createElement('p');
+    p.textContent = said;
+    d.append(h, p);
+    box.appendChild(d);
+    return d;
+  };
+  const line = (d) => {
+    const l = document.createElement('div');
+    l.className = 'line';
+    d.appendChild(l);
+    return l;
+  };
+  const label = (l, txt) => {
+    const s = document.createElement('span');
+    s.className = 'bandlbl';
+    s.textContent = txt;
+    l.appendChild(s);
+  };
+  const field = (l, cls, opts) => {
+    const i = document.createElement('input');
+    i.type = opts.type || 'text';
+    i.className = cls;
+    Object.keys(opts).forEach((k) => { if (k !== 'type') i[k] = opts[k]; });
+    l.appendChild(i);
+    return i;
+  };
+  const go = (l, txt, why, run) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn primary';
+    b.textContent = txt;
+    b.title = why;
+    b.addEventListener('click', run);
+    l.appendChild(b);
+    return b;
+  };
+
+  // A table of stand-ins. It invents players, so only a dev server makes one.
+  const made = door('A new table',
+    DEVSRV ? 'Stand-ins in every seat, ready to play. Nobody real is at it.'
+           : 'A table of stand-ins needs the server started with DEV=1.', !DEVSRV);
+  if (DEVSRV) {
+    const l = line(made);
+    label(l, 'players');
+    const n = field(l, 'count', { type: 'number', id: 'players', min: '2', max: '8',
+                                  value: String(NEW_N) });
+    go(l, 'Make the table', 'A table of stand-ins, in the lobby',
+       () => newTable(Number(n.value) || 4));
   }
-  const at = bar && bar.querySelector('.at');
-  if (at) at.textContent = `${REPLAY.at + 1} of ${REPLAY.n}`;
-  if ($('#replay-where')) $('#replay-where').textContent = REPLAY.where || '';
+
+  /* A table already in play. A dev server hands over any table it is running,
+     so it lists them; any other server wants the key the TV screen holds. */
+  const open = door('A table already in play',
+    DEVSRV ? 'Every table this server is running. Its screens keep playing, and every control here lands on that game.'
+           : 'Its code and its host key. The screen showing it has both, under ⚙ — or press Dev controls there.');
+  if (tables.length) {
+    const list = document.createElement('div');
+    list.className = 'waylist';
+    open.appendChild(list);
+    renderTables(list, tables);
+  }
+  {
+    const l = line(open);
+    label(l, 'code');
+    const c = field(l, 'code', { id: 'way-code', maxLength: 4, placeholder: 'ABCD' });
+    const t = DEVSRV ? null
+      : field(l, 'tok', { id: 'way-token', placeholder: 'host key' });
+    go(l, 'Manage it', 'Take this page onto that table', () => {
+      const code = String(c.value || '').trim().toUpperCase();
+      if (!code) return err('a table needs its code');
+      err('');
+      CODE = code;
+      HOST_TOKEN = t ? String(t.value || '').trim() : '';
+      act('open', { code: CODE, token: HOST_TOKEN });
+    });
+  }
+
+  // A game watched again. It reads what is already written down, so it needs
+  // no table and no key: the copy is its own table, and goes when this page does.
+  const watch = door('A game watched again',
+    'Put back from what was written down, on a copy of its own. The game it is a copy of is not touched.');
+  const list = document.createElement('div');
+  list.className = 'waylist';
+  watch.appendChild(list);
+  renderGames(list, WAYS);
+}
+
+// Another table of stand-ins, and the size it was, for the band to repeat.
+function newTable(n) {
+  NEW_N = Math.max(2, Math.min(8, Math.round(n) || 4));
+  try { localStorage.setItem(N_KEY, String(NEW_N)); } catch (e) { /* a browser that will not */ }
+  act('setup', { players: NEW_N });
 }
 
 /* ---------- the players panel ---------- */
@@ -630,18 +770,21 @@ function buildPhaseRow() {
 
 function renderPhaseRow() {
   const box = $('#phase-row');
-  if (!box || !ST) return;
-  const r = ST.rounds[Math.min(ST.idx, ST.rounds.length - 1)] || null;
+  const S = stateNow();
+  if (!box || !S) return;
+  const r = S.rounds[Math.min(S.idx, S.rounds.length - 1)] || null;
   const at = box.querySelector('.pround');
   if (at) {
     at.textContent = r
-      ? `Round ${Math.min(ST.idx + 1, ST.rounds.length)} of ${ST.rounds.length} · ${r.cards} cards`
+      ? `Round ${Math.min(S.idx + 1, S.rounds.length)} of ${S.rounds.length} · ${r.cards} cards`
       : 'No round in play';
   }
   const seg = box.querySelector('.seg');
   if (seg) {
+    // A game already played is where it is. The phase is shown, never forced.
+    seg.hidden = replaying();
     seg.querySelectorAll('.btn').forEach((b) =>
-      b.classList.toggle('on', b.dataset.phase === ST.phase));
+      b.classList.toggle('on', b.dataset.phase === S.phase));
   }
 }
 
@@ -654,7 +797,7 @@ const wonBad = (v) => v === '' || !Number.isFinite(Number(v));
 
 function sendWon() {
   const box = $('#prows');
-  if (!box || !ST) return;
+  if (!box || !ST || replaying()) return;
   const cells = Array.from(box.querySelectorAll('input.won'));
   const vals = cells.map((el) => String(el.value).trim());
   cells.forEach((el, i) => el.classList.toggle('part', wonBad(vals[i])));
@@ -666,49 +809,57 @@ function sendWon() {
    are rebuilt only while nothing in them is being typed in. */
 function renderPlayers() {
   const box = $('#prows');
-  if (!box || $('#players-panel').hidden) return;
+  const S = stateNow();
+  if (!box || !S || $('#players-panel').hidden) return;
   renderPhaseRow();
-  const r = ST.rounds[Math.min(ST.idx, ST.rounds.length - 1)] || null;
-  const key = ST.seats.map((s, p) =>
-    `${s.name}/${s.bot}/${s.left}/${s.id === ST.captainId}/${r ? r.dealer : ST.firstDealerId}` +
-    `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}`).join('|') + `@${ST.idx}:${ST.phase}`;
+  /* A game already played is read here, never written: what happened is what
+     the trail says, and typing over it would make the panel lie about it. */
+  const set = !replaying();
+  const r = S.rounds[Math.min(S.idx, S.rounds.length - 1)] || null;
+  const key = S.seats.map((s, p) =>
+    `${s.name}/${s.bot}/${s.left}/${s.id === S.captainId}/${r ? r.dealer : S.firstDealerId}` +
+    `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}`).join('|') +
+    `@${S.idx}:${S.phase}:${set}`;
   if (box.dataset.key === key || box.contains(document.activeElement)) return;
   box.dataset.key = key;
   box.innerHTML = '';
 
   // An edited number lands beside the others, not instead of them.
   const numbers = (k, p, v) => {
-    const out = ST.seats.map((x, q) => {
+    const out = S.seats.map((x, q) => {
       const have = r && r[k] ? r[k][q] : null;
       return q === p ? v : (have === undefined ? null : have);
     });
-    act('patch', { patch: { round: { i: ST.idx, [k]: out } } });
+    act('patch', { patch: { round: { i: S.idx, [k]: out } } });
   };
 
-  ST.seats.forEach((s, p) => {
+  S.seats.forEach((s, p) => {
     const row = document.createElement('div');
     row.className = 'prow';
 
     const name = document.createElement('input');
     name.type = 'text';
     name.value = s.name;
+    name.disabled = !set;
     name.addEventListener('change', () => act('patch', { patch: { seat: { i: p, name: name.value } } }));
 
     const radio = (group, on, fire) => {
       const el = document.createElement('input');
       el.type = 'radio'; el.name = group; el.checked = on; el.className = 'mid';
+      el.disabled = !set;
       el.addEventListener('change', fire);
       return el;
     };
-    const host = radio('cap', s.id === ST.captainId,
+    const host = radio('cap', s.id === S.captainId,
       () => act('patch', { patch: { captainId: s.id } }));
     // Mid-game the dealer belongs to the round on show; before one, to the game.
-    const dealer = radio('deal', r ? r.dealer === p : ST.firstDealerId === s.id,
-      () => act('patch', { patch: r ? { round: { i: ST.idx, dealer: p } } : { firstDealerId: s.id } }));
+    const dealer = radio('deal', r ? r.dealer === p : S.firstDealerId === s.id,
+      () => act('patch', { patch: r ? { round: { i: S.idx, dealer: p } } : { firstDealerId: s.id } }));
 
     const check = (on, k) => {
       const el = document.createElement('input');
       el.type = 'checkbox'; el.checked = on; el.className = 'mid';
+      el.disabled = !set;
       el.addEventListener('change', () => act('patch', { patch: { seat: { i: p, [k]: el.checked } } }));
       return el;
     };
@@ -720,7 +871,7 @@ function renderPlayers() {
       el.type = 'number'; el.min = '0';
       if (k === 'tricks') el.className = 'won';
       el.value = v === null || v === undefined ? '' : v;
-      el.disabled = !r;
+      el.disabled = !r || !set;
       el.addEventListener('change', k === 'tricks' ? sendWon
         : () => numbers(k, p, el.value.trim() === '' ? null : Number(el.value)));
       return el;
@@ -730,7 +881,7 @@ function renderPlayers() {
     // cell stays, empty, or every row after it would slide up a column.
     const pbtns = document.createElement('span');
     pbtns.className = 'pbtns';
-    if (DEVSRV) {
+    if (DEVSRV && set) {
       const photo = document.createElement('button');
       photo.type = 'button'; photo.className = 'btn tiny'; photo.textContent = '📷';
       photo.title = 'A stand-in photo on this seat';
@@ -748,15 +899,19 @@ function renderPlayers() {
        hand from there on, and the phone that holds it can be given it back --
        which is why this is a pair and not a one-way kick. Removing a seat
        outright is the lobby's business, and the table host's. */
-    const gone = document.createElement('button');
-    gone.type = 'button';
-    gone.className = 'btn tiny' + (s.left ? ' primary' : '');
-    gone.textContent = s.left ? 'Take back' : 'Hand over';
-    gone.title = s.left
-      ? 'Give the seat back to whoever holds its phone'
-      : 'Mark the seat gone. The table plays its hand, and the scorecard keeps its column.';
-    gone.addEventListener('click', () =>
-      act('patch', { patch: { seat: { i: p, left: !s.left } } }));
+    const gone = document.createElement(set ? 'button' : 'span');
+    if (set) {
+      gone.type = 'button';
+      gone.className = 'btn tiny' + (s.left ? ' primary' : '');
+      gone.title = s.left
+        ? 'Give the seat back to whoever holds its phone'
+        : 'Mark the seat gone. The table plays its hand, and the scorecard keeps its column.';
+      gone.addEventListener('click', () =>
+        act('patch', { patch: { seat: { i: p, left: !s.left } } }));
+      gone.textContent = s.left ? 'Take back' : 'Hand over';
+    } else {
+      gone.textContent = s.left ? 'the table played this hand' : '';
+    }
 
     row.append(name, host, dealer, check(!!s.bot, 'bot'),
                num('bids', r && r.bids ? r.bids[p] : null),
@@ -768,58 +923,94 @@ function renderPlayers() {
 
 /* ---------- render ---------- */
 
-function render() {
-  renderFrames();
-  if (DEVSRV) renderScrub();       // the card it draws is a card only a dev server can fill
-  renderRun();
-  renderPlayers();
-  const n = ST.seats.length;
-
-  $('#code').textContent = ST.code;
-  $('#phase').textContent = ST.phase + (ST.rounds.length ? ` · round ${Math.min(ST.idx + 1, ST.rounds.length)}/${ST.rounds.length}` : '');
-  $('#subtitle').textContent = `${LIVE ? 'live ' : ''}table ${ST.code} · ${n} players · ${ST.phase}`;
-  // The box is the size the next new table gets, so it holds a number that
-  // could make one: a real table with no seats yet must not leave a 0 in it.
-  if (document.activeElement !== $('#players')) {
-    $('#players').value = String(Math.max(2, Math.min(8, n)));
+/* The whole page, for whichever of the three it is on. One place decides what
+   is on show, so no message has to remember the mode it arrived in. */
+function paint() {
+  applyGates();
+  renderWays();
+  if (choosing()) return;
+  if (replaying()) renderReplay();
+  else {
+    if (stateNow() && DEVSRV) renderScrub();   // a card only a dev server can fill
+    renderRun();
   }
+  renderFrames();
+  renderPlayers();
+  renderHead();
+}
 
-  // Only a dev server has tables to hand out, so only a dev server is asked.
-  if (ST.dev && !polling) { polling = true; askTables(); setInterval(askTables, 5000); }
+// Where the page is, at the head of it.
+function renderHead() {
+  const S = stateNow();
+  if (replaying()) {
+    $('#code').textContent = REPLAY.of || '····';
+    $('#phase').textContent = S && S.rounds.length
+      ? `${S.phase} · round ${Math.min(S.idx + 1, S.rounds.length)}/${S.rounds.length}`
+      : 'replay';
+    $('#subtitle').textContent =
+      `watching table ${REPLAY.of} again · point ${REPLAY.at + 1} of ${REPLAY.n}`;
+    return;
+  }
+  if (!S) return;
+  const n = S.seats.length;
+  $('#code').textContent = S.code;
+  $('#phase').textContent = S.phase +
+    (S.rounds.length ? ` · round ${Math.min(S.idx + 1, S.rounds.length)}/${S.rounds.length}` : '');
+  $('#subtitle').textContent = `${LIVE ? 'live ' : ''}table ${S.code} · ${n} players · ${S.phase}`;
 }
 
 /* ---------- wiring ---------- */
 
-// A real table takes the same controls; the page only says to tread with
-// care, because the clicks land on somebody's game.
-function applyMode() {
-  document.body.classList.toggle('livemode', LIVE);
-  $('#live-note').hidden = !LIVE;
-  if (LIVE) {
-    $('#code').textContent = CODE;
-    $('#subtitle').textContent = `live table ${CODE}`;
-  }
-  applyGates();
-}
+/* What is on show follows two things: which of the three the page is on, and
+   what the server will take at all.
 
-/* What the server will not take is not shown. A control that draws itself and
-   then answers a refusal teaches the limits one click at a time; the page
-   knows them from the hello, so it shows what works and nothing else.
-
-   On a normal server that leaves the two that put a game right -- the players
-   panel -- which is where a live game is managed -- and the record. */
+   A control that draws itself and then answers a refusal teaches the limits
+   one click at a time; the page knows them from the hello, so it shows what
+   works and nothing else. On a normal server that leaves the two that put a
+   game right -- the players panel, and the record. */
 function applyGates() {
   const el = (s) => $(s);
-  ['#tables-tools', '#scrub-tools', '#shots-dev', '#shots-sep'].forEach((s) => {
-    if (el(s)) el(s).hidden = !DEVSRV;
+  const ways = choosing(), going = replaying();
+  const live = LIVE && !ways && !going;
+  document.body.classList.toggle('livemode', live);
+  if (el('#live-note')) el('#live-note').hidden = !live;
+  if (el('#band')) el('#band').hidden = ways;
+  /* One way back to the question, whatever is open. On a copy it is the only
+     way to stop watching, so it says so rather than leaving it to a symbol. */
+  if (el('#btn-ways')) {
+    el('#btn-ways').textContent = going ? '⌂ Stop watching' : '⌂';
+    el('#btn-ways').title = going
+      ? 'Let the copy go, and ask again' : 'Leave this table, and ask again';
+  }
+  if (el('#ways')) el('#ways').hidden = !ways;
+  // The three panels below the band have nothing to say until something is on.
+  if (ways) {
+    ['#players-panel', '#state-panel', '#host-frame', '#seat-frames'].forEach((sel) => {
+      if (el(sel)) el(sel).hidden = true;
+    });
+  } else if (el('#host-frame')) {
+    el('#host-frame').hidden = false;
+    el('#seat-frames').hidden = false;
+  }
+  // A table's controls, and a replay's, in the same places.
+  ['#tables-tools', '#shots-dev', '#shots-sep'].forEach((sel) => {
+    if (el(sel)) el(sel).hidden = !DEVSRV || going;
   });
-  if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV ? 'photo' : '';
+  ['#games-tools', '#replay-run', '#steps-row'].forEach((sel) => {
+    if (el(sel)) el(sel).hidden = !going;
+  });
+  // The scrubber is the rounds either way; only a table is sent to one.
+  if (el('#scrub-tools')) el('#scrub-tools').hidden = !going && !DEVSRV;
+  if (el('#goto-phase')) el('#goto-phase').hidden = going;
+  if (el('#run-tools') && going) el('#run-tools').hidden = true;
+  // A copy is read, never written, so there is nothing to apply to it.
+  if (el('#btn-state-apply')) el('#btn-state-apply').hidden = going;
+  if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV && !going ? 'photo' : '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   buildPhaseRow();
-  buildReplay();
-  applyMode();
+  paint();
   UI.wireTheme('#btn-theme');
 
   document.querySelectorAll('[data-act]').forEach((b) =>
@@ -877,20 +1068,13 @@ document.addEventListener('DOMContentLoaded', () => {
     act('state', { record: rec });
   });
 
-  /* Opening the panel is opening a copy: there is nothing to show until one
-     exists, and closing it lets the copy go. */
-  $('#btn-replay').addEventListener('click', () => {
-    if (REPLAY) return replayAsk({ do: 'close' });
-    replayAsk({ do: 'games' });
-  });
-
   $('#btn-players').addEventListener('click', () => {
     const panel = $('#players-panel');
     panel.hidden = !panel.hidden;
     $('#btn-players').textContent = panel.hidden ? 'Players ▾' : 'Players ▴';
     $('#btn-players').setAttribute('aria-expanded', String(!panel.hidden));
     delete $('#prows').dataset.key;
-    if (!panel.hidden && ST) renderPlayers();
+    if (!panel.hidden) renderPlayers();
   });
 
   /* Pause is the table's own message, not a dev action: this page holds the
@@ -900,14 +1084,20 @@ document.addEventListener('DOMContentLoaded', () => {
     send({ t: 'pause', on: !$('#btn-pause')._now }));
   $('#btn-step').addEventListener('click', () => act('step'));
 
+  /* The transport, where Pause and Step are on a table. A copy is moved about
+     in by hand or played back at the pace the table played it; either way it
+     is the trail being read, so nothing here can change what happened. */
+  $('#btn-back').addEventListener('click', () => replayAsk({ do: 'step', by: -1 }));
+  $('#btn-fwd').addEventListener('click', () => replayAsk({ do: 'step', by: 1 }));
+  $('#btn-play').addEventListener('click', () =>
+    replayAsk({ do: $('#btn-play')._now ? 'pause' : 'play' }));
+  // Back to the question. Whatever is open here is let go on the way.
+  $('#btn-ways').addEventListener('click', () => toWays(''));
+
+  // Another table the size of the one on show, so the count is asked for once.
   $('#btn-rebuild').addEventListener('click', () =>
-    act('setup', { players: Number($('#players').value) || 4 }));
+    newTable(ST && ST.seats.length ? ST.seats.length : NEW_N));
   $('#btn-tables').addEventListener('click', askTables);
-  $('#tablelist').addEventListener('click', (e) => {
-    if (e.target.closest('.tend')) return;
-    const row = e.target.closest('.trow');
-    if (row && row.dataset.code !== CODE) act('open', { code: row.dataset.code });
-  });
 
   $('#scale').addEventListener('change', () => { topKey = seatKey = ''; renderFrames(); });
 

@@ -3177,7 +3177,6 @@ part('the dev controls, on each kind of server');
   const devPage = (srv, seats) => {
     const P = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th' });
     P.pick('#state-panel').hidden = true;        // as the page ships it
-    P.pick('#replay-panel').hidden = true;
     P.start();
     P.socks[0].onopen();
     P.socks[0].onmessage({ data: JSON.stringify({
@@ -3365,23 +3364,108 @@ part('the dev controls, on each kind of server');
        'a bid still lands beside the gaps  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 
+  {   /* ---- the way in ----
+         Three doors, asked before anything else is drawn. Which of them are
+         open follows the server; a code in the address answers the question
+         before it is put. */
+    const cold = (srv) => {
+      const P = loadPage('dev.js', {}, '', {});
+      P.pick('#state-panel').hidden = true;
+      P.start();
+      P.socks[0].onopen();
+      ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"ways"}',
+         'a page with nothing in its address asks what it may do  got '
+         + JSON.stringify(P.socks[0].sent[0]));
+      P.socks[0].onmessage({ data: JSON.stringify({
+        t: 'ways', srv, tables: srv ? [{ code: 'WXYZ', phase: 'bid', round: 2, rounds: 7,
+                                         seats: ['a', 'b', 'c', 'd'], stand: true }] : [],
+        here: null,
+        games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000, names: ['Cal', 'Dot'] }],
+      }) });
+      return P;
+    };
+
+    {   // a normal server: no stand-ins to be had, and no list of tables
+      const P = cold(false);
+      ok(P.pick('#ways').hidden === false, 'the way in is the whole page');
+      ok(P.pick('#band').hidden === true, 'and the controls are not drawn yet');
+      const doors = P.pick('#ways').querySelectorAll('.way');
+      ok(doors.length === 3, 'a new table, one in play, and a game to watch  got ' + doors.length);
+      ok(doors[0].classList.contains('shut'),
+         'a table of stand-ins needs a dev server, and says so rather than failing');
+      ok(doors[0].querySelectorAll('input').length === 0, 'so it asks for nothing');
+      ok(doors[1].querySelectorAll('input').length === 2,
+         'a table in play wants its code and its host key  got '
+         + doors[1].querySelectorAll('input').length);
+      ok(doors[1].querySelectorAll('.waylist').length === 0,
+         'and a normal server hands over no list of its tables');
+      const games = doors[2].querySelectorAll('.trow');
+      ok(games.length === 1, 'a game on file needs neither  got ' + games.length);
+
+      P.socks[0].sent.length = 0;
+      games[0].fire('click');
+      ok(JSON.stringify(P.socks[0].sent[0])
+         === '{"t":"dev","action":"replay","do":"open","game":"a1b2c3d4e5f6"}',
+         'and picking one watches it  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+      // The code typed in, on a server that will not list its tables.
+      const box = doors[1].querySelectorAll('input');
+      box[0].value = 'wxyz';
+      box[1].value = 'thost';
+      P.socks[0].sent.length = 0;
+      doors[1].querySelector('.btn').fire('click');
+      ok(JSON.stringify(P.socks[0].sent[0])
+         === '{"t":"dev","action":"open","code":"WXYZ","token":"thost"}',
+         'a code typed in opens that table  got ' + JSON.stringify(P.socks[0].sent[0]));
+    }
+
+    {   // a dev server: stand-ins, and every table it is running
+      const P = cold(true);
+      const doors = P.pick('#ways').querySelectorAll('.way');
+      ok(!doors[0].classList.contains('shut'), 'a dev server makes a table of stand-ins');
+      P.socks[0].sent.length = 0;
+      doors[0].querySelector('.btn').fire('click');
+      ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"setup","players":4}',
+         'and asks for one the size the box says  got ' + JSON.stringify(P.socks[0].sent[0]));
+      const rows = doors[1].querySelectorAll('.trow');
+      ok(rows.length === 1, 'the tables it is running are a list to press  got ' + rows.length);
+      ok(doors[1].querySelectorAll('input').length === 1,
+         'and no host key is typed, because it hands them over anyway');
+      P.socks[0].sent.length = 0;
+      rows[0].fire('click');
+      ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"open","code":"WXYZ"}',
+         'pressing one opens the page on it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    }
+
+    {   // a code in the address is the question already answered
+      const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }]);
+      ok(P.pick('#ways').hidden === true, 'a code in the address opens straight onto that table');
+      ok(P.pick('#band').hidden === false, 'with the controls drawn');
+      P.socks[0].sent.length = 0;
+      P.pick('#btn-ways').fire('click');
+      ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"ways"}',
+         'and ⌂ puts the question back  got ' + JSON.stringify(P.socks[0].sent[0]));
+      ok(P.pick('#ways').hidden === false, 'the way in comes back');
+      ok(P.pick('#band').hidden === true, 'and the controls go');
+    }
+  }
+
   {   /* ---- watching the game again ----
-         The panel is offered wherever the host token is, because a replay
-         invents nothing: it puts back what already happened, on a copy. */
+         A replay takes the band a table takes: the games where the tables are,
+         the rounds where the scorecard is, the transport where Pause is. It
+         is offered on any server, because it invents nothing -- it puts back
+         what already happened, on a copy. */
     const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' },
                               { id: 's2', name: 'Bob', watch: 'w2' }]);
     P.socks[0].onmessage({ data: devState(false) });
-    ok(P.pick('#replay-panel').hidden === true, 'with nothing picked there is nothing to show');
-
-    P.socks[0].sent.length = 0;
-    P.pick('#btn-replay').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"games"}',
-       'opening the panel asks what there is to watch  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(P.pick('#replay-run').hidden === true, 'with nothing being watched there is no transport');
+    ok(P.pick('#steps-row').hidden === true, 'and no points to step through');
 
     const say = (over) => P.socks[0].onmessage({ data: JSON.stringify(Object.assign({
       t: 'replay', code: 'ZZZZ', of: 'AAAA', at: 0, n: 12, playing: false,
-      here: 'AAAA',
+      here: 'AAAA', game: 'a1b2c3d4e5f6',
       games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000, names: ['Cal', 'Dot'] }],
+      state: JSON.parse(devState(false)),
       seats: [{ id: 's1', name: 'Ann', watch: 'rw1' }, { id: 's2', name: 'Bob', watch: 'rw2' }],
       marks: [{ at: 1, i: 0, cards: 3, w: 'game' }, { at: 6, i: 0, cards: 3, w: 'bum' },
               { at: 11, i: null, w: 'end' }],
@@ -3389,37 +3473,23 @@ part('the dev controls, on each kind of server');
       where: 'Round 1 of 2 · 3 cards · Ann bids 1',
     }, over || {})) });
 
-    /* ---- what there is to watch ---- */
-    P.socks[0].onmessage({ data: JSON.stringify({
-      t: 'replay', code: null, here: 'AAAA',
-      games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000, names: ['Cal', 'Dot'] }] }) });
-    ok(P.pick('#replay-panel').hidden === false, 'the panel opens on what there is to watch');
-    ok(P.pick('#replay-bar').hidden === true, 'with nothing to move about in until one is picked');
-    const picks = P.pick('#replay-pick').querySelectorAll('button');
-    ok(picks.length === 2, 'this table, and the game on file  got ' + picks.length);
-    ok(/This table/.test(picks[0].textContent), 'the game this table is playing  got ' + picks[0].textContent);
-    ok(/BBBB/.test(picks[1].textContent),
-       'and one played at a table that may be long gone  got ' + picks[1].textContent);
-
-    P.socks[0].sent.length = 0;
-    picks[1].fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"replay","do":"open","game":"a1b2c3d4e5f6"}',
-       'picking one opens a copy of that game  got ' + JSON.stringify(P.socks[0].sent[0]));
-    P.socks[0].sent.length = 0;
-    picks[0].fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"open"}',
-       'and this table needs no name  got ' + JSON.stringify(P.socks[0].sent[0]));
-
-    /* ---- a copy open: the rounds, and the steps inside one ---- */
+    /* ---- a copy open: the band it takes over ---- */
     say();
-    ok(P.pick('#replay-bar').hidden === false, 'a copy opened shows the way about it');
-    ok(P.pick('#replay-marks').children.length === 3,
-       'a mark a round, and the finish  got ' + P.pick('#replay-marks').children.length);
+    ok(P.pick('#replay-run').hidden === false, 'a copy opened brings the transport up');
+    ok(P.pick('#games-tools').hidden === false, 'and the games sit where the tables sat');
+    ok(P.pick('#tables-tools').hidden === true, 'which have gone: a copy is not a table to hop to');
+    ok(P.pick('#shots-dev').hidden === true, 'nothing here invents anything');
+    ok(P.pick('#run-tools').hidden === true, 'and a game already played is not stopped, it is stepped');
+    ok(P.pick('#goto-phase').hidden === true, 'nor is it sent to a phase');
     ok(P.pick('#replay-where').textContent === 'Round 1 of 2 · 3 cards · Ann bids 1',
-       'and a line saying what is on the table');
+       'a line says what is on the table');
+    ok(P.pick('#replay-at').textContent === '1 of 12',
+       'and where in the game it is  got ' + P.pick('#replay-at').textContent);
+    ok(P.pick('#code').textContent === 'AAAA', 'the head names the table it is a copy of');
 
-    const marks = P.pick('#replay-marks').querySelectorAll('.rcell');
+    /* The rounds go in the strip a scorecard uses: they are the same thing. */
+    const marks = P.pick('#scrub').querySelectorAll('.scell');
+    ok(marks.length === 3, 'a mark a round, and the finish  got ' + marks.length);
     ok(marks[0].classList.contains('on'), 'the round it is in is marked');
     ok(marks[1].classList.contains('bum'), 'and a hand thrown in is marked as its own go');
     P.socks[0].sent.length = 0;
@@ -3438,21 +3508,20 @@ part('the dev controls, on each kind of server');
     steps[4].fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',
        'and each of them is a place to go  got ' + JSON.stringify(P.socks[0].sent[0]));
-    ok(P.pick('#replay-bar').querySelectorAll('input').length === 0,
+    ok(P.pick('#replay-run').querySelectorAll('input').length === 0,
        'nothing here is a slider: nothing here is continuous');
 
-    const bar = P.pick('#replay-bar').querySelectorAll('button');
     P.socks[0].sent.length = 0;
-    bar.find((b) => b.textContent === '▶').fire('click');
+    P.pick('#btn-fwd').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":1}',
        'it can be walked a point at a time  got ' + JSON.stringify(P.socks[0].sent[0]));
     P.socks[0].sent.length = 0;
-    bar.find((b) => b.textContent === '◀').fire('click');
+    P.pick('#btn-back').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":-1}',
        'either way  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     // Playing it back: one button, saying what it will do.
-    const play = P.pick('#replay-bar').querySelectorAll('.btn.primary')[0];
+    const play = P.pick('#btn-play');
     ok(play.textContent === '▶ Play', 'a stopped replay offers to play  got ' + play.textContent);
     P.socks[0].sent.length = 0;
     play.fire('click');
@@ -3466,6 +3535,21 @@ part('the dev controls, on each kind of server');
        'and the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
     say();
 
+    /* The panels read the copy, and only read it: what happened is what the
+       trail says, and typing over it would make the panel lie about it. */
+    P.pick('#players-panel').hidden = false;
+    P.pick('#btn-players').fire('click');
+    P.pick('#btn-players').fire('click');
+    const rows = P.pick('#prows').querySelectorAll('.prow');
+    ok(rows.length === 2, 'who was at the table  got ' + rows.length);
+    ok(rows[0].querySelectorAll('input').every((el) => el.disabled),
+       'with nothing on the row to type into');
+    ok(P.pick('#btn-state-apply').hidden === true, 'and no record to apply to a copy');
+    P.socks[0].sent.length = 0;
+    P.pick('#btn-state').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"state","replay":true}',
+       'the record read is the copy\'s  got ' + JSON.stringify(P.socks[0].sent[0]));
+
     /* Each pane holds a socket on the copy, so a step reaches it on its own.
        Throwing them away at every press reloaded every frame -- and closed the
        copy's last window, which used to take the copy with it. */
@@ -3478,14 +3562,17 @@ part('the dev controls, on each kind of server');
        'and only another copy is another set of panes');
     say();
 
-    // The panes are the copy's while one is open, and the panel goes on Close.
+    // The panes are the copy's while one is open, and ⌂ lets the copy go.
     ok(P.pick('#seat-frames').children.length === 2, 'the panes follow the copy');
     P.socks[0].sent.length = 0;
-    bar.find((b) => b.textContent === 'Close').fire('click');
+    ok(P.pick('#btn-ways').textContent === '⌂ Stop watching',
+       'the one way back says what it does here  got ' + P.pick('#btn-ways').textContent);
+    P.pick('#btn-ways').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"close"}',
-       'Close lets the copy go  got ' + JSON.stringify(P.socks[0].sent[0]));
-    P.socks[0].onmessage({ data: JSON.stringify({ t: 'replay', code: null, shut: true }) });
-    ok(P.pick('#replay-panel').hidden === true, 'and the panel goes with it');
+       'and lets the copy go  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(JSON.stringify(P.socks[0].sent[1]) === '{"t":"dev","action":"ways"}',
+       'and asks what to do next  got ' + JSON.stringify(P.socks[0].sent[1]));
+    ok(P.pick('#ways').hidden === false, 'which is the way in again');
   }
 
   {   /* ---- stopping the table, and walking it on ----

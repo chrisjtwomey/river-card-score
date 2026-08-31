@@ -10,18 +10,19 @@ and the rules that keep two copies of the same idea from drifting apart.
 game.js            THE RULES. Pure functions over plain data. Runs in Node and in the
                    browser (IIFE, `module.exports` or `window.Game`). No DOM, no sockets.
 lib/room.js        THE TABLE. Every verb that moves a game on, once: openRound, startGame,
-                   seatBid, closeBidding, scoreRound, bumDeal, undo, toLobby, finishGame,
-                   kickSeat, standDown, letBack, unstick, setDealer, renameSeat, sweep,
-                   waitingOn, publicState. Owns lib/deck.js. Never broadcasts.
+                   seatBid, closeBidding, scoreRound, bumDeal, resetRound, setScore, toLobby,
+                   finishGame, kickSeat, standDown, letBack, unstick, setDealer, renameSeat,
+                   sweep, waitingOn, publicState. Owns lib/deck.js. Never broadcasts.
 lib/deck.js        The virtual dealer: dealHands, startPlay, refusal, putCard, settleTrick.
                    Arithmetic over the room; no sockets, no timers.
 lib/bots.js        The players the table provides: what a hand is worth, which card to play,
                    and the driver that takes their turn through the same verbs a phone uses.
 lib/messages.js    THE PROTOCOL. A table of every message a seated socket may send: who may
                    send it, when, and which Room verb it calls. Guards are declarative.
-lib/dev.js         The dev controls: what this server is running (`tables`), a way onto any of
-                   it (`open`), and the stand-in tables. Calls Room verbs; invents nothing a real
-                   game cannot reach.
+lib/dev.js         The dev controls: the three ways in (`ways`) -- a table of stand-ins
+                   (`setup`), a table in play (`tables`/`open`), a game watched again
+                   (`replay`, which needs no table). Calls Room verbs; invents nothing a
+                   real game cannot reach.
 lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures,
                    and the tables running here (`/tables.json`, to this machine alone).
 lib/games.js       A finished game on disk.
@@ -62,7 +63,10 @@ public/deal.js     The deal scene.   public/finale.js  The finish.   public/felt
 public/chat.js     Table talk.       public/accolades.js  Shared with the server (A.list/pick/bonus).
 public/host.js     THE HOST FLOW: connect, deal-hold policy, table panel, compose widgets.
 public/play.js     THE PHONE FLOW: connect, felt/deal policy, vote buttons, who you are, compose.
-public/join.js, dev.js, history.js   The other pages.
+public/dev.js      The dev page: the way-in card (three doors), then one band over every
+                   screen. The band is the same rows in the same places on a table and on a
+                   game watched again; only the verbs change.
+public/join.js, history.js   The other pages.
 ```
 
 Read these together: a **state** is the same shape on the server (`room`) and on
