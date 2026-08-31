@@ -635,6 +635,16 @@ function showTip(i) {
   tip.textContent = saidAt(i);
   tip.style.left = `${span > 0 ? ((i - from) / span) * 100 : 50}%`;
   body.appendChild(tip);
+  /* Half of it hangs to the left of the mark it belongs to, so at the first
+     point on the rail it hangs off the side of the screen -- and at the last,
+     off the other side. Slide it back on once it is up, which is the only
+     moment it can be done: how far it hangs depends on what it says. */
+  const r = tip.getBoundingClientRect();
+  const wide = window.innerWidth || 0;
+  if (!r.width || !wide) return;
+  const edge = 8;
+  const back = Math.max(0, edge - r.left) - Math.max(0, r.right - (wide - edge));
+  if (back) tip.style.marginLeft = `${Math.round(back)}px`;
 }
 
 /* Dragging the head. The rail is a picker, so a press anywhere on it takes the

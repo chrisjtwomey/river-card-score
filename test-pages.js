@@ -3602,6 +3602,19 @@ part('the dev controls, on each kind of server');
     steps[4].fire('mouseleave');
     ok(!tl.querySelector('.tip'), 'leaving it takes the tip away');
 
+    /* Half a tip hangs to the left of the mark it belongs to, so at the first
+       point on the rail it hangs off the side of the screen. It slides back on
+       once it is up, which is the only moment that can be worked out. */
+    const rect = P.dom.El.prototype.getBoundingClientRect;
+    P.dom.El.prototype.getBoundingClientRect =
+      () => ({ left: -80, right: 80, width: 160, top: 0, bottom: 20, height: 20 });
+    steps[0].fire('mouseenter');
+    ok(tl.querySelector('.tip').style.marginLeft === '88px',
+       'a tip against the edge of the screen slides back on  got '
+       + tl.querySelector('.tip').style.marginLeft);
+    steps[0].fire('mouseleave');
+    P.dom.El.prototype.getBoundingClientRect = rect;
+
     P.socks[0].sent.length = 0;
     steps[5].fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',
