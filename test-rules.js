@@ -805,6 +805,28 @@ part('who may send what, and when');
   ok(t.say(0, { t: 'seatMove', id: t.room.seats[1].id, to: 0 }) === null, 'a seat is dragged to a new place');
   ok(t.room.seats.map((s) => s.name).join() === 'Bob,Ann', 'and lands there');
   ok(t.room.captainId === t.room.seats[1].id, 'and dragging it does not change who runs the table');
+  /* A seat whose clock has run out, and what the table does about it. One
+     function, because two things reach it: the clock in `sweep`, and the dev
+     page, which winds the clock on rather than write the three branches again.
+     A table of stand-ins is never idle, so the page could not have got here
+     through the clock at all. */
+  {
+    const g = table().sit(['Ann', 'Bob', 'Cal']);
+    ok(g.Room.giveUp(g.room, 2) === 'kicked' && g.room.seats.length === 2,
+       'in the lobby the seat itself goes');
+    const v = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 1, pattern: 'down', ones: 1 });
+    v.Room.startGame(v.room);
+    ok(v.Room.giveUp(v.room, 1) === 'left' && v.room.seats[1].left === true,
+       'in a game the hand goes to the table, as if the player had left');
+    const real = table().sit(['Ann', 'Bob']).rules({ max: 1, pattern: 'down', ones: 1 });
+    real.Room.startGame(real.room);
+    ok(real.Room.giveUp(real.room, 1) === 'stalled'
+       && real.room.stalled.id === real.room.seats[1].id,
+       'and with real cards the table holds no hand, so it stops on that seat');
+    ok(real.Room.giveUp(real.room, 0) === null,
+       'and stops on one seat only: the host is asked about that one first');
+  }
+
   ok(t.say(t.boss(), { t: 'addbot' }) === null, 'the table host adds a player the table provides');
   ok(t.room.seats.length === 3 && t.room.seats[2].bot, 'and it takes a seat');
   ok(t.room.cfg.deck === 'virtual', 'a bot needs cards to hold, so the deck goes onto the phones');

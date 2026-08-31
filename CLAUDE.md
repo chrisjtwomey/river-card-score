@@ -11,8 +11,9 @@ game.js            THE RULES. Pure functions over plain data. Runs in Node and i
                    browser (IIFE, `module.exports` or `window.Game`). No DOM, no sockets.
 lib/room.js        THE TABLE. Every verb that moves a game on, once: openRound, startGame,
                    seatBid, closeBidding, scoreRound, bumDeal, resetRound, setScore, toLobby,
-                   finishGame, kickSeat, standDown, letBack, unstick, setDealer, renameSeat,
-                   sweep, waitingOn, publicState. Owns lib/deck.js. Never broadcasts.
+                   finishGame, kickSeat, standDown, letBack, giveUp, unstick, setDealer,
+                   renameSeat, sweep, waitingOn, publicState. Owns lib/deck.js.
+                   Never broadcasts.
 lib/deck.js        The virtual dealer: dealHands, startPlay, refusal, putCard, settleTrick.
                    Arithmetic over the room; no sockets, no timers.
 lib/bots.js        The players the table provides: what a hand is worth, which card to play,

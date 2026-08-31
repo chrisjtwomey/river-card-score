@@ -285,6 +285,22 @@ function frame(box, label, page, addr, kind, entry, boss) {
 
 const seatOf = (id) => SEATS.find((s) => s.id === id) || null;
 
+/* Seats whose phone the page has shut. Presence is not a flag on the table --
+   `markPresence` works it out again from the live sockets on every broadcast,
+   so a forced one would be wiped by the next thing that happened. A phone goes
+   quiet by its socket going away, which here means its pane not being drawn.
+   Then the table decides on its own that nobody is behind that seat, and every
+   away path lights up: bidding for them, playing for them, the peek, the
+   toasts, and the clock that gives up on a seat. */
+const PHONE_OFF = new Set();
+const phoneOff = (id) => PHONE_OFF.has(id);
+function setPhone(id, on) {
+  if (on) PHONE_OFF.delete(id); else PHONE_OFF.add(id);
+  seatKey = '';                      // the panes are a different set now
+  renderFrames();
+  renderPlayers();                   // and the row says which way the switch is
+}
+
 function renderFrames() {
   if (!CODE && !replaying()) return;
   const scale = $('#scale').value;
@@ -309,8 +325,13 @@ function renderFrames() {
   // bottom row: the phones, the one that runs the table always first. Whoever
   // that is, that pane stands in the same place, so the eye is not sent
   // hunting for it. The key follows the order, so a new table host re-draws.
-  const list = replaying() ? REPLAY.seats : SEATS;
-  const phones = (!replaying() && cap) ? [cap].concat(list.filter((s) => s.id !== cap.id)) : list;
+  /* The phones with a socket to hold. One whose phone has been shut is not
+     drawn -- that is the whole of how a seat goes quiet here -- and the table
+     host is no exception: it is a seat like any other with the pane in a fixed
+     place, not a pane that must always be there. */
+  const list = (replaying() ? REPLAY.seats : SEATS).filter((s) => !phoneOff(s.id));
+  const first = (!replaying() && cap && !phoneOff(cap.id)) ? cap : null;
+  const phones = first ? [first].concat(list.filter((s) => s.id !== first.id)) : list;
   const seats = `${at}:${phones.map((s) => seatHash(s, at)).join(',')}:${scale}:${DEVSRV}`;
   if (seats !== seatKey) {
     seatKey = seats;
@@ -721,7 +742,8 @@ function renderPlayers() {
   const r = S.rounds[Math.min(S.idx, S.rounds.length - 1)] || null;
   const key = S.seats.map((s, p) =>
     `${s.name}/${s.bot}/${s.left}/${s.id === S.captainId}/${r ? r.dealer : S.firstDealerId}` +
-    `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}`).join('|') +
+    `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}` +
+    `/${s.online}/${phoneOff(s.id)}`).join('|') +
     `@${S.idx}:${S.phase}:${invent}`;
   if (box.dataset.key === key || box.contains(document.activeElement)) return;
   box.dataset.key = key;
@@ -793,28 +815,72 @@ function renderPlayers() {
       pbtns.append(photo, clear);
     }
 
-    /* Taking a player out of a live game. Mid-game the seat cannot simply go:
-       the rounds already played are that player's, and the scorecard is a
-       column for it. So the seat stays and is marked gone, the table plays its
-       hand from there on, and the phone that holds it can be given it back --
-       which is why this is a pair and not a one-way kick. Removing a seat
-       outright is the lobby's business, and the table host's. */
-    const gone = document.createElement('button');
-    gone.type = 'button';
-    gone.className = 'btn tiny' + (s.left ? ' primary' : '');
-    gone.title = s.left
-      ? 'Give the seat back to whoever holds its phone'
-      : 'Mark the seat gone. The table plays its hand, and the scorecard keeps its column.';
-    gone.addEventListener('click', () =>
-      act('patch', { patch: { seat: { i: p, left: !s.left } } }));
-    gone.textContent = s.left ? 'Take back' : 'Hand over';
+    // What the seat is, in a word. The verbs are the row under this one.
+    const how = document.createElement('span');
+    how.className = 'pstate';
+    how.textContent = s.left ? 'the table has this hand'
+      : s.bot ? 'a bot'
+      : phoneOff(s.id) ? 'phone off'
+      : s.online ? 'at the table' : 'quiet';
 
     row.append(name, host, dealer, check(!!s.bot, 'bot'),
                num('bids', r && r.bids ? r.bids[p] : null),
                num('tricks', r && r.tricks ? r.tricks[p] : null),
-               pbtns, gone);
-    box.appendChild(row);
+               pbtns, how);
+
+    const seat = document.createElement('div');
+    seat.className = 'pseat';
+    seat.append(row, seatTools(s, p, S));
+    box.appendChild(seat);
   });
+}
+
+/* What can be done to one seat, as a row of verbs under its values. Each is a
+   state a real table reaches on its own; the page only reaches it sooner.
+
+   `phone` is the page's own and nothing is sent: a phone goes quiet by its
+   socket going, which here is its pane not being drawn. The rest are the
+   table's, and are refused where the table would refuse them. */
+function seatTools(s, p, S) {
+  const box = document.createElement('div');
+  box.className = 'ptools';
+  const lobby = S.phase === 'lobby';
+  const doing = (what) => act('seatDo', { id: s.id, do: what });
+  const add = (label, title, fire, o) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn tiny' + ((o && o.on) ? ' primary' : '');
+    b.textContent = label;
+    b.title = title;
+    b.disabled = !!(o && o.off);
+    b.addEventListener('click', fire);
+    box.appendChild(b);
+    return b;
+  };
+
+  /* A copy has nobody behind any of its seats -- its panes are watching
+     windows -- so a phone to shut is a table's alone. */
+  if (!replaying() && !s.bot) {
+    const off = phoneOff(s.id);
+    add(off ? 'Phone on' : 'Phone off',
+        off ? 'Draw this seat\'s pane again. Its socket comes back and the table sees it.'
+            : 'Close this seat\'s pane. Its socket goes, so the table sees nobody behind it.',
+        () => setPhone(s.id, off), { on: off });
+  }
+  add('Leave', lobby
+        ? 'What the phone\'s own Leave does in the lobby: the seat goes.'
+        : 'What the phone\'s own Leave does mid-game: the seat stays and the table plays its hand.',
+      () => doing('leave'));
+  add('Kick', lobby
+        ? 'The seat put out. Only in the lobby: mid-game the scorecard is a column for it.'
+        : 'A seat only leaves the table in the lobby.',
+      () => doing('kick'), { off: !lobby });
+  add('Time out', 'The idle clock run out on this seat, and whatever the table then does '
+      + 'about it. A table of stand-ins is never idle, so this is the only way to it.',
+      () => doing('out'));
+  add('Rejoin', 'A seat the table took over, given back by name.',
+      () => doing('back'), { off: !s.left });
+  return box;
 }
 
 /* ---------- render ---------- */

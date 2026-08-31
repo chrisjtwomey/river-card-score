@@ -94,6 +94,15 @@
   .prow input.part{border-style:dashed;border-color:var(--gold)}
   .prow .mid{justify-self:center}
   .prow .pbtns{display:flex;gap:5px}
+  /* What the seat is, in a word, where Hand over used to be: the verbs have a
+     row of their own now, so this column says the state rather than offer one
+     of the things that changes it. */
+  .prow .pstate{font-size:11px;color:var(--ink-dim);text-transform:uppercase;
+    letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* One seat: what it is, and under it what can be done to it. */
+  .pseat{display:flex;flex-direction:column;gap:4px;padding:6px 0}
+  .pseat + .pseat{border-top:1px solid var(--line)}
+  .ptools{display:flex;gap:5px;flex-wrap:wrap;padding-left:2px}
 
 
   /* The state panel: the whole table as text. */
@@ -185,10 +194,10 @@
     <div class="phaserow" id="phase-row"></div>
     <div class="prow phead">
       <span>seat</span><span>host</span><span>dealer</span><span>bot</span>
-      <span>bid</span><span>won</span><span id="ph-photo">photo</span><span>in the game</span>
+      <span>bid</span><span>won</span><span id="ph-photo">photo</span><span>state</span>
     </div>
     <div id="prows" style="display:contents"></div>
-    <p class="hint">Everything lands as it is changed. The won column goes as one, once every seat has a number: the cells still wanted are ringed until it does.</p>
+    <p class="hint">Everything lands as it is changed. The won column goes as one, once every seat has a number: the cells still wanted are ringed until it does. The verbs under each seat are the table's own — every one is a state a real game reaches, reached sooner.</p>
   </div>
 
   <div class="panel statebox" id="state-panel" hidden>

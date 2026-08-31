@@ -3496,28 +3496,55 @@ part('the dev controls, on each kind of server');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"patch","patch":{"phase":"tricks"}}',
        'and a phase lands the moment it is pressed  got ' + JSON.stringify(P.socks[0].sent[0]));
 
-    /* ---- taking a player out ----
-       Mid-game the seat cannot go: the rounds played are that player's. So it
-       is marked gone and can be given back. */
-    const seats = P.pick('#prows').querySelectorAll('.prow');
-    const handOver = seats[0].querySelectorAll('button').find((b) => /Hand over/.test(b.textContent));
-    ok(!!handOver, 'each seat can be taken out of the game');
+    /* ---- what can be done to one seat ----
+       A row of verbs under each seat's values. Every one of them is a state a
+       real table reaches on its own; the page only reaches it sooner, and by
+       the same door -- each is a room verb, not a value written over. */
+    const tools = P.pick('#prows').querySelectorAll('.ptools');
+    ok(tools.length === 2, 'every seat carries its own row of verbs  got ' + tools.length);
+    const verb = (i, word) =>
+      tools[i].querySelectorAll('button').find((b) => b.textContent === word);
+    ['Phone off', 'Leave', 'Kick', 'Time out', 'Rejoin'].forEach((w) =>
+      ok(!!verb(0, w), 'the seat can be told to ' + w));
+
     P.socks[0].sent.length = 0;
-    handOver.fire('click');
+    verb(0, 'Leave').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"patch","patch":{"seat":{"i":0,"left":true}}}',
-       'which marks it gone rather than removing it  got ' + JSON.stringify(P.socks[0].sent[0]));
+       === '{"t":"dev","action":"seatDo","id":"s1","do":"leave"}',
+       'and each goes as itself, not as a value written over  got '
+       + JSON.stringify(P.socks[0].sent[0]));
+
+    /* Mid-game a seat cannot simply go -- the rounds played are that player's,
+       and the scorecard is a column for it -- so Kick says so rather than
+       earning a refusal one press at a time. */
+    ok(verb(0, 'Kick').disabled === true, 'a seat only leaves the table in the lobby');
+    ok(verb(0, 'Rejoin').disabled === true, 'and only a seat the table took over comes back');
+
+    /* A phone goes quiet by its socket going, which here is its pane not being
+       drawn: presence is worked out from the live sockets on every broadcast,
+       so a flag would be wiped by the next thing that happened. */
+    P.socks[0].sent.length = 0;
+    const panes = () => P.pick('#seat-frames').querySelectorAll('.frame').length;
+    const had = panes();
+    verb(0, 'Phone off').fire('click');
+    ok(P.socks[0].sent.length === 0, 'shutting a phone tells the table nothing');
+    ok(panes() === had - 1, 'it takes the pane away  got ' + panes() + ' of ' + had);
+    const back = P.pick('#prows').querySelectorAll('.ptools')[0]
+      .querySelectorAll('button').find((b) => b.textContent === 'Phone on');
+    ok(!!back, 'and offers to draw it again');
+    back.fire('click');
+    ok(panes() === had, 'which brings the socket back  got ' + panes());
 
     P.socks[0].onmessage({ data: devState(false, {
       seats: [{ id: 's1', name: 'Ann', left: true }, { id: 's2', name: 'Bob' }] }) });
-    const back = P.pick('#prows').querySelectorAll('.prow')[0]
-      .querySelectorAll('button').find((b) => /Take back/.test(b.textContent));
-    ok(!!back, 'and a seat that is out can be given back');
+    const give = P.pick('#prows').querySelectorAll('.ptools')[0]
+      .querySelectorAll('button').find((b) => b.textContent === 'Rejoin');
+    ok(give && give.disabled === false, 'a seat the table took over can be given back');
     P.socks[0].sent.length = 0;
-    back.fire('click');
+    give.fire('click');
     ok(JSON.stringify(P.socks[0].sent[0])
-       === '{"t":"dev","action":"patch","patch":{"seat":{"i":0,"left":false}}}',
-       'to whoever holds its phone  got ' + JSON.stringify(P.socks[0].sent[0]));
+       === '{"t":"dev","action":"seatDo","id":"s1","do":"back"}',
+       'by name, to whoever holds its phone  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 
   {   /* ---- a record the table will not have ----
@@ -3527,9 +3554,8 @@ part('the dev controls, on each kind of server');
     P.pick('#state-text').blur = () => {};          // the fake DOM has no focus
     P.socks[0].onmessage({ data: devState(false) });
 
-    P.pick('#btn-state').fire('click');
     ok(P.socks[0].sent.some((m) => m.action === 'state' && !('record' in m)),
-       'opening the panel asks for the record');
+       'a table arriving asks for the record, since the box is always beside it');
     P.socks[0].onmessage({ data: JSON.stringify({ t: 'stateRaw', record: { code: 'AAAA', seats: [] } }) });
 
     const edited = '{"code":"AAAA","seats":[]}';
