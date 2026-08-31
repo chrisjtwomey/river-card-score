@@ -339,7 +339,7 @@ const Bots = require('./lib/bots.js')({
 /* A game put back on a table of its own, from what was written down about it.
    It knows only the room's verbs: a replayed table is one the rules could have
    reached, and that is the point of it. */
-const Replay = ReplayOf({ Room, G, token });
+const Replay = ReplayOf({ Room, G, token, Trail });
 
 /* How long the table would have taken over the thing that just happened. The
    two real holds are the game's own; the other two are the replay's. */
@@ -402,7 +402,7 @@ function dropRoom(code) {
 
 /* Watching a game again. It is nobody's controls: a game on file is finished
    and already public, so any socket may ask for a copy of one. */
-const { handleWatch, games: watchGames } = Watch({
+const { handleWatch, games: watchGames, copyOf, forked } = Watch({
   createRoom, roomOf, listGames, send, fail, broadcast,
   Replay, Trail, dropRoom, paceReplay,
 });
@@ -411,7 +411,7 @@ const { handleWatch, games: watchGames } = Watch({
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello, runs } = Dev({
   DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
-  Room, Tables, Bots, Trail, watchGames,
+  Room, Tables, Bots, Trail, watchGames, copyOf, forked,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.

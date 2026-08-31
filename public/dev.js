@@ -134,6 +134,9 @@ function connect() {
       if ((REPLAY && REPLAY.code) !== was) seatKey = topKey = '';
       writeHash();
       paint();
+      // A record applied to a copy is answered by the copy, not by a hello,
+      // so this is where the panel reads back what the copy became.
+      if (stateBusy) { stateBusy = false; askState(); }
     } else if (m.t === 'replayAt') {
       /* A copy playing itself, saying where it has got to. Only the place and
          the table move: the rounds and the points of the round are the trail,
@@ -189,14 +192,23 @@ function connect() {
   ws.onclose = () => setTimeout(connect, 1000);
 }
 const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
-const act = (action, extra) => send(Object.assign({ t: 'dev', action }, extra || {}));
+/* The two forcing controls, which are the only dev actions a copy takes: the
+   record, and the players panel. On a copy they act on the copy -- the page
+   has no table when it is watching one -- so the flag goes on here rather than
+   at each of the fifteen places a control sends. Every other action is asked
+   before there is a copy, or is not a copy's at all. */
+const FORCES = ['patch', 'state'];
+const act = (action, extra) => send(Object.assign(
+  { t: 'dev', action },
+  (replaying() && FORCES.includes(action)) ? { replay: true } : null,
+  extra || {}));
 const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !msg; };
 // The panel's own line, beside the button that earned it.
 const stateErr = (msg) => { $('#state-err').textContent = msg; $('#state-err').hidden = !msg; };
 const stateStale = (on) => { if ($('#state-stale')) $('#state-stale').hidden = !on; };
 // Reading is asked for in one place, so a change arriving in the meantime is
 // the answer coming, not the table moving under the text.
-const askState = () => { stateReading = true; act('state', replaying() ? { replay: true } : null); };
+const askState = () => { stateReading = true; act('state'); };
 
 /* Back to the question. The table is let go here and the copy on the server,
    so what the page offers next is what is actually there. */
@@ -661,8 +673,7 @@ function renderPhaseRow() {
   }
   const seg = box.querySelector('.seg');
   if (seg) {
-    // A game already played is where it is. The phase is shown, never forced.
-    seg.hidden = replaying();
+    seg.hidden = false;
     seg.querySelectorAll('.btn').forEach((b) =>
       b.classList.toggle('on', b.dataset.phase === S.phase));
   }
@@ -677,12 +688,13 @@ const wonBad = (v) => v === '' || !Number.isFinite(Number(v));
 
 function sendWon() {
   const box = $('#prows');
-  if (!box || !ST || replaying()) return;
+  const S = stateNow();
+  if (!box || !S) return;
   const cells = Array.from(box.querySelectorAll('input.won'));
   const vals = cells.map((el) => String(el.value).trim());
   cells.forEach((el, i) => el.classList.toggle('part', wonBad(vals[i])));
-  if (vals.length !== ST.seats.length || vals.some(wonBad)) return;
-  act('patch', { patch: { round: { i: ST.idx, tricks: vals.map(Number) } } });
+  if (vals.length !== S.seats.length || vals.some(wonBad)) return;
+  act('patch', { patch: { round: { i: S.idx, tricks: vals.map(Number) } } });
 }
 
 /* One row a seat. Every control sends the moment it is used, and the rows
@@ -692,14 +704,16 @@ function renderPlayers() {
   const S = stateNow();
   if (!box || !S || $('#players-panel').hidden) return;
   renderPhaseRow();
-  /* A game already played is read here, never written: what happened is what
-     the trail says, and typing over it would make the panel lie about it. */
-  const set = !replaying();
+  /* A copy is written to as a table is. What the trail says happened stops
+     being what the copy is the moment it is changed, and the copy says so --
+     the change becomes its last point, and the rest of the trail goes.
+     A stand-in photo is invented data and stays a table's alone. */
+  const invent = DEVSRV && !replaying();
   const r = S.rounds[Math.min(S.idx, S.rounds.length - 1)] || null;
   const key = S.seats.map((s, p) =>
     `${s.name}/${s.bot}/${s.left}/${s.id === S.captainId}/${r ? r.dealer : S.firstDealerId}` +
     `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}`).join('|') +
-    `@${S.idx}:${S.phase}:${set}`;
+    `@${S.idx}:${S.phase}:${invent}`;
   if (box.dataset.key === key || box.contains(document.activeElement)) return;
   box.dataset.key = key;
   box.innerHTML = '';
@@ -720,13 +734,11 @@ function renderPlayers() {
     const name = document.createElement('input');
     name.type = 'text';
     name.value = s.name;
-    name.disabled = !set;
     name.addEventListener('change', () => act('patch', { patch: { seat: { i: p, name: name.value } } }));
 
     const radio = (group, on, fire) => {
       const el = document.createElement('input');
       el.type = 'radio'; el.name = group; el.checked = on; el.className = 'mid';
-      el.disabled = !set;
       el.addEventListener('change', fire);
       return el;
     };
@@ -739,7 +751,6 @@ function renderPlayers() {
     const check = (on, k) => {
       const el = document.createElement('input');
       el.type = 'checkbox'; el.checked = on; el.className = 'mid';
-      el.disabled = !set;
       el.addEventListener('change', () => act('patch', { patch: { seat: { i: p, [k]: el.checked } } }));
       return el;
     };
@@ -751,7 +762,7 @@ function renderPlayers() {
       el.type = 'number'; el.min = '0';
       if (k === 'tricks') el.className = 'won';
       el.value = v === null || v === undefined ? '' : v;
-      el.disabled = !r || !set;
+      el.disabled = !r;
       el.addEventListener('change', k === 'tricks' ? sendWon
         : () => numbers(k, p, el.value.trim() === '' ? null : Number(el.value)));
       return el;
@@ -761,7 +772,7 @@ function renderPlayers() {
     // cell stays, empty, or every row after it would slide up a column.
     const pbtns = document.createElement('span');
     pbtns.className = 'pbtns';
-    if (DEVSRV && set) {
+    if (invent) {
       const photo = document.createElement('button');
       photo.type = 'button'; photo.className = 'btn tiny'; photo.textContent = '📷';
       photo.title = 'A stand-in photo on this seat';
@@ -779,19 +790,15 @@ function renderPlayers() {
        hand from there on, and the phone that holds it can be given it back --
        which is why this is a pair and not a one-way kick. Removing a seat
        outright is the lobby's business, and the table host's. */
-    const gone = document.createElement(set ? 'button' : 'span');
-    if (set) {
-      gone.type = 'button';
-      gone.className = 'btn tiny' + (s.left ? ' primary' : '');
-      gone.title = s.left
-        ? 'Give the seat back to whoever holds its phone'
-        : 'Mark the seat gone. The table plays its hand, and the scorecard keeps its column.';
-      gone.addEventListener('click', () =>
-        act('patch', { patch: { seat: { i: p, left: !s.left } } }));
-      gone.textContent = s.left ? 'Take back' : 'Hand over';
-    } else {
-      gone.textContent = s.left ? 'the table played this hand' : '';
-    }
+    const gone = document.createElement('button');
+    gone.type = 'button';
+    gone.className = 'btn tiny' + (s.left ? ' primary' : '');
+    gone.title = s.left
+      ? 'Give the seat back to whoever holds its phone'
+      : 'Mark the seat gone. The table plays its hand, and the scorecard keeps its column.';
+    gone.addEventListener('click', () =>
+      act('patch', { patch: { seat: { i: p, left: !s.left } } }));
+    gone.textContent = s.left ? 'Take back' : 'Hand over';
 
     row.append(name, host, dealer, check(!!s.bot, 'bot'),
                num('bids', r && r.bids ? r.bids[p] : null),
@@ -827,8 +834,12 @@ function renderHead() {
     $('#phase').textContent = S && S.rounds.length
       ? `${S.phase} · round ${Math.min(S.idx + 1, S.rounds.length)}/${S.rounds.length}`
       : 'replay';
-    $('#subtitle').textContent =
-      `watching table ${REPLAY.of} again · point ${REPLAY.at + 1} of ${REPLAY.n}`;
+    /* A copy that has been changed is no longer the game that was played, and
+       saying "watching table X again" over one would be a lie. What is on show
+       is a copy that went its own way at the point it is standing on. */
+    $('#subtitle').textContent = REPLAY.forked
+      ? `table ${REPLAY.of}, changed by hand · point ${REPLAY.at + 1} of ${REPLAY.n}`
+      : `watching table ${REPLAY.of} again · point ${REPLAY.at + 1} of ${REPLAY.n}`;
     return;
   }
   if (!S) return;
@@ -882,8 +893,6 @@ function applyGates() {
   // The rounds are a strip either way; a table's is the one you can send to.
   if (el('#scrub-tools')) el('#scrub-tools').hidden = going || !DEVSRV;
   if (el('#run-tools') && going) el('#run-tools').hidden = true;
-  // A copy is read, never written, so there is nothing to apply to it.
-  if (el('#btn-state-apply')) el('#btn-state-apply').hidden = going;
   if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV && !going ? 'photo' : '';
 }
 

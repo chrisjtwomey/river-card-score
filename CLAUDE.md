@@ -21,10 +21,14 @@ lib/messages.js    THE PROTOCOL. A table of every message a seated socket may se
                    send it, when, and which Room verb it calls. Guards are declarative.
 lib/dev.js         The dev controls: the ways in (`ways`) -- a table of stand-ins
                    (`setup`) and a table in play (`tables`/`open`). Calls Room verbs;
-                   invents nothing a real game cannot reach.
+                   invents nothing a real game cannot reach. `{ replay: true }` puts
+                   the two forcing controls (`patch`, `state`) onto the copy this
+                   socket has open, and forks it there.
 lib/watch.js       THE DOOR TO A REPLAY. One message, `{ t: 'replay', do: ... }`, that any
                    socket may send: open a copy of a game on file, and move about in it.
                    No table and no key -- only a table still in play is the host's.
+                   `forked` is where a copy stops being the game: lib/dev.js calls it
+                   after the record or the players panel writes to one.
 lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures,
                    and the tables running here (`/tables.json`, to this machine alone).
 lib/games.js       A finished game on disk.

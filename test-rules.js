@@ -1484,8 +1484,14 @@ part('a game put back on a table of its own');
     return t;
   }
 
+  /* A copy takes a picture of itself when it is changed, which is the trail's
+     own frame: the same one a table forced by the dev page writes. */
+  const RTables = require('./lib/tables.js')({ DATA: '/nowhere', KEEP_HOURS: 6 });
+  const RTrail = require('./lib/trail.js')({ DATA: '/nowhere', KEEP_HOURS: 6, KEEP_GAMES: 200,
+                                             TRAIL_MAX: 1e9, record: RTables.record });
+
   const copyOf = (t, at) => {
-    const Replay = ReplayOf({ Room: t.Room, G, token: () => 'wtok' });
+    const Replay = ReplayOf({ Room: t.Room, G, token: () => 'wtok', Trail: RTrail });
     const copy = t.Room.create('COPY', 'ht');
     Replay.open(copy, 'TEST', t.room.trail.slice());
     Replay.seek(copy, at);
@@ -1625,6 +1631,51 @@ part('a game put back on a table of its own');
     ok(copy.replay.of === 'TEST' && copy.paused === true,
        'it says what it is a copy of, and plays nothing by itself');
     ok(!copy.trail || copy.trail.length === 0, 'and writes nothing down of its own');
+  }
+
+  {
+    /* A copy changed by hand. Up to the change a copy is derived and nothing
+       else -- every state it shows is the nearest picture plus the points
+       after it, worked out again on every move -- so a change has nowhere to
+       live until it becomes a point of its own.
+
+       It does. And what the trail said happened after it goes with it, because
+       it no longer describes this copy: the bids it was about have been
+       changed. That is why nothing has to refuse a fast-forward past a change.
+       There is nothing past it to go to. */
+    const t = played({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    const whole = t.room.trail.length;
+    /* Held here rather than on the copy: `become` keeps only the server's own
+       keys, so anything hung on a copy is gone the first time it is seeked. */
+    const Replay = ReplayOf({ Room: t.Room, G, token: () => 'wtok', Trail: RTrail });
+    const copy = t.Room.create('COPY', 'ht');
+    Replay.open(copy, 'TEST', t.room.trail.slice());
+    Replay.seek(copy, 3);
+    copy.seats[0].name = 'Zed';
+    const landed = Replay.fork(copy);
+    ok(copy.replay.n === 5 && landed === 4,
+       'the change is the copy\'s last point  got ' + copy.replay.at + ' of ' + copy.replay.n);
+    ok(whole > copy.replay.n,
+       'and what happened after it goes  got ' + copy.replay.n + ' of ' + whole);
+    const last = copy.replay.points[4];
+    ok(last.k === 'F' && last.w === 'edit' && !!last.f,
+       'as a picture, marked forced  got ' + JSON.stringify(last && last.k));
+    ok(copy.replay.forked === true, 'and the copy says it is no longer the game');
+    ok(copy.replay.says[4] === 'changed by hand',
+       'which is what the timeline says of it  got ' + copy.replay.says[4]);
+
+    // A point like any other: back over it, and forward onto it again.
+    Replay.step(copy, -1);
+    ok(copy.replay.at === 3 && copy.seats[0].name !== 'Zed',
+       'stepping back re-reads the trail  got ' + copy.seats[0].name);
+    Replay.step(copy, 1);
+    ok(copy.replay.at === 4 && copy.seats[0].name === 'Zed',
+       'and forward finds the change, because it is written down');
+    Replay.seek(copy, 99);
+    ok(copy.replay.at === 4, 'nothing lies past it  got ' + copy.replay.at);
+
+    // And the trail it was made from never moved: a copy is a copy.
+    ok(t.room.trail.length === whole, 'the game it is a copy of is untouched');
   }
 
   {

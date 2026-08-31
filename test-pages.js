@@ -4029,20 +4029,42 @@ part('the dev controls, on each kind of server');
        'the one it is playing at is the one marked');
     say();
 
-    /* The panels read the copy, and only read it: what happened is what the
-       trail says, and typing over it would make the panel lie about it. */
+    /* The two forcing panels write to the copy as they write to a table. What
+       the trail says happened stops being what the copy is the moment it is
+       changed, and the server says so: the change becomes the copy's last
+       point and the rest of the trail goes with it. */
     P.pick('#players-panel').hidden = false;
     P.pick('#btn-players').fire('click');
     P.pick('#btn-players').fire('click');
     const rows = P.pick('#prows').querySelectorAll('.prow');
     ok(rows.length === 2, 'who was at the table  got ' + rows.length);
-    ok(rows[0].querySelectorAll('input').every((el) => el.disabled),
-       'with nothing on the row to type into');
-    ok(P.pick('#btn-state-apply').hidden === true, 'and no record to apply to a copy');
+    ok(rows[0].querySelectorAll('input').every((el) => !el.disabled),
+       'with every cell on the row to type into');
+    ok(P.pick('#btn-state-apply').hidden !== true, 'and a record to apply to the copy');
+    // A stand-in photo is invented data, and stays a table's alone.
+    ok(!rows[0].querySelector('.pbtns').querySelector('.btn'),
+       'but no invented photo, which is a table\'s and not a copy\'s');
     P.socks[0].sent.length = 0;
     P.pick('#btn-state').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"state","replay":true}',
        'the record read is the copy\'s  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* And a change made in the panel goes to the copy, not to a table: the
+       page has no table when it is watching one. */
+    P.socks[0].sent.length = 0;
+    const bid = rows[0].querySelectorAll('input').find((el) => el.type === 'number');
+    bid.value = '2';
+    bid.fire('change');
+    const wrote = P.socks[0].sent[0];
+    ok(wrote && wrote.t === 'dev' && wrote.action === 'patch' && wrote.replay === true,
+       'a bid typed over lands on the copy  got ' + JSON.stringify(wrote));
+
+    // A copy that has been changed says so, rather than call itself the game.
+    say({ forked: true, at: 2, n: 3 });
+    ok(/changed by hand/.test(P.pick('#subtitle').textContent),
+       'and the page stops calling it the game that was played  got '
+       + P.pick('#subtitle').textContent);
+    say();
 
     /* Each pane holds a socket on the copy, so a step reaches it on its own.
        Throwing them away at every press reloaded every frame -- and closed the

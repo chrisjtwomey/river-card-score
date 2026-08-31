@@ -70,7 +70,7 @@ async function upAt(port, ms = 8000) {
 
 function client(name, url) {
   const ws = new WebSocket(url || `ws://127.0.0.1:${PORT}/ws`);
-  const c = { ws, name, state: null, hello: null, errors: [], seatId: null, pongs: 0, moved: [] };
+  const c = { ws, name, state: null, hello: null, errors: [], seatId: null, pongs: 0, replays: 0, moved: [] };
   ws.on('message', d => {
     const m = JSON.parse(d);
     if (m.t === 'state') c.state = m;
@@ -80,7 +80,7 @@ function client(name, url) {
     else if (m.t === 'tables') c.tables = m.tables;
     else if (m.t === 'seat') c.seat = m;
     else if (m.t === 'stateRaw') c.raw = m.record;
-    else if (m.t === 'replay') c.replay = m;
+    else if (m.t === 'replay') { c.replay = m; c.replays += 1; }
     else if (m.t === 'ways') c.ways = m;
     // Where a copy has got to on its own, kept in order: it should arrive
     // without this socket having asked for it.
@@ -98,6 +98,11 @@ function client(name, url) {
   c.gone = new Promise(r => ws.on('close', r));
   // Sent, and answered: everything before it has been dealt with.
   c.rt = () => { const n = c.pongs; c.send({ t: 'ping' }); return until(() => c.pongs > n); };
+  /* The same, for a page watching a game again. A ping is a table message and
+     a page watching one need be at no table, so the round trip is the copy's
+     own door: every word about a copy is answered with the whole of it. */
+  c.rtr = (o) => { const n = c.replays; c.send(Object.assign({ t: 'replay' }, o));
+                   return until(() => c.replays > n); };
   // The line this socket was last told it could not do.
   c.last = () => c.errors[c.errors.length - 1] || '';
   return c;
@@ -728,8 +733,52 @@ async function bidRound(P) {
        'and the copy comes with it, so the page can draw its band off the same state');
     cold.send({ t: 'dev', action: 'state', replay: true });
     await okBy(() => cold.raw && cold.raw.seats, 'the copy can be read as a record');
-    cold.send({ t: 'dev', action: 'state', replay: true, record: cold.raw });
-    await okBy(() => /read, not written/.test(cold.last()), 'and never written back');
+
+    /* And written to. A copy is derived until it is changed -- every state it
+       shows is worked out again from the trail -- so a change has nowhere to
+       live until it becomes a point of its own. It does: the change is the
+       copy's last point, and what the trail said happened after it goes with
+       it. Nothing has to refuse a fast-forward past the change; there is
+       nothing past it to go to. */
+    const whole = cold.replay.n;
+    ok(whole > 2, 'the game has more in it than a change would leave  got ' + whole);
+    await cold.rtr({ do: 'seek', at: 1 });
+    ok(cold.replay.at === 1, 'the copy is put at a point in the middle  got ' + cold.replay.at);
+    const edit = JSON.parse(JSON.stringify(cold.raw));
+    edit.seats[0].name = 'Zed';
+    cold.send({ t: 'dev', action: 'state', replay: true, record: edit });
+    await okBy(() => cold.replay.forked, 'a record written back changes the copy  got ' + cold.last());
+    ok(cold.replay.n === 3, 'and the trail after the change goes  got ' + cold.replay.n);
+    ok(cold.replay.at === 2, 'leaving it standing on the change  got ' + cold.replay.at);
+    ok(cold.replay.kinds === 'GRF',
+       'which is a point of its own, forced  got ' + cold.replay.kinds);
+    ok(cold.replay.says[2] === 'changed by hand',
+       'and says so on the timeline  got ' + cold.replay.says[2]);
+    ok(cold.replay.state.seats[0].name === 'Zed', 'the copy is what was written');
+
+    // Nothing beyond it to reach, whichever way it is asked for.
+    await cold.rtr({ do: 'seek', at: 40 });
+    ok(cold.replay.at === 2 && cold.replay.n === 3,
+       'seeking past the change lands on it  got ' + cold.replay.at + ' of ' + cold.replay.n);
+    await cold.rtr({ do: 'step', by: 1 });
+    ok(cold.replay.at === 2, 'and a step forward stays on it  got ' + cold.replay.at);
+    await cold.rtr({ do: 'step', by: -1 });
+    ok(cold.replay.at === 1, 'back over it still works: it is a point like any other');
+    await cold.rtr({ do: 'step', by: 1 });
+    ok(cold.replay.at === 2 && cold.replay.state.seats[0].name === 'Zed',
+       'and forward finds the change again, because it is written down');
+
+    /* The change was the copy's and the copy's alone. The game on file is what
+       it always was, so watching it again a second time is the whole game. */
+    await cold.rtr({ do: 'open', game: filed });
+    ok(cold.replay.n === whole && !cold.replay.forked,
+       'the game on file was never touched  got ' + cold.replay.n + ' of ' + whole);
+
+    /* A copy takes the two forcing controls and nothing else: what plays a
+       game on has no business here, because a copy has a game already. */
+    cold.send({ t: 'dev', action: 'fillBids', replay: true });
+    await okBy(() => /the record and the players panel/.test(cold.last()),
+       'and nothing that plays a game on  got ' + cold.last());
 
     /* A game that never finished is filed too, and by the same door. The games
        worth watching again are often the ones that could not go on: a table
