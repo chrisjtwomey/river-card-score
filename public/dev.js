@@ -535,10 +535,13 @@ function renderSteps() {
   const box = $('#replay-steps');
   if (!box || !REPLAY.kinds) return;
   const marks = REPLAY.marks;
-  let from = 0, to = REPLAY.kinds.length - 1;
-  marks.forEach((m, i) => {
-    if (m.at <= REPLAY.at) { from = m.at; to = marks[i + 1] ? marks[i + 1].at - 1 : REPLAY.kinds.length - 1; }
-  });
+  /* Which round's stretch of the trail this is. The first one takes everything
+     before it with it -- the game starting is the run-up to round one, not a
+     timeline of its own with one mark on it. */
+  let cur = 0;
+  marks.forEach((m, i) => { if (m.at <= REPLAY.at) cur = i; });
+  const from = cur === 0 ? 0 : marks[cur].at;
+  const to = marks[cur + 1] ? marks[cur + 1].at - 1 : REPLAY.kinds.length - 1;
   const key = `${from}-${to}@${REPLAY.at}:${REPLAY.kinds.length}`;
   if (box.dataset.key === key) return;
   box.dataset.key = key;

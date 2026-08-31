@@ -3561,44 +3561,49 @@ part('the dev controls, on each kind of server');
     say({ at: 3 });
     const tl = P.pick('#replay-steps').querySelector('.tlbody');
     const steps = tl.querySelectorAll('.tick');
-    ok(steps.length === 5, 'the round on show is its own points  got ' + steps.length);
-    ok(steps[0].style.left === '0%' && steps[4].style.left === '100%',
-       'laid along the rail, first to last  got ' + steps[0].style.left + '..' + steps[4].style.left);
-    ok(steps[1].classList.contains('done'), 'the ones behind the head are done');
-    ok(!steps[2].classList.contains('done'), 'and the one it stands on is not');
-    ok(tl.querySelector('.fill').style.width === '50%',
+    /* The round on show is its own points, and the first round takes the game
+       starting with it: that point is the run-up to round one, not a timeline
+       of its own with one mark on it. */
+    ok(steps.length === 6, 'the round on show is its own points  got ' + steps.length);
+    ok(steps[0].style.left === '0%' && steps[5].style.left === '100%',
+       'laid along the rail, first to last  got ' + steps[0].style.left + '..' + steps[5].style.left);
+    ok(steps[2].classList.contains('done'), 'the ones behind the head are done');
+    ok(!steps[3].classList.contains('done'), 'and the one it stands on is not');
+    ok(tl.querySelector('.fill').style.width === '60%',
        'the rail is filled to the head  got ' + tl.querySelector('.fill').style.width);
-    ok(tl.querySelector('.head').style.left === '50%',
+    ok(tl.querySelector('.head').style.left === '60%',
        'which is where the head is  got ' + tl.querySelector('.head').style.left);
     ok(tl.querySelector('.knob').textContent === '2',
        'and the head wears the point it is on  got ' + tl.querySelector('.knob').textContent);
 
     /* What a mark wears is what it is: a bid its number, a card itself, a
        trick opening a divider, and the beats that shape a round an icon. */
-    ok(steps[2].querySelector('.face').textContent === '2', 'a bid wears the number said');
-    ok(steps[3].classList.contains('bar'), 'a trick opening is a divider through the rail');
-    ok(steps[4].classList.contains('wee'), 'a card is a dot');
-    ok(steps[4].querySelector('.face').textContent === '9♠',
-       'that carries the card itself  got ' + steps[4].querySelector('.face').textContent);
-    ok(steps[0].querySelector('.face').textContent === '🃏',
-       'and a round dealt wears an icon  got ' + steps[0].querySelector('.face').textContent);
+    ok(steps[3].querySelector('.face').textContent === '2', 'a bid wears the number said');
+    ok(steps[4].classList.contains('bar'), 'a trick opening is a divider through the rail');
+    ok(steps[5].classList.contains('wee'), 'a card is a dot');
+    ok(steps[5].querySelector('.face').textContent === '9♠',
+       'that carries the card itself  got ' + steps[5].querySelector('.face').textContent);
+    ok(steps[1].querySelector('.face').textContent === '🃏',
+       'and a round dealt wears an icon  got ' + steps[1].querySelector('.face').textContent);
+    ok(steps[0].querySelector('.face').textContent === '🎬',
+       'as does the game starting  got ' + steps[0].querySelector('.face').textContent);
 
     /* Passing over a mark says what happened there, over the mark itself. The
        line beside the rail stays on the point the copy is standing on. */
-    ok(steps[2].title === 'Bob bids 2 — point 4 of 13',
-       'a mark names its own point  got ' + steps[2].title);
-    steps[3].fire('mouseenter');
+    ok(steps[3].title === 'Bob bids 2 — point 4 of 13',
+       'a mark names its own point  got ' + steps[3].title);
+    steps[4].fire('mouseenter');
     ok(tl.querySelector('.tip').textContent === 'a trick opens — point 5 of 13',
        'passing over one says what happened there  got '
        + (tl.querySelector('.tip') || {}).textContent);
-    ok(tl.querySelector('.tip').style.left === '75%', 'over the mark it belongs to');
+    ok(tl.querySelector('.tip').style.left === '80%', 'over the mark it belongs to');
     ok(P.pick('#replay-where').textContent === 'Round 1 of 2 · 3 cards · Ann bids 1',
        'and the line beside it stays where the copy is');
-    steps[3].fire('mouseleave');
+    steps[4].fire('mouseleave');
     ok(!tl.querySelector('.tip'), 'leaving it takes the tip away');
 
     P.socks[0].sent.length = 0;
-    steps[4].fire('click');
+    steps[5].fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',
        'and each of them is a place to go  got ' + JSON.stringify(P.socks[0].sent[0]));
     ok(P.pick('#replay-run').querySelectorAll('input').length === 0,

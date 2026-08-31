@@ -1326,6 +1326,17 @@ part('a table writes down what happened to it');
   ok(t.trail() === 'G R b b s c c w s c c w e R',
      'a round reads as it was played  got ' + t.trail());
 
+  /* The game starting carries a picture too, and it is the only reason a copy
+     can stand on the first point there is: the card built, and no round open
+     yet. Everything after it is worked out again from the one before. */
+  const born = t.points('G')[0];
+  ok(!!born.f && born.f.phase === 'lobby' && born.f.rounds.length === t.room.rounds.length,
+     'the game starting is the card built and no round open  got '
+     + (born.f && born.f.phase));
+  ok(t.room.trail.filter((e) => e.f).length === t.points('G').length + t.points('R').length,
+     'and nothing else in a round carries one  got '
+     + t.room.trail.filter((e) => e.f).map((e) => e.k).join(''));
+
   const first = t.points('R')[0];
   ok(first.w === 'game' && first.i === 0 && first.d === 0,
      'the first round says a game brought it  got ' + first.w);
@@ -1490,6 +1501,13 @@ part('a game put back on a table of its own');
     ok(JSON.stringify(bidding.rounds[0].bids) === JSON.stringify([0, 0, 0]),
        'three bids in, the copy has the three that were bid  got '
        + JSON.stringify(bidding.rounds[0].bids));
+    const opening = copyOf(t, 0);
+    ok(opening.replay.at === 0,
+       'a copy opens on the first point there is, not the first it could show  got '
+       + opening.replay.at);
+    ok(opening.phase === 'lobby' && opening.rounds.length === t.room.rounds.length,
+       'which is the game about to start  got ' + opening.phase);
+
     const oneBid = copyOf(t, bids[0]);
     ok(oneBid.rounds[0].bids.filter((b) => b !== null).length === 1,
        'and one bid in, exactly one  got ' + JSON.stringify(oneBid.rounds[0].bids));
