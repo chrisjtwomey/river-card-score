@@ -57,25 +57,28 @@ const Felt = (function () {
      as a card going round it. */
   const CARD_MOVE = 140;
 
-  /* How long a card another seat plays takes to come off the top of their
-     pile and land. It is the move the table is waiting on, and there are as
-     many of them as there are cards in a trick, so it is the quickest of the
-     three -- long enough to see a card picked up and turned over, and no
-     longer. */
-  const PLAY_IN = 260;
+  /* How long a card another seat plays takes to come off the top of their pile
+     and land. It is the move the table is waiting on and there is one of them
+     for every card in a trick, so it is much the quickest of the three.
+
+     It is a card's own pace exactly, and that is the point: the transition
+     underneath is the fallback where there is no way to draw an arc, so a
+     screen that bows the card and a screen that slides it take the same time
+     and the round is paced the same on both. */
+  const PLAY_IN = CARD_MOVE;
 
   /* The bow it comes round on: how far across the straight line it swings, as
      a share of the way it has to travel, so every seat bows to the same shape;
      and how much bigger it gets at the top of the bow, which is the card being
      lifted off the stack rather than slid out of it. */
-  const PLAY_BOW = 0.22, PLAY_RISE = 0.14;
+  const PLAY_BOW = 0.22, PLAY_RISE = 0.18;
 
   /* Where in the movement the card turns over, as a share of the time it
      takes. It is off the pile before it starts and face up before it lands,
      and everything between those is the turn: a card has no perspective to
      turn under here -- the overlay's belongs to the stage, not to the cards on
      it -- so what says it turned over is how long it takes to do it. */
-  const PLAY_TURN = [0.08, 0.78];
+  const PLAY_TURN = [0.05, 0.85];
 
   /* How long what the round paid stands before the table is put away for the
      next one. A figure a player has to catch inside two seconds is a figure

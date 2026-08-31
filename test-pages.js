@@ -1679,8 +1679,8 @@ function tookTrick(motion) {
      'and ends where the table already says it belongs');
   ok(runs.length > 0 && !runs[0].opts.fill,
      'nothing fills forwards on a card with a round still to play');
-  ok(runs.length > 0 && runs[0].opts.duration === 260,
-     'and it is the quickest of the three ways round  got '
+  ok(runs.length > 0 && runs[0].opts.duration === 140,
+     'and it takes exactly a card\'s own pace, which is what carries it without an arc  got '
      + (runs.length ? runs[0].opts.duration : '-'));
 
   // Off the pile face down, and over well before it lands.
@@ -1740,7 +1740,7 @@ function tookTrick(motion) {
   const on = stage.querySelectorAll('.dcard');
   // The peek shivers a pile all the while; what must not be here is a way onto
   // the table, which is the one movement that long.
-  const bows = arcs.filter((a) => on.indexOf(a.el) >= 0 && a.opts.duration === 260);
+  const bows = arcs.filter((a) => on.indexOf(a.el) >= 0 && a.opts.duration === 140);
   ok(bows.length === 0, 'a table stood up mid-round throws nothing across it  got ' + bows.length);
 }
 {

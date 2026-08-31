@@ -330,9 +330,10 @@ that band.
   gathers it comes round -- turning face up and swelling as it comes. The turn
   takes most of the way over rather than a moment in the middle of it: there is
   no perspective for a card to turn under here, so what says it turned over is
-  how long it takes. The whole of it is a quarter of a second, because it is
-  the move the table is waiting on and there is one of them per card in the
-  trick. Your own card is different, and unchanged: it
+  how long it takes. The whole of it is a card's own pace -- the same as the
+  plain slide a screen falls back to when it cannot draw an arc, so the round
+  is paced the same either way -- because it is the move the table is waiting
+  on and there is one of them per card in the trick. Your own card is different, and unchanged: it
   comes out of the fan under your thumb.
 - **A trick taken is said out loud**: *"Otter won that trick"* comes up under
   the pile, so the card that took it is still there to see. It stays for two
