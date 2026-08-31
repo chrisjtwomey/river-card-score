@@ -37,6 +37,12 @@ const CHAT_KEEP = Math.max(1, Number(process.env.CHAT_KEEP) || 100);
 // written. A whole game is about ninety kilobytes; past this something has gone
 // wrong, and the table matters more than the note of it.
 const TRAIL_MAX = Math.max(64 * 1024, Number(process.env.TRAIL_MAX) || 4 * 1024 * 1024);
+/* The beat between two points of a replay, and the longer one a scored round is
+   left up for. The beats a hand itself is built around -- the bids standing to
+   be read, a finished trick sitting on the table -- are borrowed rather than
+   named again, so a game watched again keeps the timing of the game. */
+const REPLAY_STEP = Math.max(20, Number(process.env.REPLAY_STEP) || 700);
+const REPLAY_HOLD = Math.max(20, Number(process.env.REPLAY_HOLD) || 2300);
 const TLS_KEY = process.env.TLS_KEY || path.join(__dirname, 'certs', 'key.pem');
 const TLS_CERT = process.env.TLS_CERT || path.join(__dirname, 'certs', 'cert.pem');
 let tls = null;
@@ -298,11 +304,48 @@ const Bots = require('./lib/bots.js')({
    reached, and that is the point of it. */
 const Replay = ReplayOf({ Room, G, token });
 
+/* How long the table would have taken over the thing that just happened. The
+   two real holds are the game's own; the other two are the replay's. */
+function replayBeat(room, ev) {
+  if (!ev) return REPLAY_STEP;
+  if (ev.k === 'w') return Deck.TRICK_HOLD;              // the trick sits to be read
+  if (ev.k === 'e' || ev.k === 'E') return REPLAY_HOLD;  // and a score longer still
+  if (room.play && room.play.held) return Room.BID_HOLD; // the bids stand before the hand
+  return REPLAY_STEP;
+}
+
+/* A replay playing itself, one point at a time. The timer is the copy's own --
+   nothing else on it has a clock -- and it looks again when it fires, because
+   the copy may have been moved or let go in the meantime. */
+function replayTick(room) {
+  const tag = room.replay;
+  if (!tag || !tag.playing) return;
+  if (tag.at >= tag.n - 1) { tag.playing = false; return broadcast(room); }
+  const ev = tag.points[tag.at + 1];
+  Replay.step(room, 1);
+  broadcast(room);
+  if (room.replay !== tag || !tag.playing) return;
+  room.replayTimer = setTimeout(() => {
+    room.replayTimer = null;
+    if (room.replay !== tag || !tag.playing) return;
+    replayTick(room);
+  }, replayBeat(room, ev)).unref();
+}
+
+// Playing, or stopped where it stands.
+function paceReplay(room, on) {
+  if (room.replayTimer) { clearTimeout(room.replayTimer); room.replayTimer = null; }
+  if (!room.replay) return;
+  room.replay.playing = !!on;
+  if (on) replayTick(room);
+}
+
 /* A copy of a table, let go. Nothing is filed and nothing is told: it was
    never a game, and every screen at it is the page that opened it. */
 function dropRoom(code) {
   const room = roomOf(code);
   if (!room) return;
+  paceReplay(room, false);
   Bots.stop(room);
   room.sockets.forEach((ws) => { if (ws.ctx) ws.ctx.room = null; });
   rooms.delete(room.code);
@@ -312,7 +355,7 @@ function dropRoom(code) {
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
   DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
-  Room, Tables, Bots, Trail, Replay, dropRoom,
+  Room, Tables, Bots, Trail, Replay, dropRoom, paceReplay,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.

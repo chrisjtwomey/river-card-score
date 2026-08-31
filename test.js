@@ -18,7 +18,8 @@ const DATA_DIR = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-games-'));
    would run its whole course every round. What the pauses actually are is
    checked in test-rules.js, and that each is really waited out is checked on a
    server of its own below. */
-const TUNED = { TRICK_HOLD: '120', BID_HOLD: '120', BOT_DELAY: '120', BOT_DEAL_WAIT: '150' };
+const TUNED = { TRICK_HOLD: '120', BID_HOLD: '120', BOT_DELAY: '120', BOT_DEAL_WAIT: '150',
+                REPLAY_STEP: '30', REPLAY_HOLD: '40' };
 const srv = spawn('node', [path + '/server.js'],
   { env: { ...process.env, PORT, NO_TLS: '1', DATA_DIR, KEEP_GAMES: '3', CHAT_KEEP: '5', ...TUNED },
     stdio: ['ignore', 'pipe', 'pipe'] });
@@ -521,6 +522,26 @@ async function bidRound(P) {
     await h.rt();
     ok(h.state.phase === wasPhase && h.state.idx === wasIdx,
        'and the table it copies does not move with it');
+
+    /* And it plays itself back, at the pace the table played it. */
+    h.send({ t: 'dev', action: 'replay', do: 'seek', at: 0 });
+    await okBy(() => h.replay.at <= 1,
+       'put back to the start, which is the first picture there is  got ' + h.replay.at);
+    h.send({ t: 'dev', action: 'replay', do: 'play' });
+    await okBy(() => h.replay.playing === true, 'and set going');
+    await okBy(() => h.replay.at > 0, 'it walks itself on  got ' + h.replay.at);
+    h.send({ t: 'dev', action: 'replay', do: 'pause' });
+    await okBy(() => h.replay.playing === false, 'and stops where it is');
+    const stoodAt = h.replay.at;
+    await wait(300);                       // longer than several of its beats
+    ok(h.replay.at === stoodAt, 'and stays there  got ' + h.replay.at + ' from ' + stoodAt);
+
+    // Moving about in it by hand stops it: two clocks would fight over it.
+    h.send({ t: 'dev', action: 'replay', do: 'play' });
+    await okBy(() => h.replay.playing === true, 'set going again');
+    h.send({ t: 'dev', action: 'replay', do: 'seek', at: 1 });
+    await okBy(() => h.replay.playing === false && h.replay.at === 1,
+       'moving it by hand stops it playing itself');
 
     h.send({ t: 'dev', action: 'replay', do: 'close' });
     await okBy(() => h.replay.code === null, 'the replay can be let go');

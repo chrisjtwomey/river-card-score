@@ -2796,6 +2796,21 @@ part('the dev controls, on each kind of server');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":-1}',
        'either way  got ' + JSON.stringify(P.socks[0].sent[0]));
 
+    // Playing it back: one button, saying what it will do.
+    const play = P.pick('#replay-bar').querySelectorAll('.btn.primary')[0];
+    ok(play.textContent === '▶ Play', 'a stopped replay offers to play  got ' + play.textContent);
+    P.socks[0].sent.length = 0;
+    play.fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"play"}',
+       'and asks for it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    say({ playing: true, at: 4 });
+    ok(play.textContent === '❚❚ Pause', 'a playing one offers to stop');
+    P.socks[0].sent.length = 0;
+    play.fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"pause"}',
+       'and the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    say();
+
     // The panes are the copy's while one is open, and the table's after.
     ok(P.pick('#seat-frames').children.length === 2, 'the panes follow the copy');
     P.socks[0].sent.length = 0;

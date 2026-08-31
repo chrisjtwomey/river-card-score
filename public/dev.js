@@ -402,6 +402,11 @@ function buildReplay() {
   };
 
   btn('btn', '◀', 'One point back', () => replayAsk({ do: 'step', by: -1 }));
+  /* Playing it back at the pace the table played it. Read at the tap, not at
+     the draw, so the button says what it will do rather than what it did. */
+  const go = btn('btn primary', '▶ Play', '', () =>
+    replayAsk({ do: go._now ? 'pause' : 'play' }));
+  go.id = 'btn-replay-play';
   btn('btn', '▶', 'One point on', () => replayAsk({ do: 'step', by: 1 }));
 
   const slide = document.createElement('input');
@@ -463,6 +468,12 @@ function renderReplay() {
   if (slide && document.activeElement !== slide) {
     slide.max = String(Math.max(0, REPLAY.n - 1));
     slide.value = String(REPLAY.at);
+  }
+  const go = bar && bar.querySelector('.btn.primary');
+  if (go) {
+    go._now = !!REPLAY.playing;
+    go.textContent = go._now ? '❚❚ Pause' : '▶ Play';
+    go.title = go._now ? 'Stop where it is' : 'Play it back at the pace the table played it';
   }
   const at = bar && bar.querySelector('.at');
   if (at) at.textContent = `${REPLAY.at + 1} of ${REPLAY.n}`;
