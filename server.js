@@ -119,6 +119,7 @@ function endTable(code) {
    the tokens that make a seat yours never leave the server. */
 function listTables() {
   return Array.from(rooms.values())
+    .filter((room) => !room.replay)          // a copy is not a table: see tableOf
     .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0))
     .map((room) => ({
       code: room.code,
@@ -127,11 +128,24 @@ function listTables() {
       round: room.phase === 'lobby' || room.phase === 'done' ? null : room.idx + 1,
       rounds: room.rounds.length || null,
       stand: !!room.stand,
-      replay: room.replay ? room.replay.of : null,
       seats: room.seats.map((s) => ({ id: s.id, name: s.name, bot: !!s.bot,
                                       left: !!s.left, online: !!s.online })),
     }));
 }
+
+/* A table anybody may reach by its code.
+
+   A copy of a game being watched again is a room like any other, and that is
+   what makes it work: the screens the watching page draws reach it the way a
+   screen reaches a table. But it is not a table. Nobody joins it, nobody comes
+   back to a seat at it, it is not listed among the tables this server is
+   running, and no browser remembers it -- the game it is a copy of is where all
+   of that belongs. So everything that offers a table asks for one here, and a
+   copy answers as no table at all. */
+const tableOf = (code) => {
+  const room = roomOf(code);
+  return room && !room.replay ? room : null;
+};
 
 // The one thing the HTTP side needs of a room: a seat's picture, or nothing.
 function pictureOf(code, seatId) {
@@ -463,7 +477,7 @@ function handle(ws, m) {
   }
 
   if (m.t === 'join') {
-    const room = roomOf(m.code);
+    const room = tableOf(m.code);
     if (!room) return fail(ws, 'no table with that code');
     const name = String(m.name || '').trim().slice(0, 16) || `Player ${room.seats.length + 1}`;
     const held = room.seats.find((s) => s.name.toLowerCase() === name.toLowerCase());
@@ -498,7 +512,7 @@ function handle(ws, m) {
   }
 
   if (m.t === 'resume') {
-    const room = roomOf(m.code);
+    const room = tableOf(m.code);
     if (!room) return fail(ws, 'that table is gone');
     if (m.token === room.hostToken) {
       attach(ws, room, { role: 'host' });
@@ -521,7 +535,11 @@ function handle(ws, m) {
     const room = roomOf(m.code);
     if (!room) return fail(ws, 'no table with that code');
     attach(ws, room, { role: 'screen' });
-    send(ws, { t: 'hello', role: 'screen', code: room.code, token: null });
+    /* A screen on a copy is told so. Nothing on the page changes for it -- it
+       draws the table it is given -- but the browser must not write the copy
+       down as a table it is at: there is nothing there to come back to. */
+    send(ws, { t: 'hello', role: 'screen', code: room.code, token: null,
+               replay: !!room.replay });
     return broadcast(room);
   }
 
@@ -535,7 +553,8 @@ function handle(ws, m) {
     const seat = tok && room.seats.find((x) => x.watch === tok);
     if (!seat) return fail(ws, 'that seat is gone');
     attach(ws, room, { role: 'watch', seatId: seat.id });
-    send(ws, { t: 'hello', role: 'watch', code: room.code, token: m.token, seatId: seat.id });
+    send(ws, { t: 'hello', role: 'watch', code: room.code, token: m.token, seatId: seat.id,
+               replay: !!room.replay });
     return broadcast(room);
   }
 
@@ -603,6 +622,8 @@ const IDLE_TICK = Math.max(50, Math.min(15000, Math.round((IDLE_WARN_MS || IDLE_
 if (IDLE_MS || TABLE_IDLE_MS || GAME_IDLE_MS) setInterval(() => {
   const now = Date.now();
   Array.from(rooms.values()).forEach((room) => {
+    // A copy has nobody at it by design, and its life is its page's.
+    if (room.replay) return;
     const out = Room.sweep(room, now, { idle: IDLE_MS, warn: IDLE_WARN_MS,
                                         table: TABLE_IDLE_MS, game: GAME_IDLE_MS });
     // Still there? Only a phone that is here is asked, and only once.
@@ -626,6 +647,7 @@ if (IDLE_MS || TABLE_IDLE_MS || GAME_IDLE_MS) setInterval(() => {
 setInterval(() => {                       // drop idle rooms, memory and disk alike
   const cutoff = Date.now() - KEEP_HOURS * 3600e3;
   rooms.forEach((room, code) => {
+    if (room.replay) return;               // its page closing is what takes it
     if (room.sockets.size === 0 && room.lastSeen < cutoff) {
       Bots.stop(room);
       rooms.delete(code);

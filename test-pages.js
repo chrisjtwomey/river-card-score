@@ -2453,6 +2453,30 @@ part('the front page, and the screen');
     { code: 'AAAA', token: 'ta', role: 'player', seatId: 'sa' },
   ]);
 
+  {   /* A copy of a game being watched again is not a table this browser is at:
+         there is no seat to come back to and no game going on. The hello says
+         so, and the browser drops it rather than offering it to be rejoined. */
+    /* What the browser holds, read off the store rather than through a page:
+       a page told it is on a copy keeps its own session in memory, and answers
+       for that alone. What is being checked is what it left behind. */
+    const kept = (X) => JSON.parse(X.dom.localStorage.getItem('rcs:tables:v1') || '[]')
+      .map((t) => t.code).join(',');
+    const onCopy = (code) => {
+      const X = loadPage('join.js', { 'rcs:tables:v1': two });
+      X.Net.connect({});                    // the socket, without the page on it
+      X.socks[0].onopen();
+      X.socks[0].onmessage({ data: JSON.stringify({
+        t: 'hello', role: 'screen', code, token: null, replay: true }) });
+      return X;
+    };
+    ok(kept(onCopy('ZZZZ')) === 'BBBB,AAAA',
+       'a copy is not written down, and the tables this browser is at stay  got '
+       + kept(onCopy('ZZZZ')));
+    ok(kept(onCopy('AAAA')) === 'BBBB',
+       'and one written down before the browser knew is dropped  got '
+       + kept(onCopy('AAAA')));
+  }
+
   {   // the front page lists every table this browser is at
     const P = loadPage('join.js', { 'rcs:tables:v1': two });
     P.pick('#rejoin-panel').hidden = true;

@@ -539,9 +539,29 @@ async function bidRound(P) {
     ok(h.replay.seats.every((s) => s.watch), 'its seats are watched, never played');
     ok(h.replay.n > 0 && h.replay.marks.length > 0, 'with the rounds to move about in');
 
+    /* A copy is a room, which is what makes the screens on it work -- but it
+       is not a table. Nothing that offers one offers it. */
+    const listed = await (await fetch(`http://127.0.0.1:${PORT}/tables.json`)).json();
+    ok(!(listed.tables || []).some((x) => x.code === copy),
+       'a copy is not among the tables this server is running  got '
+       + (listed.tables || []).map((x) => x.code).join(','));
+    const nobody = client('joiner'); await nobody.ready;
+    nobody.send({ t: 'join', code: copy, name: 'Zoe' });
+    await okBy(() => /no table with that code/i.test(nobody.last()),
+       'nobody joins a copy  got ' + nobody.last());
+    nobody.send({ t: 'resume', code: copy, token: 'anything' });
+    await okBy(() => /that table is gone/i.test(nobody.last()),
+       'and nobody comes back to a seat at one  got ' + nobody.last());
+    nobody.send({ t: 'dev', action: 'open', code: copy, token: h.hello.token });
+    await okBy(() => /no table with that code/i.test(nobody.last()),
+       'and the dev page will not open on one  got ' + nobody.last());
+    nobody.ws.close();
+
     const eye2 = client('atcopy'); await eye2.ready;
     eye2.send({ t: 'watch', code: copy, token: h.replay.seats[0].watch });
     await okBy(() => eye2.state && eye2.state.code === copy, 'a window can watch the copy');
+    ok(eye2.hello.replay === true,
+       'and is told it is a copy, so the browser does not write it down as a table');
     eye2.send({ t: 'bid', v: 1 });
     await okBy(() => /only watching/i.test(eye2.last()),
        'but nothing can be played at it: a watch token is the only way in  got ' + eye2.last());

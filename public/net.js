@@ -147,7 +147,13 @@ const Net = (function () {
     ws.onmessage = (e) => {
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
       if (m.t === 'hello') {
-        setSession({ code: m.code, token: m.token, role: m.role, seatId: m.seatId || null }, ephemeral);
+        /* A copy of a game being watched again is not a table this browser is
+           at: there is no seat to come back to and no game going on. It is kept
+           in this page only, and if the browser had written it down before it
+           knew, that is dropped now. */
+        if (m.replay) forget(m.code);
+        setSession({ code: m.code, token: m.token, role: m.role, seatId: m.seatId || null },
+                   ephemeral || !!m.replay);
         handlers.onHello && handlers.onHello(m);
       } else if (m.t === 'state') { handlers.onState && handlers.onState(m); }
       else if (m.t === 'error') { handlers.onError && handlers.onError(m.msg); }
