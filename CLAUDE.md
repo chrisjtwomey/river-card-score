@@ -74,10 +74,11 @@ public/viewer.js   THE REPLAY VIEWER. A game watched again, drawn off the one me
                    widgets, each `(root, R, view)`, each building what it needs inside the
                    root it is handed. `view = { send }` asks the copy for something
                    (`{do:'seek', at}`); how that is addressed is the page's business.
-public/dev.js      The dev page: the way-in card (three doors), then one band over every
-                   screen. The band is the same rows in the same places on a table and on a
-                   game watched again; only the verbs change, and the replay half of them
-                   is `viewer.js` put where it goes.
+public/dev.js      The dev page: the way-in card (three doors), then one band at the foot
+                   of the window, under the screens, which scroll above it. The band is the
+                   same rows in the same places on a table and on a game watched again;
+                   only the verbs change, and the replay half of them is `viewer.js` put
+                   where it goes.
 public/replay.html/.js  One game watched again: the table as it was in a frame, and the
                    viewer under it. `?g=<id>` is the whole address.
 public/join.js, history.js   The other pages.

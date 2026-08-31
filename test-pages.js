@@ -5575,6 +5575,29 @@ part('the finish takes the stage over');
 
 part('the pages and the stylesheet agree');
 
+/* The band is how a game is driven, so it does not scroll away from the thing
+   it is driving. Both pages that have one are built the same shape: as tall as
+   the window less the bar, the screens scrolling inside, the band last and at
+   the foot. The dev page had it at the top, where it went off the screen the
+   moment there was more to look at than fitted. */
+{
+  const page = (f) => fs.readFileSync(path.join(ROOT, 'public', f), 'utf8');
+  [['dev.html', '.devwrap', 'devmain', 'band'],
+   ['replay.html', '.replaywrap', 'replay-screen', 'replay-band']].forEach(([f, wrap, above, band]) => {
+    const html = page(f);
+    const tall = new RegExp(wrap.replace('.', '\\.')
+      + '\\{[^}]*height:calc\\(100dvh - var\\(--topbar-h');
+    ok(tall.test(html),
+       f + ' is as tall as the window less the bar it measured');
+    const i = html.indexOf('class="' + above), j = html.lastIndexOf(band + '"');
+    ok(i > 0 && j > i, f + ' puts the band under what it drives  got ' + i + ' then ' + j);
+  });
+  // And the dev band is the last thing in the wrap, not merely late in it.
+  const dev = page('dev.html');
+  ok(/<div class="panel band" id="band" hidden>[\s\S]*<\/div>\s*<\/div>\s*<script/.test(dev),
+     'the dev band is the last thing on the page');
+}
+
 /* The felt gives every card on the table a z-index of its own -- a pile card
    its place in the pile, the card in the reader's fingers 30, a bid number
    picked up 40 -- and a stamp with no z-index went under the pile it was

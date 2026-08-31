@@ -7,13 +7,19 @@
 <link rel="stylesheet" href="styles.css">
 <style>
   body{padding-bottom:0}
-  .devwrap{display:flex;flex-direction:column;gap:12px;padding:12px;max-width:none}
+  /* As tall as the window, and no taller: the screens and the panels scroll
+     inside it and the band never leaves the foot. The band is how the table is
+     driven, so it does not scroll away from the thing it is driving -- the same
+     shape the replay page is built in. */
+  .devwrap{display:flex;flex-direction:column;gap:12px;padding:12px;max-width:none;
+    height:calc(100dvh - var(--topbar-h, 62px))}
+  .devmain{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;overflow-y:auto}
 
-  /* The band: every control, over the screens. Three rows -- the table row
+  /* The band: every control, under the screens. Three rows -- the table row
      (which table or which game, and the others to hop to), the game row (where
      in it, and what may be done there), and, while a game is being watched
      again, the points of the round on show. */
-  .band{display:flex;flex-direction:column;gap:9px;padding:10px 12px}
+  .band{display:flex;flex-direction:column;gap:9px;padding:10px 12px;flex:none}
   .bandrow .code{font-size:20px;font-weight:800;letter-spacing:.14em;color:var(--gold);flex:none}
   /* A group of controls the server either takes or does not. Hiding one is
      one attribute, so nothing is left behind with its separators. */
@@ -99,6 +105,13 @@
   .frame > header a{color:var(--gold);text-decoration:none}
   .frame .shell{position:relative;overflow:hidden}
   .frame iframe{border:0;display:block;transform-origin:top left;background:var(--bg)}
+
+  /* Too short to hold the band and anything worth looking at, so the page
+     goes back to growing and the band goes back to riding with it. */
+  @media (max-height:560px){
+    .devwrap{height:auto}
+    .devmain{overflow-y:visible}
+  }
 </style>
 </head>
 <body>
@@ -126,9 +139,47 @@
 </header>
 
 <div class="devwrap">
+  <!-- Everything the band drives, scrolling on its own so the band can stay
+       at the foot of the window. -->
+  <div class="devmain">
   <!-- The way in: what this page is for, before it is for anything. Built by
        the page, because what it may offer follows the server. -->
   <div class="panel ways" id="ways" hidden></div>
+
+  <p class="err" id="dev-err" hidden></p>
+  <p class="hint live-note" id="live-note" hidden>
+    Real players may be at this table, and every control here lands on their game.
+    The phones are watching windows — they show what each player sees without
+    putting anybody at the table.
+  </p>
+
+  <div class="panel players" id="players-panel" hidden>
+    <div class="phaserow" id="phase-row"></div>
+    <div class="prow phead">
+      <span>seat</span><span>host</span><span>dealer</span><span>bot</span>
+      <span>bid</span><span>won</span><span id="ph-photo">photo</span><span>in the game</span>
+    </div>
+    <div id="prows" style="display:contents"></div>
+    <p class="hint">Everything lands as it is changed. The won column goes as one, once every seat has a number: the cells still wanted are ringed until it does.</p>
+  </div>
+
+  <div class="panel statebox" id="state-panel" hidden>
+    <textarea id="state-text" spellcheck="false" aria-label="The table as JSON"></textarea>
+    <div class="btnrow">
+      <button class="btn primary" id="btn-state-apply" type="button">Apply</button>
+      <button class="btn ghost" id="btn-state-reload" type="button">Reload</button>
+      <button class="btn ghost" id="btn-state-copy" type="button" title="The record on the clipboard, to keep or to send on">Copy</button>
+      <p class="err" id="state-err" hidden></p>
+      <p class="hint stale" id="state-stale" hidden>The table has moved since this was read — Reload before you Apply, or the move is undone.</p>
+      <p class="hint">The table becomes what the text says. Its code, its keys and the photos stay as they are.</p>
+    </div>
+  </div>
+
+  <div class="frames">
+    <div class="frameset" id="host-frame"></div>
+    <div class="frameset" id="seat-frames"></div>
+  </div>
+  </div>
 
   <div class="panel band" id="band" hidden>
     <div class="bandrow">
@@ -195,40 +246,6 @@
       <span class="bandlbl">Points</span>
       <div class="viewer-points" id="replay-points"></div>
     </div>
-  </div>
-
-  <p class="err" id="dev-err" hidden></p>
-  <p class="hint live-note" id="live-note" hidden>
-    Real players may be at this table, and every control here lands on their game.
-    The phones are watching windows — they show what each player sees without
-    putting anybody at the table.
-  </p>
-
-  <div class="panel players" id="players-panel" hidden>
-    <div class="phaserow" id="phase-row"></div>
-    <div class="prow phead">
-      <span>seat</span><span>host</span><span>dealer</span><span>bot</span>
-      <span>bid</span><span>won</span><span id="ph-photo">photo</span><span>in the game</span>
-    </div>
-    <div id="prows" style="display:contents"></div>
-    <p class="hint">Everything lands as it is changed. The won column goes as one, once every seat has a number: the cells still wanted are ringed until it does.</p>
-  </div>
-
-  <div class="panel statebox" id="state-panel" hidden>
-    <textarea id="state-text" spellcheck="false" aria-label="The table as JSON"></textarea>
-    <div class="btnrow">
-      <button class="btn primary" id="btn-state-apply" type="button">Apply</button>
-      <button class="btn ghost" id="btn-state-reload" type="button">Reload</button>
-      <button class="btn ghost" id="btn-state-copy" type="button" title="The record on the clipboard, to keep or to send on">Copy</button>
-      <p class="err" id="state-err" hidden></p>
-      <p class="hint stale" id="state-stale" hidden>The table has moved since this was read — Reload before you Apply, or the move is undone.</p>
-      <p class="hint">The table becomes what the text says. Its code, its keys and the photos stay as they are.</p>
-    </div>
-  </div>
-
-  <div class="frames">
-    <div class="frameset" id="host-frame"></div>
-    <div class="frameset" id="seat-frames"></div>
   </div>
 </div>
 
