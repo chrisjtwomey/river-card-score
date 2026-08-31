@@ -80,12 +80,15 @@ function connect() {
         stateStale(false);          // this text is the table, as of now
       }
     } else if (m.t === 'replay') {
-      // A copy opened, moved about in, or let go. The panes follow it.
       /* A copy opened, moved about in, or let go -- and either way, what there
          is to watch. Closing is the panel going; a list with no copy is the
          panel open with nothing picked yet. */
+      const was = REPLAY && REPLAY.code;
       REPLAY = m.shut ? null : m;
-      seatKey = topKey = '';
+      /* Only a different copy is a different pane. Each pane holds a socket on
+         the copy, so a step reaches it on its own; tearing them down every step
+         reloaded every frame at every press, and made the panel feel dead. */
+      if ((REPLAY && REPLAY.code) !== was) seatKey = topKey = '';
       renderReplay();
       renderFrames();
     } else if (m.t === 'seat') {

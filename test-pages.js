@@ -2907,6 +2907,18 @@ part('the dev controls, on each kind of server');
        'and the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
     say();
 
+    /* Each pane holds a socket on the copy, so a step reaches it on its own.
+       Throwing them away at every press reloaded every frame -- and closed the
+       copy's last window, which used to take the copy with it. */
+    const pane = P.pick('#seat-frames').children[0];
+    say({ at: 7 });
+    ok(P.pick('#seat-frames').children[0] === pane,
+       'moving about in a copy leaves its panes where they are');
+    say({ code: 'YYYY' });
+    ok(P.pick('#seat-frames').children[0] !== pane,
+       'and only another copy is another set of panes');
+    say();
+
     // The panes are the copy's while one is open, and the panel goes on Close.
     ok(P.pick('#seat-frames').children.length === 2, 'the panes follow the copy');
     P.socks[0].sent.length = 0;
