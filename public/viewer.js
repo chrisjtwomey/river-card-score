@@ -114,9 +114,9 @@ const Viewer = (function () {
     if (box.dataset.key === key) return;
     box.dataset.key = key;
     box.innerHTML = '';
-    const row = (code, said, when, who, why, go) => {
+    const row = (code, said, when, who, why, go, part) => {
       const b = document.createElement('div');
-      b.className = 'btn grow';
+      b.className = 'btn grow' + (part ? ' part' : '');
       b.title = why;
       const top = document.createElement('div');
       top.className = 'gtop';
@@ -149,9 +149,15 @@ const Viewer = (function () {
     }
     list.forEach((g) => {
       const names = g.names || [];
-      row(g.code, wonBy(g), gameWhen(g.at),
+      /* A game that never finished has no winner to name. What it has instead
+         is how far it got, which is the thing you came to look at. */
+      const said = g.unfinished
+        ? `⚠️ unfinished · round ${g.round} of ${g.rounds}` : wonBy(g);
+      row(g.code, said, gameWhen(g.at),
           `${names.length} players · ${names.join(', ')}`,
-          'Watch this game again', () => view.send({ do: 'open', game: g.id }));
+          g.unfinished ? 'Watch this game again, as far as it got'
+                       : 'Watch this game again',
+          () => view.send({ do: 'open', game: g.id }), g.unfinished);
     });
     if (!R.here && !list.length) {
       const p = document.createElement('p');

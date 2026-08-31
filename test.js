@@ -731,6 +731,49 @@ async function bidRound(P) {
     cold.send({ t: 'dev', action: 'state', replay: true, record: cold.raw });
     await okBy(() => /read, not written/.test(cold.last()), 'and never written back');
 
+    /* A game that never finished is filed too, and by the same door. The games
+       worth watching again are often the ones that could not go on: a table
+       ended part way through keeps what happened up to there. */
+    const part = await tableOf(['Ivy', 'Jon'], { max: 1, pattern: 'down', ones: 2 });
+    part.h.send({ t: 'start' });
+    await okBy(() => part.h.state.phase === 'bid', 'a game starts and does not finish');
+    await part.h.rt();                       // the deal is written down before it goes
+    ok((await fetch(`http://127.0.0.1:${PORT}/table/end?c=${part.code}`,
+                    { method: 'POST' })).status === 200, 'the table is ended under it');
+
+    cold.send({ t: 'dev', action: 'ways' });
+    await okBy(() => cold.ways.games.some((g) => g.code === part.code),
+       'the game that could not go on is on the list  got '
+       + cold.ways.games.map((g) => g.code).join(','));
+    const half = cold.ways.games.find((g) => g.code === part.code);
+    ok(half.unfinished === true && half.round === 1 && half.rounds > 0,
+       'saying how far it got rather than who won  got ' + JSON.stringify(half));
+    ok(!half.winners, 'because there was no winner');
+    cold.send({ t: 'dev', action: 'replay', do: 'open', game: half.id });
+    await okBy(() => cold.replay && cold.replay.of === part.code,
+       'and it is watched back like any other  got ' + cold.last());
+    part.P.forEach((x) => x.ws.close());
+
+    /* The other way a live trail stops being live: another game started over
+       the top of it, which is what somebody does when a game will not go on. */
+    const again = await tableOf(['Kit', 'Lee'], { max: 1, pattern: 'down', ones: 2 });
+    again.h.send({ t: 'start' });
+    await okBy(() => again.h.state.phase === 'bid', 'a game starts');
+    await again.h.rt();
+    // Back to the lobby and away again: New game, the way a screen says it.
+    again.h.send({ t: 'reset' });
+    await okBy(() => again.h.state.phase === 'lobby', 'the table goes back to its lobby');
+    again.h.send({ t: 'start' });
+    await okBy(() => again.h.state.phase === 'bid',
+       'and another game is started over the top of the first');
+    await again.h.rt();
+    cold.send({ t: 'dev', action: 'ways' });
+    await okBy(() => cold.ways.games.filter((g) => g.code === again.code).length === 1,
+       'the one it wrote over is kept  got '
+       + cold.ways.games.filter((g) => g.code === again.code).length);
+    again.h.ws.close();
+    again.P.forEach((x) => x.ws.close());
+
     /* The one trail that is not public is a table still in play: it holds the
        cards in every hand, so putting that one back stays the host's. */
     const live = await tableOf(['Gus', 'Hal'], { max: 1, pattern: 'down', ones: 2 });
@@ -1187,13 +1230,22 @@ async function bidRound(P) {
        'and the oldest is gone');
 
     /* A game filed keeps the trail of how it was played, under the same name
-       as its scorecard, and falls off by the same cap. */
-    const trails = fs.readdirSync(path2.join(DATA_DIR, 'trail'))
-      .filter((f) => /^\d+-[0-9a-f]{12}\.jsonl$/.test(f));
+       as its scorecard, and falls off by the same cap. A game that never
+       finished is filed too, with a headline of its own beside it -- which is
+       what tells the two piles apart, and each pile is capped on its own. */
+    const dir = path2.join(DATA_DIR, 'trail');
+    const all = fs.readdirSync(dir);
+    const bare = (f) => f.replace(/\.jsonl?$/, '');
+    const heads = new Set(all.filter((f) => /^\d+-[0-9a-f]{12}\.json$/.test(f)).map(bare));
+    const filed = all.filter((f) => /^\d+-[0-9a-f]{12}\.jsonl$/.test(f));
+    const trails = filed.filter((f) => !heads.has(bare(f)));
+    const broke = filed.filter((f) => heads.has(bare(f)));
     ok(trails.length === 3, 'a game keeps the trail of how it was played  got ' + trails.length);
+    ok(broke.length <= 3,
+       'and a game that never finished is its own pile, capped the same  got ' + broke.length);
     ok(!trails.some((f) => f.endsWith(`-${id}.jsonl`)),
        'and the oldest trail goes when its scorecard does');
-    const one = fs.readFileSync(path2.join(DATA_DIR, 'trail', trails[0]), 'utf8')
+    const one = fs.readFileSync(path2.join(dir, trails[0]), 'utf8')
       .split('\n').filter(Boolean).map((l) => JSON.parse(l).k);
     ok(one[0] === 'G' && one[one.length - 1] === 'E',
        'a kept trail runs from the game starting to the game ending  got '

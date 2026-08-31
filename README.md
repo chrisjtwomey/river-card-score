@@ -1065,7 +1065,7 @@ Then open **`/dev.html`**. It asks what you are here for before it draws anythin
 
 - **A new table** — stand-ins in every seat, ready to play, in the number the box says. A dev server's alone; on any other the door says so rather than failing when pressed.
 - **A table already in play** — on a dev server, every table this server is running, as a list to press. On any other, its code and its host key, which the TV screen showing it has under ⚙.
-- **Replays** — the game a table is playing now, and every game on file: each one a row saying who won and with what, who was at it, and when it was played. This one needs no table and no key.
+- **Replays** — the game a table is playing now, and every game on file: each one a row saying who won and with what, who was at it, and when it was played. Games that never finished are on it too, saying how far they got instead of who won. This one needs no table and no key.
 
 A code in the address is that question already answered: `dev.html#c=CODE&t=TOKEN` opens straight onto that table, which is what **Dev controls** under ⚙ on the TV screen writes. `dev.html#g=ID` opens straight onto a game watched again, and the page writes back whichever it lands on, so a reload comes to the same place. **⌂** in the band puts the question back at any time.
 
@@ -1160,7 +1160,13 @@ A copy is a room like any other, which is what makes the screens on it work: the
 
 A **game on file** needs nothing at all to watch back: no table, no host token, on any server. It is finished, and its scorecard is already served to anybody who asks at `/games.json` and on the history page; putting it back adds only the order it happened in. A **table still in play** is the one thing that stays behind the host token, because its trail holds the cards in every hand — a phone at that table is told *only the host can watch this table back*. Either way it invents nothing: it puts back what already happened, on a copy.
 
-One game at a time: a new game starts the file over, because a table lives six hours and plays several. A game that finishes keeps its trail, copied beside its scorecard and under the same name, so it falls off by the same cap the scorecards do. A live table's trail goes when its table goes, by the same six-hour rule. Neither can outlive the thing it is a trail of. `TRAIL_MAX` (4 MB) is the point at which a table stops writing rather than filling the disk — a whole game is about ninety kilobytes, so reaching it means something is wrong.
+One game at a time: a new game starts the file over, because a table lives six hours and plays several.
+
+**A live trail is filed before it is destroyed** — that is the whole rule, and there are four moments it happens: a game finishes, a table is ended, a table ages out, or another game is started over the top of one. A game that finishes is copied beside its scorecard and under the same name, so it falls off by the same cap the scorecards do.
+
+A game that *never* finished is kept too, and it is the one most worth having: a game nobody could finish is a game with something wrong in it, and the commonest thing to do after a bug is to end the table or start again — both of which used to take the evidence with them. It has no scorecard to read a headline off, so it carries its own beside it: `data/trail/<at>-<id>.json`, with who was at it and how far it got. That header is also what tells the two piles apart, and each is capped on its own, so a run of broken games cannot push out the games that were played through.
+
+**Replays** lists both. An unfinished one says *⚠️ unfinished · round 4 of 15* where a finished one names its winner, and is watched back exactly the same way — no table and no key, because the table it came from is gone. `TRAIL_MAX` (4 MB) is the point at which a table stops writing rather than filling the disk — a whole game is about ninety kilobytes, so reaching it means something is wrong.
 
 ## Test
 

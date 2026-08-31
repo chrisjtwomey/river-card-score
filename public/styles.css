@@ -1527,6 +1527,9 @@ body.settings-open{overflow:hidden}
 .grow .gtop{display:flex;align-items:baseline;gap:10px;min-width:0}
 .grow .gcode{font-weight:800;letter-spacing:.08em;color:var(--gold);flex:none}
 .grow .gwon{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* A game that never finished: it is on the list for what went wrong in it. */
+.grow.part{border-style:dashed}
+.grow.part .gwon{color:var(--gold)}
 .grow .gwhen{margin-left:auto;font-size:11px;color:var(--ink-dim);flex:none}
 .grow .gwho{font-size:11px;color:var(--ink-dim);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}

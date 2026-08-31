@@ -3410,7 +3410,9 @@ part('the dev controls, on each kind of server');
                                          seats: ['a', 'b', 'c', 'd'], stand: true }] : [],
         here: null,
         games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000,
-                  names: ['Cal', 'Dot'], totals: [31, 47], winners: [1] }],
+                  names: ['Cal', 'Dot'], totals: [31, 47], winners: [1] },
+                { id: 'f6e5d4c3b2a1', code: 'QRST', at: 1786900000000,
+                  names: ['Eve', 'Fay'], unfinished: true, round: 4, rounds: 15 }],
       }) });
       return P;
     };
@@ -3430,13 +3432,19 @@ part('the dev controls, on each kind of server');
       ok(doors[1].querySelectorAll('.waylist').length === 0,
          'and a normal server hands over no list of its tables');
       const games = doors[2].querySelectorAll('.grow');
-      ok(games.length === 1, 'a game on file needs neither  got ' + games.length);
+      ok(games.length === 2, 'a game on file needs neither  got ' + games.length);
       ok(games[0].querySelector('.gwon').textContent === '🏆 Dot · 47',
          'a row says who took it and with what  got '
          + games[0].querySelector('.gwon').textContent);
       ok(games[0].querySelector('.gwho').textContent === '2 players · Cal, Dot',
          'and who was at it  got ' + games[0].querySelector('.gwho').textContent);
       ok(!!games[0].querySelector('.gwhen').textContent, 'and when it was played');
+
+      /* A game that never finished has no winner to name. What it has instead
+         is how far it got, which is the thing you came to look at. */
+      ok(games[1].classList.contains('part'), 'one that never finished is marked apart');
+      ok(games[1].querySelector('.gwon').textContent === '⚠️ unfinished · round 4 of 15',
+         'and says how far it got  got ' + games[1].querySelector('.gwon').textContent);
 
       P.socks[0].sent.length = 0;
       games[0].fire('click');
