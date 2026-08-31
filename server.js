@@ -272,14 +272,12 @@ function restore() {
        the machine -- which is exactly what a phone hosting a game does every
        time it is stopped and started again. */
     room.lastSeen = Date.now();
-    /* A trick was being held up for the table to read when the server stopped.
-       It has been read by now, so the table moves on rather than sitting on a
-       hold that nothing is left to end. */
-    if (G.virtual(room) && room.phase === 'tricks' && room.play && room.play.turn === null && room.play.last) {
-      Deck.settleTrick(room, room.play.last.winner);
-    }
-    // The same for bids that were up to be read: they have been read by now.
-    Room.openPlay(room);
+    /* A beat was being held up for the table to read when the server stopped --
+       a finished trick, or the bids -- and the timer that would have ended it
+       went with the server. It has been read by now, so the table moves on
+       rather than sitting on a hold that nothing is left to end. The same move
+       whoever runs a table reaches by hand when one hangs. */
+    Room.unstick(room);
     rooms.set(room.code, room);
   });
 }

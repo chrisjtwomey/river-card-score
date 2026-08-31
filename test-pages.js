@@ -2793,6 +2793,75 @@ part('the front page, and the screen');
      The widget both the host screen and the dev page put a button on. It is
      offered only where the table has a hand of its own to play, and only to a
      screen that runs the table. */
+  /* ---- the table has hung, and is moved on by hand ----
+     Both beats a hand is built around are ended by a timer, and a timer belongs
+     to the server that armed it. A table whose server was stopped over the
+     moment sits there with every phone waiting on it. */
+  part('a table that has hung');
+  {
+    const R = load(900, 800);
+    const mk = (tag) => R.dom.document.createElement(tag);
+    const sent = [];
+    const boss = { me: -1, boss: true, send: (m) => sent.push(m) };
+    const held = (over) => Object.assign({
+      phase: 'tricks', idx: 0, cfg: { deck: 'virtual' },
+      seats: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Ben' }],
+      rounds: [{ cards: 3, dealer: 0, bids: [1, 1], tricks: null }],
+      play: { turn: null, held: true, trick: [], won: [0, 0], last: null, counts: [3, 3] },
+    }, over || {});
+
+    const row = mk('span');
+    /* The widget keeps one clock, and this is where it is caught: a hung table
+       sends nothing, so the moment the beat outstays itself cannot arrive on a
+       state and has to be waited for. */
+    const armed = [];
+    const realSet = global.setTimeout;
+    global.setTimeout = (f, ms) => { armed.push({ f, ms }); return realSet(() => {}, 0); };
+    try { R.Round.unstick(row, held(), boss); } finally { global.setTimeout = realSet; }
+    ok(row.hidden === true, 'bids standing to be read are not a table that has hung');
+    ok(armed.length === 1, 'but the widget waits to see  got ' + armed.length);
+    ok(armed[0].ms > 1000, 'a beat and then some  got ' + armed[0].ms);
+
+    // The wait is out, and the beat is still standing.
+    const back = Date.now;
+    Date.now = () => back() + 9000;
+    try { armed[0].f(); } finally { Date.now = back; }
+    ok(row.hidden === false, 'one still standing a beat later is');
+    ok(row.querySelector('.btn').textContent === 'Start the hand',
+       'and says which beat  got ' + row.querySelector('.btn').textContent);
+    row.querySelector('.btn').fire('click');
+    ok(JSON.stringify(sent[0]) === '{"t":"unstick"}',
+       'moved on with the move it was going to make  got ' + JSON.stringify(sent[0]));
+
+    // A trick sitting on the table is the other beat.
+    const trick = held({ play: { turn: null, held: false, trick: [], won: [1, 0],
+                                 last: { trick: [], winner: 0 }, counts: [2, 2] } });
+    row._stuckAt = 0;
+    Date.now = () => back() + 20000;
+    try { R.Round.unstick(row, trick, boss); Date.now = () => back() + 40000;
+          R.Round.unstick(row, trick, boss); } finally { Date.now = back; }
+    ok(row.hidden === false && row.querySelector('.btn').textContent === 'Take the trick in',
+       'a trick held up too long is the other one  got ' + row.querySelector('.btn').textContent);
+
+    // With real cards a counted trick always looks like that, and is not it.
+    const real = held({ cfg: { deck: 'physical' },
+      play: { turn: null, held: false, trick: [], won: [1, 0],
+              last: { trick: [], winner: 0 }, counts: [2, 2], log: [0] } });
+    row._stuckAt = 0;
+    R.Round.unstick(row, real, boss);
+    ok(row.hidden === true, 'a table with real cards counts like that all round: only its bids can hang');
+
+    // And the table moving on takes the offer away with it.
+    row._stuckAt = 0;
+    R.Round.unstick(row, held({ play: { turn: 1, held: false, trick: [], won: [0, 0],
+                                        last: null, counts: [3, 3] } }), boss);
+    ok(row.hidden === true, 'a table that is moving has nothing to be moved on');
+    ok(!row._timer, 'and no clock left running on it');
+
+    R.Round.unstick(row, held(), { me: 1, boss: false, send: () => {} });
+    ok(row.hidden === true, 'a screen that runs nothing is offered none of it');
+  }
+
   part('stopping a table that plays itself');
   {
     const R = load(1200, 800);

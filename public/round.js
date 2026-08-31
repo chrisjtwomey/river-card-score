@@ -237,6 +237,57 @@ const Round = (function () {
     onClick(q(row, '.btn'), () => view.send({ t: 'carryon' }));
   }
 
+  /* The table is standing on a beat that nothing is left to end: a finished
+     trick held up to be read, or the bids. Both are ended by a timer, and a
+     timer belongs to the server that armed it -- so a server stopped over the
+     moment, or a table read back off the disk, leaves every phone waiting on
+     a table that will never move.
+
+     Held is normal for a beat: the table is reading it. So this offers nothing
+     until the beat has outstayed itself, and it forgets the moment the table
+     moves. `root._stuckAt` is when it first looked stuck, and the page redraws
+     on its own clock, which is what makes the wait pass. */
+  const STUCK_MS = 5000;
+
+  function unstick(root, ST, view) {
+    if (!root) return;
+    const p = ST.play;
+    // With real cards `turn` is always null and `last` is the trick just
+    // counted, so only the bids can hang; the deck the server deals has both.
+    const beat = !!p && ST.phase === 'tricks'
+      && (!!p.held || (Game.virtual(ST) && p.turn === null && !!p.last));
+    // What the clock below will draw with, kept fresh on every state.
+    root._ST = ST;
+    root._view = view;
+    if (!beat) {
+      root._stuckAt = 0;
+      if (root._timer) { clearTimeout(root._timer); root._timer = null; }
+    } else if (!root._stuckAt) {
+      root._stuckAt = Date.now();
+    }
+    const on = view.boss && beat && (Date.now() - root._stuckAt) >= STUCK_MS;
+    /* A table that has hung sends nothing -- that is what being hung is -- so
+       the moment the beat outstays itself cannot be waited for on the next
+       state. This is the one clock the widget keeps, and it keeps it only
+       while a beat is standing. */
+    if (beat && !on && !root._timer) {
+      root._timer = setTimeout(() => {
+        root._timer = null;
+        if (root._ST) unstick(root, root._ST, root._view);
+      }, Math.max(50, STUCK_MS - (Date.now() - root._stuckAt) + 50));
+    }
+    root.hidden = !on;
+    if (!on) return;
+    const held = !!p.held;
+    const btn = root.tagName === 'BUTTON' ? root
+      : part(root, '.btn', () => button('btn ghost', 'Move the table on'));
+    btn.textContent = held ? 'Start the hand' : 'Take the trick in';
+    btn.title = held
+      ? 'The bids have been up long enough. Start the hand: the move the table was going to make.'
+      : 'The trick has been up long enough. Take it in and let the winner lead.';
+    onClick(btn, () => view.send({ t: 'unstick' }));
+  }
+
   /* ---------- the winner ---------- */
 
   // Who won, what each player is remembered for, and -- where the page has
@@ -362,5 +413,6 @@ const Round = (function () {
     ask.then((yes) => { if (yes) view.send({ t: 'bumdeal' }); });
   }
 
-  return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, stalled, winner, bum, vote, pause, newGame, bumDeal, undo };
+  return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, stalled, unstick,
+           winner, bum, vote, pause, newGame, bumDeal, undo };
 })();
