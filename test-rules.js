@@ -1613,10 +1613,12 @@ part('a game put back on a table of its own');
     /* Part way through the first trick: two cards down, nothing scored. There
        is no picture at this point, so the copy can only be here by having
        played the cards itself. */
-    /* Every point in words, worked out once when the copy is made. The stepper
-       says these on the way past, and the line under the band says the same
-       one for the point the copy is standing on -- one sentence, read twice. */
-    const words = bidding.replay.says;
+    /* Every point in words. The stepper says these on the way past, and the
+       line under the band says the same one for the point the copy is standing
+       on -- one sentence, read twice. Worked out when the copy is asked about
+       itself rather than kept, because a fork lengthens its own tape as it is
+       played and a list made once would stop describing it at the first card. */
+    const words = bidding.Replay.say(bidding).says;
     ok(words.length === trail.length, 'a copy has a word for every point  got '
        + words.length + ' of ' + trail.length);
     ok(/^\S+ bids \d+$/.test(words[bids[0]]),
@@ -1632,7 +1634,7 @@ part('a game put back on a table of its own');
     /* And what each point has to show for itself, which is the value it
        carried: a bid its number, a card the card. The rest is a kind of thing
        rather than a value, and wears the icon its kind wears on the page. */
-    const faces = bidding.replay.faces;
+    const faces = bidding.Replay.say(bidding).faces;
     ok(faces[bids[0]] === String(trail[bids[0]].v),
        'a bid shows the number that was said  got ' + faces[bids[0]]);
     ok(faces[oneCard] === G.cardName(trail[oneCard].x),
@@ -1722,16 +1724,17 @@ part('a game put back on a table of its own');
     Replay.seek(copy, 3);
     copy.seats[0].name = 'Zed';
     const landed = Replay.fork(copy);
-    ok(copy.replay.n === 5 && landed === 4,
-       'the change is the copy\'s last point  got ' + copy.replay.at + ' of ' + copy.replay.n);
-    ok(whole > copy.replay.n,
-       'and what happened after it goes  got ' + copy.replay.n + ' of ' + whole);
+    const tape = () => copy.replay.points.length;
+    ok(tape() === 5 && landed === 4,
+       'the change is the copy\'s last point  got ' + copy.replay.at + ' of ' + tape());
+    ok(whole > tape(),
+       'and what happened after it goes  got ' + tape() + ' of ' + whole);
     const last = copy.replay.points[4];
     ok(last.k === 'F' && last.w === 'edit' && !!last.f,
        'as a picture, marked forced  got ' + JSON.stringify(last && last.k));
     ok(copy.replay.forked === true, 'and the copy says it is no longer the game');
-    ok(copy.replay.says[4] === 'changed by hand',
-       'which is what the timeline says of it  got ' + copy.replay.says[4]);
+    ok(Replay.say(copy).says[4] === 'changed by hand',
+       'which is what the timeline says of it  got ' + Replay.say(copy).says[4]);
 
     // A point like any other: back over it, and forward onto it again.
     Replay.step(copy, -1);
@@ -1745,6 +1748,45 @@ part('a game put back on a table of its own');
 
     // And the trail it was made from never moved: a copy is a copy.
     ok(t.room.trail.length === whole, 'the game it is a copy of is untouched');
+
+    /* A fork is a table of its own, so it takes the game's own verbs -- and
+       what is said now is part of it. Every point goes onto the copy's own
+       tape, so the timeline lengthens as it is played and you can scrub back
+       over what you played. */
+    ok(copy.seats.every((x) => x.token && x.watch),
+       'its seats are held now, not only watched');
+    ok(copy.stand === true, 'and it is a table of stand-ins: nobody real is behind them');
+    Replay.seek(copy, 2);
+    ok(copy.replay.points.length === 5,
+       'seeking a fork writes nothing down: putting a trail back is not playing  got '
+       + copy.replay.points.length);
+    Replay.seek(copy, 4);
+
+    const grew = copy.replay.points.length;
+    copy.paused = false;
+    const on = G.onTurn(copy);
+    if (on !== null && copy.phase === 'bid') {
+      t.Room.seatBid(copy, on, 0);
+      ok(copy.replay.points.length === grew + 1,
+         'a bid made on a fork is a point of its own  got ' + copy.replay.points.length);
+      ok(copy.replay.points[grew].k === 'b',
+         'of the kind the trail already had a letter for  got ' + copy.replay.points[grew].k);
+      ok(/bids 0$/.test(Replay.say(copy).says[grew]),
+         'and the timeline says it  got ' + Replay.say(copy).says[grew]);
+      ok(copy.replay.at === grew,
+         'and the copy stands on what it just did  got ' + copy.replay.at + ' of ' + grew);
+      // Back over it, and the bid is not there: it is a point like any other.
+      Replay.seek(copy, 4);
+      ok((copy.rounds[copy.idx].bids || [])[on] === null || copy.idx !== 0
+         || copy.rounds[0].bids[on] === null,
+         'and scrubbing back over it undoes it');
+      Replay.seek(copy, grew);
+      ok(copy.rounds[copy.idx].bids[on] === 0,
+         'and forward finds it again, because it is written down');
+    }
+    // What was written down about the game itself is still not touched.
+    ok(t.room.trail.length === whole, 'and still nothing reaches the game on file');
+    ok(!copy.trail || !copy.trail.length, 'nor a trail of its own, which is what is filed');
   }
 
   {

@@ -36,6 +36,8 @@ lib/games.js       A finished game on disk.
 lib/trail.js       What happened to a table, written down as it happens: a point a
                    thing, appended to a file of its own. `point`/`frame` are pure and
                    called from Room verbs; `flush` is the server's, at the broadcast.
+                   A copy being read writes nothing (`replay.reading`); a copy that
+                   has been changed writes onto its own `replay.points`, never disk.
                    A live trail is filed before it is destroyed -- a game finishing,
                    a table ending, one ageing out, or another game started over it.
 lib/tables.js      A table still in play, on disk: written after every broadcast,

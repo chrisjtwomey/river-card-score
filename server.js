@@ -144,6 +144,16 @@ function listTables() {
    running, and no browser remembers it -- the game it is a copy of is where all
    of that belongs. So everything that offers a table asks for one here, and a
    copy answers as no table at all. */
+/* A table, or a copy that has been played on. A copy is not a table -- nothing
+   offers one and nobody joins one -- but a fork is a table of its own, and the
+   seats the dev page handed out have to be able to come back to it. Only by a
+   key already held: `join`, which is a code and a name, still finds nothing. */
+const seatableOf = (code) => {
+  const room = roomOf(code);
+  if (!room) return null;
+  return (!room.replay || room.replay.forked) ? room : null;
+};
+
 const tableOf = (code) => {
   const room = roomOf(code);
   return room && !room.replay ? room : null;
@@ -250,6 +260,10 @@ function broadcast(room) {
   // Somebody is at this table, or has just left it. Whoever is holding the
   // machine awake for the table wants to know either way.
   sayBusy();
+  /* The page holding a fork's controls is not at the copy -- the panes are --
+     so a hand played on one would move the table and leave the timeline
+     behind. This is where it catches up. */
+  if (room.replay && room.replay.forked) sayWhere(room);
   // Whoever is on play now, this is where a bot finds out it is them.
   Bots.nudge(room);
   // And if the bids have just gone up to be read, this is where the beat
@@ -262,7 +276,8 @@ function broadcast(room) {
    re-checks the table it was armed for: a bum deal or a seat going can move
    the game on while it runs. */
 function holdBids(room) {
-  if (room.replay) return;          // a replay has one clock, and it is not this one
+  // A replay has one clock and it is not this one; a fork plays the game.
+  if (room.replay && !room.replay.forked) return;
   if (room.bidTimer || !G.bidsHeld(room)) return;
   const tag = room.play, at = room.idx;
   room.bidTimer = setTimeout(() => {
@@ -359,7 +374,12 @@ function replayBeat(room, ev) {
    played at, not on the copy. So it is told here, and only where the copy has
    got to -- the rest of what it drew is the trail, which does not move. */
 function sayWhere(room) {
-  if (room.replay && room.replay.to) send(room.replay.to, Replay.at(room));
+  if (!room.replay || !room.replay.to) return;
+  /* A fork lengthens its own tape as it is played, so the page is told the
+     whole of it: the timeline has points on it that were not there before.
+     A copy being read is only moving about in a tape that does not change, so
+     where it has got to is the whole of the news. */
+  send(room.replay.to, room.replay.forked ? Replay.say(room) : Replay.at(room));
 }
 
 /* A replay playing itself, one point at a time. The timer is the copy's own --
@@ -368,7 +388,7 @@ function sayWhere(room) {
 function replayTick(room) {
   const tag = room.replay;
   if (!tag || !tag.playing) return;
-  if (tag.at >= tag.n - 1) { tag.playing = false; broadcast(room); return sayWhere(room); }
+  if (tag.at >= tag.points.length - 1) { tag.playing = false; broadcast(room); return sayWhere(room); }
   const ev = tag.points[tag.at + 1];
   Replay.step(room, 1);
   broadcast(room);
@@ -534,18 +554,23 @@ function handle(ws, m) {
   }
 
   if (m.t === 'resume') {
-    const room = tableOf(m.code);
+    const room = seatableOf(m.code);
     if (!room) return fail(ws, 'that table is gone');
     if (m.token === room.hostToken) {
       attach(ws, room, { role: 'host' });
-      send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken });
+      send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken,
+                 replay: !!room.replay });
       return broadcast(room);
     }
     const seat = room.seats.find((s) => s.token === m.token);
     if (!seat) return fail(ws, 'that seat is gone');
     seat.left = false;                       // whoever left has come back to it
     attach(ws, room, { role: 'player', seatId: seat.id });
-    send(ws, { t: 'hello', role: 'player', code: room.code, token: seat.token, seatId: seat.id });
+    /* A seat at a fork is told what it is on, the same as a screen is: it may
+       play there, but no browser should write a copy down as a table it is at.
+       There is nothing to come back to -- the copy goes when its page does. */
+    send(ws, { t: 'hello', role: 'player', code: room.code, token: seat.token, seatId: seat.id,
+               replay: !!room.replay });
     return broadcast(room);
   }
 

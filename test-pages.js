@@ -4172,6 +4172,28 @@ part('the dev controls, on each kind of server');
     play.fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"play"}',
        'and asks for it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    /* A copy that has been changed is a table of its own, and Carry on is what
+       starts it: the panes hold their seats and the bots take their turns.
+       There is nothing to start on a copy that is still the game it is a copy
+       of -- nothing is played at one of those. */
+    const go = () => run().querySelector('.vw-run');
+    ok(go().hidden === true, 'a copy that is still the game has nothing to start');
+    const held = (on) => JSON.parse(devState(false, { paused: on }));
+    say({ forked: true, state: held(true) });
+    ok(go().hidden === false && go().textContent === '▶ Carry on',
+       'a fork offers to be played  got ' + go().textContent);
+    P.socks[0].sent.length = 0;
+    go().fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"run","on":true}',
+       'and asks the copy for it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    say({ forked: true, state: held(false) });
+    ok(go().textContent === '❚❚ Stop', 'a running fork offers to be stopped');
+    P.socks[0].sent.length = 0;
+    go().fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"run","on":false}',
+       'the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    say();
+
     say({ playing: true, at: 4 });
     ok(play.textContent === '❚❚ Pause', 'a playing one offers to stop');
     P.socks[0].sent.length = 0;

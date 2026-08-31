@@ -221,6 +221,10 @@ const Viewer = (function () {
   }
   const topOf = (R, i) => (i === 0 ? 0 : R.marks[i].at);
 
+  // Whether the copy's own table is held. A copy is, always; a fork is until
+  // it is carried on.
+  const stopped = (R) => !!(R && R.state && R.state.paused);
+
   /* A round back, and a round on. Back part way through a round goes to the top
      of it first, the way a track does: it is the same press for "this one
      again" and "the one before", and which you meant is where you are. On from
@@ -299,6 +303,13 @@ const Viewer = (function () {
       });
       box.appendChild(seg);
       box._rates = seg;
+      /* A copy that has been changed is a table of its own, and this is what
+         starts it: the panes on it can play the hand you set up, and the bots
+         take their turns. It is stopped when it is made -- forking is setting
+         a game up, not starting one -- so this is always the next thing to
+         press, and it is not there at all on a copy that is still the game it
+         is a copy of. */
+      btn(box, 'btn vw-run', '', '', () => ask({ do: 'run', on: stopped(now()) }));
       const at = document.createElement('span');
       at.className = 'viewer-at';
       box.appendChild(at);
@@ -319,6 +330,16 @@ const Viewer = (function () {
       : 'Play it back at the pace the table played it';
     box._rates.querySelectorAll('.btn').forEach((b) =>
       b.classList.toggle('on', Number(b.dataset.rate) === (R.rate || 1)));
+    const go = box.querySelector('.vw-run');
+    go.hidden = !R.forked;
+    if (R.forked) {
+      const held = stopped(R);
+      go.textContent = held ? '▶ Carry on' : '❚❚ Stop';
+      go.title = held
+        ? 'Play from here: the panes hold their seats, and the bots take their turns'
+        : 'Stop the table. No bid, no card and no trick lands until you carry it on.';
+      go.classList.toggle('primary', held);
+    }
     box.querySelector('.viewer-at').textContent = `${R.at + 1} of ${R.n}`;
   }
 

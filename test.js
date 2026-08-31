@@ -775,6 +775,47 @@ async function bidRound(P) {
     ok(cold.replay.n === whole && !cold.replay.forked,
        'the game on file was never touched  got ' + cold.replay.n + ' of ' + whole);
 
+    /* A fork is a table of its own, so it takes the game's own verbs -- and
+       its seats are handed over as seats, not as watching keys, so the panes
+       on one can play the hand you set up. */
+    await cold.rtr({ do: 'open', game: filed });
+    ok(cold.replay.seats.every((x) => !x.token),
+       'a copy hands over watching keys and no seat');
+    await cold.rtr({ do: 'seek', at: 1 });
+    const there = JSON.parse(JSON.stringify(cold.raw));
+    cold.send({ t: 'dev', action: 'state', replay: true, record: there });
+    await okBy(() => cold.replay.forked, 'the copy is changed  got ' + cold.last());
+    ok(cold.replay.seats.every((x) => x.token),
+       'and a fork hands over its seats  got ' + JSON.stringify(cold.replay.seats));
+    ok(cold.replay.state.paused === true,
+       'stopped where it stands: forking sets a game up, it does not start one');
+
+    /* And a seat comes back to it by the key it was handed, which no copy
+       allows -- a copy is not a table anybody joins. */
+    const pane = client('pane'); await pane.ready;
+    pane.send({ t: 'resume', code: cold.replay.code, token: cold.replay.seats[0].token });
+    await okBy(() => pane.hello && pane.hello.role === 'player',
+       'a pane holds a seat at the fork  got ' + pane.last());
+    ok(pane.hello.replay === true,
+       'and is told what it is on, so no browser writes a copy down as a table');
+
+    // It is still not a table anybody may join by code and a name.
+    const walk = client('walk'); await walk.ready;
+    walk.send({ t: 'join', code: cold.replay.code, name: 'Zoe' });
+    await okBy(() => /no table with that code/i.test(walk.last()),
+       'and nobody walks up to one  got ' + walk.last());
+    walk.ws.close();
+
+    // Stopped, so nothing lands until it is carried on; then it does.
+    const seat0 = cold.replay.state.seats[0].id;
+    ok(seat0, 'the fork has seats');
+    await cold.rtr({ do: 'run', on: true });
+    ok(cold.replay.state.paused === false, 'the fork is carried on');
+    await cold.rtr({ do: 'run', on: false });
+    ok(cold.replay.state.paused === true, 'and stopped again');
+    pane.ws.close();
+    await cold.rtr({ do: 'open', game: filed });
+
     /* A copy takes the two forcing controls and nothing else: what plays a
        game on has no business here, because a copy has a game already. */
     cold.send({ t: 'dev', action: 'fillBids', replay: true });
