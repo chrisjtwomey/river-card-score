@@ -106,11 +106,27 @@
   .prow .mid{justify-self:center}
   .prow .pbtns{display:flex;gap:5px}
 
-  /* The points of the round on show, one cell each. Nothing here is a slider,
-     because nothing here is continuous. */
-  .replaysteps{display:flex;gap:2px;overflow-x:auto;min-width:0;padding-bottom:2px;flex:1}
-  .replaysteps .scell{min-width:20px;padding:2px 4px;font-size:11px;flex-direction:row}
-  .replaysteps .scell.done{background:rgba(31,122,77,.14)}
+  /* The points of the round on show: a bar with a bubble on it a point. It is
+     a bar because a round is a run from one end to the other, and bubbles
+     because nothing in it is continuous -- each point either happened or has
+     not, and each of them is a place to go. */
+  .steps{position:relative;display:flex;align-items:center;flex:1;min-width:0;
+    padding:7px 0;gap:0}
+  .steps .track,.steps .fill{position:absolute;top:50%;height:3px;margin-top:-1.5px;
+    border-radius:2px;pointer-events:none}
+  .steps .track{left:0;right:0;background:var(--line)}
+  .steps .fill{left:0;background:var(--gold);transition:width .18s ease}
+  /* A cell a point, so the bubbles sit at even spacing however many there are
+     and the bar behind them ends under the one it has reached. */
+  .steps .pip{position:relative;flex:1 1 0;min-width:0;display:flex;justify-content:center;
+    border:0;background:none;padding:0;cursor:pointer}
+  .steps .dot{width:19px;height:19px;flex:none;border-radius:50%;border:2px solid var(--line);
+    background:var(--bg2);color:var(--ink-dim);display:flex;align-items:center;
+    justify-content:center;font:700 10px/1 ui-monospace,Menlo,monospace}
+  .steps .pip.done .dot{border-color:var(--gold);background:var(--gold);color:#fff}
+  .steps .pip.on .dot{width:23px;height:23px;font-size:11px;border-color:var(--gold);
+    background:var(--bg2);color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,43,.25)}
+  .steps .pip:hover .dot{border-color:var(--gold)}
   #replay-where{margin:0;font-weight:650;color:var(--ink);min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #replay-at{font-size:12px;color:var(--ink-dim);font-weight:650;flex:none}
@@ -228,7 +244,7 @@
          at the one it is standing on. -->
     <div class="bandrow" id="steps-row" hidden>
       <span class="bandlbl">Points</span>
-      <div class="replaysteps" id="replay-steps"></div>
+      <div class="steps" id="replay-steps"></div>
       <span class="bandsep"></span>
       <p class="hint" id="replay-where"></p>
     </div>

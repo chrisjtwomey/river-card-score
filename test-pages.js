@@ -3523,6 +3523,10 @@ part('the dev controls, on each kind of server');
       marks: [{ at: 1, i: 0, cards: 3, w: 'game' }, { at: 6, i: 0, cards: 3, w: 'bum' },
               { at: 11, i: null, w: 'end' }],
       kinds: 'GRbbscccwΣRbE'.replace('Σ', 'e'),
+      says: ['the game starts', 'the round is dealt', 'Ann bids 1', 'Bob bids 2',
+             'a trick opens', 'Ann plays 9♠', 'Bob plays 4♥', 'Ann plays K♦',
+             'Ann takes the trick', 'the round is scored', 'the round is dealt',
+             'Bob bids 0', 'the game ends'],
       where: 'Round 1 of 2 · 3 cards · Ann bids 1',
     }, over || {})) });
 
@@ -3554,10 +3558,26 @@ part('the dev controls, on each kind of server');
     /* The steps inside the round on show. Discrete, because a game is: each of
        these either happened or has not. */
     say({ at: 3 });
-    const steps = P.pick('#replay-steps').querySelectorAll('.scell');
+    const steps = P.pick('#replay-steps').querySelectorAll('.pip');
     ok(steps.length === 5, 'the round on show is its own points  got ' + steps.length);
     ok(steps[2].classList.contains('on'), 'with the one it is standing on marked');
     ok(steps[1].classList.contains('done'), 'and the ones behind it done');
+    ok(P.pick('#replay-steps').querySelector('.fill').style.width === '50%',
+       'and the bar filled to the middle of it  got '
+       + P.pick('#replay-steps').querySelector('.fill').style.width);
+    ok(!!P.pick('#replay-steps').querySelector('.track'), 'over a track the whole way');
+
+    /* Passing over a bubble says what happened at that point, and leaving it
+       puts back what is on the table where the copy stands. */
+    ok(steps[2].title === 'Bob bids 2 — point 4 of 13',
+       'a bubble names its own point  got ' + steps[2].title);
+    steps[3].fire('mouseenter');
+    ok(P.pick('#replay-where').textContent === 'a trick opens',
+       'passing over one says what happened there  got ' + P.pick('#replay-where').textContent);
+    steps[3].fire('mouseleave');
+    ok(P.pick('#replay-where').textContent === 'Round 1 of 2 · 3 cards · Ann bids 1',
+       'and leaving it puts the table back  got ' + P.pick('#replay-where').textContent);
+
     P.socks[0].sent.length = 0;
     steps[4].fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',

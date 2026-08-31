@@ -1473,6 +1473,7 @@ part('a game put back on a table of its own');
     const copy = t.Room.create('COPY', 'ht');
     Replay.open(copy, 'TEST', t.room.trail.slice());
     Replay.seek(copy, at);
+    copy.Replay = Replay;              // the module that made it, to ask it things
     return copy;
   };
 
@@ -1496,6 +1497,22 @@ part('a game put back on a table of its own');
     /* Part way through the first trick: two cards down, nothing scored. There
        is no picture at this point, so the copy can only be here by having
        played the cards itself. */
+    /* Every point in words, worked out once when the copy is made. The stepper
+       says these on the way past, and the line under the band says the same
+       one for the point the copy is standing on -- one sentence, read twice. */
+    const words = bidding.replay.says;
+    ok(words.length === trail.length, 'a copy has a word for every point  got '
+       + words.length + ' of ' + trail.length);
+    ok(/^\S+ bids \d+$/.test(words[bids[0]]),
+       'a bid says who bid and what  got ' + words[bids[0]]);
+    const oneCard = trail.findIndex((e) => e.k === 'c');
+    ok(/plays .*[♠♥♦♣]$/.test(words[oneCard]),
+       'a card says who played it, as a card reads  got ' + words[oneCard]);
+    ok(words[0] === 'the game starts' && words[words.length - 1] === 'the game ends',
+       'and the ends of the game say so  got ' + words[0] + ' .. ' + words[words.length - 1]);
+    ok(bidding.Replay.say(bidding).says.length === trail.length,
+       'and they go to the page with the rest of the copy');
+
     const cards = trail.map((e, at) => (e.k === 'c' ? at : -1)).filter((at) => at >= 0);
     const copy = copyOf(t, cards[1]);
     const down = copy.play.trick.map((x) => x.card);

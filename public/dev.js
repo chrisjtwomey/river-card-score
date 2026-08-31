@@ -505,12 +505,19 @@ const STEPS = {
   E: ['\ud83c\udfc1', 'the game ends'],
 };
 
-/* The points of the round the copy is standing in, one cell each.
+/* The points of the round the copy is standing in: a bar, with a bubble on it
+   a point, filled up to the one it is standing on.
 
    A game is some hundreds of points, which is why this is two levels and not
    one: the rounds above pick the round, and this picks the moment inside it.
-   Nothing here is a slider, because nothing here is continuous -- a game is a
-   sequence of things that happened, and each of them either has or has not. */
+   The bubbles are not a slider, because nothing here is continuous -- a game is
+   a sequence of things that happened, and each of them either has or has not.
+
+   Passing over one says what happened there, twice over: on the line beside the
+   bar, which is instant, and as the browser's own tip under the pointer. Both
+   are the sentence the server made for that point, so the line the copy is
+   standing on and the line a bubble gives are the same words about the same
+   thing. */
 function renderSteps() {
   const box = $('#replay-steps');
   if (!box || !REPLAY.kinds) return;
@@ -523,19 +530,43 @@ function renderSteps() {
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.innerHTML = '';
+  const n = to - from + 1;
+  const track = document.createElement('span');
+  track.className = 'track';
+  /* The bar stops under the middle of the bubble it has reached, which is where
+     each bubble sits in its own cell: one of n, so (i + a half) of n across. */
+  const fill = document.createElement('span');
+  fill.className = 'fill';
+  const done = Math.max(0, Math.min(REPLAY.at - from, n - 1));
+  fill.style.width = `${((done + 0.5) / n) * 100}%`;
+  box.append(track, fill);
   for (let i = from; i <= to; i++) {
     const k = REPLAY.kinds[i];
-    const [mark, said] = STEPS[k] || ['?', 'something'];
+    const [mark, kind] = STEPS[k] || ['?', 'something'];
+    // An older server sends no words, so the kind of point stands in for them.
+    const said = (REPLAY.says && REPLAY.says[i]) || kind;
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'scell' + (i === REPLAY.at ? ' on' : '') + (i < REPLAY.at ? ' done' : '');
-    b.textContent = mark;
+    b.className = 'pip' + (i === REPLAY.at ? ' on' : '') + (i < REPLAY.at ? ' done' : '');
     b.title = `${said} — point ${i + 1} of ${REPLAY.kinds.length}`;
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.textContent = mark;
+    b.appendChild(dot);
     b.addEventListener('click', () => replayAsk({ do: 'seek', at: i }));
+    b.addEventListener('mouseenter', () => sayWhere(said));
+    b.addEventListener('mouseleave', () => sayWhere(''));
     box.appendChild(b);
   }
-  const on = box.querySelector('.scell.on');
+  const on = box.querySelector('.pip.on');
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+/* The line beside the bar. It says what is on the table, or what a bubble being
+   passed over was -- one line, so the eye has one place to read either from. */
+function sayWhere(said) {
+  const el = $('#replay-where');
+  if (el) el.textContent = said || (REPLAY && REPLAY.where) || '';
 }
 
 /* The rounds of the game being watched, in the strip a scorecard uses. A hand
@@ -663,7 +694,7 @@ function renderReplay() {
   play.title = play._now ? 'Stop where it is'
     : 'Play it back at the pace the table played it';
   $('#replay-at').textContent = `${REPLAY.at + 1} of ${REPLAY.n}`;
-  $('#replay-where').textContent = REPLAY.where || '';
+  sayWhere('');
 }
 
 /* ---------- the way in ---------- */
