@@ -1855,6 +1855,125 @@ function tookTrick(motion) {
   ok(t.stage.querySelectorAll('.dcard.took').length === 1, 'and the trick lies there as it always did');
 }
 
+part('game speed');
+
+/* How fast the game plays on this screen. It is a speed, so bigger is quicker
+   and a duration is divided by it -- and it belongs to the screen, never to
+   the table: nobody else's game changes because of it. */
+{
+  const dom = makeDom(412, 860);
+  const quiet = { log() {}, info() {}, warn() {}, error() {} };
+  const load1 = () => new Function('window', 'document', 'localStorage', 'console',
+    fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8') + '\n; return UI;')(
+    dom.window, dom.document, dom.localStorage, quiet);
+  let UI = load1();
+
+  ok(UI.speed() === 1, 'with nothing chosen the game plays as it is drawn  got ' + UI.speed());
+  ok(UI.ms(400) === 400 && UI.hold(2000) === 2000, 'and nothing is scaled at 1x');
+
+  UI.setSpeed(2);
+  ok(UI.speed() === 2, 'twice is twice  got ' + UI.speed());
+  ok(UI.ms(400) === 200, 'a movement takes half as long  got ' + UI.ms(400));
+  ok(UI.hold(2000) === 1000, 'and a beat is cut in half too  got ' + UI.hold(2000));
+
+  UI.setSpeed(0.5);
+  ok(UI.speed() === 0.5, 'half is half  got ' + UI.speed());
+  ok(UI.ms(400) === 800, 'a movement takes twice as long  got ' + UI.ms(400));
+  /* A beat is a window the table grants, not one this screen may lengthen: a
+     trick sits for TRICK_HOLD before the winner may lead, and the bots wait
+     DEAL_WAIT for the phones. Past that the table moves on and cuts the beat
+     anyway, which reads worse than never having asked. */
+  ok(UI.hold(2000) === 2000, 'but a beat the table is waiting through is not drawn out  got '
+     + UI.hold(2000));
+
+  // It is remembered, and a speed that is not one of the three is not taken.
+  ok(load1().speed() === 0.5, 'the choice is remembered');
+  UI.setSpeed(3);
+  ok(UI.speed() === 0.5, 'a speed that is not offered is refused  got ' + UI.speed());
+  UI.setSpeed(1);
+
+  // The stylesheet is told, because a transition cannot read a setting.
+  UI.setSpeed(2);
+  ok(dom.document.documentElement.style.getPropertyValue('--speed') === '2',
+     'the stylesheet is told  got ' + dom.document.documentElement.style.getPropertyValue('--speed'));
+
+  // A movement is scaled by its rate, so a delay and a duration go together.
+  const a = { playbackRate: 1 };
+  UI.paced(a);
+  ok(a.playbackRate === 2, 'a movement is paced by its rate, delay and all  got ' + a.playbackRate);
+
+  // And the row is on the settings page, in a section of its own.
+  const rows = UI.commonSettings({ motion: true });
+  const i = rows.findIndex((r) => r.label === 'Game speed');
+  ok(i > 0, 'the settings page offers it');
+  ok(rows[i - 1].kind === 'group' && rows[i - 1].label === 'Play',
+     'in a section of its own  got ' + JSON.stringify(rows[i - 1]));
+  ok(rows[i].options.map((o) => o.v).join(',') === '0.5,1,2',
+     'half, as it is, and twice  got ' + rows[i].options.map((o) => o.v).join(','));
+  ok(UI.commonSettings({}).every((r) => r.label !== 'Game speed'),
+     'and not on a page that never animates anything');
+  UI.setSpeed(1);
+}
+
+/* The stylesheet divides by it too: a card placed by a style has to keep pace
+   with a card drawn by an arc, or the two disagree at every speed but one. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const scaled = css.match(/calc\([.\d]+s \/ var\(--speed, 1\)\)/g) || [];
+  ok(scaled.length >= 4, 'the transitions the table moves on are divided by it  got ' + scaled.length);
+  ok(/\.deal\.table \.dcard\{transition:transform calc\(\.14s \/ var\(--speed, 1\)\)/.test(css),
+     'a card among them');
+}
+
+/* Every timed thing on the felt is asked for at the speed the screen is
+   playing at, and the two kinds are told apart: what it draws, and what it
+   waits through while the table waits for it. */
+{
+  const n = 4, cards = 5, me = 1, them = 3;
+  const made = stateFor(n, cards, me, { phase: 'tricks', turn: null, pturn: them });
+  const L = load(412, 860, 'full');
+  L.dom.localStorage.setItem('river-card-score:speed:v1', '2');
+  L.Felt.sync(made.ST, me, { send: () => {} });
+  const arcs = [];
+  L.dom.El.prototype.animate = function (kf, opts) {
+    const a = { el: this, kf, opts: opts || {}, playbackRate: 1, cancel() {}, commitStyles() {},
+                pause() {}, play() {}, finish() {}, finished: Promise.resolve(), onfinish: null };
+    arcs.push(a);
+    return a;
+  };
+  L.dom.El.prototype.getAnimations = () => [];
+  // One card played: the way in is still asked for at 1x and paced by its
+  // rate, so the numbers in the file stay the game as it is drawn.
+  const one = JSON.parse(JSON.stringify(made.ST));
+  one.play.trick = [{ p: them, card: made.hands[them][0] }];
+  one.play.turn = (them + 1) % n;
+  one.play.counts = made.hands.map((h, q) => h.length - (q === them ? 1 : 0));
+  L.Felt.sync(one, me, { send: () => {} });
+  const way = arcs.filter((a) => a.opts.duration === 140 && a.kf.length > 5);
+  ok(way.length === 1, 'the card is still given its way in  got ' + way.length);
+  ok(way.length > 0 && way[0].playbackRate === 2,
+     'drawn at twice the rate  got ' + (way.length ? way[0].playbackRate : '-'));
+
+  // A trick taken: the beat it is left up for is halved, because it may be cut.
+  const held = JSON.parse(JSON.stringify(made.ST));
+  held.hand = made.ST.hand.slice(1);
+  held.play.trick = [];
+  held.play.last = { trick: made.hands.map((h, q) => ({ p: q, card: h[0] })), winner: them };
+  held.play.won = [0, 0, 0, 0];
+  held.play.won[them] = 1;
+  held.play.turn = null;
+  held.play.counts = made.hands.map((h) => h.length - 1);
+  const armed = [];
+  const realSet = setTimeout;
+  global.setTimeout = (f, ms) => { armed.push({ f, ms }); return realSet(() => {}, 0); };
+  try { L.Felt.sync(held, me, { send: () => {} }); } finally { global.setTimeout = realSet; }
+  const beats = armed.map((t) => t.ms).sort((a, b) => a - b);
+  ok(beats.indexOf(1000) >= 0, 'a trick is left up for half as long  got ' + beats.join(','));
+  ok(beats.indexOf(790) >= 0,
+     'and the cards set off inside it, the gather scaled with it  got ' + beats.join(','));
+  L.dom.localStorage.setItem('river-card-score:speed:v1', '1');
+}
+
 part('the settings page');
 
 /* The ⚙ opens a page laid over this one. The button holds a drawn icon, so a

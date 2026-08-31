@@ -601,8 +601,11 @@ body.stage-head .toaster{top:var(--stage-band, calc(clamp(48px, 8vh, 78px) + 84p
   background:radial-gradient(ellipse at 50% 45%, rgba(22,92,63,.99), rgba(7,11,8,1) 70%);
   backdrop-filter:none;-webkit-backdrop-filter:none;
 }
-.deal.table .dcard{transition:transform .14s cubic-bezier(.25,.85,.3,1)}
-.deal.table .dcard.slow{transition-duration:.34s}
+/* The game's own movement, at the speed this screen plays at: --speed is
+   stamped on the root by UI.setSpeed, and a card placed by a style keeps
+   pace with a card drawn by an arc, which is scaled the same way. */
+.deal.table .dcard{transition:transform calc(.14s / var(--speed, 1)) cubic-bezier(.25,.85,.3,1)}
+.deal.table .dcard.slow{transition-duration:calc(.34s / var(--speed, 1))}
 .deal.table .dcard.drag{transition:none}
 .deal.table.still .dcard{transition:none}
 @media (prefers-reduced-motion: reduce){
@@ -650,7 +653,7 @@ body.stage-head .toaster{top:var(--stage-band, calc(clamp(48px, 8vh, 78px) + 84p
   border-radius:12px;border:1px solid rgba(255,255,255,.28);
   background:rgba(9,14,10,.72);color:#f3efe2;font-size:17px;
   box-shadow:0 4px 14px rgba(0,0,0,.45);
-  transition:transform .13s cubic-bezier(.25,.85,.3,1);
+  transition:transform calc(.13s / var(--speed, 1)) cubic-bezier(.25,.85,.3,1);
   backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
 }
 .deal.table.still .bidchip{transition:none}
@@ -673,7 +676,7 @@ body.stage-head .toaster{top:var(--stage-band, calc(clamp(48px, 8vh, 78px) + 84p
   position:absolute;left:50%;top:50%;width:64px;height:90px;margin:-45px 0 0 -32px;
   border:2px dashed rgba(255,255,255,.17);border-radius:9px;
   z-index:0;pointer-events:none;
-  transition:transform .14s cubic-bezier(.25,.85,.3,1);
+  transition:transform calc(.14s / var(--speed, 1)) cubic-bezier(.25,.85,.3,1);
 }
 .deal.table.still .dplace{transition:none}
 @media (prefers-reduced-motion: reduce){.deal.table .dplace{transition:none}}

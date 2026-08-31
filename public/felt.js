@@ -39,6 +39,15 @@
 const Felt = (function () {
   const { cardEl, tf, faceOf, parts } = Stage;
 
+  /* Every duration below is the game at 1x, and every one of them is asked for
+     through these. `ms` is a movement this screen draws; `hold` is a beat the
+     table is waiting through, which may be cut short and may not be drawn out.
+     Both are asked at the moment they are wanted, never kept, so a speed
+     changed in the settings is the speed of the very next thing that moves. */
+  const ms = (n) => UI.ms(n);
+  const hold = (n) => UI.hold(n);
+  const paced = (a) => UI.paced(a);
+
   /* How long the trick just taken stays named before the cards are gathered to
      whoever took it. The server holds the table on that trick for a little
      longer still (TRICK_HOLD in lib/deck.js): the winner must not lead while
@@ -1052,7 +1061,7 @@ const Felt = (function () {
       s.el.classList.remove('no');
       void s.el.offsetWidth;                  // so it shakes again
       s.el.classList.add('no');
-      setTimeout(() => s.el.classList.remove('no'), 420);
+      setTimeout(() => s.el.classList.remove('no'), ms(420));
     }
     say(refusal());
   }
@@ -1077,7 +1086,7 @@ const Felt = (function () {
     send({ t: 'play', card: s.card });
     layout();
     say('…');
-    setTimeout(() => el.classList.remove('slow'), 400);
+    setTimeout(() => el.classList.remove('slow'), ms(400));
   }
 
   /* Where the thumb has to get to for the card to be played. It is the thumb
@@ -1353,7 +1362,7 @@ const Felt = (function () {
     // go, or a filled animation outranks everything that follows.
     own(el, home);
     // Linear: the shaping is in the keyframes. See arcPlay.
-    el.animate(arcPlay(g, q, k, of, home), { duration: PLAY_IN, easing: 'linear' });
+    paced(el.animate(arcPlay(g, q, k, of, home), { duration: PLAY_IN, easing: 'linear' }));
   }
 
   /* The way it comes: a bow from where it was lying to where it lands. The
@@ -1433,9 +1442,9 @@ const Felt = (function () {
     legs.forEach(({ el, from, steps }) => {
       at(el, home);              // where it belongs, before it sets off
       if (!el.animate) return;   // and where it simply slides to, with no arc
-      el.animate(arcRound(g, from, win, home),
+      paced(el.animate(arcRound(g, from, win, home),
         { duration: Math.max(CARD_MOVE, Math.round(SWEEP * steps / most)),
-          easing: ARC_EASE });
+          easing: ARC_EASE }));
     });
   }
 
@@ -1513,8 +1522,8 @@ const Felt = (function () {
        from. */
     const away = (el) => {
       if (!el || !el.animate) return;
-      el.animate([{ opacity: 1 }, { opacity: 0 }],
-        { duration: 320, delay: Math.round(UNWIND * 0.45), easing: 'ease-out', fill: 'forwards' });
+      paced(el.animate([{ opacity: 1 }, { opacity: 0 }],
+        { duration: 320, delay: Math.round(UNWIND * 0.45), easing: 'ease-out', fill: 'forwards' }));
     };
     (last.labels || []).forEach(away);
     (last.places || []).forEach(away);
@@ -1547,10 +1556,10 @@ const Felt = (function () {
            moment the first one set off, so the whole table would turn over at
            once and then a few would trickle in out of poses they had already
            taken. */
-        el.animate(arcIn(g, q, t, j, face, rest),
-          { duration: ARC, delay: i * lead, easing: ARC_EASE, fill: 'forwards' });
+        paced(el.animate(arcIn(g, q, t, j, face, rest),
+          { duration: ARC, delay: i * lead, easing: ARC_EASE, fill: 'forwards' }));
         // And it is where the table says it is once it has got there.
-        setTimeout(() => { if (key === k) el.style.transform = rest; }, i * lead + ARC);
+        setTimeout(() => { if (key === k) el.style.transform = rest; }, ms(i * lead + ARC));
       });
     });
 
@@ -1561,8 +1570,8 @@ const Felt = (function () {
       if (key !== k || !hero || !hero.parentNode) return;
       hero.classList.add('slow');
       at(hero, deckAt(g, legs.length, true));
-    }, over);
-    setTimeout(() => { if (key === k) done(true); }, over + 340);
+    }, ms(over));
+    setTimeout(() => { if (key === k) done(true); }, ms(over + 340));
   }
 
   // Where a seat sits round the ring, counted clockwise from the reader's own.
@@ -1644,9 +1653,9 @@ const Felt = (function () {
        has found their own row in it. */
     Table.standings(box, Object.assign({}, ST, { totals: before }), { me, lastTotals: was });
     if (el.animate) {
-      el.animate([{ opacity: 0, transform: 'translate(-50%,-46%)' },
+      paced(el.animate([{ opacity: 0, transform: 'translate(-50%,-46%)' },
                   { opacity: 1, transform: 'translate(-50%,-50%)' }],
-        { duration: 240, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' });
+        { duration: 240, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'both' }));
     }
     const k = key;
     // Then what the round did to it: the scores run up, the bars grow, and
@@ -1654,17 +1663,17 @@ const Felt = (function () {
     setTimeout(() => {
       if (key !== k) return;
       Table.standings(box, ST, { me, lastTotals: was });
-    }, STAND_WAIT);
+    }, ms(STAND_WAIT));
     setTimeout(() => {
       if (key !== k) return;
       const off = el.animate
-        ? el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-out', fill: 'forwards' })
+        ? paced(el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-out', fill: 'forwards' }))
         : null;
       setTimeout(() => {
         el.hidden = true;
         if (key === k) done();
       }, off ? 260 : 0);
-    }, STAND_HOLD);
+    }, hold(STAND_HOLD));
   }
 
   /* A trick taken is a moment: it is named, and only when that has been read
@@ -1691,7 +1700,7 @@ const Felt = (function () {
     setTimeout(() => {
       if (told !== sig || key !== k) return;
       sweepIn(taken, sig);
-    }, Math.max(0, TOOK_HOLD - SWEEP));
+    }, Math.max(0, hold(TOOK_HOLD) - ms(SWEEP)));
     setTimeout(() => {
       if (told !== sig || key !== k) return;   // the table moved on without us
       swept = sig;
@@ -1699,7 +1708,7 @@ const Felt = (function () {
       endBeat();
       const now = round();
       if (T && want && now) { reconcile(now); paint(now); }
-    }, TOOK_HOLD);
+    }, hold(TOOK_HOLD));
   }
 
   function endBeat() {
@@ -1765,7 +1774,7 @@ const Felt = (function () {
               if (key === k && want && round()) start(round(), carried);
             });
           });
-        }, PAID_HOLD);
+        }, hold(PAID_HOLD));
         return;
       }
       start(r);

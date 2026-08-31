@@ -55,7 +55,17 @@ const Finale = (function () {
       const T = calm
         ? { fade: 120, gap: 180, flip: 240, out: 220, acc: 8000, settle: 4000, hold: 2400 }
         : { fade: 200, gap: 480, flip: 620, out: 320, acc: 8000, settle: 4000, hold: 4200 };
+      /* Every movement this scene makes goes in here and every timer it arms
+         goes through `after`, so the speed it plays at is applied in two
+         places rather than at every number. playbackRate scales a delay and a
+         duration together, and these delays are a running total of the ones
+         before them: they cannot be scaled one at a time. */
       const anims = [], timers = [];
+      anims.push = function (a) {
+        UI.paced(a);
+        return Array.prototype.push.call(this, a);
+      };
+      const after = (fn, d) => setTimeout(fn, UI.ms(d));
       let ended = false, settled = false, raf = 0, bob = null;
 
       const head = document.createElement('div');            // the line across the top
@@ -150,11 +160,11 @@ const Finale = (function () {
       fade(card, [{ opacity: 0 }, { opacity: 1 }],
         { duration: calm ? 200 : 420, delay: T.fade + 120, easing: 'ease-out', fill: 'both' }, anims);
       if (!calm && card.animate) {
-        bob = card.animate(
+        bob = UI.paced(card.animate(
           [{ transform: 'rotateY(180deg) translateY(-5px) rotate(-1.4deg)' },
            { transform: 'rotateY(180deg) translateY(5px) rotate(1.4deg)' }],
           { duration: 3600, delay: T.fade, direction: 'alternate', iterations: Infinity,
-            easing: 'ease-in-out' });
+            easing: 'ease-in-out' }));
       }
 
       /* ---- 1. the places, as they stood before the accolades ---- */
@@ -225,7 +235,7 @@ const Finale = (function () {
 
         // and the points land in the standings behind it
         if (pay) {
-          timers.push(setTimeout(() => {
+          timers.push(after(() => {
             if (ended) return;
             (a.who || []).forEach((i) => {
               const from = cur[i];
@@ -238,7 +248,7 @@ const Finale = (function () {
                   { duration: 380, easing: 'cubic-bezier(.2,.9,.3,1.4)' }));
               }
             });
-            timers.push(setTimeout(() => { if (!ended) relayout(true); }, calm ? 0 : 640));
+            timers.push(after(() => { if (!ended) relayout(true); }, calm ? 0 : 640));
           }, at + payAt));
         }
       });
@@ -256,7 +266,7 @@ const Finale = (function () {
             fill: 'forwards' }, anims);
       }
       // The breathing stops before the card leaves, so the flip starts square.
-      timers.push(setTimeout(() => { if (bob) { bob.cancel(); bob = null; } },
+      timers.push(after(() => { if (bob) { bob.cancel(); bob = null; } },
         Math.max(0, (awards.length ? runAt : winAt) - 700)));
 
       /* ---- 3. the winner, once every accolade is in ---- */
@@ -335,7 +345,7 @@ const Finale = (function () {
         if (bob) { bob.cancel(); bob = null; }
         overlay.removeEventListener('pointerdown', skip);
         window.removeEventListener('keydown', skip);
-        const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
+        const out = UI.paced(overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' }));
         // A scene that opens while this one fades out owns the overlay now, so
         // do not pull the stage out from under it.
         out.onfinish = () => {
@@ -361,8 +371,8 @@ const Finale = (function () {
       S.live = { kind: 'finale', finish };
       const linger = Math.max(0, Number(opts && opts.linger) || 0);
       const shown = winAt + T.flip + 400;
-      timers.push(setTimeout(() => { settled = true; }, shown));   // now a tap clears it
-      timers.push(setTimeout(finish, shown + T.hold + linger));
+      timers.push(after(() => { settled = true; }, shown));   // now a tap clears it
+      timers.push(after(finish, shown + T.hold + linger));
     });
   }
 

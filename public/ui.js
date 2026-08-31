@@ -213,6 +213,17 @@ const UI = (function () {
         get: motion,
         set: setMotion });
     }
+    /* A section of its own, under the look of the page and over what belongs
+       to this screen alone. It is not a look -- it changes how long the game
+       takes to watch -- and it is not this screen's hardware either. */
+    if (o.motion) {
+      list.push({ kind: 'group', label: 'Play' });
+      list.push({ kind: 'choice',
+        label: 'Game speed',
+        options: [{ v: 0.5, label: '0.5\u00d7' }, { v: 1, label: '1\u00d7' }, { v: 2, label: '2\u00d7' }],
+        get: speed,
+        set: setSpeed });
+    }
     list.push({ kind: 'group', label: 'This screen' });
     // Safari on an iPhone has no full screen at all, so the row is not offered.
     list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
@@ -418,6 +429,71 @@ const UI = (function () {
   function setMotion(m) {
     if (m !== 'full' && m !== 'reduced' && m !== 'off') return;
     try { localStorage.setItem(KEY_MOTION, m); } catch (e) {}
+  }
+
+  /* ---------- game speed ---------- */
+
+  const KEY_SPEED = 'river-card-score:speed:v1';
+  const SPEEDS = [0.5, 1, 2];
+
+  /* How fast the game plays on this screen. It is written the way a speed is
+     written on anything that plays -- bigger is quicker -- so a duration is
+     divided by it: 2 draws every movement in half the time, 0.5 takes twice
+     as long over it, and 1 is the game as it is drawn.
+
+     It belongs to the screen and not to the table. Everybody at a table may
+     have a different one, and none of them changes the game for anybody
+     else: what it moves is how this screen draws what happened, never what
+     happened or when the table let it. */
+  function speed() {
+    let saved = null;
+    try { saved = localStorage.getItem(KEY_SPEED); } catch (e) {}
+    const q = new URLSearchParams(window.location.search).get('speed');
+    if (q !== null && SPEEDS.indexOf(Number(q)) >= 0) {
+      saved = q;
+      try { localStorage.setItem(KEY_SPEED, q); } catch (e) {}
+    }
+    const v = Number(saved);
+    return SPEEDS.indexOf(v) >= 0 ? v : 1;
+  }
+
+  // From the settings menu.
+  function setSpeed(v) {
+    if (SPEEDS.indexOf(Number(v)) < 0) return;
+    try { localStorage.setItem(KEY_SPEED, String(Number(v))); } catch (e) {}
+    stampSpeed();
+  }
+
+  /* The stylesheet is told as well. A transition is a duration like any other,
+     and the ones the table moves on are written as a division by this, so a
+     card placed by a style and a card drawn by an arc keep the same pace. */
+  function stampSpeed() {
+    try {
+      document.documentElement.style.setProperty('--speed', String(speed()));
+    } catch (e) {}
+  }
+
+  /* A duration this screen owns: how long it takes to draw something. */
+  const ms = (n) => Math.max(1, Math.round(n / speed()));
+
+  /* A beat this screen holds on to while the table waits for it -- the moment
+     a trick is left up to be read, what a round paid, the places at the end of
+     one. The table grants the window, not the screen: a trick sits for
+     TRICK_HOLD before the winner may lead, and the bots wait DEAL_WAIT for the
+     phones to say their tables are up. So a beat may be cut short, which is
+     this screen's business, and may not be drawn out, which is not: past the
+     window the table moves on and cuts the beat anyway, which reads worse than
+     never having asked for it. */
+  const hold = (n) => Math.min(n, ms(n));
+
+  /* A movement, at the speed this screen is playing at. Everything that starts
+     one puts it through here rather than dividing its own numbers: playbackRate
+     scales a delay and a duration together, and a scene whose delays are a
+     running total of the ones before them cannot be scaled a number at a
+     time. */
+  function paced(a) {
+    if (a) { try { a.playbackRate = speed(); } catch (e) {} }
+    return a;
   }
 
   /* ---------- small movements ---------- */
@@ -635,8 +711,10 @@ const UI = (function () {
   // Every page wants the saved theme, and none of them should have to ask: this
   // runs as the file loads, which is as early as any of them could.
   startTheme();
+  // The same, and for the same reason: the stylesheet cannot read a setting.
+  stampSpeed();
 
-  return { motion, setMotion, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
+  return { motion, setMotion, speed, setSpeed, ms, hold, paced, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
            keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask,

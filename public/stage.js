@@ -8,6 +8,11 @@
    the same one.
 */
 const Stage = (function () {
+
+  /* A movement on this screen, at the speed the screen is playing at. Every
+     one of them is started through here rather than by dividing its own
+     numbers: playbackRate scales a delay and a duration together. */
+  const move = (el, frames, opts) => UI.paced(el.animate(frames, opts));
   const S = { live: null };        // the scene on screen, while it is held open
 
   // A card from the server, 'TH' or '9S', as the face this stage draws: the
@@ -303,7 +308,7 @@ const Stage = (function () {
   function fade(card, frames, opts, into) {
     const made = [];
     Array.prototype.forEach.call(card.querySelectorAll('.face'), (f) => {
-      const a = f.animate(frames, opts);
+      const a = move(f, frames, opts);
       if (into) into.push(a);
       made.push(a);
     });
@@ -365,9 +370,9 @@ const Stage = (function () {
     const once = () => {
       if (off) return;
       drop();
-      set = [card.animate(frames, { duration: FLAT })];
-      lit.forEach((f) => set.push(f.animate(glow, { duration: FLAT })));
-      timer = setTimeout(once, EVERY);
+      set = [move(card, frames, { duration: FLAT })];
+      lit.forEach((f) => set.push(move(f, glow, { duration: FLAT })));
+      timer = setTimeout(once, UI.ms(EVERY));
     };
     once();
     return { cancel: () => { off = true; clearTimeout(timer); drop(); } };
@@ -388,7 +393,7 @@ const Stage = (function () {
     el.className = 'dstamp';
     el.textContent = String(value);
     stage.appendChild(el);
-    const a = el.animate(
+    const a = move(el, 
       [{ transform: `${flat} scale(2.7) rotate(-15deg)`, opacity: 0, offset: 0,
          easing: 'cubic-bezier(.2,.9,.3,1.5)' },
        { transform: `${flat} scale(.9) rotate(5deg)`, opacity: 1, offset: .16 },
@@ -398,12 +403,12 @@ const Stage = (function () {
       { duration: 1200, fill: 'both' });
     a.onfinish = () => el.remove();
 
-    card.animate(
+    move(card, 
       [{ transform: at }, { transform: `${at} scale(1.13)`, offset: .3 },
        { transform: `${at} scale(.98)`, offset: .55 }, { transform: at }],
       { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1.3)' });
     if (label && label.animate) {
-      label.animate(
+      move(label, 
         [{ transform: 'translate(-50%,0) scale(1)' },
          { transform: 'translate(-50%,0) scale(1.22)', offset: .35 },
          { transform: 'translate(-50%,0) scale(1)' }],

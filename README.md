@@ -410,6 +410,29 @@ that band.
   them shrink as seats are added.
 - With **Animations** set to *Off* on the settings page the felt is drawn without the
   deal and without any movement. Everything is still reachable.
+- **Game speed**, in a section of its own on the settings page, is `0.5×`, `1×`
+  or `2×`. It is written the way a speed is written on anything that plays --
+  bigger is quicker -- so every duration is divided by it: `2×` draws the deal,
+  the cards, the gather, the putting away and the finish in half the time, and
+  `0.5×` takes twice as long over them. `1×` is the game as it is drawn, and
+  every number in this file is that.
+
+  It belongs to the screen, not to the table. Everybody at a table may have a
+  different one and none of them changes the game for anybody else: what it
+  moves is how this screen draws what happened, never what happened or when
+  the table allowed it.
+
+  That is also why it cannot slow everything down. A beat this screen holds
+  while the table waits for it -- a trick left up to be read, what a round
+  paid, the places at the end of one -- sits inside a window the table grants:
+  a trick sits for `TRICK_HOLD` before the winner may lead, and the bots wait
+  `DEAL_WAIT` for the phones to say their tables are up. Those beats are cut
+  short at `2×` and left alone at `0.5×`; past the window the table moves on
+  and cuts the beat anyway, which reads worse than never having asked. The
+  movements themselves scale both ways.
+
+  What the table itself paces is untouched by it: a bot still thinks for
+  `BOT_DELAY` before it plays, whatever this is set to.
 
 ### Bum deal
 

@@ -1,6 +1,11 @@
 'use strict';
 /* The scorecard table, shared by the host screen and the player phones. */
 const Table = (function () {
+
+  /* A movement on this screen, at the speed the screen is playing at. Every
+     one of them is started through here rather than by dividing its own
+     numbers: playbackRate scales a delay and a duration together. */
+  const move = (el, frames, opts) => UI.paced(el.animate(frames, opts));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -170,13 +175,13 @@ const Table = (function () {
       // spot is a smear.
       const who = slot !== won && slot.querySelector('.who');
       if (who) {
-        who.animate([{ opacity: 1 }, { opacity: 0 }],
+        move(who, [{ opacity: 1 }, { opacity: 0 }],
           { duration: 200, easing: 'ease-out', fill: 'forwards' });
       }
       const r = slot.getBoundingClientRect();
       const dx = Math.round(to.left - r.left), dy = Math.round(to.top - r.top);
       const tilt = (i - (slots.length - 1) / 2) * 3.5;
-      slot.animate(
+      move(slot, 
         [{ transform: 'translate(0,0) rotate(0deg)', offset: 0 },
          { transform: `translate(${dx}px,${dy}px) rotate(${tilt}deg)`, offset: .42,
            easing: 'cubic-bezier(.25,.85,.3,1.05)' },
@@ -208,7 +213,7 @@ const Table = (function () {
       ghost.appendChild(s);
     });
     box.appendChild(ghost);
-    const out = ghost.animate(
+    const out = move(ghost, 
       [{ transform: 'translateY(0) scale(1)', opacity: 1 },
        { transform: `translateY(${drift}px) scale(.86)`, opacity: 0 }],
       { duration: 220, easing: 'cubic-bezier(.4,0,.7,.4)', fill: 'forwards' });
@@ -221,7 +226,7 @@ const Table = (function () {
     if (!UI.fx.on()) return;
     Array.prototype.forEach.call(box.querySelectorAll(':scope > .slot'), (s) => {
       if (!s.animate) return;
-      s.animate([{ opacity: 0, transform: 'translateY(10px) scale(.96)' },
+      move(s, [{ opacity: 0, transform: 'translateY(10px) scale(.96)' },
                  { opacity: 1, transform: 'none' }],
         { duration: 200, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
     });

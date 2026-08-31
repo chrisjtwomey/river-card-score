@@ -98,7 +98,17 @@ const Deal = (function () {
       const T = calm
         ? { fade: 120, deckPop: 140, start: 120, gap: 45, fly: 200, flip: 200, hold: 320, out: 220 }
         : { fade: 160, deckPop: 200, start: 220, gap: 80, fly: 360, flip: 380, hold: 520, out: 280 };
+      /* Every movement this scene makes goes in here and every timer it arms
+         goes through `after`, so the speed it plays at is applied in two
+         places rather than at every number. playbackRate scales a delay and a
+         duration together, and these delays are a running total of the ones
+         before them: they cannot be scaled one at a time. */
       const anims = [], timers = [];
+      anims.push = function (a) {
+        UI.paced(a);
+        return Array.prototype.push.call(this, a);
+      };
+      const after = (fn, d) => setTimeout(fn, UI.ms(d));
       const labels = [], cardEls = [], landedAt = [], piles = [];
       const hold = !!(opts && opts.hold);
       // The felt keeps the stage: the deal is the first move of the round, not
@@ -163,7 +173,10 @@ const Deal = (function () {
          the card in three dimensions -- the back stops facing the room and the
          blank front is painted instead. */
       const riffle = (at, into) => {
+        /* Either this scene's list or one a caller keeps -- the shuffle can be
+           asked for on its own. Whichever it is, what goes in it is paced. */
         const made = into || anims;
+        const put = (a) => { made.push(UI.paced(a)); return a; };
         deckEls.forEach((d, i) => {
           const rest = deckRest(i), lift = R.cy - i * 0.9;
           const left = i < half;
@@ -174,7 +187,7 @@ const Deal = (function () {
                            lift + j * 1.4 + (Math.random() * 4 - 2),
                            side * (12 + Math.random() * 3), 180, 1);
           const o = (ms) => Math.max(0, Math.min(1, ms / riffleMs));
-          made.push(d.animate(
+          put(d.animate(
             [{ transform: rest, offset: 0, easing: 'cubic-bezier(.3,.8,.35,1)' },
              { transform: apart, offset: o(splitMs), easing: 'linear' },
              { transform: apart, offset: o(splitMs + k * step),
@@ -189,11 +202,11 @@ const Deal = (function () {
           // card belongs in front of it. The cut clears the band again
           // before the trump is turned. Not how a real riffle works, but it
           // reads better.
-          timers.push(setTimeout(() => {
+          timers.push(after(() => {
             if (!ended && !settled) d.style.zIndex = String(10 + k);
           }, at + splitMs + k * step));
           // and the whole pile squares up once the last card is in
-          made.push(d.animate(
+          put(d.animate(
             [{ transform: rest }, { transform: tf(0, lift, 0, 180, 1.02), offset: .5 },
              { transform: rest }],
             { duration: squareMs, delay: at + riffleMs, easing: 'ease-in-out' }));
@@ -282,7 +295,7 @@ const Deal = (function () {
       // The shuffle's z-order has done its work. It has to go before the
       // turned trump card flips on top of the pile, and by now the deck is
       // fading out, so nobody sees the pile reorder.
-      const dropBand = () => timers.push(setTimeout(() => {
+      const dropBand = () => timers.push(after(() => {
         deckEls.forEach((d) => { d.style.zIndex = ''; });
       }, dealEnd));
       dropBand();
@@ -444,7 +457,7 @@ const Deal = (function () {
         timers.forEach(clearTimeout);
         overlay.removeEventListener('pointerdown', skip);
         window.removeEventListener('keydown', skip);
-        const out = overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' });
+        const out = UI.paced(overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T.out, fill: 'both' }));
         // A scene that opens while this one fades out owns the overlay now, so
         // do not pull the stage out from under it.
         out.onfinish = () => {
@@ -470,7 +483,7 @@ const Deal = (function () {
         live.settled = true;
         applyTurn();
         live.pending.splice(0).forEach(([p, v], i) => {
-          timers.push(setTimeout(() => { if (S.live === live) stamp(p, v); }, i * 350));
+          timers.push(after(() => { if (S.live === live) stamp(p, v); }, i * 350));
         });
       }
       /* The stage, and everything the deal left standing on it, given to
@@ -510,12 +523,12 @@ const Deal = (function () {
       const naturalEnd = shuffleOnly ? shuffleEnd + T.hold : heroAt + T.flip + T.hold + linger;
       const landedAtEnd = shuffleOnly ? shuffleEnd : heroAt + T.flip;   // the cards are all down
       function arm() {
-        timers.push(setTimeout(() => {
+        timers.push(after(() => {
           settled = true;
           landed();
           handover();
         }, landedAtEnd));
-        if (!hold && !keep) timers.push(setTimeout(finish, naturalEnd));
+        if (!hold && !keep) timers.push(after(finish, naturalEnd));
       }
 
       // Every deal is live while it is up, so the bids can land on it.
