@@ -404,6 +404,28 @@ const UI = (function () {
     });
   }
 
+  /* The table taken away by the machine that runs it: not a game ending --
+     nothing is scored and nothing is filed -- the table itself goes, and every
+     screen at it is told so. Two screens offer it, the host screen and the
+     table controls, and it must be worded the same on both, so the asking and
+     the doing live here and each page says only what to do afterwards.
+
+     `before` runs once the answer is yes and before the table goes: the page
+     is about to be told its own table is gone, and it has to know that is
+     because it asked. Resolves to whether it went ahead. */
+  function endTable(code, before) {
+    return ask(`End table ${code}?`,
+      'Every phone at it is put off, and the game is not kept: nothing is scored and '
+      + 'nothing goes to Past games. The table cannot be started again.',
+      'End the table', true).then((yes) => {
+        if (!yes) return false;
+        if (before) before();
+        return fetch('/table/end?c=' + encodeURIComponent(code), { method: 'POST' })
+          .catch(() => {})
+          .then(() => true);
+      });
+  }
+
   /* One button, and nothing to decide: the table has said something the player
      has to see. It is the tap that matters -- whoever taps is at the table --
      so there is nothing to answer and no answer to read. */
@@ -741,7 +763,7 @@ const UI = (function () {
   return { motion, setMotion, speed, setSpeed, ms, hold, paced, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
            keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
-           addressPicker, fullAddress, fx, ask, tell,
+           addressPicker, fullAddress, fx, ask, tell, endTable,
            commonSettings, startZoom, zoomNow, setZoom,
            wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
 })();

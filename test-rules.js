@@ -283,7 +283,7 @@ part('a round opens in one place, whatever brought it there');
     'a game starting': (t) => t.Room.startGame(t.room),
     'the round before scoring': (t) => { t.Room.startGame(t.room); t.Room.scoreRound(t.room, [1, 0, 0]); },
     'a hand thrown in': (t) => { t.Room.startGame(t.room); t.Room.bumDeal(t.room); },
-    'a step back': (t) => { t.Room.startGame(t.room); t.bidAll(1); t.Room.undo(t.room); },
+    'a round put back': (t) => { t.Room.startGame(t.room); t.bidAll(1); t.Room.resetRound(t.room); },
   };
   Object.keys(ways).forEach((why) => {
     const t = table().sit(['Ann', 'Bob', 'Cal']).rules({ max: 3, pattern: 'down', ones: 2 });
@@ -469,48 +469,60 @@ part('the trump card, and who may set it');
      'and nobody may change it there either');
 }
 
-part('one step back');
+part('a round put back')
 
+/* The round in play goes back to the start of its bidding, and is played
+   again. A round already scored is not reached backwards -- it is put right on
+   the scorecard, where its number is read -- and a round still being bid has
+   nothing behind the bids to go back to. */
 {
   // from the end of the game
   const t = started(['Ann', 'Bob'], { max: 1, pattern: 'down', ones: 1 });
   t.Room.scoreRound(t.room, [1, 0]);
   ok(t.room.phase === 'done', 'the game is over');
-  ok(t.Room.undo(t.room) === null, 'a step back is taken');
-  ok(t.room.phase === 'tricks' && t.room.idx === 0, 'and it reopens the last round for its tricks');
-  ok(t.room.rounds[0].tricks === null, 'with the tricks cleared');
+  ok(t.Room.resetRound(t.room) === null, 'the last round is put back');
+  ok(t.room.phase === 'bid' && t.room.idx === 0, 'and opens for its bids again');
+  ok(t.round().tricks === null && t.round().bids.every((b) => b === null),
+     'with the bids and the tricks cleared');
   ok(t.room.awards === null, 'and the accolades unsettled');
 }
 {
-  // from the middle of a round, and from the start of the next
+  // from the middle of a round
   const t = started(['Ann', 'Bob', 'Cal'], { max: 2, pattern: 'down', ones: 3 });
   t.bidAll(1);
   ok(t.room.phase === 'tricks', 'the bids are in');
-  t.Room.undo(t.room);
-  ok(t.room.phase === 'bid' && t.round().bids.every((b) => b === null), 'a step back from the tricks clears the bids');
+  ok(t.Room.resetRound(t.room) === null, 'and the round is put back');
+  ok(t.room.phase === 'bid' && t.round().bids.every((b) => b === null), 'which clears them');
+  ok(t.room.idx === 0, 'without leaving the round');
+  ok(t.room.play === null, 'and nothing counted stays counted');
+
+  ok(t.Room.resetRound(t.room) === 'the round has not been bid yet',
+     'a round still being bid has nothing to put back');
   t.bidAll(1);
   t.Room.scoreRound(t.room, [1, 1, 0]);
   ok(t.room.idx === 1 && t.room.phase === 'bid', 'the round is scored and the next opens');
-  t.Room.undo(t.room);
-  ok(t.room.idx === 0 && t.room.phase === 'tricks', 'a step back from a fresh round reopens the one before');
-  ok(t.room.rounds[0].tricks === null, 'and its tricks go');
-  ok(t.room.play && t.room.play.won.join() === '0,0,0', 'to be counted again from nothing');
-  ok(t.room.rounds[1].bids === null, 'the round stepped out of is left with no bids at all');
-  ok(t.Room.undo(t.room) === null && t.room.phase === 'bid', 'and back again to its bids');
-  ok(t.Room.undo(t.room) === 'nothing to undo', 'there is nothing before the first bid of the first round');
+  ok(t.Room.resetRound(t.room) === 'the round has not been bid yet',
+     'and the one before is not reached backwards: the scorecard puts it right');
 }
 {
-  // where the cards were dealt on the phones, they are gone: whichever step
-  // was taken back, the round it lands on is dealt again
+  // where the cards were dealt on the phones, they are dealt again
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   const first = t.room.play.hands.map((h) => h.join()).join('|');
   t.bidAll(1);
-  t.Room.undo(t.room);
-  ok(t.room.phase === 'bid', 'a step back lands on the bids');
+  t.Room.resetRound(t.room);
+  ok(t.room.phase === 'bid', 'a round put back lands on the bids');
   ok(t.room.play.hands.every((h) => h.length === t.round().cards), 'with a full hand each');
-  ok(t.room.play.hands.map((h) => h.join()).join('|') !== first, 'dealt again, not the hands that were played');
+  ok(t.room.play.hands.map((h) => h.join()).join('|') !== first,
+     'dealt again, not the hands that were played');
 }
-
+{
+  // and the table stops waiting on whoever it had stopped on
+  const t = started(['Ann', 'Bob'], { max: 2, pattern: 'down', ones: 1 });
+  t.bidAll(1);
+  t.room.stalled = { id: t.room.seats[1].id, ms: 5 * 60e3 };
+  t.Room.resetRound(t.room);
+  ok(t.room.stalled === null, 'a round put back is not still stopped on anybody');
+}
 
 part('the bids stand for a moment before the hand is played');
 
@@ -720,7 +732,7 @@ part('who may send what, and when');
   ok(/only the table host/.test(t.say(1, { t: 'config', patch: { max: 9 } }) || ''),
      'a player who does not run the table cannot change the rules');
   ok(/only the table host/.test(t.say(1, { t: 'start' }) || ''), 'nor start the game');
-  ok(/only the table host/.test(t.say(1, { t: 'undo' }) || ''), 'nor go back');
+  ok(/only the table host/.test(t.say(1, { t: 'resetround' }) || ''), 'nor put a round back');
   ok(/only the table host/.test(t.say(1, { t: 'reset' }) || ''), 'nor put the table back to the lobby');
   ok(/only players/.test(t.say('host', { t: 'bid', v: 1 }) || ''), 'the host screen holds no cards, so it does not bid');
   ok(/only players/.test(t.say('host', { t: 'vote', agree: true }) || ''), 'and does not vote');
@@ -1012,6 +1024,33 @@ part('leaving on purpose, which is not the same as a phone going quiet');
 }
 
 {
+  /* A table standing on a beat that nothing is left to end. Both beats are
+     ended by a timer, and a timer belongs to the server that armed it. */
+  const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  t.bidAll(1, true);
+  ok(G.bidsHeld(t.room), 'the bids stand to be read');
+  ok(/only the table host/.test(t.say(1, { t: 'unstick' }) || ''), 'no player moves the table on');
+  ok(t.say('host', { t: 'unstick' }) === null, 'whoever runs the table does');
+  ok(!G.bidsHeld(t.room) && t.room.play.turn === G.firstLeader(t.round(), 3),
+     'and the hand starts, left of the dealer: the move the timer was going to make');
+  ok(/not waiting on anything/.test(t.say('host', { t: 'unstick' }) || ''),
+     'a table that is moving has nothing to be moved on');
+
+  // The other beat: a finished trick, sitting there to be read.
+  for (let i = 0; i < 3; i++) {
+    const p = t.room.play.turn;
+    t.say(p, { t: 'play', card: G.legalPlays(t.room.play.hands[p], t.Room.Deck.ledSuit(t.room.play))[0] });
+  }
+  ok(t.room.play.turn === null && !!t.room.play.last, 'the trick is taken and held up');
+  ok(t.say('host', { t: 'unstick' }) === null, 'and the table is moved on');
+  ok(t.room.play.turn !== null, 'so whoever took it leads the next one');
+
+  // A stopped table is exactly the table somebody would unstick.
+  t.say('host', { t: 'pause', on: true });
+  ok(!/stopped/.test(t.say('host', { t: 'unstick' }) || ''), 'being stopped does not hold this one');
+}
+
+{
   // the seat that runs the table never goes to somebody who cannot run it
   const t = table().sit(['Ann', 'Bob']).sit(['Bot'], { bot: true });
   ok(t.room.captainId === t.room.seats[0].id, 'Ann runs the table');
@@ -1293,15 +1332,15 @@ part('a table writes down what happened to it');
   let p = G.turnSeat(t.round(), 2);
   while (p !== null) { t.Room.seatBid(t.room, p, 0); p = G.turnSeat(t.round(), 2); }
   t.room.trail.length = 0;
-  t.Room.undo(t.room);
-  ok(t.trail() === 'z R', 'a step back is written down, then the round it lands on  got ' + t.trail());
-  ok(t.points('R')[0].w === 'undo', 'which says a step back brought it');
+  t.Room.resetRound(t.room);
+  ok(t.trail() === 'R', 'a round put back is written down as the round opening again  got ' + t.trail());
+  ok(t.points('R')[0].w === 'reset', 'which says what brought it');
 
-  // A step back that was refused is not a step back.
+  // One that was refused did not happen, so nothing is written down.
   const u = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
   u.Room.startGame(u.room);
   u.room.trail.length = 0;
-  ok(u.Room.undo(u.room) === 'nothing to undo' && u.trail() === '',
+  ok(u.Room.resetRound(u.room) === 'the round has not been bid yet' && u.trail() === '',
      'and one there was no room for is not written down at all  got ' + u.trail());
 }
 
@@ -1484,18 +1523,18 @@ part('a game put back on a table of its own');
   }
 
   {
-    /* A step back is part of what happened too. With real cards nothing is
-       dealt afterwards, so there is no picture to land on: the copy can only
-       be here by having stepped back itself. */
+    /* A round put back is part of what happened too, and the round opening
+       again carries its own picture, so the copy lands on it whichever deck
+       the table plays with. */
     const t = table().sit(['Ann', 'Bob']).rules({ max: 2, pattern: 'down', ones: 1 });
     t.Room.startGame(t.room);
     let p = G.turnSeat(t.round(), 2);
     while (p !== null) { t.Room.seatBid(t.room, p, 1); p = G.turnSeat(t.round(), 2); }
     ok(t.room.phase === 'tricks', 'the bids are in and the hand is on');
-    t.Room.undo(t.room);
+    t.Room.resetRound(t.room);
     const copy = copyOf(t, t.room.trail.length - 1);
     ok(copy.phase === 'bid' && copy.rounds[0].bids.every((b) => b === null),
-       'a step back put back takes the bids back with it  got '
+       'a round put back takes the bids back with it  got '
        + copy.phase + ' ' + JSON.stringify(copy.rounds[0].bids));
   }
 

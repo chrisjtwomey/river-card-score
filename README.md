@@ -163,6 +163,38 @@ That is what a table is stopped for. A table of people playing with real cards
 can be stopped like any other, and is the one most likely to want a moment: the
 food arrives, or somebody is arguing about a rule.
 
+### Running the table, mid-game
+
+Everything whoever runs a table does to a game already going is on the scores
+page they are already looking at — the TV screen, and the phone of the player
+who runs the table. There is no second page and no second key: whatever that
+screen may do at the table, this is it.
+
+**One row of controls**, the same five on both screens and in the same order —
+under the bids on the TV screen, and beside the turn on the phone:
+
+| | |
+|---|---|
+| **❚❚ Pause / ▶ Play** | Stops the table, for everybody. |
+| **Start the hand** / **Take the trick in** | Only where the table has hung on a beat nothing is left to end. |
+| **Bum deal** | Throws the hand in and deals it again, counting the re-deal. Any player can ask; the dealer and the table host throw it in. |
+| **Reset round** | Puts the round in play back to its bids, to be played again. |
+| **New game** | The same players, no scorecard. |
+
+**Reset round** is the round in play, back to the start of its bidding: the
+bids go, and on a table dealt on the phones the hand is dealt again. Where the
+game is over it is the last round that comes back, so a game that ended on a
+round nobody agreed with is played again rather than argued about. It is not
+offered while the bids are still coming in — there is nothing behind them, and
+a hand dealt wrong is thrown in with *Bum deal*, the button beside it.
+
+**A round already scored is not reached backwards.** It is put right on the
+scorecard, below, where its number is read.
+
+Every one of them hides itself where there is nothing to do, and the row goes
+when they all have. The bum deal is the only one any player gets; the rest are
+the table host's.
+
 
 ### A browser holds more than one table
 

@@ -207,9 +207,6 @@ function render() {
   $('#code-badge').textContent = ST.code;
   $('#code-small').textContent = ST.code;
   renderJoin();
-  // In the top bar, so it is where the eye is when a hand is playing itself.
-  // It stands in every phase, so it is drawn here rather than with the game.
-  Round.pause($('#btn-pause'), ST, view());
   $('#subtitle').textContent = (SHOW ? 'Showing ' : '') + (lobby
     ? `Table ${ST.code} · waiting to start`
     : `Table ${ST.code} · ${ST.seats.length} players`);
@@ -259,9 +256,12 @@ function renderGame() {
   renderTurn(r, n);
   Round.vote($('#votebox'), ST, view());
   Round.bum($('#btn-bum'), ST, view());
-  // A screen that only shows a table cannot go back or start over: the
-  // buttons were drawn anyway, and every tap on them was refused.
-  $('#btn-undo').hidden = SHOW;
+  // Everything this screen does to a game already going sits in one row under
+  // the bids. Each of these hides itself where there is nothing to do, and a
+  // screen that only shows a table runs nothing at all.
+  Round.pause($('#btn-pause'), ST, view());
+  Round.unstick($('#unstick-row'), ST, view());
+  Round.resetRound($('#btn-reset-round'), ST, view());
   $('#btn-reset').hidden = SHOW;
   renderTable(r);
   Round.playFor($('#playfor-row'), ST, view());
@@ -421,16 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
     { kind: 'action', label: 'End this table', danger: true, hidden: () => !canEnd(),
       run: () => {
         const code = CODE;
-        UI.ask(`End table ${code}?`,
-          'Every phone at it is put off, and the game is not kept: nothing is scored and '
-          + 'nothing goes to Past games. The table cannot be started again.',
-          'End the table', true).then((yes) => {
-            if (!yes) return;
-            ending = true;
-            fetch('/table/end?c=' + encodeURIComponent(code), { method: 'POST' })
-              .catch(() => {})
-              .then(() => { Net.forget(code); location.href = 'index.html'; });
-          });
+        UI.endTable(code, () => { ending = true; })
+          .then((gone) => { if (gone) { Net.forget(code); location.href = 'index.html'; } });
       } },
     /* The way to put this game right, wherever it is running: on a normal
        server the page opens with the repair form and the record and nothing
@@ -448,6 +440,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // playFinale() in the console replays the result.
   window.playFinale = (mode) => playFinaleNow(mode || 'full');
 
-  $('#btn-undo').addEventListener('click', () => Round.undo(view(), ST));
   boot();
 });

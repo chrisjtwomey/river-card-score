@@ -3328,8 +3328,20 @@ part('bidding for a seat that is not there, and leaving');
   /* The same stand-in, for one page, answering where that page is read: yes to
      everything would have every screen believe it was the machine serving it,
      and offer what only that machine may do. */
-  const uiFor = (loc) => new Proxy(
-    Object.assign({ servedHere: () => /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(loc.hostname || '') }, uiReal),
+  const uiFor = (loc, doFetch) => new Proxy(
+    Object.assign({
+      servedHere: () => /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(loc.hostname || ''),
+      /* The real one asks, then puts the table off the server. The stand-in ask
+         answers yes at once, as it does everywhere here, so what is left to
+         prove is that the page reaches the server and does what it does next.
+         The fetch is the page's own, which is what the checks read. */
+      endTable: (code, before) => {
+        asked.push({ t: `End table ${code}?`, b: '', l: 'End the table' });
+        if (before) before();
+        if (doFetch) doFetch('/table/end?c=' + encodeURIComponent(code), { method: 'POST' });
+        return { then: (f) => f(true) };
+      },
+    }, uiReal),
     { get: (t, k) => (k in t ? t[k] : anything) });
 
   function playPage(seed, search, o) {
@@ -3337,7 +3349,9 @@ part('bidding for a seat that is not there, and leaving');
     const dom = makeDom(412, 860);
     Object.keys(seed || {}).forEach((k) => dom.localStorage.setItem(k, seed[k]));
     const els = {};
-    const pick = (sel) => (els[sel] || (els[sel] = new dom.El(sel === '#bid-chips' ? 'div' : 'div')));
+    /* An id that names a button is a button, as it is on the page: a widget
+       handed one draws into it, and handed anything else builds one inside. */
+    const pick = (sel) => (els[sel] || (els[sel] = new dom.El(/^#btn-/.test(sel) ? 'button' : 'div')));
     dom.document.querySelector = pick;
     dom.document.getElementById = (id) => pick('#' + id);
     const gone = [];
@@ -3382,7 +3396,7 @@ part('bidding for a seat that is not there, and leaving');
     dom.localStorage.setItem('rcs:tables:v1',
       JSON.stringify([{ code: 'TEST', token: role === 'host' ? 'th' : null, role }]));
     const els = {};
-    const pick = (sel) => (els[sel] || (els[sel] = new dom.El('div')));
+    const pick = (sel) => (els[sel] || (els[sel] = new dom.El(/^#btn-/.test(sel) ? 'button' : 'div')));
     dom.document.querySelector = pick;
     dom.document.getElementById = (id) => pick('#' + id);
     const gone = [];
@@ -3406,7 +3420,7 @@ part('bidding for a seat that is not there, and leaving');
     const fn = new Function('window', 'document', 'localStorage', 'location', 'history', 'WebSocket',
       'Game', 'UI', 'Table', 'console', 'fetch', ...stubs, src + '\n; return { Net };');
     const out = fn(dom.window, dom.document, dom.localStorage, location, history, WebSocket, Game,
-      uiFor(location), Table, { log() {}, info() {}, warn() {}, error() {} }, fetch,
+      uiFor(location, fetch), Table, { log() {}, info() {}, warn() {}, error() {} }, fetch,
       ...stubs.map((n) => (n in given ? given[n] : anything)));
     dom.document.fire('DOMContentLoaded');
     socks[0].onopen();
@@ -3477,12 +3491,12 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.pick('#bidstrip').children.length === 3, 'one pill a seat  got ' + P.pick('#bidstrip').children.length);
     // the bum deal is not the turn panel's, so it stays when the panel goes
     ok(P.pick('#bum-row').hidden === false, 'a bum deal can still be asked for on the page');
-    ok(P.pick('#bum-row').querySelector('.btn').textContent === 'Bum deal',
-       'and the table host throws it in  got ' + P.pick('#bum-row').querySelector('.btn').textContent);
+    ok(P.pick('#btn-bum').textContent === 'Bum deal',
+       'and the table host throws it in  got ' + P.pick('#btn-bum').textContent);
     const other = table({ away: false, boss: false }); other.rounds[0].dealer = 1;   // neither host nor dealer
     P.feed(other);
-    ok(P.pick('#bum-row').querySelector('.btn').textContent === 'Ask for a bum deal',
-       'while anybody else asks  got ' + P.pick('#bum-row').querySelector('.btn').textContent);
+    ok(P.pick('#btn-bum').textContent === 'Ask for a bum deal',
+       'while anybody else asks  got ' + P.pick('#btn-bum').textContent);
     ok(P.pick('#leave-row').hidden === false, 'leaving is at the top of the page');
     ok(P.pick('#scorecard').hidden !== true, 'and the scorecard is drawn on a plain panel, never folded away');
   }
@@ -3592,7 +3606,7 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.pick('#cap-join').hidden === false && P.pick('#cap-tv').hidden === true,
        'with no TV screen the phone shows the code');
     ok(P.pick('#btn-start').hidden === false, 'and carries the start button itself');
-    ok(P.pick('#captain-panel').hidden === true, 'with no second panel about running the table');
+    ok(P.pick('#bum-row').hidden === true, 'with no row of game controls: there is no game yet');
     ok(P.pick('#lobby-hint').hidden === true,
        'and says nothing to whoever runs it: the screen itself says what to do  got '
        + P.pick('#lobby-hint').textContent);
@@ -3611,11 +3625,19 @@ part('bidding for a seat that is not there, and leaving');
     ok(/starts the game when everybody is seated/.test(Q.pick('#lobby-hint').textContent),
        'and is told who will  got ' + Q.pick('#lobby-hint').textContent);
 
-    // in a game, the host's own panel is the two things it can still do
+    /* In a game it is one row, and the bum deal any player can ask for is in
+       it beside the four that are the table host's. */
     const R = playPage(seed, '?c=TEST');
     R.feed(table({}));
-    ok(R.pick('#captain-panel').hidden === false && R.pick('#cap-game').hidden === false,
-       'in play it is undo and a new game, and nothing else');
+    ok(R.pick('#bum-row').hidden === false, 'in play the row of controls is there');
+    ok(R.pick('#btn-bum').hidden === false && R.pick('#btn-reset').hidden === false,
+       'with the bum deal and a new game side by side');
+    const S = playPage(seed, '?c=TEST');
+    S.feed(table({ boss: false }));
+    ok(S.pick('#btn-reset').hidden === true,
+       'a player who runs nothing is offered no new game');
+    ok(S.pick('#bum-row').hidden === false && S.pick('#btn-bum').hidden === false,
+       'but can still ask the table to throw the hand in');
   }
 
   {   // the seat controls are a menu with words on it, not a row of glyphs
@@ -3695,7 +3717,7 @@ part('bidding for a seat that is not there, and leaving');
        'and it says my vote landed  got ' + (acts.querySelector('.hint') || {}).textContent);
     const btns = acts.querySelectorAll('button');
     ok(btns.length === 1 && btns[0].textContent === 'No, play on', 'with the other answer still there  got ' + btns.map((b) => b.textContent).join('|'));
-    ok(P.pick('#bum-row').hidden === true, 'and the button that asks is away while the vote is on');
+    ok(P.pick('#btn-bum').hidden === true, 'and the button that asks is away while the vote is on');
   }
 
   {   // the order of play is changed by dragging a seat by its handle
@@ -3734,8 +3756,9 @@ part('bidding for a seat that is not there, and leaving');
     const S = hostPage('screen');
     S.feed(tricks());
     ok(S.dom.document.body.classList.contains('showing'), 'the screen knows it only shows the table');
-    ok(S.pick('#btn-bum').hidden === true && S.pick('#btn-undo').hidden === true && S.pick('#btn-reset').hidden === true,
-       'no bum deal, undo or new game on a screen that only shows the table');
+    ok(S.pick('#btn-bum').hidden === true && S.pick('#btn-reset-round').hidden === true
+       && S.pick('#btn-reset').hidden === true && S.pick('#btn-pause').hidden === true,
+       'no bum deal, reset round, pause or new game on a screen that only shows the table');
     ok(S.pick('#host-count').hidden === true, 'and no count of the tricks');
     ok(!/tap it here/.test(S.pick('#turn-hint').textContent),
        'nor a hint that says there is one  got ' + S.pick('#turn-hint').textContent);
@@ -3752,8 +3775,9 @@ part('bidding for a seat that is not there, and leaving');
 
     const H = hostPage('host');
     H.feed(tricks());
-    ok(H.pick('#btn-bum').hidden === false && H.pick('#btn-undo').hidden === false && H.pick('#btn-reset').hidden === false,
-       'the screen that runs the table has them all');
+    ok(H.pick('#btn-bum').hidden === false && H.pick('#btn-reset-round').hidden === false
+       && H.pick('#btn-reset').hidden === false && H.pick('#btn-pause').hidden === false,
+       'the screen that runs the table has them all, in one row under the bids');
     ok(H.pick('#host-count').hidden === false, 'and the count of the tricks');
     ok(/Ann taps who takes each trick, or tap it here/.test(H.pick('#turn-hint').textContent),
        'and says the dealer keeps it, or the screen can  got ' + H.pick('#turn-hint').textContent);
@@ -3936,16 +3960,27 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.pick('#winner-panel').hidden === false, 'and the winner panel says who won');
   }
 
-  {   // a step back is asked about first, and told what it takes
+  {   /* Putting the round back is asked about first, and told what it takes.
+         From the bidding there is nothing behind the bids, so it is not there
+         at all -- the hand is thrown in with Bum deal instead. */
     const P = playPage(seed, '?c=TEST');
     const st = table({ away: false }); st.phase = 'tricks'; st.turn = null;
     P.feed(st);
+    ok(P.pick('#btn-reset-round').hidden === false, 'a round being played can be put back');
+    ok(P.pick('#btn-reset-round').textContent === 'Reset round',
+       'and says so  got ' + P.pick('#btn-reset-round').textContent);
     asked.length = 0; P.socks[0].sent.length = 0;
-    P.pick('#btn-undo').fire('click');
-    ok(asked.length === 1 && /^Undo/.test(asked[0].t), 'undo asks first  got ' + JSON.stringify(asked[0]));
-    ok(/round 1/i.test(asked[0].b), 'and names the round it takes back  got ' + (asked[0] || {}).b);
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"undo"}',
+    P.pick('#btn-reset-round').fire('click');
+    ok(asked.length === 1 && /^Reset this round/.test(asked[0].t),
+       'it asks first  got ' + JSON.stringify(asked[0]));
+    ok(/Round 1 goes back to its bids/.test(asked[0].b),
+       'and names the round it takes back  got ' + (asked[0] || {}).b);
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"resetround"}',
        'and the tap goes to the table once it is confirmed  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    P.feed(table({ away: false }));            // back to the bidding
+    ok(P.pick('#btn-reset-round').hidden === true,
+       'while the bids are still coming in there is nothing behind them to go back to');
   }
 
   {   // a refusal is said where it can be seen

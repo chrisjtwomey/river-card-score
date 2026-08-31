@@ -283,13 +283,14 @@ async function bidRound(P) {
   const r2 = host.state.rounds[1];
   ok(r2.cards === 1 && r2.dealer === 1, 'round 2: 1 card, dealer is seat 1');
 
-  // ---- a step back, and a hand thrown in ----
-  host.send({ t: 'undo' });
-  await okBy(() => host.state.idx === 0 && host.state.phase === 'tricks', 'the host screen takes a step back');
-  P[0].send({ t: 'trick', p: 1 }); await P[0].rt();
-  P[0].send({ t: 'trick', p: 2 });
-  await okBy(() => JSON.stringify(host.state.totals) === '[0,11,11]',
-     'and the round is counted again  got ' + JSON.stringify(host.state.totals));
+  /* ---- a round already scored, put right on the scorecard ----
+     The game has moved past round 1, so there is no going back into it: the
+     record of it is retyped where it is read. */
+  host.send({ t: 'resetround' });
+  await okBy(() => /no round to put back/i.test(host.last()),
+     'a round the game has moved past is not put back  got ' + host.last());
+  const bid0 = host.state.rounds[0].bids.slice();     // as they were really bid
+  const was0 = JSON.stringify(host.state.totals);
 
   P[2].send({ t: 'bid', v: 1 }); await P[2].rt();
   P[2].send({ t: 'bumdeal' });
@@ -345,8 +346,10 @@ async function bidRound(P) {
     await until(() => seats[0].state.play.held === false);   // the bids are read first
     seats[r.dealer].send({ t: 'trick', p: 0 });       // the dealer keeps the round
     await okBy(() => seats[0].state.idx === 1, 'and the round scores');
-    seats[0].send({ t: 'undo' });
-    await okBy(() => seats[0].state.idx === 0 && seats[0].state.phase === 'tricks', 'the table host can go back');
+    seats[0].send({ t: 'score', round: 0, bids: seats[0].state.rounds[0].bids, tricks: [0, 1] });
+    await okBy(() => JSON.stringify(seats[0].state.rounds[0].tricks) === '[0,1]',
+       'the table host puts a scored round right from a phone  got '
+       + JSON.stringify(seats[0].state.rounds[0].tricks));
     seats[0].send({ t: 'reset' });
     await okBy(() => seats[0].state.phase === 'lobby', 'and can call a new game');
   }
@@ -683,8 +686,9 @@ async function bidRound(P) {
          'the totals everybody is ranked by carry what the accolades paid');
       const owed = aw.reduce((sum, a) => sum + a.who.length * pay, 0);
       ok(d.state.bonus.reduce((a, b) => a + b, 0) === owed, 'and every winner is paid ' + pay);
-      d.send({ t: 'undo' });
-      await okBy(() => !d.state.awards && d.state.bonus.every((b) => !b), 'going back puts the accolades away');
+      d.send({ t: 'resetround' });
+      await okBy(() => !d.state.awards && d.state.bonus.every((b) => !b),
+         'putting the last round back puts the accolades away');
       d.send({ t: 'dev', action: 'endGame' });
       await okBy(() => (d.state.awards || []).length > 0, 'and ending it again draws them afresh');
 

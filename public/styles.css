@@ -1088,7 +1088,9 @@ body.player .standings-panel{box-shadow:var(--shadow)}
   background:rgba(184,134,43,.10);border:1px dashed var(--gold);
 }
 .vote-text{font-size:15px;font-weight:650}
-.bum-row{justify-content:flex-end}
+/* Everything anybody at the table does to a game already going, in one row.
+   It wraps rather than squeezing: five controls do not fit a phone in a line. */
+.bum-row{justify-content:flex-end;flex-wrap:wrap;gap:8px}
 /* On the phone the button has a strip of its own under the turn panel: the
    panel is not there on a table dealt on the phones, and the button must be. */
 .panel.bum-row{flex-direction:row;padding:10px 16px}
@@ -1197,7 +1199,6 @@ body.host .scorecard-panel .table-wrap{
 .netbanner a{color:var(--gold)}
 
 /* ---------- the elected table host ---------- */
-.captain-panel{border-color:var(--gold)}
 .tally.gold{background:rgba(184,134,43,.18);color:var(--gold)}
 /* The rules on a phone, folded away. It was a small grey word with a smaller
    arrow, and the players who most wanted it -- everybody who is not setting

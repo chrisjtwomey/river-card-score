@@ -155,13 +155,13 @@ function renderWinner() {
   Round.winner($('#winner-panel'), ST);
 }
 
-// A bum deal throws the hand in. The dealer can do it alone; anybody else asks
-// the table, and every player must agree. The button and the vote box are
-// widgets, so the felt can carry the vote too.
+/* A bum deal throws the hand in. The dealer can do it alone; anybody else asks
+   the table, and every player must agree. The vote box is a widget, so the felt
+   can carry it too; the button that asks is in the row of controls with the
+   rest, and is drawn there (renderCaptain) so that one place decides whether
+   the row is on screen at all. */
 function renderVote() {
-  const v = view();
-  Round.bum($('#bum-row'), ST, v);
-  Round.vote($('#votebox'), ST, v);
+  Round.vote($('#votebox'), ST, view());
 }
 
 // The finish plays once, when the last round is scored. A phone that opens on
@@ -226,10 +226,21 @@ function dealWatch(r) {
 /* What the player who runs the table can do to a game already going. The
    lobby's own controls are in the lobby, drawn with it. */
 function renderCaptain(lobby) {
-  const boss = amHost();
-  $('#captain-panel').hidden = !boss || lobby;
-  $('#cap-game').hidden = lobby;
-  if (boss && !lobby) $('#btn-undo').disabled = false;
+  const row = $('#bum-row');
+  if (lobby) { row.hidden = true; return; }
+  /* The same row the TV screen carries, drawn by the same widgets: throw the
+     hand in, stop the table, move it on where it has hung, play the round
+     again, start over. The bum deal is any player's; the rest are the table
+     host's, and each widget knows which. */
+  const v = view();
+  Round.bum($('#btn-bum'), ST, v);
+  Round.pause($('#btn-pause'), ST, v);
+  Round.unstick($('#unstick-row'), ST, v);
+  Round.resetRound($('#btn-reset-round'), ST, v);
+  $('#btn-reset').hidden = !v.boss;
+  // A row of nothing is not a row: it goes when every button in it has.
+  row.hidden = ['#btn-pause', '#unstick-row', '#btn-bum', '#btn-reset-round', '#btn-reset']
+    .every((sel) => $(sel).hidden);
 }
 
 // The table host may be the only screen, so the code and the QR live here too.
@@ -465,7 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
           + 'This phone can come back to it from the front page.',
       'Leave', true).then((yes) => { if (yes) Net.send({ t: 'leave' }); });
   });
-  $('#btn-undo').addEventListener('click', () => Round.undo(view(), ST));
   $('#btn-reset').addEventListener('click', () => Round.newGame(view()));
   boot();
   wireSettings();                   // after boot: it needs to know whether this window may act

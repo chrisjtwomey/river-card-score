@@ -507,14 +507,18 @@ function renderMarks() {
     const here = i === cur;
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'rcell' + (here ? ' on' : '') + (m.w === 'bum' || m.w === 'undo' ? ' bum' : '');
+    b.className = 'rcell' + (here ? ' on' : '')
+      + (m.w === 'bum' || m.w === 'reset' || m.w === 'undo' ? ' bum' : '');
     b.appendChild(document.createTextNode(m.w === 'end' ? '🏁' : String(m.i + 1)));
     const s = document.createElement('small');
     s.textContent = m.w === 'end' ? 'end'
-      : (m.w === 'bum' ? 'again' : (m.w === 'undo' ? 'back' : `${m.cards}c`));
+      : (m.w === 'bum' ? 'again'
+        // 'undo' is what older trails on disk call a round put back by hand.
+        : (m.w === 'reset' || m.w === 'undo' ? 'back' : `${m.cards}c`));
     b.appendChild(s);
     b.title = m.w === 'bum' ? 'The hand was thrown in and dealt again'
-      : (m.w === 'undo' ? 'The table stepped back to here' : 'Take the replay to here');
+      : (m.w === 'reset' || m.w === 'undo'
+        ? 'The round was put back to here' : 'Take the replay to here');
     b.addEventListener('click', () => replayAsk({ do: 'seek', at: m.at }));
     box.appendChild(b);
   });

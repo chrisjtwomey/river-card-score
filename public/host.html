@@ -18,7 +18,6 @@
   </div>
   <div class="topbar-actions">
     <span class="netpill" id="netpill" hidden>reconnecting…</span>
-    <button class="btn ghost" id="btn-pause" type="button" hidden></button>
     <button class="btn ghost icon" id="btn-chat" type="button" title="Table talk"
         aria-label="Table talk"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.6 3h10.8A2.6 2.6 0 0 1 18 5.6v6.3a2.6 2.6 0 0 1-2.6 2.6H9.1l-3.5 3.1a.7.7 0 0 1-1.2-.52v-2.58H4.6A2.6 2.6 0 0 1 2 11.9V5.6A2.6 2.6 0 0 1 4.6 3z"/></svg><span class="chat-badge" hidden></span></button>
     <button class="btn ghost icon" id="btn-settings" type="button" title="Settings"
@@ -130,9 +129,14 @@
       <div id="stalled-row" hidden></div>
       <!-- with real cards the table counts: a row a seat, tap who took the trick -->
       <div id="host-count" hidden></div>
+      <!-- Everything whoever runs the table does to a game already going, in
+           one row: stop it, move it on where it has hung, throw the hand in,
+           play the round again, start over. -->
       <div class="entry-actions">
+        <button class="btn" id="btn-pause" type="button" hidden></button>
+        <span id="unstick-row" hidden></span>
         <button class="btn ghost" id="btn-bum" type="button" title="Throw the hand in and deal it again">Bum deal</button>
-        <button class="btn ghost" id="btn-undo" type="button">Undo last step</button>
+        <button class="btn ghost" id="btn-reset-round" type="button" hidden>Reset round</button>
         <button class="btn ghost danger" id="btn-reset" type="button">New game</button>
       </div>
       <div class="votebox" id="votebox" hidden>

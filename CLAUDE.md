@@ -83,6 +83,8 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
    tricks null, phase `bid`, vote null, play null, deal if virtual). `bumDeal`
    bumps `redeals` *before* calling it: every screen keys its deal on
    `Table.roundKey(ST)` = `idx:redeals`, and the felt hands over on it.
+   `resetRound` calls it too, for the round in play; a round already scored is
+   never reopened -- it is retyped in place (`setScore`).
 6. **`publicState.turn` is bid-only.** During tricks the seat on play is `play.turn`.
    The phone and the felt branch on `play ? play.turn : ST.turn`.
 7. **A widget is `(root, ST, view)`.** `view = { me, boss, send }`: this screen's

@@ -363,20 +363,32 @@ const Round = (function () {
 
   /* ---------- the three things a table is asked twice about ---------- */
 
-  /* A step back takes bids or a score with it, and on a table that deals the
-     cards it deals the round again, so it is asked first and told what goes.
-     The server decides what is undone; this says the same thing before the
-     tap lands. */
-  function undo(view, ST) {
-    if (!ST || ST.phase === 'lobby') return;
-    const back = ST.phase === 'tricks' ? ST.idx : ST.phase === 'done' ? ST.rounds.length - 1 : ST.idx - 1;
-    if (back < 0) { view.send({ t: 'undo' }); return; }   // nothing to undo: the table says so
-    const body = Game.virtual(ST)
-      ? `Round ${back + 1} is dealt again and bid again.`
-      : ST.phase === 'tricks'
-        ? `The bids of round ${back + 1} are cleared, and it is bid again.`
-        : `Round ${back + 1} is unscored, and its tricks are counted again.`;
-    UI.ask('Undo the last step?', body, 'Undo', true).then((yes) => { if (yes) view.send({ t: 'undo' }); });
+  /* The round in play, put back to the start of its bidding. It takes the bids
+     with it, and on a table that deals the cards it deals the hand again, so
+     it is asked first and told what goes.
+
+     Only where there is a round to put back: while the bids are still coming
+     in there is nothing behind them, and the hand is thrown in with Bum deal
+     instead -- the button beside this one. A round already scored is put right
+     on the scorecard, where its number is read. */
+  function resetRound(root, ST, view) {
+    if (!root) return;
+    const on = view.boss && (ST.phase === 'tricks' || ST.phase === 'done');
+    root.hidden = !on;
+    if (!on) return;
+    // Read at the tap, not at the draw: the state moves under a wired button.
+    root._at = ST.phase === 'done' ? ST.rounds.length - 1 : ST.idx;
+    root._dealt = Game.virtual(ST);
+    root._over = ST.phase === 'done';
+    root.textContent = 'Reset round';
+    root.title = 'Put this round back to its bids and play it again';
+    onClick(root, () => {
+      const body = `Round ${root._at + 1} goes back to its bids`
+        + (root._dealt ? ' and is dealt again.' : ', and its tricks are counted again from nothing.')
+        + (root._over ? ' The game is no longer over.' : '');
+      UI.ask('Reset this round?', body, 'Reset the round', true)
+        .then((yes) => { if (yes) view.send({ t: 'resetround' }); });
+    });
   }
 
   function newGame(view) {
@@ -414,5 +426,5 @@ const Round = (function () {
   }
 
   return { header, bidStrip, tally, trickCount, bidFor, playFor, playout, stalled, unstick,
-           winner, bum, vote, pause, newGame, bumDeal, undo };
+           winner, bum, vote, pause, newGame, bumDeal, resetRound };
 })();

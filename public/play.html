@@ -64,15 +64,6 @@
     <button class="btn primary big" id="btn-start" type="button" hidden disabled>Start game</button>
   </section>
 
-  <!-- What the player who runs the table can do to a game already going.
-       Everything the lobby needs is in the lobby, where it is being done. -->
-  <section class="panel captain-panel" id="captain-panel" hidden>
-    <div id="cap-game" class="row-actions" hidden>
-      <button class="btn ghost" id="btn-undo" type="button">Undo last step</button>
-      <button class="btn ghost danger" id="btn-reset" type="button">New game</button>
-    </div>
-  </section>
-
   <section id="game" hidden>
     <!-- the felt is the game on a virtual table; this is the way back to it -->
     <div class="feltbar" id="felt-bar" hidden>
@@ -129,11 +120,17 @@
       <div id="trick-count" hidden></div>
     </div>
 
-    <!-- A bum deal: the dealer and the table host throw the hand in, anybody
-         else asks. Outside the turn panel, which a table dealt on the phones
-         does not have. -->
+    <!-- Everything anybody at the table does to a game already going, in one
+         row: the bum deal any player can ask for, and beside it the four that
+         are the table host's. Outside the turn panel, which a table dealt on
+         the phones does not have. Each hides itself where there is nothing to
+         do, and the row goes when they all have. -->
     <div class="panel bum-row" id="bum-row" hidden>
+      <button class="btn" id="btn-pause" type="button" hidden></button>
+      <span id="unstick-row" hidden></span>
       <button class="btn ghost" id="btn-bum" type="button" title="Throw the hand in and deal it again">Ask for a bum deal</button>
+      <button class="btn ghost" id="btn-reset-round" type="button" hidden>Reset round</button>
+      <button class="btn ghost danger" id="btn-reset" type="button" hidden>New game</button>
     </div>
 
     <div class="panel winner-panel" id="winner-panel" hidden>
