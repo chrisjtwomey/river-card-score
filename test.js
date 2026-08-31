@@ -577,6 +577,13 @@ async function bidRound(P) {
        'and says which copy, and what is on it');
     h.send({ t: 'dev', action: 'replay', do: 'pause' });
     await okBy(() => h.replay.playing === false, 'and stops where it is');
+
+    // How fast it plays itself is the copy's own, and the page is told it.
+    h.send({ t: 'dev', action: 'replay', do: 'rate', v: 4 });
+    await okBy(() => h.replay.rate === 4,
+       'a replay can be played back faster than the table played it  got ' + h.replay.rate);
+    h.send({ t: 'dev', action: 'replay', do: 'rate', v: 1 });
+    await okBy(() => h.replay.rate === 1, 'and put back to the pace it was played');
     const stoodAt = h.replay.at;
     await wait(300);                       // longer than several of its beats
     ok(h.replay.at === stoodAt, 'and stays there  got ' + h.replay.at + ' from ' + stoodAt);

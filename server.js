@@ -328,11 +328,14 @@ const Replay = ReplayOf({ Room, G, token });
 /* How long the table would have taken over the thing that just happened. The
    two real holds are the game's own; the other two are the replay's. */
 function replayBeat(room, ev) {
-  if (!ev) return REPLAY_STEP;
-  if (ev.k === 'w') return Deck.TRICK_HOLD;              // the trick sits to be read
-  if (ev.k === 'e' || ev.k === 'E') return REPLAY_HOLD;  // and a score longer still
-  if (room.play && room.play.held) return Room.BID_HOLD; // the bids stand before the hand
-  return REPLAY_STEP;
+  let beat = REPLAY_STEP;
+  if (!ev) beat = REPLAY_STEP;
+  else if (ev.k === 'w') beat = Deck.TRICK_HOLD;              // the trick sits to be read
+  else if (ev.k === 'e' || ev.k === 'E') beat = REPLAY_HOLD;  // and a score longer still
+  else if (room.play && room.play.held) beat = Room.BID_HOLD; // the bids stand before the hand
+  // The speed picked divides every beat, the game's own ones included, so half
+  // speed is the whole game slowed rather than the gaps between cards stretched.
+  return Math.max(20, Math.round(beat / ((room.replay && room.replay.rate) || 1)));
 }
 
 /* The panes on a copy are told by the broadcast, like any other screen. The

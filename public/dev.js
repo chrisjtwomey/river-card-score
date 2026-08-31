@@ -46,6 +46,16 @@ const stateNow = () => (replaying() ? (REPLAY.state || null) : ST);
 const N_KEY = 'rcs:dev:players';
 let NEW_N = Math.max(2, Math.min(8, Number(localStorage.getItem(N_KEY)) || 4));
 
+/* How fast a replay plays itself, against the pace the table played it. It is
+   remembered, because whoever slows a game down to read it wants the next one
+   slow too. The copy is made at the table's own pace and told this once. */
+const RATE_KEY = 'rcs:dev:rate';
+const RATES = [[0.5, '½×', 'Half the pace the table played it'],
+               [1, '1×', 'The pace the table played it'],
+               [2, '2×', 'Twice the pace'],
+               [4, '4×', 'Four times the pace']];
+let RATE = Number(localStorage.getItem(RATE_KEY)) || 1;
+
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
    lands on the game it was pressed from; #g=ID opens it on a game watched
    again. The page writes back whichever it lands on, so a reload comes to the
@@ -128,6 +138,10 @@ function connect() {
       REPLAY = m.shut ? null : m;
       WANT = (REPLAY && REPLAY.game) || null;
       if (REPLAY) err('');            // a copy that opened is not a line to keep
+      // A new copy is made at the table's own pace: tell it the one picked last.
+      if (REPLAY && REPLAY.code !== was && RATE !== REPLAY.rate) {
+        replayAsk({ do: 'rate', v: RATE });
+      }
       /* Only a different copy is a different pane. Each pane holds a socket on
          the copy, so a step reaches it on its own; tearing them down every step
          reloaded every frame at every press, and made the panel feel dead. */
@@ -142,6 +156,7 @@ function connect() {
       if (REPLAY && REPLAY.code === m.code) {
         REPLAY.at = m.at;
         REPLAY.playing = m.playing;
+        REPLAY.rate = m.rate;
         REPLAY.where = m.where;
         REPLAY.state = m.state;
         paint();
@@ -800,11 +815,41 @@ function gameWhen(at) {
     ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+/* The speeds it can be played back at. Built here rather than written into the
+   page because the list of them is one thing, and a button a speed written out
+   four times is four places to keep right. */
+function buildRates() {
+  const box = $('#replay-rate');
+  if (!box || box._wired) return;
+  box._wired = true;
+  RATES.forEach(([v, label, why]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn';
+    b.dataset.rate = String(v);
+    b.textContent = label;
+    b.title = why;
+    b.addEventListener('click', () => setRate(v));
+    box.appendChild(b);
+  });
+}
+
+function setRate(v) {
+  RATE = v;
+  try { localStorage.setItem(RATE_KEY, String(v)); } catch (e) { /* a browser that will not */ }
+  replayAsk({ do: 'rate', v });
+}
+
 // The band, on a game that has already happened.
 function renderReplay() {
   if (!replaying()) return;
   renderMarks();
   renderSteps();
+  const rates = $('#replay-rate');
+  if (rates) {
+    rates.querySelectorAll('.btn').forEach((b) =>
+      b.classList.toggle('on', Number(b.dataset.rate) === (REPLAY.rate || 1)));
+  }
   const play = $('#btn-play');
   play._now = !!REPLAY.playing;             // read at the tap, not at the draw
   play.textContent = play._now ? '❚❚ Pause' : '▶ Play';
@@ -1210,6 +1255,7 @@ function applyGates() {
 
 document.addEventListener('DOMContentLoaded', () => {
   buildPhaseRow();
+  buildRates();
   paint();
   UI.wireTheme('#btn-theme');
 

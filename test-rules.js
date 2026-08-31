@@ -1501,6 +1501,15 @@ part('a game put back on a table of its own');
     ok(JSON.stringify(bidding.rounds[0].bids) === JSON.stringify([0, 0, 0]),
        'three bids in, the copy has the three that were bid  got '
        + JSON.stringify(bidding.rounds[0].bids));
+    /* How fast it plays itself back. It is a copy's own, it starts at the pace
+       the table played it, and it is held inside what a clock can do. */
+    const paced = copyOf(t, 0);
+    ok(paced.replay.rate === 1, 'a copy plays back at the pace it was played');
+    ok(paced.Replay.rate(paced, 0.5) === 0.5, 'and can be slowed to read it');
+    ok(paced.Replay.rate(paced, 99) === 8 && paced.Replay.rate(paced, -3) === 0.25,
+       'but not to a speed no clock could keep  got ' + paced.replay.rate);
+    ok(paced.Replay.rate(paced, 'quick') === 1, 'and junk is the pace it was played');
+
     const opening = copyOf(t, 0);
     ok(opening.replay.at === 0,
        'a copy opens on the first point there is, not the first it could show  got '

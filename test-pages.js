@@ -3515,7 +3515,7 @@ part('the dev controls, on each kind of server');
     ok(P.pick('#steps-row').hidden === true, 'and no points to step through');
 
     const say = (over) => P.socks[0].onmessage({ data: JSON.stringify(Object.assign({
-      t: 'replay', code: 'ZZZZ', of: 'AAAA', at: 0, n: 13, playing: false,
+      t: 'replay', code: 'ZZZZ', of: 'AAAA', at: 0, n: 13, playing: false, rate: 1,
       here: 'AAAA', game: 'a1b2c3d4e5f6',
       games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000, names: ['Cal', 'Dot'] }],
       state: JSON.parse(devState(false)),
@@ -3660,6 +3660,22 @@ part('the dev controls, on each kind of server');
     play.fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"pause"}',
        'and the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    say();
+
+    /* How fast it plays itself. The table's own pace is one of the speeds, and
+       the one it is set to is marked, so the row says where it is as well as
+       where to send it. */
+    const rates = P.pick('#replay-rate').querySelectorAll('.btn');
+    ok(rates.length === 4, 'four speeds to play it back at  got ' + rates.length);
+    ok(rates[1].classList.contains('on'),
+       'the table\'s own pace to start with  got ' + rates.map((b) => b.className).join('|'));
+    P.socks[0].sent.length = 0;
+    rates[0].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"rate","v":0.5}',
+       'and picking one asks for it  got ' + JSON.stringify(P.socks[0].sent[0]));
+    say({ rate: 0.5 });
+    ok(rates[0].classList.contains('on') && !rates[1].classList.contains('on'),
+       'the one it is playing at is the one marked');
     say();
 
     /* The panels read the copy, and only read it: what happened is what the
