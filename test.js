@@ -531,7 +531,7 @@ async function bidRound(P) {
        What a replay is, is settled in test-rules.js. What is proved here is
        that it is a copy: a table of its own that nobody can reach, nobody can
        play at, and that goes when the page watching it does. */
-    h.send({ t: 'dev', action: 'replay', do: 'open' });
+    h.send({ t: 'replay', do: 'open' });
     await okBy(() => h.replay && h.replay.code, 'the host token opens a replay on a normal server');
     const copy = h.replay.code;
     ok(copy !== code, 'and it is a table of its own  got ' + copy);
@@ -571,18 +571,18 @@ async function bidRound(P) {
        'and it is never offered as a table to go to');
 
     const wasPhase = h.state.phase, wasIdx = h.state.idx;
-    h.send({ t: 'dev', action: 'replay', do: 'seek', at: 1 });
+    h.send({ t: 'replay', do: 'seek', at: 1 });
     await okBy(() => h.replay.at === 1, 'the replay can be moved about in');
     await h.rt();
     ok(h.state.phase === wasPhase && h.state.idx === wasIdx,
        'and the table it copies does not move with it');
 
     /* And it plays itself back, at the pace the table played it. */
-    h.send({ t: 'dev', action: 'replay', do: 'seek', at: 0 });
+    h.send({ t: 'replay', do: 'seek', at: 0 });
     await okBy(() => h.replay.at <= 1,
        'put back to the start, which is the first picture there is  got ' + h.replay.at);
     h.moved.length = 0;
-    h.send({ t: 'dev', action: 'replay', do: 'play' });
+    h.send({ t: 'replay', do: 'play' });
     await okBy(() => h.replay.playing === true, 'and set going');
     await okBy(() => h.replay.at > 0, 'it walks itself on  got ' + h.replay.at);
     /* And it says where it has got to as it goes. This socket is on the table
@@ -595,23 +595,23 @@ async function bidRound(P) {
        + JSON.stringify(h.moved.map((x) => x.at)));
     ok(h.moved.every((x) => x.code === copy && x.where),
        'and says which copy, and what is on it');
-    h.send({ t: 'dev', action: 'replay', do: 'pause' });
+    h.send({ t: 'replay', do: 'pause' });
     await okBy(() => h.replay.playing === false, 'and stops where it is');
 
     // How fast it plays itself is the copy's own, and the page is told it.
-    h.send({ t: 'dev', action: 'replay', do: 'rate', v: 4 });
+    h.send({ t: 'replay', do: 'rate', v: 4 });
     await okBy(() => h.replay.rate === 4,
        'a replay can be played back faster than the table played it  got ' + h.replay.rate);
-    h.send({ t: 'dev', action: 'replay', do: 'rate', v: 1 });
+    h.send({ t: 'replay', do: 'rate', v: 1 });
     await okBy(() => h.replay.rate === 1, 'and put back to the pace it was played');
     const stoodAt = h.replay.at;
     await wait(300);                       // longer than several of its beats
     ok(h.replay.at === stoodAt, 'and stays there  got ' + h.replay.at + ' from ' + stoodAt);
 
     // Moving about in it by hand stops it: two clocks would fight over it.
-    h.send({ t: 'dev', action: 'replay', do: 'play' });
+    h.send({ t: 'replay', do: 'play' });
     await okBy(() => h.replay.playing === true, 'set going again');
-    h.send({ t: 'dev', action: 'replay', do: 'seek', at: 1 });
+    h.send({ t: 'replay', do: 'seek', at: 1 });
     await okBy(() => h.replay.playing === false && h.replay.at === 1,
        'moving it by hand stops it playing itself');
 
@@ -622,12 +622,12 @@ async function bidRound(P) {
     eye2.ws.close();
     await eye2.gone;
     h.errors.length = 0;
-    h.send({ t: 'dev', action: 'replay', do: 'step', by: 1 });
+    h.send({ t: 'replay', do: 'step', by: 1 });
     await until(() => h.replay.at === 2 || h.errors.length);
     ok(h.errors.length === 0 && h.replay.at === 2,
        'a copy outlives the windows looking at it  got ' + h.replay.at + ' ' + h.last());
 
-    h.send({ t: 'dev', action: 'replay', do: 'close' });
+    h.send({ t: 'replay', do: 'close' });
     await okBy(() => h.replay.code === null, 'the replay can be let go');
     const after2 = await (await fetch(`http://127.0.0.1:${PORT}/tables.json`)).json();
     ok(!after2.tables.some((x) => x.code === copy), 'and the copy goes with it');
@@ -637,7 +637,7 @@ async function bidRound(P) {
     const dev2 = client('devpage'); await dev2.ready;
     dev2.send({ t: 'dev', action: 'open', code, token: h.hello.token });
     await okBy(() => dev2.hello && dev2.hello.code === code, 'a second dev page opens the table');
-    dev2.send({ t: 'dev', action: 'replay', do: 'open' });
+    dev2.send({ t: 'replay', do: 'open' });
     await okBy(() => dev2.replay && dev2.replay.code, 'and a replay of its own');
     const copy2 = dev2.replay.code, key2 = dev2.replay.seats[0].watch;
     dev2.ws.close();
@@ -720,7 +720,7 @@ async function bidRound(P) {
        'and is offered to a page that has opened nothing');
     const filed = cold.ways.games.find((g) => g.code === done.code).id;
 
-    cold.send({ t: 'dev', action: 'replay', do: 'open', game: filed });
+    cold.send({ t: 'replay', do: 'open', game: filed });
     await okBy(() => cold.replay && cold.replay.code,
        'which watches it back with no table and no host key  got ' + cold.last());
     ok(cold.replay.of === done.code, 'on a copy that says what it is a copy of');
@@ -749,7 +749,7 @@ async function bidRound(P) {
     ok(half.unfinished === true && half.round === 1 && half.rounds > 0,
        'saying how far it got rather than who won  got ' + JSON.stringify(half));
     ok(!half.winners, 'because there was no winner');
-    cold.send({ t: 'dev', action: 'replay', do: 'open', game: half.id });
+    cold.send({ t: 'replay', do: 'open', game: half.id });
     await okBy(() => cold.replay && cold.replay.of === part.code,
        'and it is watched back like any other  got ' + cold.last());
     part.P.forEach((x) => x.ws.close());
@@ -779,10 +779,10 @@ async function bidRound(P) {
     const live = await tableOf(['Gus', 'Hal'], { max: 1, pattern: 'down', ones: 2 });
     live.h.send({ t: 'start' });
     await okBy(() => live.h.state.phase === 'bid', 'a table in play is being written down');
-    live.P[1].send({ t: 'dev', action: 'replay', do: 'open' });
+    live.P[1].send({ t: 'replay', do: 'open' });
     await okBy(() => /only the host/i.test(live.P[1].last()),
        'a phone at that table may not put it back  got ' + live.P[1].last());
-    live.h.send({ t: 'dev', action: 'replay', do: 'open' });
+    live.h.send({ t: 'replay', do: 'open' });
     await okBy(() => live.h.replay && live.h.replay.code, 'the screen that runs it may');
 
     cold.ws.close(); done.h.ws.close(); live.h.ws.close();
@@ -935,13 +935,13 @@ async function bidRound(P) {
     d.send({ t: 'dev', action: 'endGame' });
     await okBy(() => d.state.phase === 'done', 'and played out to the finish');
     const rounds = d.state.rounds.length;
-    d.send({ t: 'dev', action: 'replay', do: 'open' });
+    d.send({ t: 'replay', do: 'open' });
     await okBy(() => d.replay && d.replay.code, 'and the game it played can be watched again');
     ok(d.replay.marks.length === rounds + 1,
        'with every round to move about in, and the finish  got '
        + d.replay.marks.length + ' for ' + rounds + ' rounds');
     ok(d.replay.marks[d.replay.marks.length - 1].w === 'end', 'the last of them being the finish');
-    d.send({ t: 'dev', action: 'replay', do: 'seek', at: d.replay.marks[0].at });
+    d.send({ t: 'replay', do: 'seek', at: d.replay.marks[0].at });
     await okBy(() => d.replay.at === d.replay.marks[0].at, 'and it can be taken to a round');
     ok(/Round|finish/i.test(d.replay.where || ''),
        'which says what is on the table  got ' + d.replay.where);
@@ -949,22 +949,22 @@ async function bidRound(P) {
        this one, but what is read is the game's kept trail, by its id -- so a
        game whose table went hours ago is watched the same way. */
     const filed = d.state.gameId;
-    d.send({ t: 'dev', action: 'replay', do: 'games' });
+    d.send({ t: 'replay', do: 'games' });
     await okBy(() => d.replay && d.replay.games, 'the page is told what there is to watch');
     ok(d.replay.games.some((g) => g.id === filed),
        'the game just played is on the list  got ' + JSON.stringify(d.replay.games.map((g) => g.id)));
     ok(d.replay.here === d.state.code, 'and so is the table itself');
 
-    d.send({ t: 'dev', action: 'replay', do: 'open', game: filed });
+    d.send({ t: 'replay', do: 'open', game: filed });
     await okBy(() => d.replay.code && d.replay.game === filed,
        'a game on file opens by its own name, not its table\'s');
     ok(d.replay.of === d.state.code, 'and says which table it was played at');
     ok(d.replay.marks.length === rounds + 1, 'with every round of it');
-    d.send({ t: 'dev', action: 'replay', do: 'open', game: 'ffffffffffff' });
+    d.send({ t: 'replay', do: 'open', game: 'ffffffffffff' });
     await okBy(() => /nothing was written down about that game/i.test(d.last()),
        'a game nothing was written down about is refused');
 
-    d.send({ t: 'dev', action: 'replay', do: 'close' }); await d.rt();
+    d.send({ t: 'replay', do: 'close' }); await d.rt();
 
     d.send({ t: 'dev', action: 'goto', round: 1, phase: 'bid' }); await d.rt();
 

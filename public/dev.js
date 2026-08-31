@@ -484,7 +484,7 @@ function standInAvatar(name, i) {
    rounds of the one being watched, the transport and the points of the round on
    show. This page only says where each of those goes and how a word gets back
    to the copy. */
-const replayAsk = (o) => send(Object.assign({ t: 'dev', action: 'replay' }, o));
+const replayAsk = (o) => send(Object.assign({ t: 'replay' }, o));
 const watching = { send: replayAsk };
 
 function renderReplay() {

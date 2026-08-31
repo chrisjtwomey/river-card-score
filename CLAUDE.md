@@ -19,10 +19,12 @@ lib/bots.js        The players the table provides: what a hand is worth, which c
                    and the driver that takes their turn through the same verbs a phone uses.
 lib/messages.js    THE PROTOCOL. A table of every message a seated socket may send: who may
                    send it, when, and which Room verb it calls. Guards are declarative.
-lib/dev.js         The dev controls: the three ways in (`ways`) -- a table of stand-ins
-                   (`setup`), a table in play (`tables`/`open`), a game watched again
-                   (`replay`, which needs no table). Calls Room verbs; invents nothing a
-                   real game cannot reach.
+lib/dev.js         The dev controls: the ways in (`ways`) -- a table of stand-ins
+                   (`setup`) and a table in play (`tables`/`open`). Calls Room verbs;
+                   invents nothing a real game cannot reach.
+lib/watch.js       THE DOOR TO A REPLAY. One message, `{ t: 'replay', do: ... }`, that any
+                   socket may send: open a copy of a game on file, and move about in it.
+                   No table and no key -- only a table still in play is the host's.
 lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures,
                    and the tables running here (`/tables.json`, to this machine alone).
 lib/games.js       A finished game on disk.

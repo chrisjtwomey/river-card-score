@@ -1213,6 +1213,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `lib/trail.js` — what happened to a table, written down as it happens.
 - `lib/tables.js` — a table still in play, on disk, so that stopping the server does not end it.
 - `lib/dev.js` — the dev portal, which a real game never touches.
+- `lib/watch.js` — the door to a replay: one message any socket may send to open a copy of a game on file and move about in it. No table and no key; only a table still in play stays the host's.
 - `public/ui.js` — shared page bits: the full-screen button, the wake lock, the motion setting every scene and flourish asks.
 - `public/stage.js` — the overlay both scenes are played on, its parts, the slot that says which one is open, and the peek: the one way a screen shows the seat it is waiting on.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.

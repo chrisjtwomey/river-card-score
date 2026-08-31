@@ -14,6 +14,7 @@ const Games = require('./lib/games.js');
 const TablesOf = require('./lib/tables.js');
 const Http = require('./lib/http.js');
 const Dev = require('./lib/dev.js');
+const Watch = require('./lib/watch.js');
 const Messages = require('./lib/messages.js');
 const RoomOf = require('./lib/room.js');
 const TrailOf = require('./lib/trail.js');
@@ -398,11 +399,18 @@ function dropRoom(code) {
   rooms.delete(room.code);
 }
 
+/* Watching a game again. It is nobody's controls: a game on file is finished
+   and already public, so any socket may ask for a copy of one. */
+const { handleWatch, games: watchGames } = Watch({
+  createRoom, roomOf, listGames, send, fail, broadcast,
+  Replay, Trail, dropRoom, paceReplay,
+});
+
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
-const { handleDev, devHello } = Dev({
-  DEV, G, createRoom, roomOf, listTables, listGames, endTable, attach, send, fail, broadcast, setAvatar,
-  Room, Tables, Bots, Trail, Replay, dropRoom, paceReplay,
+const { handleDev, devHello, runs } = Dev({
+  DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
+  Room, Tables, Bots, Trail, watchGames,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
@@ -463,6 +471,19 @@ function handle(ws, m) {
   }
 
   if (m.t === 'dev') return handleDev(ws, m);
+
+  /* A game watched again, on a copy of its own. It needs no table and no key:
+     a game on file is finished, and its scorecard is already served over http
+     to anybody who asks -- putting it back adds only the order it happened in.
+     The one thing that is not public is a table still in play, whose trail
+     holds the cards in every hand, so watching that one back is the host's. */
+  if (m.t === 'replay') {
+    const at = ws.ctx && ws.ctx.room;
+    if (m.do === 'open' && !m.game && at && !runs(ws, at)) {
+      return fail(ws, 'only the host can watch this table back');
+    }
+    return handleWatch(ws, m, at);
+  }
 
   if (m.t === 'avatar') {
     const room = ws.ctx && ws.ctx.room;

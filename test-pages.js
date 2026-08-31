@@ -3449,7 +3449,7 @@ part('the dev controls, on each kind of server');
       P.socks[0].sent.length = 0;
       games[0].fire('click');
       ok(JSON.stringify(P.socks[0].sent[0])
-         === '{"t":"dev","action":"replay","do":"open","game":"a1b2c3d4e5f6"}',
+         === '{"t":"replay","do":"open","game":"a1b2c3d4e5f6"}',
          'and picking one watches it  got ' + JSON.stringify(P.socks[0].sent[0]));
 
       // The code typed in, on a server that will not list its tables.
@@ -3637,7 +3637,7 @@ part('the dev controls, on each kind of server');
     ok(marks[1].classList.contains('bum'), 'and a hand thrown in is marked as its own go');
     P.socks[0].sent.length = 0;
     marks[1].fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":6}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"seek","at":6}',
        'pressing one takes the copy there  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     /* The steps inside the round on show. Discrete, because a game is: each of
@@ -3700,7 +3700,7 @@ part('the dev controls, on each kind of server');
 
     P.socks[0].sent.length = 0;
     steps[5].fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"seek","at":5}',
        'and each of them is a place to go  got ' + JSON.stringify(P.socks[0].sent[0]));
     ok(P.pick('#replay-run').querySelectorAll('input').length === 0,
        'nothing here is a slider: nothing here is continuous');
@@ -3719,16 +3719,16 @@ part('the dev controls, on each kind of server');
     ok(body.querySelector('.head').style.left === '100%', 'and a drag moves it along');
     ok(P.socks[0].sent.length === 0, 'with nothing asked of the copy while it is moving');
     body.fire('pointerup', { clientX: 100, pointerId: 1 });
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":5}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"seek","at":5}',
        'letting go takes the copy there  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     P.socks[0].sent.length = 0;
     run().querySelector('.vw-fwd').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":1}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"step","by":1}',
        'it can be walked a point at a time  got ' + JSON.stringify(P.socks[0].sent[0]));
     P.socks[0].sent.length = 0;
     run().querySelector('.vw-back').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":-1}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"step","by":-1}',
        'either way  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     /* And a round at a time, outside those. Back part way through a round goes
@@ -3740,7 +3740,7 @@ part('the dev controls, on each kind of server');
       P.socks[0].sent.length = 0;
       run().querySelector(btn === 'back' ? '.vw-prev' : '.vw-next').fire('click');
       ok(JSON.stringify(P.socks[0].sent[0])
-         === `{"t":"dev","action":"replay","do":"seek","at":${want}}`,
+         === `{"t":"replay","do":"seek","at":${want}}`,
          why + '  got ' + JSON.stringify(P.socks[0].sent[0]));
     };
     roundGoes(3, 'back', 0, 'part way through a round, back goes to the top of it');
@@ -3763,13 +3763,13 @@ part('the dev controls, on each kind of server');
     ok(play.textContent === '▶ Play', 'a stopped replay offers to play  got ' + play.textContent);
     P.socks[0].sent.length = 0;
     play.fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"play"}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"play"}',
        'and asks for it  got ' + JSON.stringify(P.socks[0].sent[0]));
     say({ playing: true, at: 4 });
     ok(play.textContent === '❚❚ Pause', 'a playing one offers to stop');
     P.socks[0].sent.length = 0;
     play.fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"pause"}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"pause"}',
        'and the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
     say();
 
@@ -3782,7 +3782,7 @@ part('the dev controls, on each kind of server');
        'the table\'s own pace to start with  got ' + rates.map((b) => b.className).join('|'));
     P.socks[0].sent.length = 0;
     rates[0].fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"rate","v":0.5}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"rate","v":0.5}',
        'and picking one asks for it  got ' + JSON.stringify(P.socks[0].sent[0]));
     say({ rate: 0.5 });
     ok(rates[0].classList.contains('on') && !rates[1].classList.contains('on'),
@@ -3822,7 +3822,7 @@ part('the dev controls, on each kind of server');
     ok(P.pick('#btn-ways').textContent === '⌂ Stop watching',
        'the one way back says what it does here  got ' + P.pick('#btn-ways').textContent);
     P.pick('#btn-ways').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"close"}',
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"close"}',
        'and lets the copy go  got ' + JSON.stringify(P.socks[0].sent[0]));
     ok(JSON.stringify(P.socks[0].sent[1]) === '{"t":"dev","action":"ways"}',
        'and asks what to do next  got ' + JSON.stringify(P.socks[0].sent[1]));
