@@ -734,6 +734,27 @@ async function bidRound(P) {
     ok(d.state.code !== 'HACK', 'but its code stays what it was');
     d.send({ t: 'dev', action: 'state', record: [1, 2] });
     await okBy(() => /not a table/.test(d.last()), 'junk in the editor is refused whole');
+    /* ---- a table of stand-ins makes a trail like any other ----
+       Randomise plays a whole game through the room's own verbs, so the trail
+       it leaves is a real one and replays like a real one. This is the path a
+       developer actually uses: shuffle up a game, then watch it back. */
+    d.send({ t: 'dev', action: 'randomise' });
+    await okBy(() => d.state && d.state.rounds.length > 0, 'a table of stand-ins is shuffled up');
+    d.send({ t: 'dev', action: 'endGame' });
+    await okBy(() => d.state.phase === 'done', 'and played out to the finish');
+    const rounds = d.state.rounds.length;
+    d.send({ t: 'dev', action: 'replay', do: 'open' });
+    await okBy(() => d.replay && d.replay.code, 'and the game it played can be watched again');
+    ok(d.replay.marks.length === rounds + 1,
+       'with every round to move about in, and the finish  got '
+       + d.replay.marks.length + ' for ' + rounds + ' rounds');
+    ok(d.replay.marks[d.replay.marks.length - 1].w === 'end', 'the last of them being the finish');
+    d.send({ t: 'dev', action: 'replay', do: 'seek', at: d.replay.marks[0].at });
+    await okBy(() => d.replay.at === d.replay.marks[0].at, 'and it can be taken to a round');
+    ok(/Round|finish/i.test(d.replay.where || ''),
+       'which says what is on the table  got ' + d.replay.where);
+    d.send({ t: 'dev', action: 'replay', do: 'close' }); await d.rt();
+
     d.send({ t: 'dev', action: 'goto', round: 1, phase: 'bid' }); await d.rt();
 
     /* ---- a stopped table, walked on one move at a time ----
