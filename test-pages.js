@@ -4034,8 +4034,8 @@ part('the dev controls, on each kind of server');
        changed, and the server says so: the change becomes the copy's last
        point and the rest of the trail goes with it. */
     P.pick('#players-panel').hidden = false;
-    P.pick('#btn-players').fire('click');
-    P.pick('#btn-players').fire('click');
+    P.pick('#btn-tools').fire('click');          // shut
+    P.pick('#btn-tools').fire('click');          // and open again, drawing them
     const rows = P.pick('#prows').querySelectorAll('.prow');
     ok(rows.length === 2, 'who was at the table  got ' + rows.length);
     ok(rows[0].querySelectorAll('input').every((el) => !el.disabled),
@@ -4045,9 +4045,11 @@ part('the dev controls, on each kind of server');
     ok(!rows[0].querySelector('.pbtns').querySelector('.btn'),
        'but no invented photo, which is a table\'s and not a copy\'s');
     P.socks[0].sent.length = 0;
-    P.pick('#btn-state').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"state","replay":true}',
-       'the record read is the copy\'s  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.pick('#btn-tools').fire('click');
+    P.pick('#btn-tools').fire('click');
+    ok(P.socks[0].sent.some((o) =>
+         JSON.stringify(o) === '{"t":"dev","action":"state","replay":true}'),
+       'the record read is the copy\'s  got ' + JSON.stringify(P.socks[0].sent));
 
     /* And a change made in the panel goes to the copy, not to a table: the
        page has no table when it is watching one. */
@@ -5596,6 +5598,29 @@ part('the finish takes the stage over');
 }
 
 part('the pages and the stylesheet agree');
+
+/* The page is two halves: the screens on the left, the tools on the right.
+   They were one column with the panels folded away under the screens, which
+   meant setting a table up and watching it were the same scroll -- open the
+   players table and the screens went off the top. */
+{
+  const dev = fs.readFileSync(path.join(ROOT, 'public/dev.html'), 'utf8');
+  ok(/\.devmain\{display:flex;gap/.test(dev), 'the main view is two halves side by side');
+  const left = dev.indexOf('class="devleft"'), right = dev.indexOf('class="devright"');
+  ok(left > 0 && right > left, 'the screens first, the tools beside them');
+  ['host-frame', 'seat-frames'].forEach((id) => {
+    const i = dev.indexOf('id="' + id + '"');
+    ok(i > left && i < right, id + ' is on the screens side  got ' + i);
+  });
+  ['players-panel', 'state-panel'].forEach((id) => {
+    ok(dev.indexOf('id="' + id + '"') > right, id + ' is on the tools side');
+  });
+  // One button folds both away, because they are one job and not two panels.
+  ok(/id="btn-tools"/.test(dev) && !/id="btn-players"/.test(dev) && !/id="btn-state"[^-]/.test(dev),
+     'and one Tools button folds the half away');
+  ok(/\.devwrap\.notools \.devright\{display:none\}/.test(dev),
+     'which is what gives the screens the whole width');
+}
 
 /* The band is how a game is driven, so it does not scroll away from the thing
    it is driving. Both pages that have one are built the same shape: as tall as

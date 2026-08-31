@@ -22,6 +22,7 @@ let DEVSRV = false;              // this server takes the controls that invent d
 let polling = false;             // the list of tables, on a dev server only
 let onTable = false;             // this socket got onto a table
 let stateBusy = false;           // a record is out, and its answer is the panel's
+let TOOLS = true;                // the two tables beside the screens are on show
 let stateLoaded = false;         // a record is in the box, read at some moment
 let stateReading = false;        // and one was asked for, so a change is not news
 let REPLAY = null;               // the copy being watched, and where it stands
@@ -105,8 +106,10 @@ function connect() {
       err('');
       paint();
       if (polling) askTables();
-      // The record landed, so read back what the table became.
+      // The record landed, so read back what the table became. Otherwise this
+      // is a table arriving, and the box beside it starts empty.
       if (stateBusy) { stateBusy = false; askState(); }
+      else if (!stateLoaded) askState();
     } else if (m.t === 'tables') {
       if (WAYS) WAYS.tables = m.tables || [];
       renderTables($('#tablelist'), m.tables || []);
@@ -131,12 +134,14 @@ function connect() {
       /* Only a different copy is a different pane. Each pane holds a socket on
          the copy, so a step reaches it on its own; tearing them down every step
          reloaded every frame at every press, and made the panel feel dead. */
-      if ((REPLAY && REPLAY.code) !== was) seatKey = topKey = '';
+      if ((REPLAY && REPLAY.code) !== was) { seatKey = topKey = ''; stateLoaded = false; }
       writeHash();
       paint();
       // A record applied to a copy is answered by the copy, not by a hello,
-      // so this is where the panel reads back what the copy became.
+      // so this is where the panel reads back what the copy became. Otherwise
+      // this is a copy arriving, and the box beside it starts empty.
       if (stateBusy) { stateBusy = false; askState(); }
+      else if (replaying() && !stateLoaded) askState();
     } else if (m.t === 'replayAt') {
       /* A copy playing itself, saying where it has got to. Only the place and
          the table move: the rounds and the points of the round are the trail,
@@ -208,7 +213,11 @@ const stateErr = (msg) => { $('#state-err').textContent = msg; $('#state-err').h
 const stateStale = (on) => { if ($('#state-stale')) $('#state-stale').hidden = !on; };
 // Reading is asked for in one place, so a change arriving in the meantime is
 // the answer coming, not the table moving under the text.
-const askState = () => { stateReading = true; act('state'); };
+const askState = () => {
+  if (!CODE && !replaying()) return;      // nothing open to read a record off
+  stateReading = true;
+  act('state');
+};
 
 /* Back to the question. The table is let go here and the copy on the server,
    so what the page offers next is what is actually there. */
@@ -702,7 +711,7 @@ function sendWon() {
 function renderPlayers() {
   const box = $('#prows');
   const S = stateNow();
-  if (!box || !S || $('#players-panel').hidden) return;
+  if (!box || !S || !TOOLS || $('#players-panel').hidden) return;
   renderPhaseRow();
   /* A copy is written to as a table is. What the trail says happened stops
      being what the copy is the moment it is changed, and the copy says so --
@@ -850,6 +859,24 @@ function renderHead() {
   $('#subtitle').textContent = `${LIVE ? 'live ' : ''}table ${S.code} · ${n} players · ${S.phase}`;
 }
 
+/* The half of the page beside the screens. Both tables go with it: they are
+   one job -- setting a table up -- and folding one and not the other left the
+   column half empty with the screens no wider for it. */
+function setTools(on) {
+  TOOLS = !!on;
+  const wrap = document.querySelector('.devwrap');
+  if (wrap) wrap.classList.toggle('notools', !TOOLS);
+  const btn = $('#btn-tools');
+  if (btn) {
+    btn.textContent = TOOLS ? 'Tools ▴' : 'Tools ▾';
+    btn.setAttribute('aria-expanded', String(TOOLS));
+  }
+  if (!TOOLS) return;
+  delete $('#prows').dataset.key;
+  renderPlayers();
+  askState();
+}
+
 /* ---------- wiring ---------- */
 
 /* What is on show follows two things: which of the three the page is on, and
@@ -875,14 +902,12 @@ function applyGates() {
   }
   if (el('#ways')) el('#ways').hidden = !ways;
   // The three panels below the band have nothing to say until something is on.
-  if (ways) {
-    ['#players-panel', '#state-panel', '#host-frame', '#seat-frames'].forEach((sel) => {
-      if (el(sel)) el(sel).hidden = true;
-    });
-  } else if (el('#host-frame')) {
-    el('#host-frame').hidden = false;
-    el('#seat-frames').hidden = false;
-  }
+  /* The two tables are the right half of the page, not panels that are opened
+     one at a time: they are up whenever there is something to be up about. */
+  ['#players-panel', '#state-panel', '#host-frame', '#seat-frames'].forEach((sel) => {
+    if (el(sel)) el(sel).hidden = ways;
+  });
+  if (el('#panel-toggles')) el('#panel-toggles').hidden = ways;
   // A table's controls, and a replay's, in the same places.
   ['#tables-tools', '#shots-dev', '#shots-sep'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = !DEVSRV || going;
@@ -919,13 +944,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // The state panel: fetch on open and after every apply; never mid-edit.
-  $('#btn-state').addEventListener('click', () => {
-    const panel = $('#state-panel');
-    panel.hidden = !panel.hidden;
-    $('#btn-state').textContent = panel.hidden ? 'State ▾' : 'State ▴';
-    $('#btn-state').setAttribute('aria-expanded', String(!panel.hidden));
-    if (!panel.hidden) askState();
-  });
   $('#btn-state-reload').addEventListener('click', () => {
     $('#state-text').blur();
     askState();
@@ -956,14 +974,8 @@ document.addEventListener('DOMContentLoaded', () => {
     act('state', { record: rec });
   });
 
-  $('#btn-players').addEventListener('click', () => {
-    const panel = $('#players-panel');
-    panel.hidden = !panel.hidden;
-    $('#btn-players').textContent = panel.hidden ? 'Players ▾' : 'Players ▴';
-    $('#btn-players').setAttribute('aria-expanded', String(!panel.hidden));
-    delete $('#prows').dataset.key;
-    if (!panel.hidden) renderPlayers();
-  });
+  // The two tables go together: they are one half of the page, not two panels.
+  $('#btn-tools').addEventListener('click', () => setTools(!TOOLS));
 
   /* Pause is the table's own message, not a dev action: this page holds the
      host token, so it says it the way the host screen does. Step is the dev

@@ -13,7 +13,18 @@
      shape the replay page is built in. */
   .devwrap{display:flex;flex-direction:column;gap:12px;padding:12px;max-width:none;
     height:calc(100dvh - var(--topbar-h, 62px))}
-  .devmain{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;overflow-y:auto}
+  /* Two halves: the screens on the left, the tools on the right. Each scrolls
+     on its own, so reading a long scorecard in the state editor does not send
+     the screens off the top. */
+  .devmain{display:flex;gap:12px;flex:1;min-height:0}
+  .devleft,.devright{display:flex;flex-direction:column;gap:12px;min-width:0;
+    min-height:0;overflow-y:auto}
+  .devleft{flex:1 1 50%}
+  .devright{flex:1 1 50%}
+  /* Folded away, and the screens have the width. Watching a hand play is not
+     the same job as setting one up. */
+  .devwrap.notools .devright{display:none}
+  .devwrap.notools .devleft{flex:1 1 100%}
 
   /* The band: every control, under the screens. Three rows -- the table row
      (which table or which game, and the others to hop to), the game row (where
@@ -110,7 +121,13 @@
      goes back to growing and the band goes back to riding with it. */
   @media (max-height:560px){
     .devwrap{height:auto}
-    .devmain{overflow-y:visible}
+    .devleft,.devright{overflow-y:visible}
+  }
+  /* Too narrow to halve: the tools go under the screens and the page scrolls
+     as one, which is what it did before there were two halves. */
+  @media (max-width:1000px){
+    .devmain{flex-direction:column;overflow-y:auto}
+    .devleft,.devright{flex:none;overflow-y:visible}
   }
 </style>
 </head>
@@ -142,6 +159,8 @@
   <!-- Everything the band drives, scrolling on its own so the band can stay
        at the foot of the window. -->
   <div class="devmain">
+  <!-- The screens, and the state of the page itself. -->
+  <div class="devleft" id="devleft">
   <!-- The way in: what this page is for, before it is for anything. Built by
        the page, because what it may offer follows the server. -->
   <div class="panel ways" id="ways" hidden></div>
@@ -153,6 +172,15 @@
     putting anybody at the table.
   </p>
 
+  <div class="frames">
+    <div class="frameset" id="host-frame"></div>
+    <div class="frameset" id="seat-frames"></div>
+  </div>
+  </div>
+
+  <!-- The tools, beside what they act on: who is at the table, and the table
+       itself as text. -->
+  <div class="devright" id="devright">
   <div class="panel players" id="players-panel" hidden>
     <div class="phaserow" id="phase-row"></div>
     <div class="prow phead">
@@ -175,9 +203,6 @@
     </div>
   </div>
 
-  <div class="frames">
-    <div class="frameset" id="host-frame"></div>
-    <div class="frameset" id="seat-frames"></div>
   </div>
   </div>
 
@@ -235,9 +260,10 @@
         <button class="btn" id="btn-no-avatars" type="button">No photos</button>
       </div>
       <span class="bandsep"></span>
+      <!-- The two tables beside the screens, folded away together: watching a
+           hand play is not the same job as setting one up. -->
       <div class="oneshots" id="panel-toggles">
-        <button class="btn" id="btn-players" type="button" aria-expanded="false">Players ▾</button>
-        <button class="btn" id="btn-state" type="button" aria-expanded="false">State ▾</button>
+        <button class="btn" id="btn-tools" type="button" aria-expanded="true">Tools ▴</button>
       </div>
     </div>
     <!-- Watching: the points of the round on show, and what is on the table
