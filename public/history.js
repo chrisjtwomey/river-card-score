@@ -105,7 +105,7 @@ function offerReplay(card) {
   const go = document.createElement('a');
   go.className = 'btn primary watch-again';
   go.href = `replay.html?g=${encodeURIComponent(id)}`;
-  go.textContent = '▶ Watch it again';
+  go.textContent = '▶ Replay';
   go.title = 'Play this game back, a point at a time or at the pace it was played';
   head.appendChild(go);
 }
