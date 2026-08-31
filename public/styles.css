@@ -1526,7 +1526,7 @@ body.settings-open{overflow:hidden}
 .scell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
 .scell.bum{border-style:dashed}
 .seg{display:flex;flex:none;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-.seg .btn{border:0;border-radius:0;padding:6px 10px;font-size:12px}
+.seg .btn{border:0;border-radius:0;padding:7px 12px;font-size:12.5px}
 .seg .btn.on{background:var(--felt);color:#fff}
 
 /* The round on show as a timeline: a rail, the points marked along it in
@@ -1590,9 +1590,9 @@ body.settings-open{overflow:hidden}
 
 /* A row of controls over a screen, and the small words that label one. Two
    pages draw one now: the dev band, and the replay page's. */
-.bandrow{display:flex;align-items:center;gap:10px;min-width:0}
+.bandrow{display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:wrap;row-gap:8px}
 .bandsep{width:1px;align-self:stretch;background:var(--line);flex:none}
-.bandlbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);font-weight:700;flex:none}
+.bandlbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-dim);font-weight:700;flex:none}
 
 /* The transport, and how fast it plays itself. */
 .viewer-run{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
