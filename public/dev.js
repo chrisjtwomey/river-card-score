@@ -770,7 +770,7 @@ function renderWays() {
   // A game watched again. It reads what is already written down, so it needs
   // no table and no key: the copy is its own table, and goes when this page does.
   const watch = door('Replays',
-    'A game put back from what was written down, on a copy of its own. The game it is a copy of is not touched, and this needs no table and no key.');
+    'Play a past game back, a point at a time or at the pace it was played. It runs on a copy, so the game it came from is not touched. No table and no key needed.');
   const list = document.createElement('div');
   list.className = 'waylist tall';       // the longest of the lists, and the most read
   watch.appendChild(list);
