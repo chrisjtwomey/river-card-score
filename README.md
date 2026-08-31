@@ -921,6 +921,16 @@ On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which p
 
 Making a table of stand-ins needs `DEV=1`. On a normal server the page loads and says so — but **Dev controls** under ⚙ on the TV screen, the way in to a real table, is offered wherever that screen holds the host token. That is the point: a game broken by a bug is broken on the server it is running on, not on the one with `DEV=1` set.
 
+#### The trail a table leaves
+
+Every table writes down what happened to it, as it happens: the game starting, each round opening, each bid, each card, each trick taken, each round scored, the finish. A scorecard keeps only what those added up to; the trail keeps the sequence, so a game can be walked back through afterwards instead of watched in the hope of catching the moment.
+
+A point is the thing that happened and not a picture of the table — twenty-odd bytes against three kilobytes. A picture is taken only where the game could not be worked out again without one: a round opening, because the deal is shuffled and will never come round the same way twice, and the finish, because the accolades are drawn rather than reckoned. Those pictures carry no table talk, no keys and no hands out of anybody's seat.
+
+It goes in a file of its own, `data/trail/CODE.jsonl`, one line a point, appended. That is not tidiness: a table's own record is rewritten whole after every broadcast, so a trail kept there would be written again for every card — some hundreds of megabytes over one game, on a machine that may well be a phone. Appending a line costs the line.
+
+One game at a time: a new game starts the file over, because a table lives six hours and plays several. A trail goes when its table goes, by the same rule, so it cannot outlive the game it is about. `TRAIL_MAX` (4 MB) is the point at which a table stops writing rather than filling the disk — a whole game is about ninety kilobytes, so reaching it means something is wrong.
+
 ## Test
 
 ```sh
@@ -963,6 +973,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `lib/deck.js` — the dealer for a virtual table: the hands, and the rules of a trick. It moves cards; the server holds a finished trick up.
 - `lib/bots.js` — the players the table provides: what a hand is worth, which card to play, and the driver that takes their turn.
 - `lib/games.js` — a finished game on disk.
+- `lib/trail.js` — what happened to a table, written down as it happens.
 - `lib/tables.js` — a table still in play, on disk, so that stopping the server does not end it.
 - `lib/dev.js` — the dev portal, which a real game never touches.
 - `public/ui.js` — shared page bits: the full-screen button, the wake lock, the motion setting every scene and flourish asks.

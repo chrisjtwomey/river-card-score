@@ -24,6 +24,9 @@ lib/dev.js         The dev controls: what this server is running (`tables`), a w
 lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures,
                    and the tables running here (`/tables.json`, to this machine alone).
 lib/games.js       A finished game on disk.
+lib/trail.js       What happened to a table, written down as it happens: a point a
+                   thing, appended to a file of its own. `point`/`frame` are pure and
+                   called from Room verbs; `flush` is the server's, at the broadcast.
 lib/tables.js      A table still in play, on disk: written after every broadcast,
                    read back when the server comes up. Sockets and pictures left out.
 server.js          Wiring only: http/ws servers, the rooms map, the entry messages

@@ -1373,6 +1373,44 @@ async function bidRound(P) {
     nowhere.ws.close(); tv.ws.close(); ann.ws.close();
   }
 
+  /* ---- what happened, written down as it happened ----
+     What the points are is settled in test-rules.js. What is proved here is
+     that they reach a file of their own, appended rather than rewritten, and
+     that a new game starts the file again. */
+  {
+    console.log('\n-- the trail a table leaves --');
+    const { h, P: [ann, ben], code } = await tableOf(['Ann', 'Ben'],
+      { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    const trailFile = path2.join(DATA_DIR, 'trail', `${code}.jsonl`);
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid');
+    await okBy(() => fs.existsSync(trailFile), 'a table writes down what happened to it');
+
+    const kinds = () => fs.readFileSync(trailFile, 'utf8').split('\n').filter(Boolean)
+      .map((l) => JSON.parse(l).k);
+    ok(kinds()[0] === 'G' && kinds()[1] === 'R',
+       'starting with the game and the round it opened  got ' + kinds().slice(0, 2));
+
+    const before = kinds().join(' ');
+    await bidRound([ann, ben]);
+    await okBy(() => kinds().length > before.split(' ').length,
+       'and every bid is added to it, not written over');
+    ok(kinds().join(' ').startsWith(before),
+       'what was there before is still there, untouched  got ' + kinds().join(' '));
+
+    // A new game is where the file starts again: a table plays several.
+    h.send({ t: 'reset' }); await h.rt();
+    h.send({ t: 'start' });
+    await until(() => h.state.phase === 'bid');
+    await okBy(() => kinds().filter((k) => k === 'G').length === 1,
+       'and a new game starts the file over, so one game is on it  got '
+       + kinds().filter((k) => k === 'G').length);
+
+    // The trail is the table's own file and never rides in its record.
+    const rec = JSON.parse(fs.readFileSync(path2.join(DATA_DIR, 'tables', `${code}.json`), 'utf8'));
+    ok(!('trail' in rec), 'and never rides in the table record, which is rewritten whole');
+  }
+
   /* ---- a table of bots plays on for whoever is watching it ----
      The rule is checked in test-rules.js against `seen` set by hand. What is
      proved here is the wire: a real socket on the table is what sets it, and

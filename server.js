@@ -16,6 +16,7 @@ const Http = require('./lib/http.js');
 const Dev = require('./lib/dev.js');
 const Messages = require('./lib/messages.js');
 const RoomOf = require('./lib/room.js');
+const TrailOf = require('./lib/trail.js');
 
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = __dirname;
@@ -31,6 +32,10 @@ const KEEP_HOURS = Math.max(0, Number(process.env.KEEP_HOURS) || 6);
 // How many lines of table talk a table keeps. Long enough to scroll back
 // through a game, short enough that every state carries it without a thought.
 const CHAT_KEEP = Math.max(1, Number(process.env.CHAT_KEEP) || 100);
+// How big one table's trail of what happened may get before it stops being
+// written. A whole game is about ninety kilobytes; past this something has gone
+// wrong, and the table matters more than the note of it.
+const TRAIL_MAX = Math.max(64 * 1024, Number(process.env.TRAIL_MAX) || 4 * 1024 * 1024);
 const TLS_KEY = process.env.TLS_KEY || path.join(__dirname, 'certs', 'key.pem');
 const TLS_CERT = process.env.TLS_CERT || path.join(__dirname, 'certs', 'cert.pem');
 let tls = null;
@@ -51,6 +56,11 @@ const { saveGame, readGame, listGames } = Games({ DATA, KEEP_GAMES, G });
 
 // And the tables still in play, so that stopping this server does not end them.
 const Tables = TablesOf({ DATA, KEEP_HOURS });
+
+// What happened to each of them, written down as it happens, in a file of its
+// own: a table's record is rewritten whole every time, and a trail is appended.
+const Trail = TrailOf({ DATA, KEEP_HOURS, TRAIL_MAX, record: Tables.record });
+Trail.sweep();
 
 // The pages, the QR code, the addresses, a finished game, a picture. It reads
 // the rooms for a picture and knows nothing else about a game.
@@ -73,6 +83,7 @@ function endTable(code) {
   room.sockets.forEach((ws) => { if (ws.readyState === 1) fail(ws, 'that table is gone'); });
   rooms.delete(room.code);
   Tables.forget(room.code);
+  Trail.forget(room.code);
   sayBusy();
   return true;
 }
@@ -160,7 +171,7 @@ function newCode() {
 
 // The table as the game sees it: every verb that moves a game on, written
 // once. The server adds the sockets, the presence, and the telling.
-const Room = RoomOf({ G, A, token, saveGame, DEV });
+const Room = RoomOf({ G, A, token, saveGame, DEV, Trail });
 const { curRound, seatIndex, Deck } = Room;
 
 function createRoom() {
@@ -188,6 +199,8 @@ function broadcast(room) {
   // A table in play outlives the server it is on: this is the one moment
   // something about it has changed, so this is where it is written down.
   Tables.save(room);
+  // And what happened on the way to it, appended to a file of its own.
+  Trail.flush(room);
   // Somebody is at this table, or has just left it. Whoever is holding the
   // machine awake for the table wants to know either way.
   sayBusy();
@@ -277,7 +290,7 @@ const Bots = require('./lib/bots.js')({
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
   DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
-  Room, Tables, Bots,
+  Room, Tables, Bots, Trail,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
@@ -479,6 +492,7 @@ setInterval(() => {                       // drop idle rooms, memory and disk al
       Bots.stop(room);
       rooms.delete(code);
       Tables.forget(code);
+      Trail.forget(code);
     }
   });
 }, 600000);

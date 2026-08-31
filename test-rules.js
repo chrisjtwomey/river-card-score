@@ -44,7 +44,12 @@ function table(o) {
   const bounce = (ws, msg) => { said.push(msg); ws.said.push(msg); };
   const broadcast = () => { casts.n += 1; };
 
-  const Room = RoomOf({ G, A, token, saveGame: (r) => saved.push(r.gameId), DEV: !!o.dev });
+  /* The trail the room writes what happened onto. Its pure half only: the
+     points are read straight off the room, and nothing here goes near a disk. */
+  const Tables = require('./lib/tables.js')({ DATA: '/nowhere', KEEP_HOURS: 6 });
+  const Trail = require('./lib/trail.js')({ DATA: '/nowhere', KEEP_HOURS: 6,
+                                            TRAIL_MAX: 1e9, record: Tables.record });
+  const Room = RoomOf({ G, A, token, saveGame: (r) => saved.push(r.gameId), DEV: !!o.dev, Trail });
   const room = Room.create(o.code || 'TEST', 'hosttoken');
 
   // The server's own playCard, without the hold: the rules are the deck's, the
@@ -98,7 +103,10 @@ function table(o) {
   }
 
   const t = {
-    Room, room, say, said, casts, saved, Bots,
+    Room, room, say, said, casts, saved, Bots, Trail,
+    // What the table has written down, as a line of kinds: 'G R b b s c c w e'.
+    trail() { return room.trail.map((e) => e.k).join(' '); },
+    points(k) { return room.trail.filter((e) => e.k === k); },
     // Sit players down. The first one down runs the table, as on a real one.
     sit(names, extra) {
       names.forEach((nm) => room.seats.push(Room.seat(nm, extra)));
@@ -980,6 +988,136 @@ part('the tables this server is running');
   ok(!isLocal('192.168.1.5') && !isLocal('10.0.0.2') && !isLocal('::ffff:192.168.1.5'),
      'a phone on the network may not: it has the code or it has nothing');
   ok(!isLocal('') && !isLocal(undefined) && !isLocal(null), 'and neither may an address that is not one');
+}
+
+part('a table writes down what happened to it');
+
+/* A point a thing that happened, in the order it happened, and a picture only
+   where the game could not be worked out again without one. */
+{
+  const t = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  const dealt = JSON.stringify(t.room.play.hands);
+
+  let p = G.turnSeat(t.round(), 2);
+  while (p !== null) { t.Room.seatBid(t.room, p, 0); p = G.turnSeat(t.round(), 2); }
+  t.Room.openPlay(t.room);
+  let guard = 20;
+  while (guard-- > 0 && t.room.play && t.room.play.hands.some((h) => h.length)) {
+    const on = t.room.play.turn;
+    if (on === null) break;
+    const can = G.legalPlays(t.room.play.hands[on], t.Room.Deck.ledSuit(t.room.play));
+    const w = t.Room.Deck.putCard(t.room, on, can[0]);
+    if (w !== null) t.Room.Deck.settleTrick(t.room, w);
+  }
+
+  ok(t.trail() === 'G R b b s c c w s c c w e R',
+     'a round reads as it was played  got ' + t.trail());
+
+  const first = t.points('R')[0];
+  ok(first.w === 'game' && first.i === 0 && first.d === 0,
+     'the first round says a game brought it  got ' + first.w);
+  ok(JSON.stringify(first.f.play.hands) === dealt,
+     'and carries the hands as they were dealt, which no shuffle would find again');
+  ok(first.f.rounds[0].trump === t.room.rounds[0].trump, 'and the trump turned with them');
+  ok(!('chat' in first.f) && !('hostToken' in first.f) && !('trail' in first.f),
+     'a picture carries no talk, no key and not itself');
+  ok(!('token' in first.f.seats[0]) && !('watch' in first.f.seats[0]),
+     'and hands out no seat of the table it is a picture of');
+
+  const cards = t.points('c');
+  ok(cards.length === 4 && cards.every((e) => typeof e.x === 'string' && e.p >= 0),
+     'every card is written down, with the seat that played it  got ' + cards.length);
+  ok(t.points('w').length === 2, 'and every trick, with the seat that took it');
+}
+
+{
+  // What a picture is for: the deal. So a round has one whichever way it opened.
+  const ways = [
+    ['a game starting', (t) => t.Room.startGame(t.room), 'game'],
+    ['a round scoring', (t) => { t.Room.startGame(t.room); t.room.trail.length = 0;
+                                 t.Room.scoreRound(t.room, [1, 0]); }, 'next'],
+    ['a hand thrown in', (t) => { t.Room.startGame(t.room); t.room.trail.length = 0;
+                                  t.Room.bumDeal(t.room); }, 'bum'],
+  ];
+  ways.forEach(([what, go, want]) => {
+    const t = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+    go(t);
+    const r = t.points('R').pop();
+    ok(r && r.w === want, `${what} opens a round that says so  got ` + (r && r.w));
+    ok(r && r.f && r.f.play && r.f.play.hands.every((h) => h.length),
+       'and takes a picture of the hands it dealt');
+  });
+}
+
+{
+  // A hand thrown in is the same round again, and says which attempt it is.
+  const t = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  t.room.trail.length = 0;
+  t.Room.bumDeal(t.room);
+  const r = t.points('R').pop();
+  ok(r.i === 0 && r.d === 1, 'a hand thrown in is the same round, one attempt on  got '
+     + r.i + ':' + r.d);
+}
+
+{
+  // A step back is a thing that happened, and the round it lands on is dealt
+  // again -- so the picture that follows is the one that counts.
+  const t = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  let p = G.turnSeat(t.round(), 2);
+  while (p !== null) { t.Room.seatBid(t.room, p, 0); p = G.turnSeat(t.round(), 2); }
+  t.room.trail.length = 0;
+  t.Room.undo(t.room);
+  ok(t.trail() === 'z R', 'a step back is written down, then the round it lands on  got ' + t.trail());
+  ok(t.points('R')[0].w === 'undo', 'which says a step back brought it');
+
+  // A step back that was refused is not a step back.
+  const u = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  u.Room.startGame(u.room);
+  u.room.trail.length = 0;
+  ok(u.Room.undo(u.room) === 'nothing to undo' && u.trail() === '',
+     'and one there was no room for is not written down at all  got ' + u.trail());
+}
+
+{
+  // A seat may change its bid while it still may, and that is two things said.
+  const t = table().sit(['Ann', 'Bob', 'Cal']).rules({ deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  const first = G.turnSeat(t.round(), 3);
+  t.room.trail.length = 0;
+  t.Room.seatBid(t.room, first, 1);
+  t.Room.seatBid(t.room, first, 2);
+  ok(t.trail() === 'b b', 'a bid changed is two points, not one  got ' + t.trail());
+  ok(t.points('b')[1].v === 2, 'the second saying what it was changed to');
+}
+
+{
+  /* With real cards there are no cards to write down. What the trail keeps is
+     the bids and the taps, and a tap taken back is written down too. */
+  const t = table().sit(['Ann', 'Bob']).rules({ max: 2, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  let p = G.turnSeat(t.round(), 2);
+  while (p !== null) { t.Room.seatBid(t.room, p, 0); p = G.turnSeat(t.round(), 2); }
+  t.Room.openPlay(t.room);
+  t.room.trail.length = 0;
+  t.Room.countTrick(t.room, 0);
+  t.Room.uncountTrick(t.room);
+  t.Room.countTrick(t.room, 1);
+  ok(t.trail() === 'w W w', 'a trick tapped, taken back, and tapped again  got ' + t.trail());
+  ok(t.points('c').length === 0, 'and never a card: there are none to write down');
+}
+
+{
+  // The finish carries a picture: the accolades are drawn, not worked out.
+  const t = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 1, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  t.Room.scoreRound(t.room, [1, 0]);
+  const e = t.points('E')[0];
+  ok(e && e.g === t.room.gameId, 'the finish is written down under the game\'s own name');
+  ok(e && e.f && JSON.stringify(e.f.awards) === JSON.stringify(t.room.awards),
+     'with the accolades it drew, which it would not draw the same way twice');
 }
 
 part('a table becomes a record of one');
