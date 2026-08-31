@@ -504,6 +504,33 @@ function standInAvatar(name, i) {
    list of what the card already lists is a second place to keep right. */
 const replayAsk = (o) => send(Object.assign({ t: 'dev', action: 'replay' }, o));
 
+/* Which round's stretch of the trail the head is in, and where that stretch
+   starts. The first round takes everything before it with it: the game
+   starting is the run-up to round one, not a stretch of its own with one point
+   in it. Asked in one place, because the rounds strip, the timeline and the
+   two round buttons all have to agree about it. */
+function roundNow() {
+  let cur = 0;
+  (REPLAY.marks || []).forEach((m, i) => { if (m.at <= REPLAY.at) cur = i; });
+  return cur;
+}
+const topOf = (i) => (i === 0 ? 0 : REPLAY.marks[i].at);
+
+/* A round back, and a round on. Back part way through a round goes to the top
+   of it first, the way a track does: it is the same press for "this one again"
+   and "the one before", and which you meant is where you are. On from the last
+   round is the end of the game, which is the only thing left after it. */
+function stepRound(by) {
+  const marks = REPLAY.marks || [];
+  if (!marks.length) return;
+  const cur = roundNow();
+  if (by > 0) {
+    return replayAsk({ do: 'seek', at: marks[cur + 1] ? marks[cur + 1].at : REPLAY.n - 1 });
+  }
+  const top = topOf(cur);
+  replayAsk({ do: 'seek', at: REPLAY.at > top ? top : topOf(Math.max(0, cur - 1)) });
+}
+
 /* Every kind of point: the icon it wears on the timeline, the plain word it is
    called where an older server sends no sentence for it, and how big a mark it
    makes. A round is mostly cards, so a card is a dot in the colour of its suit
@@ -550,12 +577,8 @@ function renderSteps() {
   const box = $('#replay-steps');
   if (!box || !REPLAY.kinds) return;
   const marks = REPLAY.marks;
-  /* Which round's stretch of the trail this is. The first one takes everything
-     before it with it -- the game starting is the run-up to round one, not a
-     timeline of its own with one mark on it. */
-  let cur = 0;
-  marks.forEach((m, i) => { if (m.at <= REPLAY.at) cur = i; });
-  const from = cur === 0 ? 0 : marks[cur].at;
+  const cur = roundNow();
+  const from = topOf(cur);
   const to = marks[cur + 1] ? marks[cur + 1].at - 1 : REPLAY.kinds.length - 1;
   const key = `${from}-${to}@${REPLAY.at}:${REPLAY.kinds.length}`;
   if (box.dataset.key === key) return;
@@ -711,10 +734,7 @@ function renderMarks() {
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.innerHTML = '';
-  // The mark the copy is standing in: the last one it has reached, and the
-  // first one before it has reached any.
-  let cur = 0;
-  REPLAY.marks.forEach((m, i) => { if (m.at <= REPLAY.at) cur = i; });
+  const cur = roundNow();
   REPLAY.marks.forEach((m, i) => {
     const again = m.w === 'bum' || m.w === 'reset' || m.w === 'undo';
     const b = document.createElement('button');
@@ -849,6 +869,14 @@ function renderReplay() {
   if (rates) {
     rates.querySelectorAll('.btn').forEach((b) =>
       b.classList.toggle('on', Number(b.dataset.rate) === (REPLAY.rate || 1)));
+  }
+  /* The two round buttons say when there is nowhere to go: at the first point
+     there is nothing behind it, and at the last nothing in front. */
+  const marks = REPLAY.marks || [];
+  const cur = roundNow();
+  if ($('#btn-prev-round')) $('#btn-prev-round').disabled = REPLAY.at === 0;
+  if ($('#btn-next-round')) {
+    $('#btn-next-round').disabled = !marks[cur + 1] && REPLAY.at >= REPLAY.n - 1;
   }
   const play = $('#btn-play');
   play._now = !!REPLAY.playing;             // read at the tap, not at the draw
@@ -1335,6 +1363,8 @@ document.addEventListener('DOMContentLoaded', () => {
      is the trail being read, so nothing here can change what happened. */
   $('#btn-back').addEventListener('click', () => replayAsk({ do: 'step', by: -1 }));
   $('#btn-fwd').addEventListener('click', () => replayAsk({ do: 'step', by: 1 }));
+  $('#btn-prev-round').addEventListener('click', () => stepRound(-1));
+  $('#btn-next-round').addEventListener('click', () => stepRound(1));
   $('#btn-play').addEventListener('click', () =>
     replayAsk({ do: $('#btn-play')._now ? 'pause' : 'play' }));
   // Back to the question. Whatever is open here is let go on the way.

@@ -3647,6 +3647,33 @@ part('the dev controls, on each kind of server');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":-1}',
        'either way  got ' + JSON.stringify(P.socks[0].sent[0]));
 
+    /* And a round at a time, outside those. Back part way through a round goes
+       to the top of it first, the way a track does: the same press means "this
+       one again" and "the one before", and which you meant is where you are.
+       The marks here are the game start, a hand thrown in, and the finish. */
+    const roundGoes = (from, btn, want, why) => {
+      say({ at: from });
+      P.socks[0].sent.length = 0;
+      P.pick(btn === 'back' ? '#btn-prev-round' : '#btn-next-round').fire('click');
+      ok(JSON.stringify(P.socks[0].sent[0])
+         === `{"t":"dev","action":"replay","do":"seek","at":${want}}`,
+         why + '  got ' + JSON.stringify(P.socks[0].sent[0]));
+    };
+    roundGoes(3, 'back', 0, 'part way through a round, back goes to the top of it');
+    roundGoes(7, 'back', 6, 'wherever that round starts');
+    roundGoes(6, 'back', 0, 'and at the top already, back goes to the round before');
+    roundGoes(3, 'on', 6, 'on goes to the round after');
+    roundGoes(7, 'on', 11, 'the finish being one of them');
+    roundGoes(11, 'on', 12, 'and past the last round there is only the end');
+
+    say({ at: 0 });
+    ok(P.pick('#btn-prev-round').disabled === true,
+       'at the first point there is no round behind it');
+    ok(P.pick('#btn-next-round').disabled === false, 'but there is one in front');
+    say({ at: 12 });
+    ok(P.pick('#btn-next-round').disabled === true, 'and at the last there is none');
+    say();
+
     // Playing it back: one button, saying what it will do.
     const play = P.pick('#btn-play');
     ok(play.textContent === '▶ Play', 'a stopped replay offers to play  got ' + play.textContent);

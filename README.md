@@ -1083,7 +1083,7 @@ The controls are one band over the screens, three rows — the same rows in the 
 
 - **❚❚ Pause / ▶ Play** and **Step** — on a table that plays a hand of its own. Pause is the same control the host screen has, said the same way. **Step**, which only the dev page has, then lets the table make exactly one move: one bid, or one card. It is how a hand is read at your own pace rather than at a bot's. Step is live only while the table is stopped, and it invents nothing — it is the move the bots were going to make anyway.
 
-- **◀ ▶ Play ▶** — the same place in the band, for a game watched again: back a point, on a point, or played back at the pace the table played it. Under it, the **Points** timeline of the round on show.
+- **⏮ ◀ ▶ Play ▶ ⏭** — the same place in the band, for a game watched again: a round back or on at the outside, a point back or on inside those, and Play between them. Under it, the **Points** timeline of the round on show.
 
 **Players ▾** and **State ▾** stand apart from those, at the end of the row: they open a panel rather than move the game on, and the two of them are what is left when the rest is not offered. On a game watched again they read the copy and only read it.
 
@@ -1147,6 +1147,8 @@ Pick one and the copy is made, and the page becomes the same page with the verbs
 Two levels of moving about in it, because a game is two levels: a mark a round in the strip — a hand thrown in gets its own, because it was a second go and looked different — and under it the **Points** timeline, the round on show as a rail with the points marked along it in the order they happened. The first round takes the game starting with it, since that point is the run-up to round one rather than a timeline of its own with one mark on it. Press anywhere on it and the head goes there; drag the head and it follows. Only letting go asks the copy to move, because a seek re-seeds it from the nearest picture and plays it forward — doing that for every pixel of a drag would make the drag the slowest part of it. A hand on the rail also stops a replay playing itself, because two clocks on one copy would fight over where it is.
 
 What a mark wears is what it is. A bid wears the number that was said, a card wears itself in the colour of its suit, a trick opening is a divider through the rail, and the beats that shape a round wear an icon: 🎬 the game starts, 🃏 the round is dealt, ♻️ thrown in and dealt again, ✔ a trick taken, ↩ one taken back, 📝 the round is scored, ⟲ the round put back, ⚠️ the table forced, 🏁 the game ends. A round is mostly cards, and forty of them named at once is not a thing to read; the head wears whatever point it is standing on.
+
+**⏮** and **⏭** move a round at a time. Back part way through a round goes to the top of it first, the way a track does: the same press means *this one again* and *the one before*, and which you meant is where you are. On from the last round is the end of the game, which is the only thing after it. Both say so when there is nowhere to go.
 
 Pass over a mark and it says what happened there — *Nia plays 9♠ — point 42 of 214* — over the mark itself. That sentence is made once, on the server, when the copy is made, and the line beside the rail says the same one for the point the copy is standing on, so the two never drift apart and never fight over one place. **⌂ Stop watching** lets the copy go. While one is open the panes are the copy's, and none of them can be acted in: the game they show has already been played.
 
