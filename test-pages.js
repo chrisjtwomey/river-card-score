@@ -4402,6 +4402,36 @@ part('the dev controls, on each kind of server');
     ok(P.socks[0].sent.some((o) => o.action === 'hands'),
        'the table moving asks for the cards again  got ' + JSON.stringify(P.socks[0].sent));
 
+    /* A card pressed keeps the focus, and the press is over the moment it
+       fires. The panel used to refuse to rebuild while anything in it had the
+       focus at all, so a card given to a seat did not appear until you clicked
+       away -- it read as the table ignoring you. A word half typed is the one
+       thing worth holding off for. */
+    const dealt = (h) => JSON.stringify({ t: 'handsRaw', hands: h });
+    const shown = () => P.pick('#prows').querySelector('.phand')
+      .querySelectorAll('.btn.card').filter((b) => b.classList.contains('primary')).length;
+    P.pick('#prows').querySelectorAll('.ptools')[0]
+      .querySelectorAll('button').find((b) => b.textContent === 'Hand \u25be').fire('click');
+    P.socks[0].onmessage({ data: dealt([['AS', 'KH'], ['2C', 'QD']]) });
+    ok(shown() === 2, 'two cards to start  got ' + shown());
+    const card = P.pick('#prows').querySelector('.phand')
+      .querySelectorAll('.btn.card').find((b) => !b.disabled && !b.classList.contains('primary'));
+    P.dom.document.activeElement = card;             // as a browser leaves it
+    card.fire('click');
+    P.socks[0].onmessage({ data: dealt([['AS', 'KH', '3S'], ['2C', 'QD']]) });
+    ok(shown() === 3, 'the card lands while the button that dealt it still has the focus  got '
+       + shown());
+
+    // But a word being typed is not thrown away under whoever is typing it.
+    const bid = P.pick('#prows').querySelectorAll('.prow')[0]
+      .querySelectorAll('input').find((el) => el.type === 'number');
+    P.dom.document.activeElement = bid;
+    P.socks[0].onmessage({ data: dealt([['AS'], ['2C', 'QD']]) });
+    ok(shown() === 3, 'a row is not rebuilt under a half-typed number  got ' + shown());
+    P.dom.document.activeElement = null;
+    P.socks[0].onmessage({ data: dealt([['AS'], ['2C', 'QD']]) });
+    ok(shown() === 1, 'and it lands as soon as the typing is done  got ' + shown());
+
     // With real cards the hand is on the table, and nothing here knows it.
     P.socks[0].onmessage({ data: devState(true, { phase: 'tricks' }) });
     ok(!tools0().querySelectorAll('button').find((b) => /^Hand/.test(b.textContent)),

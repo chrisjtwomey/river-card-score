@@ -883,6 +883,21 @@ function sendWon() {
   act('patch', { patch: { round: { i: S.idx, tricks: vals.map(Number) } } });
 }
 
+/* Whether something in `box` is being typed into. The panel is not rebuilt
+   under a word half written -- a row redrawn mid-word loses it.
+
+   Only a word, though. A button, a tick box or a radio keeps the focus after
+   it is pressed, and the press is over the moment it fires, so holding off for
+   those meant nothing landed until you clicked away: a card given to a seat, a
+   seat made a bot, the dealer moved. It looked like the table ignoring you. */
+const TYPED_IN = { text: true, number: true };
+function typingIn(box) {
+  const el = document.activeElement;
+  if (!el || !box.contains(el)) return false;
+  if (el.tagName === 'TEXTAREA') return true;
+  return el.tagName === 'INPUT' && !!TYPED_IN[el.type];
+}
+
 /* One row a seat. Every control sends the moment it is used, and the rows
    are rebuilt only while nothing in them is being typed in. */
 function renderPlayers() {
@@ -902,7 +917,7 @@ function renderPlayers() {
     `/${s.online}/${phoneOff(s.id)}`).join('|') +
     `@${S.idx}:${S.phase}:${invent}:${Game.awaySeat(S)}:${S.play ? S.play.turn : ''}:${!!S.vote}` +
     `:${HAND_OPEN}:${(handsNow() || []).map((h) => (h || []).join('')).join('/')}`;
-  if (box.dataset.key === key || box.contains(document.activeElement)) return;
+  if (box.dataset.key === key || typingIn(box)) return;
   box.dataset.key = key;
   box.innerHTML = '';
 
