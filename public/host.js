@@ -384,7 +384,7 @@ function renderStandings() {
 
 function renderScorecard() {
   UI.measureSticky();
-  Table.scorecard('#scorecard', ST, -1);
+  Table.scorecard('#scorecard', ST, -1, view());
 }
 
 /* ---------- wiring ---------- */

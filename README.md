@@ -195,6 +195,42 @@ Every one of them hides itself where there is nothing to do, and the row goes
 when they all have. The bum deal is the only one any player gets; the rest are
 the table host's.
 
+### The scorecard is editable
+
+Whoever runs the table taps a **scored round** on the scorecard and retypes it.
+That is the only way back into a round the game has moved past, and it is the
+right one: what went wrong is a number, and the number is being read right
+there.
+
+**Three things on the card are tappable**, and each opens what it is:
+
+- **a figure** — one seat's `2→1` in one round;
+- **the round** — its own cell down the left, `3 · 5♠`;
+- **a name** — at the head of its column. That opens the name to be changed,
+  because the column is the name. Never a bot's: that name is the table's own.
+
+A figure and a round open the same sheet, and it holds the **whole round**: a
+bid and a won for every seat, with the check under them. Tapped on one figure
+it opens on that seat, ringed and ready to retype — but the other seats are
+there, because they have to be:
+
+**The tricks have to total the hand.** At a table they always do, so a column
+that does not is refused rather than filed — and it is the check that catches
+the slip, because a trick taken off one seat has to land on another. A cell
+sent on its own could never satisfy that, which is why the sheet is the row.
+
+The bids are bounded by the hand and nothing else: a bid that broke the
+screw-the-dealer rule was still the bid that was made.
+
+The round in play is not editable. It is already being typed on the bid pad and
+the trick counter, and on a table dealt on the phones its tricks are the cards
+the server is holding. Put it back with *Reset round* and play it again.
+
+Every screen sees the corrected card at once, the totals follow it, and a game
+that was already over is filed again under the same name, so the card in *Past
+games* is the card on the screen. The accolades stay as they were drawn: they
+were drawn once, and drawing them again would be a different game's worth of
+luck.
 
 ### A browser holds more than one table
 

@@ -110,7 +110,7 @@ function render() {
   lastDone = Table.sayRound(ST, me, lastDone, virtual && Felt.shown());
   lastTrick = Table.sayTrick(ST, lastTrick);      // a trick counted, with real cards
   UI.measureSticky();
-  Table.scorecard('#scorecard', ST, me);
+  Table.scorecard('#scorecard', ST, me, view());
 }
 
 /* The panel that is only there when the table needs a decision from this

@@ -2862,6 +2862,145 @@ part('the front page, and the screen');
     ok(row.hidden === true, 'a screen that runs nothing is offered none of it');
   }
 
+  /* ---- the scorecard, put right ----
+     A round already scored is the one thing the buttons cannot reach: the game
+     has moved past it. So the number is retyped where it is read. */
+  part('the scorecard, put right');
+  {
+    const R = load(900, 800);
+    const sent = [];
+    const boss = { me: -1, boss: true, send: (m) => sent.push(m) };
+    const ST = {
+      code: 'TEST', phase: 'bid', idx: 1,
+      cfg: { deck: 'physical', trump: false, bonus: 10, miss: 'atleast' },
+      seats: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Ben' }, { id: 'c', name: 'Cal' }],
+      rounds: [{ cards: 2, dealer: 0, bids: [1, 1, 0], tricks: [1, 1, 0] },
+               { cards: 1, dealer: 1, bids: [null, null, null], tricks: null }],
+      totals: [11, 11, 0],
+    };
+    const plain = R.Table.scorecardHTML(ST, -1);
+    ok(plain.indexOf('roundedit') < 0 && plain.indexOf('celledit') < 0
+       && plain.indexOf('nameedit') < 0,
+       'a screen that runs nothing gets the card it always had');
+    const card = R.Table.scorecardHTML(ST, -1, true);
+    ok(/class="roundedit" data-round="0"/.test(card),
+       'a scored round is a way into itself for whoever runs the table');
+    ok((card.match(/roundedit/g) || []).length === 1,
+       'and only a scored one: the round in play is played, not retyped');
+    // Every figure on it is its own way in, and so is every name.
+    ok(/class="celledit" data-round="0" data-seat="1"/.test(card),
+       'so is each figure in it, by seat');
+    ok((card.match(/celledit/g) || []).length === 3,
+       'one a seat, and only in the round that has one  got ' + (card.match(/celledit/g) || []).length);
+    ok(/class="nameedit" data-seat="2"/.test(card), 'and the name at the head of each column');
+    ok((card.match(/nameedit/g) || []).length === 3,
+       'one a seat  got ' + (card.match(/nameedit/g) || []).length);
+    const withBot = JSON.parse(JSON.stringify(ST));
+    withBot.seats[2].bot = true;
+    ok((R.Table.scorecardHTML(withBot, -1, true).match(/nameedit/g) || []).length === 2,
+       'never a bot\'s: that name is the table\'s own, not a person\'s');
+
+    const box = R.dom.document.createElement('div');
+    R.Table.editRound(box, ST, 0, boss);
+    const d = R.dom.document.getElementById('round-edit');
+    ok(!!d, 'tapping it opens the round to be retyped');
+    ok(d.querySelector('h2').textContent === 'Round 1 · 2 cards',
+       'named, so nobody retypes the wrong one  got ' + d.querySelector('h2').textContent);
+    ok(box._editing === true, 'and the card holds still while it is open');
+    const rows = d.querySelectorAll('.edit-row');
+    ok(rows.length === 4, 'a row a seat, under a heading  got ' + rows.length);
+    const boxes = d.querySelectorAll('input');
+    ok(boxes.length === 6, 'a bid and a won for each  got ' + boxes.length);
+    ok(boxes.map((x) => x.value).join(',') === '1,1,1,1,0,0',
+       'filled with what the round says  got ' + boxes.map((x) => x.value).join(','));
+    const tally = d.querySelector('.edit-tally');
+    ok(tally.textContent === 'Tricks total 2 of 2', 'with the check under them  got ' + tally.textContent);
+    const save = d.querySelectorAll('.btn').find((b) => b.textContent === 'Save');
+    ok(save.disabled === false, 'and a row that adds up can be saved');
+
+    // A row that does not add up cannot be sent: the table would refuse it.
+    boxes[3].value = '0';                        // Ben won 0 as well
+    boxes[3].fire('input');
+    ok(tally.textContent === 'Tricks total 1 of 2', 'a column that does not add up says so  got ' + tally.textContent);
+    ok(save.disabled === true, 'and cannot be saved');
+    boxes[5].value = '1';                        // the trick lands on Cal instead
+    boxes[5].fire('input');
+    ok(tally.textContent === 'Tricks total 2 of 2', 'the trick has to land somewhere  got ' + tally.textContent);
+    ok(save.disabled === false, 'and once it has, it can');
+
+    sent.length = 0;
+    save.fire('click');
+    ok(JSON.stringify(sent[0]) === '{"t":"score","round":0,"bids":[1,1,0],"tricks":[1,0,1]}',
+       'the whole row goes at once, because the check is a row\'s  got ' + JSON.stringify(sent[0]));
+    ok(box._editing === false, 'and the card is let go again');
+
+    // Cancel changes nothing.
+    R.Table.editRound(box, ST, 0, boss);
+    sent.length = 0;
+    d.querySelectorAll('.btn').find((b) => b.textContent === 'Cancel').fire('click');
+    ok(sent.length === 0, 'Cancel says nothing to the table');
+    ok(box._editing === false, 'and lets the card go');
+
+    // A round that has not been scored has no record to correct.
+    R.Table.editRound(box, ST, 1, boss);
+    ok(box._editing === false, 'a round still being played does not open at all');
+
+    /* Tapped on one figure rather than on the round, the same sheet opens --
+       the check is a row's, and a trick taken off one seat has to land on
+       another -- but it opens on the seat that was tapped. */
+    R.Table.editRound(box, ST, 0, boss, 2);
+    const asked = d.querySelectorAll('.edit-row').filter((x) => x.classList.contains('asked'));
+    ok(asked.length === 1, 'the seat that was tapped is marked, and only that one');
+    ok(asked[0].querySelector('.nm').textContent === 'Cal',
+       'and it is the seat whose figure it was  got ' + asked[0].querySelector('.nm').textContent);
+    ok(d.querySelectorAll('.edit-row').length === 4,
+       'the whole round is still there to be balanced against');
+    d.querySelectorAll('.btn').find((b) => b.textContent === 'Cancel').fire('click');
+
+    /* And the tap itself. The card is a table of HTML the fake DOM does not
+       parse, so what is proved here is the one listener that reads it: the card
+       is rebuilt whenever a figure on it changes, so the listener is the
+       table's and not each button's. */
+    const mk = (cls, data) => {
+      const b = R.dom.document.createElement('button');
+      b.className = cls;
+      Object.keys(data).forEach((k) => { b.dataset[k] = data[k]; });
+      return b;
+    };
+    const sc = R.dom.document.createElement('div');
+    R.dom.document.querySelector = (q) => (q === '#card' ? sc : null);
+    R.Table.scorecard('#card', ST, -1, boss);
+    const tapped = (cls, data) => {
+      const b = mk(cls, data);
+      sc.appendChild(b);
+      sc.fire('click', { target: b });
+      b.remove();
+    };
+    tapped('celledit', { round: '0', seat: '1' });
+    const asked2 = R.dom.document.getElementById('round-edit')
+      .querySelectorAll('.edit-row').filter((x) => x.classList.contains('asked'));
+    ok(asked2.length === 1 && asked2[0].querySelector('.nm').textContent === 'Ben',
+       'a tap on one figure opens its own round, on its own seat');
+    R.dom.document.getElementById('round-edit')
+      .querySelectorAll('.btn').find((b) => b.textContent === 'Cancel').fire('click');
+
+    tapped('nameedit', { seat: '2' });
+    const sheet = R.dom.document.getElementById('seat-name');
+    ok(sheet.querySelector('h2').textContent === 'Rename Cal',
+       'and a tap on a name opens that name  got ' + sheet.querySelector('h2').textContent);
+    sent.length = 0;
+    sheet.querySelector('.namebox').value = 'Callum';
+    sheet.querySelectorAll('.btn').find((b) => b.textContent === 'Save').fire('click');
+    ok(JSON.stringify(sent[0]) === '{"t":"renameseat","id":"c","name":"Callum"}',
+       'which the table hears as the seat\'s  got ' + JSON.stringify(sent[0]));
+
+    // A screen that runs nothing has no listener to reach.
+    sent.length = 0;
+    sc._view = { me: -1, boss: false, send: (m) => sent.push(m) };
+    tapped('nameedit', { seat: '2' });
+    ok(sent.length === 0, 'and none of it answers a screen that runs nothing');
+  }
+
   part('stopping a table that plays itself');
   {
     const R = load(1200, 800);

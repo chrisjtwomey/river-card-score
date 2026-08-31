@@ -291,6 +291,27 @@ async function bidRound(P) {
      'a round the game has moved past is not put back  got ' + host.last());
   const bid0 = host.state.rounds[0].bids.slice();     // as they were really bid
   const was0 = JSON.stringify(host.state.totals);
+  host.send({ t: 'score', round: 0, bids: bid0, tricks: [0, 1, 1] });
+  await okBy(() => JSON.stringify(host.state.rounds[0].tricks) === '[0,1,1]',
+     'a trick moved onto another seat lands  got ' + JSON.stringify(host.state.rounds[0].tricks));
+  await okBy(() => JSON.stringify(host.state.totals) !== was0, 'and the scores follow it');
+  await okBy(() => JSON.stringify(P[1].state.rounds[0].tricks) === '[0,1,1]', 'on every phone too');
+
+  host.send({ t: 'score', round: 0, bids: bid0, tricks: [0, 0, 1] });
+  await okBy(() => /have to total 2/.test(host.last()),
+     'a column that does not add up is refused  got ' + host.last());
+  ok(JSON.stringify(host.state.rounds[0].tricks) === '[0,1,1]', 'and nothing lands on the table');
+  host.send({ t: 'score', round: 1, bids: bid0, tricks: [1, 0, 0] });
+  await okBy(() => /has not been scored/.test(host.last()),
+     'nor is a round that has not been scored yet  got ' + host.last());
+
+  P[1].send({ t: 'score', round: 0, bids: [0, 0, 0], tricks: [2, 0, 0] });
+  await okBy(() => /only the table host/i.test(P[1].last()),
+     'and no other player retypes it  got ' + P[1].last());
+
+  host.send({ t: 'score', round: 0, bids: bid0, tricks: [1, 1, 0] });
+  await okBy(() => JSON.stringify(host.state.totals) === was0,
+     'put back as it was, and the scores with it');
 
   P[2].send({ t: 'bid', v: 1 }); await P[2].rt();
   P[2].send({ t: 'bumdeal' });

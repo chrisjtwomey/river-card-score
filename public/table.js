@@ -9,28 +9,52 @@ const Table = (function () {
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // ST is the state from the server. `me` marks one column, or -1 for none.
-  function scorecardHTML(ST, me) {
+  /* ST is the state from the server. `me` marks one column, or -1 for none.
+     `edit` makes a scored round's own cell a button: whoever runs the table
+     taps it to put that round's numbers right. Every other screen, and the
+     history page, passes nothing and gets the card it always had. */
+  function scorecardHTML(ST, me, edit) {
     const run = ST.seats.map(() => 0);
     let html = '<thead><tr><th>Round</th>';
     ST.seats.forEach((s, i) => {
-      html += `<th class="${i === me ? 'mecol' : ''}">${esc(s.name)}</th>`;
+      /* The name at the head of a column is the name on the scorecard, so for
+         whoever runs the table it is also where the name is changed. Not a
+         bot's: that name is the table's own, not a person's. */
+      const name = (edit && !s.bot)
+        ? `<button type="button" class="nameedit" data-seat="${i}" ` +
+          `title="Change this name">${esc(s.name)}</button>`
+        : esc(s.name);
+      html += `<th class="${i === me ? 'mecol' : ''}">${name}</th>`;
     });
     html += '</tr></thead><tbody>';
 
     ST.rounds.forEach((r, i) => {
       const suit = ST.cfg.trump && r.trump ? ' ' + Game.SUITS.find((s) => s.k === r.trump).g : '';
-      const cls = Game.roundDone(r) ? '' : (i === ST.idx ? 'current' : '');
-      html += `<tr class="${cls}"><td>${i + 1} · ${r.cards}${esc(suit)}</td>`;
+      const done = Game.roundDone(r);
+      const cls = done ? '' : (i === ST.idx ? 'current' : '');
+      const label = `${i + 1} · ${r.cards}${esc(suit)}`;
+      html += `<tr class="${cls}"><td>` + ((edit && done)
+        ? `<button type="button" class="roundedit" data-round="${i}" ` +
+          `title="Put this round's numbers right">${label}</button>`
+        : label) + '</td>';
       ST.seats.forEach((_, p) => {
         const mecol = p === me ? ' mecol' : '';
         if (Game.roundDone(r)) {
           const pts = Game.roundScore(r.bids[p], r.tricks[p], ST.cfg);
           run[p] += pts;
           const hit = r.bids[p] === r.tricks[p];
-          html += `<td class="${mecol.trim()}"><span class="cell"><span class="bidwon ${hit ? 'hit' : 'miss'}">` +
+          /* One figure, and the way to put it right: the cell a wrong number
+             is read in is the cell it is retyped in. The sheet it opens is
+             still the whole round -- the tricks have to total the hand, and a
+             trick taken off one seat has to land on another -- but it opens
+             on the seat that was tapped. */
+          const cell = `<span class="cell"><span class="bidwon ${hit ? 'hit' : 'miss'}">` +
             `${r.bids[p]}→${r.tricks[p]} (${pts >= 0 ? '+' : ''}${pts})</span>` +
-            `<span class="run">${run[p]}</span></span></td>`;
+            `<span class="run">${run[p]}</span></span>`;
+          html += `<td class="${mecol.trim()}">` + (edit
+            ? `<button type="button" class="celledit" data-round="${i}" data-seat="${p}" ` +
+              `title="Put this round's numbers right">${cell}</button>`
+            : cell) + '</td>';
         } else if (i === ST.idx && r.bids && r.bids[p] !== null) {
           html += `<td class="${mecol.trim()}"><span class="cell"><span class="bidwon">bid ${r.bids[p]}</span>` +
             `<span class="run">${run[p]}</span></span></td>`;
@@ -62,14 +86,142 @@ const Table = (function () {
      view -- and most states do not change a single figure on it. So the HTML
      is compared with what is already there, and an unchanged card is left
      exactly as it is. */
-  function scorecard(sel, ST, me) {
+  function scorecard(sel, ST, me, view) {
     const box = document.querySelector(sel);
     if (!box) return;
-    const html = scorecardHTML(ST, me);
-    if (box._html === html) return;
+    const edit = !!(view && view.boss);
+    /* What the tap will act on, kept fresh whether the card is redrawn or not:
+       the listener below is wired once and must never read a stale table. */
+    box._state = ST;
+    box._view = view || null;
+    const html = scorecardHTML(ST, me, edit);
+    /* The card is redrawn only when it has something new to say -- and never
+       while a round of it is being retyped, which would throw the typing away
+       on the next bid anybody makes. */
+    if (box._html === html || box._editing) return;
     box._html = html;
     box.innerHTML = html;
+    if (edit) wireEdit(box);
     followCurrent(sel);
+  }
+
+  /* Tapping a scored round opens it to be put right. The card is rebuilt from
+     scratch whenever a figure on it changes, so the listener is the table's
+     and not the button's: one, wired once, that reads the round off the tap. */
+  function wireEdit(box) {
+    if (box._wiredEdit) return;
+    box._wiredEdit = true;
+    box.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || !t.closest || !box._view || !box._view.boss) return;
+      const ST = box._state;
+      // A name at the head of its column.
+      const named = t.closest('.nameedit');
+      if (named) return askName(ST, ST.seats[Number(named.dataset.seat)], box._view);
+      // One figure in a round, or the round itself: the same sheet either way,
+      // opened on the seat that was tapped where there was one.
+      const cell = t.closest('.celledit');
+      if (cell) return editRound(box, ST, Number(cell.dataset.round), box._view, Number(cell.dataset.seat));
+      const row = t.closest('.roundedit');
+      if (row) editRound(box, ST, Number(row.dataset.round), box._view);
+    });
+  }
+
+  /* One round of the card, retyped. It is a sheet rather than an edit in the
+     table itself: the row is four figures wide on a phone before it carries
+     any boxes, and the thing being checked -- that the tricks total the hand --
+     belongs under them where it can be read as it changes.
+
+     The whole row goes at once, because the check is a row's. A trick taken
+     off one seat has to land on another, and a cell sent on its own could
+     never satisfy that. */
+  function editRound(box, ST, i, view, seat) {
+    const r = ST.rounds[i];
+    if (!r || !Game.roundDone(r)) return;
+    let d = document.getElementById('round-edit');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'round-edit';
+      document.body.appendChild(d);
+    }
+    while (d.firstChild) d.firstChild.remove();          // built afresh each time
+
+    const el = (tag, cls, txt) => {
+      const x = document.createElement(tag);
+      if (cls) x.className = cls;
+      if (txt !== undefined) x.textContent = txt;
+      return x;
+    };
+    d.appendChild(el('h2', '', `Round ${i + 1} · ${r.cards} card${r.cards === 1 ? '' : 's'}`));
+    const rows = el('div', 'edit-rows');
+    const bidBox = [], wonBox = [];
+    const head = el('div', 'edit-row edit-head');
+    head.append(el('span', 'nm', ''), el('span', '', 'bid'), el('span', '', 'won'));
+    rows.appendChild(head);
+    ST.seats.forEach((s, p) => {
+      // The seat that was tapped is marked, so a sheet opened from one cell
+      // says which figure the tap was about.
+      const row = el('div', 'edit-row' + (p === seat ? ' asked' : ''));
+      const num = (v) => {
+        const x = document.createElement('input');
+        x.type = 'number';
+        x.min = '0';
+        x.max = String(r.cards);
+        x.value = String(v);
+        return x;
+      };
+      const b = num(r.bids[p]), w = num(r.tricks[p]);
+      bidBox.push(b); wonBox.push(w);
+      b.setAttribute('aria-label', `${s.name} bid`);
+      w.setAttribute('aria-label', `${s.name} won`);
+      row.append(el('span', 'nm', s.name), b, w);
+      rows.appendChild(row);
+    });
+    d.appendChild(rows);
+
+    /* The tally, live. It is the one thing a person cannot hold in their head
+       while they retype a row, and the one thing the table will refuse. */
+    const tally = el('p', 'hint edit-tally');
+    d.appendChild(tally);
+    const read = (list) => list.map((x) => Math.round(Number(x.value)));
+    const bad = (list) => list.some((v) => !Number.isFinite(v) || v < 0 || v > r.cards);
+    const save = el('button', 'btn primary', 'Save');
+    save.type = 'button';
+    function retally() {
+      const w = read(wonBox);
+      const sum = w.reduce((a, x) => a + (Number.isFinite(x) ? x : 0), 0);
+      const right = !bad(w) && !bad(read(bidBox)) && sum === r.cards;
+      tally.textContent = `Tricks total ${sum} of ${r.cards}`;
+      tally.className = 'hint edit-tally' + (right ? ' ok' : ' off');
+      save.disabled = !right;
+    }
+    bidBox.concat(wonBox).forEach((x) => x.addEventListener('input', retally));
+    retally();
+
+    const acts = el('div', 'confirm-actions');
+    const cancel = el('button', 'btn ghost', 'Cancel');
+    cancel.type = 'button';
+    const shut = () => {
+      box._editing = false;
+      box._html = null;                 // the card was left as it was: draw it afresh
+      if (d.close) d.close();
+      else d.hidden = true;
+    };
+    cancel.addEventListener('click', shut);
+    save.addEventListener('click', () => {
+      view.send({ t: 'score', round: i, bids: read(bidBox), tricks: read(wonBox) });
+      shut();
+    });
+    acts.append(cancel, save);
+    d.appendChild(acts);
+
+    box._editing = true;
+    if (d.showModal) d.showModal(); else d.hidden = false;
+    /* Tapped on one figure, the sheet opens ready to retype it. Tapped on the
+       round itself there is no one figure, so nothing is taken. */
+    const first = seat >= 0 ? bidBox[seat] : null;
+    if (first && first.focus) { first.focus(); if (first.select) first.select(); }
+    d.addEventListener('close', () => { box._editing = false; box._html = null; }, { once: true });
   }
 
   // Scrolls the scorecard box so the round in play stays in view. It moves the
@@ -88,6 +240,50 @@ const Table = (function () {
     if (Math.abs(box.scrollTop - top) < 2) return;
     if (box.scrollTo) box.scrollTo({ top, behavior: 'smooth' });
     else box.scrollTop = top;
+  }
+
+  /* A name typed into the little sheet the seat menu opens. One name to a
+     table -- the scorecard is a column under it -- and the table says so if
+     the one typed is taken. */
+  function askName(ST, seat, view) {
+    let d = document.getElementById('seat-name');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'seat-name';
+      document.body.appendChild(d);
+    }
+    while (d.firstChild) d.firstChild.remove();          // built afresh each time
+    const h = document.createElement('h2');
+    h.textContent = `Rename ${seat.name}`;
+    const box = document.createElement('input');
+    box.type = 'text';
+    box.className = 'namebox';
+    box.value = seat.name;
+    box.maxLength = 16;
+    box.setAttribute('aria-label', 'Name');
+    const note = document.createElement('p');
+    note.className = 'hint';
+    note.textContent = 'The scorecard is a column under this name, so it changes with it.';
+    const acts = document.createElement('div');
+    acts.className = 'confirm-actions';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn ghost';
+    cancel.textContent = 'Cancel';
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'btn primary';
+    save.textContent = 'Save';
+    const shut = () => { if (d.close) d.close(); else d.hidden = true; };
+    cancel.addEventListener('click', shut);
+    save.addEventListener('click', () => {
+      const want = String(box.value || '').trim();
+      if (want && want !== seat.name) view.send({ t: 'renameseat', id: seat.id, name: want });
+      shut();
+    });
+    acts.append(cancel, save);
+    d.append(h, box, note, acts);
+    if (d.showModal) d.showModal(); else d.hidden = false;
   }
 
   /* ---------- a card on screen ---------- */
@@ -448,7 +644,7 @@ const Table = (function () {
   // after it: the finish plays once.
   const justFinished = (ST, was) => ST.phase === 'done' && !!was && was !== 'done';
 
-  return { scorecardHTML, scorecard, followCurrent, esc, roundKey, dealOpts, finaleOpts,
+  return { scorecardHTML, scorecard, editRound, followCurrent, esc, roundKey, dealOpts, finaleOpts,
            bidsAfter, sayBids, sayPresence, sayRound, sayTrick, cardEl, trickEl,
            sweepTrick, sweepOut, trickIn,
            standings, winner, voteText, justFinished };

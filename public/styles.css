@@ -332,7 +332,45 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 dialog h2{color:var(--ink);text-transform:none;letter-spacing:-.01em;font-size:19px;margin-bottom:10px}
 .rules{margin:0 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:7px;font-size:14px}
 dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-.confirm-actions{justify-content:flex-end}
+.confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+/* One round of the scorecard, retyped. A sheet rather than an edit in the
+   table itself: the row is already four figures wide on a phone. */
+.edit-rows{display:flex;flex-direction:column;gap:6px}
+.edit-row{display:grid;grid-template-columns:1fr 78px 78px;gap:8px;align-items:center}
+.edit-row .nm{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.edit-row input{
+  font:inherit;text-align:center;padding:8px 6px;border-radius:9px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%;
+}
+.edit-head span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink-dim);font-weight:700;text-align:center}
+/* The one thing the table will refuse, said as it is typed. */
+.edit-tally{margin-top:12px;font-weight:700}
+.edit-tally.ok{color:var(--good)}
+.edit-tally.off{color:var(--red)}
+
+/* The way into it: a scored round's own cell, for whoever runs the table. */
+.roundedit,.nameedit{
+  font:inherit;font-weight:inherit;color:inherit;background:none;
+  border:1px dashed transparent;border-radius:7px;padding:1px 5px;margin:-1px -5px;
+  cursor:pointer;text-align:left;white-space:nowrap;
+}
+/* The name at the head of a column: uppercase like the heading it replaces. */
+.nameedit{text-transform:inherit;letter-spacing:inherit}
+/* And one figure in a round. The cell already carries the padding, so the
+   button fills it and adds only the ring that says it can be tapped. */
+.celledit{
+  display:block;width:100%;font:inherit;color:inherit;background:none;
+  border:1px dashed transparent;border-radius:7px;padding:1px 3px;margin:-1px -3px;
+  cursor:pointer;text-align:center;
+}
+.roundedit:hover,.roundedit:focus-visible,
+.nameedit:hover,.nameedit:focus-visible{border-color:var(--gold);color:var(--gold);outline:none}
+.celledit:hover,.celledit:focus-visible{border-color:var(--gold);outline:none}
+/* The seat a sheet was opened on, in the sheet: which figure the tap was about. */
+.edit-row.asked .nm{color:var(--gold)}
+.edit-row.asked input{border-color:var(--gold)}
 
 /* ---------- cards on the table ---------- */
 .pcard{
