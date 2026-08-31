@@ -772,7 +772,7 @@ function renderWays() {
   const watch = door('Replays',
     'A game put back from what was written down, on a copy of its own. The game it is a copy of is not touched, and this needs no table and no key.');
   const list = document.createElement('div');
-  list.className = 'waylist';
+  list.className = 'waylist tall';       // the longest of the lists, and the most read
   watch.appendChild(list);
   renderGames(list, WAYS);
 }

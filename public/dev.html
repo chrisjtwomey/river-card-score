@@ -36,7 +36,7 @@
 
   /* The way in: three doors, before there is anything to control. Roomy on
      purpose -- this is where a choice is made, not where a game is driven. */
-  .ways{display:flex;flex-direction:column;gap:0;padding:0;max-width:860px;margin:5vh auto 0}
+  .ways{display:flex;flex-direction:column;gap:0;padding:0;max-width:1120px;margin:5vh auto 0}
   .way{display:flex;flex-direction:column;gap:12px;padding:22px 26px}
   .way + .way{border-top:1px solid var(--line)}
   .way h2{margin:0;font-size:18px;font-weight:800;letter-spacing:.01em}
@@ -49,6 +49,9 @@
   .way .line input.tok{width:150px}
   .way.shut h2,.way.shut p{opacity:.55}
   .waylist{display:flex;flex-direction:column;gap:7px;max-height:300px;overflow-y:auto}
+  /* The replays are the longest list and the one most worth scanning, so it
+     shows half as many again before it has to be scrolled. */
+  .waylist.tall{max-height:450px}
   /* A row in one of those lists. The band's strip is tuned for hopping between
      things; here there is room, so each row says what it is. */
   .waylist .trow{width:100%;flex:none;padding:9px 12px;font-size:13px;gap:10px}
