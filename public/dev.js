@@ -75,9 +75,19 @@ function connect() {
      back opens the same table, or the same game again -- a copy belongs to the
      socket that asked for one, so it went when this one did. */
   ws.onopen = () => {
-    if (CODE) return act('open', { code: CODE, token: HOST_TOKEN });
-    if (WANT) return replayAsk({ do: 'open', game: WANT });
-    askWays();
+    /* Where the page already is, and then the question -- always the question.
+       `ways` is what says which controls this server will take at all, and a
+       page whose address already named a table or a game used to skip it. A
+       table answers with a hello, which says as much; a copy answers with the
+       copy, which says nothing about the server. So a replay opened by address
+       believed it was on a server that invents nothing, and put away the
+       controls that need one -- the hand picker among them.
+
+       Asked second, so the answer that draws the page lands first: the door
+       never flashes up on its way to somewhere the address already named. */
+    if (CODE) act('open', { code: CODE, token: HOST_TOKEN });
+    else if (WANT) replayAsk({ do: 'open', game: WANT });
+    askWays((CODE || WANT) ? 'quiet' : false);
   };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
@@ -249,7 +259,18 @@ function toWays(msg) {
 }
 
 // The question, and the note that it is out: whatever comes back is its answer.
-function askWays(keep) { waysOut = keep ? 'keep' : 'clear'; act('ways'); }
+/* The question: what will this server take, and what is there to open with
+   it. `keep` leaves a line already on the page alone.
+
+   `quiet` is for a page that already has somewhere to be, and asks only to
+   learn what it may do there. A refusal to that is nothing to draw a door
+   about, and must not be mistaken for one -- an error arriving before the
+   answer would otherwise be read as the question itself being refused, and
+   swallow whatever it was really about. */
+function askWays(how) {
+  waysOut = how === 'quiet' ? false : (how ? 'keep' : 'clear');
+  act('ways');
+}
 
 /* ---------- previews ---------- */
 

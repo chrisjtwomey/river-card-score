@@ -3442,6 +3442,38 @@ part('the dev controls, on each kind of server');
      goes and that it draws what the server said. */
   const VIEWER = ['public/ui.js', 'public/viewer.js'];
 
+  /* An address that already names where to go still asks what this server
+     will take. A table answers with a hello, which says as much; a copy
+     answers with the copy, which says nothing about the server -- so a replay
+     opened by address believed it was on a server that invents nothing, and
+     put away every control that needs one, the hand picker among them.
+
+     Asked second, so the answer that draws the page lands first and the door
+     never flashes up on its way to somewhere the address already named. */
+  {
+    const byGame = loadPage('dev.js', {}, '', { hash: '#g=a1b2c3d4e5f6', real: VIEWER });
+    byGame.start();
+    byGame.socks[0].onopen();
+    const said = byGame.socks[0].sent.map((o) => o.do || o.action);
+    ok(said.join(',') === 'open,ways',
+       'a page sent to a game opens it, then asks what it may do there  got ' + said.join(','));
+
+    const byCode = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th', real: VIEWER });
+    byCode.start();
+    byCode.socks[0].onopen();
+    ok(byCode.socks[0].sent.map((o) => o.action).join(',') === 'open,ways',
+       'and so does one sent to a table  got '
+       + byCode.socks[0].sent.map((o) => o.action).join(','));
+
+    /* A refusal to a question the page did not need the answer to is not the
+       question being refused. Asked while there is nowhere else to be, a
+       refused `ways` draws the fallback door; asked from somewhere, it draws
+       nothing and leaves the line to whatever it was really about. */
+    byGame.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'no such game' }) });
+    ok(byGame.pick('#dev-err').textContent === 'no such game',
+       'and an error still reaches the page  got ' + byGame.pick('#dev-err').textContent);
+  }
+
   // A table on the wire: the hello the dev page gets, then a state.
   const devPage = (srv, seats) => {
     const P = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th', real: VIEWER });
