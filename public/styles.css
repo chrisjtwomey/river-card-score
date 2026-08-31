@@ -73,6 +73,15 @@ p{margin:0}
 }
 /* with a photo set, the pip is the player */
 .pip.avpic{background:#f3efe2 center/cover no-repeat;color:transparent}
+/* The way back, at the left of every bar but the front page's. A link and not
+   a button, so a window that may not touch the game can still be left; and the
+   same size as the pip beside it, so a thumb finds one as easily as the other. */
+.backlink{
+  display:grid;place-items:center;width:34px;height:38px;flex:none;margin-left:-6px;
+  color:#f3efe2;font-size:30px;line-height:1;text-decoration:none;
+  border-radius:9px;opacity:.85;
+}
+.backlink:hover,.backlink:focus-visible{background:rgba(255,255,255,.16);opacity:1}
 .sub{font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-actions{display:flex;gap:8px;flex:none}
 .topbar .btn{background:rgba(255,255,255,.14);color:#f3efe2;border-color:transparent}

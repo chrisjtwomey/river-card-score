@@ -294,7 +294,7 @@ function wireSettings() {
   const seat = () => (ST && mySeat() >= 0 ? ST.seats[mySeat()] : null);
   const lobby = () => !!(ST && ST.phase === 'lobby');
   Settings.wire('#btn-settings', {
-    items: UI.commonSettings({ motion: true, home: true }),
+    items: UI.commonSettings({ motion: true }),
     who: WATCH ? null : {
       name: () => (seat() ? seat().name : Net.name()),
       photo: () => (seat() ? Avatar.url(ST.code, seat()) : (framed() ? null : Avatar.saved())),

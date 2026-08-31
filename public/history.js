@@ -179,7 +179,7 @@ function findOnTable() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  Settings.wire('#btn-settings', { items: UI.commonSettings({ home: true }) });
+  Settings.wire('#btn-settings', { items: UI.commonSettings() });
 
   show(Games.all());
   askWhatCanBeWatched();

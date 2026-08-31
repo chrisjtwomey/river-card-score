@@ -180,15 +180,42 @@ const UI = (function () {
   function zoomNow() { return zoom; }
   function setZoom(z) { zoom = clamp(Number(z) || 1); applyZoom(zoom); }
 
+  /* ---------- the way back ---------- */
+
+  /* Every page but the front one says where its back goes, as `data-back` on
+     its top bar, and the control itself is drawn here: the same mark in the
+     same corner on all of them, and one rule that takes it away where it does
+     not belong. That rule is the frame. A page inside one is a window onto a
+     table -- the dev page's panes, the screen a replay is watched on -- and
+     nobody navigates a window: the back would put the front page where the
+     game was. It is a link and not a button, so a window that may not touch
+     the game can still be left. */
+  function backLink() {
+    const bar = document.querySelector('.topbar');
+    const to = bar && bar.dataset && bar.dataset.back;
+    if (!to || (window.top && window.top !== window.self)) return null;
+    const a = document.createElement('a');
+    a.className = 'backlink';
+    a.href = to;
+    a.textContent = '\u2039';
+    a.title = bar.dataset.backName || 'Back';
+    a.setAttribute('aria-label', a.title);
+    // Inside the brand, not beside it: the bar holds its two ends apart, and a
+    // third child would push the name of the page into the middle.
+    const brand = bar.querySelector('.brand') || bar;
+    brand.insertBefore(a, brand.firstChild);
+    return a;
+  }
+  document.addEventListener('DOMContentLoaded', backLink);
+
   /* ---------- the settings menu ---------- */
 
   /* The settings every screen has, as rows for the settings page
      (Settings.wire draws them). A page adds its own to the end: a row with no
      group before it joins the last one.
      opts: { motion: true } for a page that plays the deal, { zoom: true } for
-     one read from across a room, { home: true } for a page that is not the
-     front page -- the way back used to be the ♠ in the corner, which on a
-     phone with a photo set was the player's own face. */
+     one read from across a room. The way back is not here: it is the mark in
+     the corner of the top bar, and a menu is not where navigation goes. */
   function commonSettings(opts) {
     const o = opts || {};
     const list = [
@@ -228,7 +255,6 @@ const UI = (function () {
     // Safari on an iPhone has no full screen at all, so the row is not offered.
     list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
                 get: isFull, set: () => { try { toggleFullscreen(); } catch (e) {} } });
-    if (o.home) list.push({ kind: 'link', label: 'Front page', href: 'index.html' });
     return list;
   }
 
@@ -820,7 +846,7 @@ const UI = (function () {
 
   return { motion, setMotion, speed, ownSpeed, setSpeed, setPlayed, ms, hold, paced,
            fadeStrip, showCell, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
-           keepAwake, measureTopbar,
+           keepAwake, measureTopbar, backLink,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask, tell, endTable,
            commonSettings, startZoom, zoomNow, setZoom,

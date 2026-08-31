@@ -39,7 +39,8 @@ server.js          Wiring only: http/ws servers, the rooms map, the entry messag
                    (create/join/resume/screen/watch/avatar), presence, broadcast, the trick
                    hold timer, upkeep.
 
-public/ui.js       Page chrome shared by every page: the settings rows, theme, zoom, wake lock,
+public/ui.js       Page chrome shared by every page: the way back (backLink, off `data-back`
+                   on the top bar), the settings rows, theme, zoom, wake lock,
                    full screen, the ask() dialog, the motion and speed settings, a strip that
                    does not fit (fadeStrip/showCell), the small effects (fx).
 public/settings.js The settings page behind the ⚙: laid over the page that opened it, draws

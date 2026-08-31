@@ -2160,6 +2160,85 @@ part('the sticky boxes are watched, not measured');
   ok(reads > 0, 'the measuring itself still measures, for whoever has no watcher  got ' + reads + ' reads');
 }
 
+/* ---- the way back ----
+
+   The mark went round the houses. It was the ♠ in the corner, and with a photo
+   set the ♠ was the player's own face: tapping yourself left the game. Then it
+   was a named row in the settings menu, which is not where navigation goes
+   either. It is a mark of its own now, at the left of the bar, on every page
+   but the front one -- and the pages say only where their back goes. */
+part('the way back');
+{
+  const loadBar = (o) => {
+    const dom = makeDom(412, 860);
+    const bar = new dom.El('header');
+    bar.className = 'topbar';
+    if (o.to) bar.dataset.back = o.to;
+    if (o.name) bar.dataset.backName = o.name;
+    const brand = new dom.El('div');
+    brand.className = 'brand';
+    const pip = new dom.El('span');
+    pip.className = 'pip';
+    brand.appendChild(pip);
+    bar.appendChild(brand);
+    dom.document.body.appendChild(bar);
+    if (o.framed) dom.window.top = { notThisOne: true };
+    const src = fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8');
+    const UI = new Function('window', 'document', 'localStorage', 'location', 'console',
+      src + '\n; return UI;')(dom.window, dom.document, dom.localStorage,
+      { protocol: 'file:' }, { log() {}, info() {}, warn() {}, error() {} });
+    dom.document.fire('DOMContentLoaded');
+    return { UI, dom, bar, brand, pip, back: () => brand.querySelector('.backlink') };
+  };
+
+  {
+    const t = loadBar({ to: 'index.html', name: 'Front page' });
+    const back = t.back();
+    ok(!!back, 'a bar that says where its back goes gets the mark');
+    ok(back && back.href === 'index.html',
+       'and the mark goes there  got ' + (back || {}).href);
+    ok(t.brand.children[0] === back, 'at the left of the bar, before the pip');
+    ok(back && back.tagName === 'A',
+       'a link and not a button, so a screen that may not touch the game can still be left');
+    ok(back && back.title === 'Front page' && back.getAttribute('aria-label') === 'Front page',
+       'named by where it goes, for a reader who cannot see a chevron  got ' + (back || {}).title);
+  }
+
+  {   // The front page is what back means: it says nothing, and gets nothing.
+    const t = loadBar({});
+    ok(!t.back(), 'a bar that says nothing gets nothing');
+  }
+
+  {   /* A page inside a frame is a window onto a table -- the dev page's panes,
+         the screen a replay is watched on -- and nobody navigates a window.
+         The back would put the front page where the game was. */
+    const t = loadBar({ to: 'index.html', name: 'Front page', framed: true });
+    ok(!t.back(), 'and a window onto a table is never navigated');
+  }
+
+  {   // It is not in the menu any more, whatever the page asks for.
+    const t = loadBar({});
+    [{}, { motion: true }, { zoom: true }, { motion: true, zoom: true }].forEach((o) => {
+      ok(t.UI.commonSettings(o).every((r) => r.label !== 'Front page'),
+         'no page keeps the way back in its settings  got ' + JSON.stringify(o));
+    });
+  }
+
+  {   // Every page but the front one says where its back goes.
+    const wants = { 'history.html': 'index.html', 'host.html': 'index.html',
+                    'play.html': 'index.html', 'dev.html': 'index.html',
+                    'replay.html': 'history.html' };
+    Object.keys(wants).forEach((f) => {
+      const html = fs.readFileSync(path.join(ROOT, 'public', f), 'utf8');
+      const m = /<header class="topbar" data-back="([^"]+)" data-back-name="([^"]+)"/.exec(html);
+      ok(!!m && m[1] === wants[f],
+         f + ' goes back to ' + wants[f] + '  got ' + (m ? m[1] : 'no way back'));
+    });
+    const front = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
+    ok(!/data-back/.test(front), 'and the front page has nowhere to go back to');
+  }
+}
+
 /* ---- the tables this browser holds ----
 
    The bug: there was one slot for a seat, written by every page on every

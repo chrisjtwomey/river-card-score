@@ -27,9 +27,9 @@ app's own first screen instead, where it needs no server of ours at all.
 
 Every page carries one **⚙** button in the top bar, and it opens the settings
 page: the theme (system, light or dark), the animations (full, short or off),
-full screen, on the TV screen the text size, and on a phone the way back to
-the front page. The settings page lies over the page it was opened from, with
-a back arrow of its own, so a game underneath keeps its place and its socket.
+full screen, and on the TV screen the text size. The settings page lies over
+the page it was opened from, with a back arrow of its own, so a game
+underneath keeps its place and its socket.
 Rows that a browser cannot honour leave themselves out -- full screen is not
 offered on Safari on an iPhone. On a phone the settings page also holds who
 you are: the name, and the photo that goes on the back of your cards. At a
@@ -37,6 +37,25 @@ table they are the seat's, changed in the lobby; a change made during a game
 goes with the next table, because the scorecard is a column under the name it
 has. A table's screens have one other button, 💬 for the talk, and nothing
 else.
+
+**The way back is a ‹ at the left of the bar**, on every page but the front
+one, where back has nowhere to go. Each page says only where its back goes --
+`data-back` on its own top bar -- and `UI.backLink` draws the mark, so it is
+the same shape in the same corner everywhere. The TV screen, a seat and Past
+games go to the front page; a replay goes back to Past games, which is where
+it was opened from. It is a link and not a button, so a screen that may not
+touch the game can still be left. One rule takes it away: a page inside a
+frame is a window onto a table -- the dev page's panes, the screen a replay is
+watched on -- and nobody navigates a window, so the back would put the front
+page where the game was.
+
+It has been three things. It was the ♠ in the corner, and with a photo set the
+♠ was the player's own face, so tapping yourself left the game. Then it was a
+named row in the ⚙ menu, which is not where navigation goes either. Leaving a
+page is not leaving a table: the seat and the socket are held, and the front
+page offers the table back under *You are in a game*. Giving the seat up is
+still **Leave the game**, and putting the table down is still **End the
+table**, both behind a question.
 
 The server builds the QR code itself, so nothing is sent to an outside service. It is always black on white, whatever the page theme is, because a camera cannot read an inverted code.
 
@@ -1216,7 +1235,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `lib/tables.js` — a table still in play, on disk, so that stopping the server does not end it.
 - `lib/dev.js` — the dev portal, which a real game never touches.
 - `lib/watch.js` — the door to a replay: one message any socket may send to open a copy of a game on file and move about in it. No table and no key; only a table still in play stays the host's.
-- `public/ui.js` — shared page bits: the full-screen button, the wake lock, the motion setting every scene and flourish asks.
+- `public/ui.js` — shared page bits: the way back at the left of the bar, the full-screen button, the wake lock, the motion setting every scene and flourish asks.
 - `public/stage.js` — the overlay both scenes are played on, its parts, the slot that says which one is open, and the peek: the one way a screen shows the seat it is waiting on.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
 - `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
