@@ -209,12 +209,23 @@ a.btn{display:inline-flex;align-items:center;justify-content:center;text-decorat
 
 /* ---------- standings ---------- */
 .standings{display:flex;flex-direction:column;gap:6px}
-.stand-row{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:10px;font-size:15px;position:relative}
+/* Rank, name, what the seat is, the score -- and the bar under them.
+
+   Every row is its own grid, so the three things on the right have to be made
+   to line up down the list rather than left to size themselves. The score is
+   given a width wide enough for any of them, so its column is the same in
+   every row; that fixes the right-hand edge of the badges beside it, which is
+   the score column's left edge; and the bar is spanned to the end of the row,
+   so every bar ends in the same place whatever is above it. */
+.stand-row{display:grid;grid-template-columns:22px minmax(0,1fr) auto max-content;
+  align-items:center;gap:10px;font-size:15px;position:relative}
 .stand-row .rank{font-size:12px;font-weight:700;color:var(--ink-dim)}
 .stand-row .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stand-row .bar{grid-column:2;height:5px;border-radius:3px;background:var(--chip);overflow:hidden;margin-top:-3px}
+.stand-row .bar{grid-column:2 / -1;height:5px;border-radius:3px;background:var(--chip);overflow:hidden;margin-top:-3px}
 .stand-row .bar i{display:block;height:100%;background:var(--felt);border-radius:3px}
-.stand-row .pts{font-variant-numeric:tabular-nums;font-weight:700}
+/* Wide enough for a score of any size this game reaches, negatives included,
+   so the column does not change width from row to row. */
+.stand-row .pts{font-variant-numeric:tabular-nums;font-weight:700;min-width:4ch;text-align:right}
 .stand-row.lead .pts{color:var(--gold)}
 /* what a round just paid, floating up out of the score */
 .fxrise{
