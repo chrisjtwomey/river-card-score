@@ -805,6 +805,38 @@ part('who may send what, and when');
   ok(t.say(0, { t: 'seatMove', id: t.room.seats[1].id, to: 0 }) === null, 'a seat is dragged to a new place');
   ok(t.room.seats.map((s) => s.name).join() === 'Bob,Ann', 'and lands there');
   ok(t.room.captainId === t.room.seats[1].id, 'and dragging it does not change who runs the table');
+  /* The bum-deal vote's counting, and a line in the talk: both are room verbs
+     because two doors reach each. A phone answers a vote and says a line; the
+     dev page does both for a seat, and neither writes the rule out twice. */
+  {
+    const v = table().sit(['Ann', 'Bob', 'Cal']).rules({ max: 1, pattern: 'down', ones: 1 });
+    v.Room.startGame(v.room);
+    ok(v.Room.seatVote(v.room, 1, true) === null, 'with no vote open there is nothing to answer');
+    v.room.vote = { kind: 'bumdeal', by: 1, round: v.room.idx, yes: [1], no: [] };
+    ok(v.Room.seatVote(v.room, 0, true) === 'yes' && v.room.vote.yes.length === 2,
+       'a yes joins the ones already in');
+    ok(v.Room.seatVote(v.room, 0, true) === 'yes' && v.room.vote.yes.length === 2,
+       'and answering twice is still one answer');
+    ok(v.Room.seatVote(v.room, 2, false) === 'no' && v.room.vote === null,
+       'one no ends it: a hand is thrown in by everybody or not at all');
+    v.room.vote = { kind: 'bumdeal', by: 1, round: v.room.idx, yes: [1], no: [] };
+    v.Room.seatVote(v.room, 0, true);
+    ok(v.Room.seatVote(v.room, 2, true) === 'dealt' && v.room.vote === null,
+       'and the last yes throws the hand in');
+
+    const c = table().sit(['Ann', 'Bob']);
+    ok(c.Room.say(c.room, 0, '  hello   there  ', 100).text === 'hello there',
+       'a line is one line, however it was typed');
+    ok(c.room.chat[0].name === 'Ann' && c.room.chat[0].who === c.room.seats[0].id,
+       'and it is that seat\'s');
+    ok(c.Room.say(c.room, -1, 'from the table', 100).name === 'Table',
+       'a line with no seat behind it is the table\'s');
+    ok(c.Room.say(c.room, 0, '   ', 100) === null, 'nothing said is nothing kept');
+    for (let i = 0; i < 8; i++) c.Room.say(c.room, 0, 'line ' + i, 5);
+    ok(c.room.chat.length === 5 && c.room.chat[4].text === 'line 7',
+       'and the oldest go, so a long table carries a short history  got ' + c.room.chat.length);
+  }
+
   /* A seat whose clock has run out, and what the table does about it. One
      function, because two things reach it: the clock in `sweep`, and the dev
      page, which winds the clock on rather than write the three branches again.

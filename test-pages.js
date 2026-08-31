@@ -3590,6 +3590,51 @@ part('the dev controls, on each kind of server');
     back.fire('click');
     ok(panes() === had, 'which brings the socket back  got ' + panes());
 
+    /* Acting for a seat. The table's own two are offered on exactly the seat
+       the table would take them for -- the one it is waiting on that nobody is
+       behind -- because anywhere else they are a button that earns a refusal. */
+    const toolsOf = (i) => P.pick('#prows').querySelectorAll('.ptools')[i];
+    const wordOn = (i, w) => toolsOf(i).querySelectorAll('button').find((b) => b.textContent === w);
+    ok(!wordOn(0, 'Bid for'), 'nobody bids for a seat whose phone is at the table');
+    P.socks[0].onmessage({ data: devState(false, {
+      seats: [{ id: 's1', name: 'Ann', online: false }, { id: 's2', name: 'Bob', online: true }],
+      rounds: [{ cards: 3, dealer: 1, bids: [null, null], tricks: null },
+               { cards: 2, dealer: 1, bids: null, tricks: null }] }) });
+    ok(!!wordOn(0, 'Bid for'), 'the seat the table waits on, that nobody is behind, is bid for');
+    ok(!wordOn(1, 'Bid for'), 'and only that one');
+    P.socks[0].sent.length = 0;
+    wordOn(0, 'Bid for').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"bidfor"}',
+       'as the table\'s own message  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    // A vote is answered by the phone it is put to, so this is the one thing
+    // here that no host-side message can say.
+    ok(!wordOn(0, '\u2713'), 'no vote open, nothing to answer');
+    P.socks[0].onmessage({ data: devState(false, {
+      vote: { kind: 'bumdeal', by: 1, round: 0, yes: [1], no: [] } }) });
+    ok(!!wordOn(0, '\u2713') && !!wordOn(0, '\u2717'), 'a vote open, and each seat may answer it');
+    P.socks[0].sent.length = 0;
+    wordOn(0, '\u2717').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"seatDo","id":"s1","do":"no"}',
+       'and a no goes as that seat\'s  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(/Bob asked . 1 yes, 0 no/.test(P.pick('#phase-row').querySelector('.pvote')
+         .querySelector('.pstate').textContent),
+       'while the round line says who asked and how it stands  got '
+       + P.pick('#phase-row').querySelector('.pvote').querySelector('.pstate').textContent);
+
+    // And a line in the talk, as that seat.
+    P.dom.window.prompt = () => 'well played';
+    P.socks[0].sent.length = 0;
+    wordOn(0, '\uD83D\uDCAC').fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"seatDo","id":"s1","do":"say","text":"well played"}',
+       'said as that seat  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.dom.window.prompt = () => null;
+    P.socks[0].sent.length = 0;
+    wordOn(0, '\uD83D\uDCAC').fire('click');
+    ok(P.socks[0].sent.length === 0, 'and nothing said is nothing sent');
+
     P.socks[0].onmessage({ data: devState(false, {
       seats: [{ id: 's1', name: 'Ann', left: true }, { id: 's2', name: 'Bob' }] }) });
     const give = P.pick('#prows').querySelectorAll('.ptools')[0]

@@ -410,7 +410,7 @@ const { handleWatch, games: watchGames, copyOf, forked } = Watch({
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello, runs } = Dev({
-  DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
+  DEV, CHAT_KEEP, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
   Room, Tables, Bots, Trail, watchGames, copyOf, forked,
 });
 

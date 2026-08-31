@@ -868,7 +868,7 @@ function renderPlayers() {
     `${s.name}/${s.bot}/${s.left}/${s.id === S.captainId}/${r ? r.dealer : S.firstDealerId}` +
     `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}` +
     `/${s.online}/${phoneOff(s.id)}`).join('|') +
-    `@${S.idx}:${S.phase}:${invent}`;
+    `@${S.idx}:${S.phase}:${invent}:${Game.awaySeat(S)}:${S.play ? S.play.turn : ''}:${!!S.vote}`;
   if (box.dataset.key === key || box.contains(document.activeElement)) return;
   box.dataset.key = key;
   box.innerHTML = '';
@@ -1004,6 +1004,32 @@ function seatTools(s, p, S) {
       () => doing('out'));
   add('Rejoin', 'A seat the table took over, given back by name.',
       () => doing('back'), { off: !s.left });
+
+  /* Acting for a seat. The table's own two, said the way the host screen says
+     them -- so they are offered on exactly the seat the table would take them
+     for: the one it is waiting on that nobody is behind. Anywhere else they
+     would be a button that earns a refusal. */
+  if (!replaying()) {
+    const away = Game.awaySeat(S) === p;
+    if (S.phase === 'bid' && away) {
+      add('Bid for', 'The table bids this hand, reading the cards where it has them.',
+          () => send({ t: 'bidfor' }));
+    }
+    if (S.play && S.play.turn === p && away && Game.virtual(S)) {
+      add('Play for', 'The table plays a card for this seat, from the ones the rules allow.',
+          () => send({ t: 'playfor' }));
+    }
+    // This seat's answer to a vote, which no host-side message can say: a vote
+    // is answered by the phone it is put to.
+    if (S.vote) {
+      add('\u2713', `${s.name} agrees to the bum deal`, () => doing('yes'));
+      add('\u2717', `${s.name} refuses it, which ends the vote`, () => doing('no'));
+    }
+    add('\uD83D\uDCAC', `Say something in the talk as ${s.name}`, () => {
+      const text = window.prompt(`Say something as ${s.name}`);
+      if (text) act('seatDo', { id: s.id, do: 'say', text });
+    });
+  }
   return box;
 }
 
