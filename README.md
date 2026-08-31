@@ -211,6 +211,16 @@ table — 48K apiece, and every phone hands its own over again. `KEEP_HOURS`,
 6 by default, is how long a table nobody has touched is kept, in memory and on
 disk alike.
 
+**A table nobody is at takes itself away.** Nobody is at it when no player is
+online and no screen is watching — bots are nobody, and so are the stand-ins on
+a dev table. A lobby or a game that is over goes five minutes after the last of
+them (`TABLE_IDLE_MS`); a game in play is given half an hour (`GAME_IDLE_MS`),
+because a hand people are in the middle of is one they mean to come back to.
+It is not a game ending: nothing is scored and nothing is filed, the table
+itself is taken away, and its code opens nothing afterwards. A table restored
+from disk starts its clocks when the server comes up, so a phone that hosts and
+is restarted does not lose every table it was holding.
+
 ### Table talk
 
 Every table has a chat room of its own. 💬 in the top bar opens a sheet over the

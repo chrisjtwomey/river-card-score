@@ -42,6 +42,12 @@ const span = (name, dflt) => {
    and how long before that the phone is asked whether anybody is there. */
 const IDLE_MS = span('IDLE_MS', 5 * 60e3);
 const IDLE_WARN_MS = span('IDLE_WARN_MS', 60e3);
+/* And how long a table nobody is at is kept: nobody playing at it, and no
+   screen watching it. A game in play is given longer than a lobby or a game
+   that is over -- a hand people are in the middle of is one they mean to come
+   back to. KEEP_HOURS is the outer limit either way. */
+const TABLE_IDLE_MS = span('TABLE_IDLE_MS', 5 * 60e3);
+const GAME_IDLE_MS = span('GAME_IDLE_MS', 30 * 60e3);
 // How many lines of table talk a table keeps. Long enough to scroll back
 // through a game, short enough that every state carries it without a thought.
 const CHAT_KEEP = Math.max(1, Number(process.env.CHAT_KEEP) || 100);
@@ -261,6 +267,11 @@ function restore() {
     // Nobody is at the table until they connect to this server. A bot never
     // went anywhere.
     room.seats.forEach((s) => { s.online = !!s.bot; s.idleAt = Date.now(); s.warned = false; });
+    /* This server has just seen it. Without this the clocks would read from
+       before it came up, and the first sweep would take away every table on
+       the machine -- which is exactly what a phone hosting a game does every
+       time it is stopped and started again. */
+    room.lastSeen = Date.now();
     /* A trick was being held up for the table to read when the server stopped.
        It has been read by now, so the table moves on rather than sitting on a
        hold that nothing is left to end. */
@@ -587,11 +598,12 @@ sayBusy();
 
    It runs often enough that a minute's warning is a minute, and does nothing
    at all on a table where everybody is playing. */
-const IDLE_TICK = Math.max(50, Math.min(15000, Math.round((IDLE_WARN_MS || IDLE_MS) / 4)));
-if (IDLE_MS) setInterval(() => {
+const IDLE_TICK = Math.max(50, Math.min(15000, Math.round((IDLE_WARN_MS || IDLE_MS || TABLE_IDLE_MS) / 4)));
+if (IDLE_MS || TABLE_IDLE_MS || GAME_IDLE_MS) setInterval(() => {
   const now = Date.now();
-  rooms.forEach((room) => {
-    const out = Room.sweep(room, now, { idle: IDLE_MS, warn: IDLE_WARN_MS });
+  Array.from(rooms.values()).forEach((room) => {
+    const out = Room.sweep(room, now, { idle: IDLE_MS, warn: IDLE_WARN_MS,
+                                        table: TABLE_IDLE_MS, game: GAME_IDLE_MS });
     // Still there? Only a phone that is here is asked, and only once.
     out.warn.forEach((p) => {
       const seat = room.seats[p];
@@ -603,7 +615,10 @@ if (IDLE_MS) setInterval(() => {
     });
     out.gone.forEach((g) => (g.how === 'kicked' ? tellKicked(room, g.seat) : tellGone(room, g.seat)));
     if (out.gone.length) markPresence(room);
-    if (out.changed) broadcast(room);
+    // Nobody is at it and nobody is watching it. The table itself goes: it is
+    // not a game ending, so nothing is scored and nothing is filed.
+    if (out.end) endTable(room.code);
+    else if (out.changed) broadcast(room);
   });
 }, IDLE_TICK).unref();
 

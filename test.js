@@ -1748,7 +1748,8 @@ async function bidRound(P) {
     const port9 = PORT + 8;
     const srv9 = spawn('node', [path + '/server.js'], {
       env: { ...process.env, PORT: port9, NO_TLS: '1', DATA_DIR,
-             IDLE_MS: '900', IDLE_WARN_MS: '300', ...TUNED },
+             IDLE_MS: '900', IDLE_WARN_MS: '300',
+             TABLE_IDLE_MS: '700', GAME_IDLE_MS: '30000', ...TUNED },
       stdio: 'ignore',
     });
     await upAt(port9);
@@ -1806,6 +1807,24 @@ async function bidRound(P) {
       ok(P[1].idles >= 3, 'a phone is asked again each time the clock comes round');
       ok(!h.state.seats[1].left, 'and answering keeps the seat, however long the table waits');
       h.ws.close(); P[0].ws.close(); P[1].ws.close();
+    }
+
+    // and a table nobody is at, and nobody is watching, takes itself away
+    {
+      const { h, P, code } = await tableOf(['Gil'], null, url);
+      const running = async () => (await fetch(`http://127.0.0.1:${port9}/tables.json`)
+        .then((r) => r.json())).tables.some((x) => x.code === code);
+      ok(await running(), 'a table this server is running is in its listing');
+      h.ws.close(); P[0].ws.close();
+      await h.gone; await P[0].gone;
+      let there = true;
+      for (let i = 0; i < 200 && there; i++) { await wait(20); there = await running(); }
+      ok(!there, 'and it takes itself away once nobody is at it and nobody is watching');
+      const back = client('gil', url); await back.ready;
+      back.send({ t: 'screen', code });
+      await until(() => back.errors.length);
+      ok(/no table with that code/i.test(back.last()), 'the code opens nothing afterwards  got ' + back.last());
+      back.ws.close();
     }
 
     srv9.kill();

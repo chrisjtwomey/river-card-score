@@ -1110,6 +1110,44 @@ const later = (mins) => Date.now() + mins * 60e3;
   ok(t.room.seats.length === 2 && !t.room.seats.some((x) => x.left), 'nobody is put out of a finished game');
 }
 
+/* A table nobody is at takes itself away. It is not a game ending: nothing is
+   scored and nothing is filed. The taking away is the server's -- it is what
+   holds the tables -- so what is checked here is the answer. */
+const TMS = { idle: 5 * 60e3, warn: 60e3, table: 5 * 60e3, game: 30 * 60e3 };
+{
+  const t = table().sit(['Ann', 'Bob']);
+  ok(!t.Room.idleTable(t.room, later(60), TMS), 'a table with a player at it is nobody\'s to take away');
+  t.room.seats.forEach((x) => { x.online = false; });
+  ok(!t.Room.idleTable(t.room, later(4), TMS), 'an empty lobby is kept for a while');
+  ok(t.Room.idleTable(t.room, later(6), TMS), 'and then it goes');
+  t.room.seen = true;
+  ok(!t.Room.idleTable(t.room, later(60), TMS), 'unless a screen is watching it');
+  t.room.seen = false;
+  ok(!t.Room.idleTable(t.room, later(60), { table: 0, game: 0 }), 'and a clock at nought never takes one away');
+}
+
+{
+  // a game in play is given longer: it is one people mean to come back to
+  const t = started(['Ann', 'Bob'], { deck: 'virtual' });
+  t.room.seats.forEach((x) => { x.online = false; });
+  ok(!t.Room.idleTable(t.room, later(10), TMS), 'a game in play is not taken away at the lobby\'s clock');
+  ok(t.Room.idleTable(t.room, later(31), TMS), 'but it does not sit there for ever either');
+  t.Room.finishGame(t.room);
+  ok(t.Room.idleTable(t.room, later(6), TMS), 'and a game that is over goes at the shorter clock');
+}
+
+{
+  // a table of bots is nobody at a table, and so are the stand-ins on a dev page
+  const t = table().sit(['Ann']).sit(['Bot'], { bot: true });
+  t.room.seats[0].online = false;
+  ok(t.Room.idleTable(t.room, later(6), TMS), 'a bot does not keep a table up');
+  const d = table().sit(['Amy', 'Hugh'], { online: false });
+  d.room.stand = true;
+  ok(d.Room.idleTable(d.room, later(6), TMS), 'nor do the stand-ins on a dev table');
+  ok(d.Room.sweep(d.room, later(6), TMS).end, 'and the sweep says so, seats untouched');
+  ok(d.room.seats.length === 2, 'having taken nothing off it');
+}
+
 part('the tables this server is running');
 
 /* A table's four characters are the only door it has. A listing of them handed
