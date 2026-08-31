@@ -974,6 +974,102 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   ok(!G.tablePlaysOn(t.room), 'and the bot does not play the game out on its own');
 }
 
+part('a seat nobody is behind');
+
+/* The clock runs while nobody holds a seat, and while the table is stopped on
+   it. It never runs on a player who is at the table with nothing to do: at a
+   table with real cards a phone is touched to bid and not again, and dropping
+   those players would empty a room of people sat around a table. */
+const MS = { idle: 5 * 60e3, warn: 60e3 };
+const later = (mins) => Date.now() + mins * 60e3;
+
+{
+  const t = table().sit(['Ann', 'Bob', 'Cal']);
+  t.room.seats[1].online = false;
+  ok(!t.Room.idleSeat(t.room, 0), 'a phone open in the lobby is never idle, however long it waits');
+  ok(t.Room.idleSeat(t.room, 1), 'a seat with no window on it is');
+  let out = t.Room.sweep(t.room, later(4), MS);
+  ok(t.room.seats.length === 3 && !out.gone.length, 'and it keeps its seat until the clock runs out');
+  out = t.Room.sweep(t.room, later(6), MS);
+  ok(t.room.seats.length === 2 && out.gone.length === 1, 'then the seat goes');
+  ok(out.gone[0].how === 'kicked' && out.gone[0].seat.name === 'Bob', 'and the server is told whose phone to tell');
+  ok(t.room.seats.every((x) => x.name !== 'Bob'), 'nothing of a lobby seat is kept: nothing was played');
+}
+
+{
+  const t = table().sit(['Ann', 'Bob']).sit(['Bot'], { bot: true });
+  t.room.seats[1].online = false;
+  t.Room.sweep(t.room, later(6), { idle: 0, warn: 0 });
+  ok(t.room.seats.length === 3, 'a clock set to nought puts nobody out');
+  const b = table().sit(['Ann']).sit(['Bot'], { bot: true });
+  b.room.seats[1].online = false;
+  b.Room.sweep(b.room, later(60), MS);
+  ok(b.room.seats.length === 2, 'and a bot is never away, whatever its seat says');
+}
+
+{
+  // a table of stand-ins on the dev page is nobody's game
+  const t = table().sit(['Ann', 'Bob'], { online: false });
+  t.room.stand = true;
+  t.Room.sweep(t.room, later(60), MS);
+  ok(t.room.seats.length === 2, 'the stand-ins on a dev table keep their seats');
+}
+
+{
+  // in a game, the clock runs on the seat the table is stopped on
+  const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual' });
+  const p = G.onTurn(t.room);
+  ok(p === 1, 'the player left of the dealer bids first');
+  ok(t.Room.idleSeat(t.room, p), 'the table is stopped on them, so their clock runs');
+  ok(!t.Room.idleSeat(t.room, 2), 'and the players waiting their turn are not idle at all');
+  let out = t.Room.sweep(t.room, later(4.5), MS);
+  ok(out.warn.length === 1 && out.warn[0] === p, 'a minute before the end, the phone is asked whether anybody is there');
+  ok(!t.Room.sweep(t.room, later(4.6), MS).warn.length, 'and asked once, not again on every look');
+  ok(!out.gone.length && !out.changed, 'nothing has happened to the seat yet');
+  out = t.Room.sweep(t.room, later(6), MS);
+  ok(out.gone.length === 1 && out.gone[0].how === 'left', 'the clock runs out and the hand is handed over');
+  ok(t.room.seats[p].left && t.room.seats.length === 3,
+     'the seat keeps its name and its column: the rounds already played are that player\'s');
+  ok(G.tablePlays(t.room.seats[p], t.room.cfg), 'and auto-play has the hand from here on');
+}
+
+{
+  // any message a phone sends winds the clock back
+  const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual' });
+  const p = G.onTurn(t.room);
+  t.room.seats[p].idleAt = Date.now() - 4.5 * 60e3;    // stopped on them, a while ago now
+  ok(t.Room.sweep(t.room, Date.now(), MS).warn.length === 1, 'the phone is asked');
+  ok(t.room.seats[p].warned, 'and the table remembers asking');
+  t.say(p, { t: 'here' });
+  ok(!t.room.seats[p].warned, 'it answers, and the table stops asking');
+  ok(!t.Room.sweep(t.room, later(1), MS).gone.length,
+     'a minute later the seat is still theirs: the answer wound the clock back');
+  ok(t.Room.sweep(t.room, later(6), MS).gone.length === 1, 'and the clock runs again from the answer');
+}
+
+{
+  // with real cards the table can hold nobody's hand, so it takes none away
+  const t = started(['Ann', 'Bob', 'Cal']);
+  t.room.seats[1].online = false;
+  const out = t.Room.sweep(t.room, later(60), MS);
+  ok(!out.gone.length && !t.room.seats[1].left, 'a quiet seat at a table with real cards keeps its hand');
+  ok(t.room.seats.length === 3, 'and its place');
+}
+
+{
+  // a game that is over is left exactly as it was played
+  const t = started(['Ann', 'Bob'], { deck: 'virtual', max: 1, pattern: 'down', ones: 1 });
+  t.bidAll(0);
+  while (t.room.phase !== 'done') {
+    const p = G.onTurn(t.room);
+    if (p === null) { t.settle(); continue; }
+    t.say(p, { t: 'play', card: t.room.play.hands[p][0] });
+  }
+  t.room.seats.forEach((x) => { x.online = false; });
+  t.Room.sweep(t.room, later(60), MS);
+  ok(t.room.seats.length === 2 && !t.room.seats.some((x) => x.left), 'nobody is put out of a finished game');
+}
+
 part('the tables this server is running');
 
 /* A table's four characters are the only door it has. A listing of them handed

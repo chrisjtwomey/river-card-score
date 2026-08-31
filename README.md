@@ -105,6 +105,19 @@ already played are that player's. So the seat stays, marked as gone, and
 auto-play takes its hand from there on. That phone can still come back to the seat
 from the front page, and it is a player's again.
 
+**A seat nobody is behind leaves the table.** A clock runs on a seat while
+nobody holds it — no window open on it — and while the table is stopped on it
+and can go no further. A phone that is open with nothing to do is never idle,
+however long it sits there: at a table with real cards a phone is touched to
+bid and not again, and the players are all sat around the table. A minute
+before the clock runs out, a phone that is here is asked **Still there?**, and
+any tap on it is the answer. When it runs out, a lobby seat simply goes — its
+phone lands back on the front page — and in a game the hand is handed to
+auto-play, exactly as if that player had pressed *Leave the game*. With real
+cards the table can hold nobody's hand, so nothing is taken from anybody.
+`IDLE_MS`, five minutes by default, is the clock; `IDLE_WARN_MS`, one minute,
+is how long before it the phone is asked. Either at nought turns it off.
+
 **The table plays on only while somebody is there to see it.** Auto-play and
 the bots are there so a game is not held up for a seat nobody is behind — not
 so that a game plays itself in an empty room. Somebody is a player still in the

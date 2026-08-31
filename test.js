@@ -84,6 +84,9 @@ function client(name, url) {
     // Where a copy has got to on its own, kept in order: it should arrive
     // without this socket having asked for it.
     else if (m.t === 'replayAt') c.moved.push(m);
+    // The table asking whether anybody is there. Kept as a count: it asks
+    // again every time the clock comes round.
+    else if (m.t === 'idle') c.idles = (c.idles || 0) + 1;
     else if (m.t === 'kicked') c.kicked = true;
     else if (m.t === 'left') c.left = true;
   });
@@ -1736,6 +1739,62 @@ async function bidRound(P) {
     ok(JSON.stringify(net2.urls) === '["https://table.example.com"]',
        'PUBLIC_URL is the only address offered, with no private ones  got ' + JSON.stringify(net2.urls));
     srv2.kill();
+  }
+
+  /* ---- a seat nobody is behind ----
+     The clock is the server's own, so it is proved against a real one: this
+     server gives a seat nine tenths of a second and asks after six. */
+  {
+    const port9 = PORT + 8;
+    const srv9 = spawn('node', [path + '/server.js'], {
+      env: { ...process.env, PORT: port9, NO_TLS: '1', DATA_DIR,
+             IDLE_MS: '900', IDLE_WARN_MS: '300', ...TUNED },
+      stdio: 'ignore',
+    });
+    await upAt(port9);
+    const url = `ws://127.0.0.1:${port9}/ws`;
+
+    // in the lobby, a window that closes is a seat that goes
+    {
+      const { h, P } = await tableOf(['Ann', 'Bob'], null, url);
+      P[1].ws.close(); await P[1].gone;
+      await okBy(() => h.state.seats.length === 1, 'a phone gone from the lobby loses its seat');
+      ok(h.state.seats[0].name === 'Ann' && h.state.seats[0].online,
+         'and the phone that is still there keeps its own');
+      h.ws.close(); P[0].ws.close();
+    }
+
+    // in a game, a phone that is here but does not answer its turn
+    {
+      const { h, P } = await tableOf(['Ann', 'Bob'],
+                                    { deck: 'virtual', max: 2, pattern: 'down', ones: 1 }, url);
+      h.send({ t: 'start' });
+      await until(() => h.state.phase === 'bid');
+      const turn = h.state.turn;
+      ok(turn === 1, 'the player left of the dealer bids first');
+      await okBy(() => P[1].idles > 0, 'the table asks that phone whether anybody is there');
+      ok(!h.state.seats[1].left, 'and takes nothing away while it is asking');
+      await okBy(() => h.state.seats[1].left, 'nobody answers, so auto-play takes the hand');
+      ok(P[1].left, 'and the phone is told the seat is not its any more');
+      ok(h.state.seats.length === 2, 'the seat keeps its column on the scorecard');
+      h.ws.close(); P[0].ws.close(); P[1].ws.close();
+    }
+
+    // and a phone that does answer keeps its seat, however long it sits there
+    {
+      const { h, P } = await tableOf(['Cal', 'Dee'],
+                                    { deck: 'virtual', max: 2, pattern: 'down', ones: 1 }, url);
+      P[1].ws.on('message', (d) => {
+        if (JSON.parse(d).t === 'idle') P[1].send({ t: 'here' });
+      });
+      h.send({ t: 'start' });
+      await until(() => P[1].idles >= 3, 5000);
+      ok(P[1].idles >= 3, 'a phone is asked again each time the clock comes round');
+      ok(!h.state.seats[1].left, 'and answering keeps the seat, however long the table waits');
+      h.ws.close(); P[0].ws.close(); P[1].ws.close();
+    }
+
+    srv9.kill();
   }
 
   /* ---- the addresses a phone cannot find for itself ----

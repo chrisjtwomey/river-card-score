@@ -30,6 +30,18 @@ const KEEP_GAMES = Math.max(1, Number(process.env.KEEP_GAMES) || 200);
 // is read back from. One rule, so a table cannot be dropped from one and held
 // by the other.
 const KEEP_HOURS = Math.max(0, Number(process.env.KEEP_HOURS) || 6);
+/* A length of time, in milliseconds, that may be set to nought to turn the
+   thing it times off altogether. `Number(x) || d` cannot do that: nought is
+   falsy, and every one of these means something at nought. */
+const span = (name, dflt) => {
+  const v = Number(process.env[name]);
+  return Number.isFinite(v) && v >= 0 ? v : dflt;
+};
+/* How long a seat may have nobody behind it -- no window open, or a window
+   that does not answer its turn -- before the table does something about it,
+   and how long before that the phone is asked whether anybody is there. */
+const IDLE_MS = span('IDLE_MS', 5 * 60e3);
+const IDLE_WARN_MS = span('IDLE_WARN_MS', 60e3);
 // How many lines of table talk a table keeps. Long enough to scroll back
 // through a game, short enough that every state carries it without a thought.
 const CHAT_KEEP = Math.max(1, Number(process.env.CHAT_KEEP) || 100);
@@ -248,7 +260,7 @@ function restore() {
     const room = Object.assign(Room.create(rec.code, rec.hostToken), rec, { sockets: new Set() });
     // Nobody is at the table until they connect to this server. A bot never
     // went anywhere.
-    room.seats.forEach((s) => { s.online = !!s.bot; });
+    room.seats.forEach((s) => { s.online = !!s.bot; s.idleAt = Date.now(); s.warned = false; });
     /* A trick was being held up for the table to read when the server stopped.
        It has been read by now, so the table moves on rather than sitting on a
        hold that nothing is left to end. */
@@ -368,7 +380,7 @@ const { handleDev, devHello } = Dev({
 });
 
 // Every message a seated socket may send, and who may send it, as a table.
-const { handleTable } = Messages({
+const { handleTable, tellGone, tellKicked } = Messages({
   DEV, CHAT_KEEP, G, A, send, fail, broadcast, Room, playCard, markPresence,
   addBot: (room) => Room.addBot(room, Bots.botName(room)),
   bidValue: Bots.bidFor,
@@ -569,6 +581,31 @@ function sayBusy() {
 // Often enough that a table wakes up promptly, rarely enough to be nothing.
 setInterval(sayBusy, Math.max(200, Math.min(30000, Math.round(BUSY_QUIET / 2)))).unref();
 sayBusy();
+
+/* A seat nobody is behind. The clock and what it means are the room's
+   (`Room.sweep`); the time, and the telling, are here.
+
+   It runs often enough that a minute's warning is a minute, and does nothing
+   at all on a table where everybody is playing. */
+const IDLE_TICK = Math.max(50, Math.min(15000, Math.round((IDLE_WARN_MS || IDLE_MS) / 4)));
+if (IDLE_MS) setInterval(() => {
+  const now = Date.now();
+  rooms.forEach((room) => {
+    const out = Room.sweep(room, now, { idle: IDLE_MS, warn: IDLE_WARN_MS });
+    // Still there? Only a phone that is here is asked, and only once.
+    out.warn.forEach((p) => {
+      const seat = room.seats[p];
+      room.sockets.forEach((w) => {
+        if (w.ctx && w.ctx.seatId === seat.id && w.ctx.role === 'player') {
+          send(w, { t: 'idle', in: IDLE_WARN_MS });
+        }
+      });
+    });
+    out.gone.forEach((g) => (g.how === 'kicked' ? tellKicked(room, g.seat) : tellGone(room, g.seat)));
+    if (out.gone.length) markPresence(room);
+    if (out.changed) broadcast(room);
+  });
+}, IDLE_TICK).unref();
 
 setInterval(() => {                       // drop idle rooms, memory and disk alike
   const cutoff = Date.now() - KEEP_HOURS * 3600e3;

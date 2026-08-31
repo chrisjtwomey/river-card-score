@@ -154,6 +154,10 @@ const Net = (function () {
       // Left on purpose. The seat is still this browser's to come back to, so
       // the table is remembered; the page just walks away from it.
       else if (m.t === 'left') { handlers.onLeft && handlers.onLeft(m); }
+      /* The table has been waiting on this phone and is about to give up on
+         it. Nothing has happened yet: it is a question, and any answer to it
+         is the answer. */
+      else if (m.t === 'idle') { handlers.onIdle && handlers.onIdle(m); }
       else if (m.t === 'kicked') { forget(m.code || (current() || {}).code); handlers.onKicked && handlers.onKicked(); }
     };
 

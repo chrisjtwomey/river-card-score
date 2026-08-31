@@ -404,6 +404,30 @@ const UI = (function () {
     });
   }
 
+  /* One button, and nothing to decide: the table has said something the player
+     has to see. It is the tap that matters -- whoever taps is at the table --
+     so there is nothing to answer and no answer to read. */
+  function tell(title, body, okLabel) {
+    let d = document.getElementById('ui-tell');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'ui-tell';
+      d.innerHTML = '<h2></h2><p class="hint"></p>' +
+        '<form method="dialog" class="confirm-actions">' +
+        '<button class="btn primary" value="ok">OK</button></form>';
+      document.body.appendChild(d);
+    }
+    if (!d.showModal) { window.alert(title + (body ? '\n\n' + body : '')); return Promise.resolve(); }
+    d.querySelector('h2').textContent = title;
+    d.querySelector('p').textContent = body || '';
+    d.querySelector('[value="ok"]').textContent = okLabel || 'OK';
+    if (d.open) return Promise.resolve();          // it is already up, and already answered
+    return new Promise((res) => {
+      d.addEventListener('close', () => res(), { once: true });
+      d.showModal();
+    });
+  }
+
   /* ---------- motion ---------- */
 
   const KEY_MOTION = 'river-card-score:motion:v1';
@@ -717,7 +741,7 @@ const UI = (function () {
   return { motion, setMotion, speed, setSpeed, ms, hold, paced, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
            keepAwake, measureTopbar,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
-           addressPicker, fullAddress, fx, ask,
+           addressPicker, fullAddress, fx, ask, tell,
            commonSettings, startZoom, zoomNow, setZoom,
            wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
 })();

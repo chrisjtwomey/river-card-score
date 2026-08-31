@@ -11,7 +11,8 @@ game.js            THE RULES. Pure functions over plain data. Runs in Node and i
                    browser (IIFE, `module.exports` or `window.Game`). No DOM, no sockets.
 lib/room.js        THE TABLE. Every verb that moves a game on, once: openRound, startGame,
                    seatBid, closeBidding, scoreRound, bumDeal, undo, toLobby, finishGame,
-                   waitingOn, publicState. Owns lib/deck.js. Never broadcasts.
+                   kickSeat, standDown, sweep, waitingOn, publicState. Owns lib/deck.js.
+                   Never broadcasts.
 lib/deck.js        The virtual dealer: dealHands, startPlay, refusal, putCard, settleTrick.
                    Arithmetic over the room; no sockets, no timers.
 lib/bots.js        The players the table provides: what a hand is worth, which card to play,
@@ -151,7 +152,7 @@ as they are. Drift between the modes is the thing being guarded against.
     with stand-in sockets; `t.say(who, msg)` sends one message as the server
     would and returns the line said back, or null. **A rule goes here.** No port,
     no socket, no clock: the whole file runs in well under a second.
-  - `test.js` — whole games over real WebSockets, ports 8899–8906. **What a
+  - `test.js` — whole games over real WebSockets, ports 8899–8907. **What a
     socket adds goes here**: a refusal reaching the phone that earned it, a
     change reaching every screen, presence, reconnect, and a table outliving its
     server. Nothing waits on the clock: `okBy(pred, msg)` polls until the table

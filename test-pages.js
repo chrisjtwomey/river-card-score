@@ -3241,7 +3241,10 @@ part('bidding for a seat that is not there, and leaving');
   };
   // ask() answers yes, and answers it now, so the tap can be followed
   const asked = [];
+  // and tell() is tapped away at once, the way a player taps it
+  const telling = [];
   const uiReal = { fx, ask: (t, b, l) => { asked.push({ t, b, l }); return { then: (f) => f(true) }; },
+                   tell: (t, b, l) => { telling.push({ t, b, l }); return { then: (f) => f() }; },
                    keepAwake: () => ({ then: () => {} }),
                    // a real list, so a page can add its own rows to it
                    commonSettings: () => [] };
@@ -3938,6 +3941,20 @@ part('bidding for a seat that is not there, and leaving');
     const gone = table({}); gone.seats[2].left = true;
     P.feed(gone);
     ok(P.pick('#playout-row').hidden === true, 'nor for a hand the table already plays');
+  }
+
+  {   // the table has been waiting on this phone, and asks whether anybody is there
+    const P = playPage(seed, '?c=TEST');
+    P.feed(table({}));
+    telling.length = 0;
+    P.socks[0].sent.length = 0;
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'idle', in: 60000 }) });
+    ok(telling.length === 1 && telling[0].t === 'Still there?',
+       'the table asks the phone it is waiting on whether anybody is there');
+    ok(/auto-play takes your hand/.test(telling[0].b),
+       'and says what happens if nobody answers  got ' + (telling[0] || {}).b);
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"here"}',
+       'the tap is the answer  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 
   {   // leaving

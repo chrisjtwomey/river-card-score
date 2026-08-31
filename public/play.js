@@ -50,6 +50,7 @@ function boot() {
       // felt, so a refusal went unseen exactly where it mattered.
       UI.fx.toast(msg, { err: true, ms: 4000 });
     },
+    onIdle: () => stillThere(),
     onKicked: () => { location.href = 'index.html'; },
     // You left. The seat is still yours to come back to, so it is remembered.
     onLeft: () => { location.href = 'index.html'; },
@@ -122,6 +123,20 @@ function renderAttention(r, me) {
   Round.playFor($('#playfor-row'), ST, v);
   const rows = ['#votebox', '#bidfor-pad', '#playfor-row', '#playout-row'];
   $('#attn-panel').hidden = rows.every((sel) => $(sel).hidden);
+}
+
+/* The table is stopped on this seat and has been for a while, so it asks
+   whether anybody is there. Any tap is the answer -- the clock is wound back
+   by every message a phone sends, and this dialog sends one. What happens if
+   nobody taps depends on the table: a hand dealt on the phones is one
+   auto-play can take, and a hand of real cards is not. */
+function stillThere() {
+  if (WATCH || mySeat() < 0) return;
+  UI.tell('Still there?',
+    Game.virtual(ST)
+      ? 'The table is waiting on you. In a minute, auto-play takes your hand.'
+      : 'The table is waiting on you. In a minute, the table stops and asks the host.',
+    "I'm here").then(() => Net.send({ t: 'here' }));
 }
 
 /* Leaving on purpose, which the table can tell from a phone going quiet: a
