@@ -2812,23 +2812,48 @@ part('the dev controls, on each kind of server');
     const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' },
                               { id: 's2', name: 'Bob', watch: 'w2' }]);
     P.socks[0].onmessage({ data: devState(false) });
-    ok(P.pick('#replay-panel').hidden === true, 'with no copy open there is nothing to show');
+    ok(P.pick('#replay-panel').hidden === true, 'with nothing picked there is nothing to show');
 
     P.socks[0].sent.length = 0;
     P.pick('#btn-replay').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"open"}',
-       'opening the panel opens a copy  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"games"}',
+       'opening the panel asks what there is to watch  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     const say = (over) => P.socks[0].onmessage({ data: JSON.stringify(Object.assign({
       t: 'replay', code: 'ZZZZ', of: 'AAAA', at: 0, n: 12, playing: false,
+      here: 'AAAA',
+      games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000, names: ['Cal', 'Dot'] }],
       seats: [{ id: 's1', name: 'Ann', watch: 'rw1' }, { id: 's2', name: 'Bob', watch: 'rw2' }],
       marks: [{ at: 1, i: 0, cards: 3, w: 'game' }, { at: 6, i: 0, cards: 3, w: 'bum' },
               { at: 11, i: null, w: 'end' }],
       where: 'Round 1 of 2 · 3 cards · Ann bids 1',
     }, over || {})) });
 
+    /* ---- what there is to watch ---- */
+    P.socks[0].onmessage({ data: JSON.stringify({
+      t: 'replay', code: null, here: 'AAAA',
+      games: [{ id: 'a1b2c3d4e5f6', code: 'BBBB', at: 1787000000000, names: ['Cal', 'Dot'] }] }) });
+    ok(P.pick('#replay-panel').hidden === false, 'the panel opens on what there is to watch');
+    ok(P.pick('#replay-bar').hidden === true, 'with nothing to move about in until one is picked');
+    const picks = P.pick('#replay-pick').querySelectorAll('button');
+    ok(picks.length === 2, 'this table, and the game on file  got ' + picks.length);
+    ok(/This table/.test(picks[0].textContent), 'the game this table is playing  got ' + picks[0].textContent);
+    ok(/BBBB/.test(picks[1].textContent),
+       'and one played at a table that may be long gone  got ' + picks[1].textContent);
+
+    P.socks[0].sent.length = 0;
+    picks[1].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"replay","do":"open","game":"a1b2c3d4e5f6"}',
+       'picking one opens a copy of that game  got ' + JSON.stringify(P.socks[0].sent[0]));
+    P.socks[0].sent.length = 0;
+    picks[0].fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"open"}',
+       'and this table needs no name  got ' + JSON.stringify(P.socks[0].sent[0]));
+
+    /* ---- a copy open: the rounds, and the steps inside one ---- */
     say();
-    ok(P.pick('#replay-panel').hidden === false, 'a copy opened shows the way about it');
+    ok(P.pick('#replay-bar').hidden === false, 'a copy opened shows the way about it');
     ok(P.pick('#replay-marks').children.length === 3,
        'a mark a round, and the finish  got ' + P.pick('#replay-marks').children.length);
     ok(P.pick('#replay-where').textContent === 'Round 1 of 2 · 3 cards · Ann bids 1',
@@ -2842,13 +2867,13 @@ part('the dev controls, on each kind of server');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"seek","at":6}',
        'pressing one takes the copy there  got ' + JSON.stringify(P.socks[0].sent[0]));
 
-    const steps = P.pick('#replay-bar').querySelectorAll('button');
+    const bar = P.pick('#replay-bar').querySelectorAll('button');
     P.socks[0].sent.length = 0;
-    steps.find((b) => b.textContent === '▶').fire('click');
+    bar.find((b) => b.textContent === '▶').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":1}',
-       'and it can be walked a point at a time  got ' + JSON.stringify(P.socks[0].sent[0]));
+       'it can be walked a point at a time  got ' + JSON.stringify(P.socks[0].sent[0]));
     P.socks[0].sent.length = 0;
-    steps.find((b) => b.textContent === '◀').fire('click');
+    bar.find((b) => b.textContent === '◀').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"step","by":-1}',
        'either way  got ' + JSON.stringify(P.socks[0].sent[0]));
 
@@ -2867,13 +2892,13 @@ part('the dev controls, on each kind of server');
        'and the same button stops it  got ' + JSON.stringify(P.socks[0].sent[0]));
     say();
 
-    // The panes are the copy's while one is open, and the table's after.
+    // The panes are the copy's while one is open, and the panel goes on Close.
     ok(P.pick('#seat-frames').children.length === 2, 'the panes follow the copy');
     P.socks[0].sent.length = 0;
-    steps.find((b) => b.textContent === 'Close').fire('click');
+    bar.find((b) => b.textContent === 'Close').fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"dev","action":"replay","do":"close"}',
        'Close lets the copy go  got ' + JSON.stringify(P.socks[0].sent[0]));
-    P.socks[0].onmessage({ data: JSON.stringify({ t: 'replay', code: null, of: 'AAAA' }) });
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'replay', code: null, shut: true }) });
     ok(P.pick('#replay-panel').hidden === true, 'and the panel goes with it');
   }
 

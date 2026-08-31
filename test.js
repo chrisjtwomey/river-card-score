@@ -753,6 +753,25 @@ async function bidRound(P) {
     await okBy(() => d.replay.at === d.replay.marks[0].at, 'and it can be taken to a round');
     ok(/Round|finish/i.test(d.replay.where || ''),
        'which says what is on the table  got ' + d.replay.where);
+    /* A game on file replays with no table of its own. This one's table is
+       this one, but what is read is the game's kept trail, by its id -- so a
+       game whose table went hours ago is watched the same way. */
+    const filed = d.state.gameId;
+    d.send({ t: 'dev', action: 'replay', do: 'games' });
+    await okBy(() => d.replay && d.replay.games, 'the page is told what there is to watch');
+    ok(d.replay.games.some((g) => g.id === filed),
+       'the game just played is on the list  got ' + JSON.stringify(d.replay.games.map((g) => g.id)));
+    ok(d.replay.here === d.state.code, 'and so is the table itself');
+
+    d.send({ t: 'dev', action: 'replay', do: 'open', game: filed });
+    await okBy(() => d.replay.code && d.replay.game === filed,
+       'a game on file opens by its own name, not its table\'s');
+    ok(d.replay.of === d.state.code, 'and says which table it was played at');
+    ok(d.replay.marks.length === rounds + 1, 'with every round of it');
+    d.send({ t: 'dev', action: 'replay', do: 'open', game: 'ffffffffffff' });
+    await okBy(() => /nothing was written down about that game/i.test(d.last()),
+       'a game nothing was written down about is refused');
+
     d.send({ t: 'dev', action: 'replay', do: 'close' }); await d.rt();
 
     d.send({ t: 'dev', action: 'goto', round: 1, phase: 'bid' }); await d.rt();

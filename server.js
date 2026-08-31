@@ -354,7 +354,7 @@ function dropRoom(code) {
 // The dev controls. Nothing here is reachable unless a 'dev' message asks for
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello } = Dev({
-  DEV, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
+  DEV, G, createRoom, roomOf, listTables, listGames, endTable, attach, send, fail, broadcast, setAvatar,
   Room, Tables, Bots, Trail, Replay, dropRoom, paceReplay,
 });
 
