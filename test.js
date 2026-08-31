@@ -80,6 +80,7 @@ function client(name, url) {
     else if (m.t === 'tables') c.tables = m.tables;
     else if (m.t === 'seat') c.seat = m;
     else if (m.t === 'stateRaw') c.raw = m.record;
+    else if (m.t === 'handsRaw') c.hands = m.hands;
     else if (m.t === 'replay') { c.replay = m; c.replays += 1; }
     else if (m.t === 'ways') c.ways = m;
     // Where a copy has got to on its own, kept in order: it should arrive
@@ -949,15 +950,24 @@ async function bidRound(P) {
     d.send({ t: 'dev', action: 'patch',
              patch: { hands: [['AS', 'KH', 'AS', 'ZZ'], ['AS', '2C'], [], []] } });
     await d.rt();
+    /* A hand is a secret, so no state carries one: the panel asks for them by
+       a door of their own, and a dev server's alone. */
+    ok(d.state.play && !('hands' in d.state.play),
+       'the state a screen is sent carries no hands  got ' + Object.keys(d.state.play || {}));
+    d.send({ t: 'dev', action: 'hands' });
+    await okBy(() => d.hands && d.hands.length === 4,
+       'and the panel asks for them by a door of their own  got ' + JSON.stringify(d.hands));
+    ok(JSON.stringify(d.hands[0]) === '["AS","KH"]',
+       'a card said twice is held once, and what is not a card is dropped  got '
+       + JSON.stringify(d.hands[0]));
+    ok(JSON.stringify(d.hands[1]) === '["2C"]',
+       'and a card an earlier seat already holds is not dealt again  got '
+       + JSON.stringify(d.hands[1]));
     d.send({ t: 'dev', action: 'state' });
     await okBy(() => d.raw && d.raw.play && d.raw.play.hands,
-       'the record carries the hands  got ' + JSON.stringify(d.raw && d.raw.play));
-    ok(JSON.stringify(d.raw.play.hands[0]) === '["AS","KH"]',
-       'a card said twice is held once, and what is not a card is dropped  got '
-       + JSON.stringify(d.raw.play.hands[0]));
-    ok(JSON.stringify(d.raw.play.hands[1]) === '["2C"]',
-       'and a card an earlier seat already holds is not dealt again  got '
-       + JSON.stringify(d.raw.play.hands[1]));
+       'the record carries them too  got ' + JSON.stringify(d.raw && d.raw.play));
+    ok(JSON.stringify(d.raw.play.hands) === JSON.stringify(d.hands),
+       'and the two agree  got ' + JSON.stringify(d.raw.play.hands));
     d.send({ t: 'dev', action: 'patch', patch: { idx: 1, phase: 'bid' } });
     await okBy(() => d.state.idx === 1 && d.state.phase === 'bid', 'and back to where the card was');
 

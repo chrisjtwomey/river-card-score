@@ -4203,6 +4203,15 @@ part('the dev controls, on each kind of server');
        + P.pick('#subtitle').textContent);
     say();
 
+    /* Every forcing control on a copy acts on the copy: the page has no table
+       while it is watching one, so the flag goes on once rather than at each
+       of the places a control sends. The cards a picker draws from are one of
+       them -- a hand is a secret, so they never come in a state. */
+    P.socks[0].sent.length = 0;
+    P.pick('#prows').querySelectorAll('input').find((el) => el.type === 'number').fire('change');
+    ok(P.socks[0].sent.length > 0 && P.socks[0].sent.every((o) => o.replay === true),
+       'a copy takes every one of them  got ' + JSON.stringify(P.socks[0].sent));
+
     /* Each pane holds a socket on the copy, so a step reaches it on its own.
        Throwing them away at every press reloaded every frame -- and closed the
        copy's last window, which used to take the copy with it. */
@@ -4296,10 +4305,13 @@ part('the dev controls, on each kind of server');
        A deck is fifty-two cards and no card is in two places, so the picker is
        the deck itself: this seat's cards marked, another seat's shut with a
        line saying whose, and the rest there to be taken. */
+    /* A hand is a secret: the state a screen is sent carries how many cards a
+       seat holds and never which, so the picker asks for them by a door of
+       their own and draws nothing until they come. */
     P.socks[0].onmessage({ data: devState(true, {
       phase: 'tricks', cfg: { max: 3, pattern: 'down', ones: 2, deck: 'virtual' },
       seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Bob' }],
-      play: { turn: 0, trick: [], hands: [['AS', 'KH'], ['2C', 'QD']] },
+      play: { turn: 0, trick: [], counts: [2, 2] },
     }) });
     const tools0 = () => P.pick('#prows').querySelectorAll('.ptools')[0];
     const word = (w) => tools0().querySelectorAll('button').find((b) => b.textContent === w);
@@ -4310,9 +4322,16 @@ part('the dev controls, on each kind of server');
     const openIt = word('Hand \u25be');
     ok(!!openIt, 'and offers the cards themselves');
     ok(!P.pick('#prows').querySelector('.phand'), 'shut until it is asked for');
+    P.socks[0].sent.length = 0;
     openIt.fire('click');
+    ok(P.socks[0].sent.some((o) => o.action === 'hands'),
+       'opening it asks the table for the cards  got ' + JSON.stringify(P.socks[0].sent));
+    ok(!P.pick('#prows').querySelector('.phand'),
+       'and draws nothing until they come: the state never carried them');
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'handsRaw',
+      hands: [['AS', 'KH'], ['2C', 'QD']] }) });
     const pick2 = P.pick('#prows').querySelector('.phand');
-    ok(!!pick2, 'the picker opens');
+    ok(!!pick2, 'the picker opens on the cards that came back');
     ok(pick2.querySelectorAll('.phand-row').length === 4, 'a line a suit  got '
        + pick2.querySelectorAll('.phand-row').length);
     const cards = pick2.querySelectorAll('.btn.card');
@@ -4339,6 +4358,17 @@ part('the dev controls, on each kind of server');
       .querySelectorAll('button').find((b) => b.textContent === 'Hand \u25be').fire('click');
     ok(P.pick('#prows').querySelectorAll('.phand').length === 1,
        'one hand is open at a time  got ' + P.pick('#prows').querySelectorAll('.phand').length);
+
+    /* The table moving under an open picker asks again: what it draws has to
+       be the hand now, not the hand the picker opened on. */
+    P.socks[0].sent.length = 0;
+    P.socks[0].onmessage({ data: devState(true, {
+      phase: 'tricks', cfg: { max: 3, pattern: 'down', ones: 2, deck: 'virtual' },
+      seats: [{ id: 's1', name: 'Ann' }, { id: 's2', name: 'Bob' }],
+      play: { turn: 1, trick: [], counts: [1, 2] },
+    }) });
+    ok(P.socks[0].sent.some((o) => o.action === 'hands'),
+       'the table moving asks for the cards again  got ' + JSON.stringify(P.socks[0].sent));
 
     // With real cards the hand is on the table, and nothing here knows it.
     P.socks[0].onmessage({ data: devState(true, { phase: 'tricks' }) });

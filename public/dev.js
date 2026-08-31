@@ -114,6 +114,12 @@ function connect() {
       if (WAYS) WAYS.tables = m.tables || [];
       renderTables($('#tablelist'), m.tables || []);
       if (choosing()) renderWays();
+    } else if (m.t === 'handsRaw') {
+      // Whose they are matters: a copy's hands must not be drawn over a table's.
+      HANDS = m.hands || null;
+      HANDS_AT = m.replay ? 'r:' + (REPLAY ? REPLAY.code : '') : 't:' + CODE;
+      delete $('#prows').dataset.key;
+      renderPlayers();
     } else if (m.t === 'stateRaw') {
       // The record to edit. Never over what is being typed: Reload asks again.
       stateReading = false;
@@ -142,6 +148,7 @@ function connect() {
       // this is a copy arriving, and the box beside it starts empty.
       if (stateBusy) { stateBusy = false; askState(); }
       else if (replaying() && !stateLoaded) askState();
+      askHands();
     } else if (m.t === 'replayAt') {
       /* A copy playing itself, saying where it has got to. Only the place and
          the table move: the rounds and the points of the round are the trail,
@@ -165,6 +172,9 @@ function connect() {
          happen quietly. A read already asked for is not the table moving. */
       if (stateLoaded && !stateReading && !$('#state-panel').hidden) stateStale(true);
       ST = m;
+      // The hand under an open picker has to be the hand now, not the hand
+      // the picker opened on.
+      askHands();
       // Only a dev server has tables to hand out, so only a dev server is asked.
       if (ST.dev && !polling) { polling = true; askTables(); setInterval(askTables, 5000); }
       paint();
@@ -202,7 +212,7 @@ const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
    has no table when it is watching one -- so the flag goes on here rather than
    at each of the fifteen places a control sends. Every other action is asked
    before there is a copy, or is not a copy's at all. */
-const FORCES = ['patch', 'state'];
+const FORCES = ['patch', 'state', 'hands'];
 const act = (action, extra) => send(Object.assign(
   { t: 'dev', action },
   (replaying() && FORCES.includes(action)) ? { replay: true } : null,
@@ -230,6 +240,7 @@ function toWays(msg) {
   SEATS = [];
   onTable = false;
   stateLoaded = false;
+  HANDS = null; HANDS_AT = ''; HAND_OPEN = null;
   topKey = seatKey = '';
   writeHash();
   err(msg || '');
@@ -869,7 +880,7 @@ function renderPlayers() {
     `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}` +
     `/${s.online}/${phoneOff(s.id)}`).join('|') +
     `@${S.idx}:${S.phase}:${invent}:${Game.awaySeat(S)}:${S.play ? S.play.turn : ''}:${!!S.vote}` +
-    `:${HAND_OPEN}:${S.play && S.play.hands ? S.play.hands.map((h) => (h || []).join('')).join('/') : ''}`;
+    `:${HAND_OPEN}:${(handsNow() || []).map((h) => (h || []).join('')).join('/')}`;
   if (box.dataset.key === key || box.contains(document.activeElement)) return;
   box.dataset.key = key;
   box.innerHTML = '';
@@ -943,12 +954,12 @@ function renderPlayers() {
     // What the seat is, in a word. The verbs are the row under this one.
     const how = document.createElement('span');
     how.className = 'pstate';
-    const hand = (S.play && S.play.hands && S.play.hands[p]) || null;
+    const held = (S.play && S.play.counts) ? S.play.counts[p] : null;
     how.textContent = s.left ? 'the table has this hand'
       : s.bot ? 'a bot'
       : phoneOff(s.id) ? 'phone off'
       : s.online ? 'at the table' : 'quiet';
-    if (hand) how.textContent += ` \u00b7 ${hand.length} cards`;
+    if (held !== null && held !== undefined) how.textContent += ` \u00b7 ${held} cards`;
 
     row.append(name, host, dealer, check(!!s.bot, 'bot'),
                num('bids', r && r.bids ? r.bids[p] : null),
@@ -958,10 +969,24 @@ function renderPlayers() {
     const seat = document.createElement('div');
     seat.className = 'pseat';
     seat.append(row, seatTools(s, p, S));
-    if (HAND_OPEN === s.id && S.play && S.play.hands) seat.appendChild(handEditor(s, p, S));
+    if (HAND_OPEN === s.id && handsNow()) seat.appendChild(handEditor(s, p, S));
     box.appendChild(seat);
   });
 }
+
+/* The cards in every hand, as last read. They are never in the state a screen
+   is sent -- a hand is a secret -- so the panel asks for them by a door of
+   their own, and asks again whenever the table moves under an open picker.
+   `HANDS_AT` is the table they belong to, so a copy's are never drawn over a
+   table's. */
+let HANDS = null;
+let HANDS_AT = '';
+const handsKey = () => (replaying() ? 'r:' + REPLAY.code : 't:' + CODE);
+function askHands() {
+  if (!HAND_OPEN || !DEVSRV) return;
+  act('hands');
+}
+const handsNow = () => (HANDS_AT === handsKey() ? HANDS : null);
 
 /* The seat whose hand is open for editing, or null. One at a time, because a
    picker is fifty-two buttons and every seat carrying one would be four
@@ -976,7 +1001,7 @@ let HAND_OPEN = null;
 function handEditor(s, p, S) {
   const box = document.createElement('div');
   box.className = 'phand';
-  const hands = (S.play && S.play.hands) || [];
+  const hands = handsNow() || [];
   const mine = new Set(hands[p] || []);
   const whose = new Map();
   hands.forEach((h, q) => (h || []).forEach((c) => { if (q !== p) whose.set(c, q); }));
@@ -1091,11 +1116,16 @@ function seatTools(s, p, S) {
   /* The hand, where there is one to hold and a server that will take it. With
      real cards the hand is on the table, and nothing here knows what is in
      it. */
-  if (DEVSRV && !replaying() && Game.virtual(S) && S.play && S.play.hands) {
+  if (DEVSRV && Game.virtual(S) && S.play && S.play.counts) {
     const open = HAND_OPEN === s.id;
     add(open ? 'Hand \u25b4' : 'Hand \u25be',
         `The cards ${s.name} holds, dealt by hand`,
-        () => { HAND_OPEN = open ? null : s.id; delete $('#prows').dataset.key; renderPlayers(); },
+        () => {
+          HAND_OPEN = open ? null : s.id;
+          delete $('#prows').dataset.key;
+          renderPlayers();
+          askHands();                 // the cards themselves are a door of their own
+        },
         { on: open });
   }
   return box;

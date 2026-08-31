@@ -805,6 +805,21 @@ part('who may send what, and when');
   ok(t.say(0, { t: 'seatMove', id: t.room.seats[1].id, to: 0 }) === null, 'a seat is dragged to a new place');
   ok(t.room.seats.map((s) => s.name).join() === 'Bob,Ann', 'and lands there');
   ok(t.room.captainId === t.room.seats[1].id, 'and dragging it does not change who runs the table');
+  /* A hand is a secret, and that is the deck's rule: the state every screen is
+     sent says how many cards a seat holds and never which. The dev page's hand
+     picker is built on this -- it cannot read the cards off a state, so it has
+     to ask for them by a door of their own. */
+  {
+    const h = table().sit(['Ann', 'Bob', 'Cal'])
+      .rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
+    h.Room.startGame(h.room);
+    const pub = h.Room.publicState(h.room);
+    ok(pub.play && !('hands' in pub.play),
+       'no state carries the hands  got ' + Object.keys(pub.play || {}).join(','));
+    ok(JSON.stringify(pub.play.counts) === '[3,3,3]',
+       'only how many each seat holds  got ' + JSON.stringify(pub.play.counts));
+  }
+
   /* The bum-deal vote's counting, and a line in the talk: both are room verbs
      because two doors reach each. A phone answers a vote and says a line; the
      dev page does both for a seat, and neither writes the rule out twice. */
