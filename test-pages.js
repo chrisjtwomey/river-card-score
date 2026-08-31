@@ -3529,8 +3529,9 @@ part('the dev controls, on each kind of server');
     /* ---- a copy open: the band it takes over ---- */
     say();
     ok(P.pick('#replay-run').hidden === false, 'a copy opened brings the transport up');
-    ok(P.pick('#games-tools').hidden === false, 'and the games sit where the tables sat');
-    ok(P.pick('#tables-tools').hidden === true, 'which have gone: a copy is not a table to hop to');
+    ok(P.pick('#tables-tools').hidden === true, 'the tables go: a copy is not a table to hop to');
+    ok(P.pick('#gamelist').children.length === 0,
+       'and no second list of games: one is picked on the way in, and that is where another is');
     ok(P.pick('#shots-dev').hidden === true, 'nothing here invents anything');
     ok(P.pick('#run-tools').hidden === true, 'and a game already played is not stopped, it is stepped');
     ok(P.pick('#goto-phase').hidden === true, 'nor is it sent to a phase');

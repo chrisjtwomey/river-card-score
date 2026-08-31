@@ -57,8 +57,7 @@
   .waylist .trow{width:100%;flex:none;padding:9px 12px;font-size:13px;gap:10px}
   .waylist .trow .tcode{font-size:14px}
 
-  /* A game on file: what it was, in two lines. The same row goes in the band's
-     strip while one is being watched, where the second line is trimmed off. */
+  /* A game on file: what it was, in two lines. */
   .grow{display:flex;flex-direction:column;align-items:stretch;gap:3px;flex:none;
     padding:9px 12px;text-align:left;font-size:13px;line-height:1.35}
   .waylist .grow{width:100%}
@@ -69,8 +68,6 @@
   .grow .gwho{font-size:11px;color:var(--ink-dim);overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap}
   .grow.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
-  #gamelist .grow{padding:5px 9px;font-size:12px}
-  #gamelist .grow .gwho,#gamelist .grow .gwhen{display:none}
 
   /* The scrubber: the whole card as cells. Click a round and the game is
      played up to it; the ends are the lobby and the finish. */
@@ -183,12 +180,6 @@
         <span class="bandsep"></span>
         <button class="btn primary" id="btn-rebuild" type="button"
           title="Another table the same size">New table</button>
-      </span>
-      <!-- Watching: the games to hop between, where the tables are. -->
-      <span class="cluster" id="games-tools" hidden>
-        <span class="bandsep"></span>
-        <span class="bandlbl">Games</span>
-        <div class="tablestrip" id="gamelist"></div>
       </span>
     </div>
     <div class="bandrow">

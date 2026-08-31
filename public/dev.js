@@ -476,14 +476,17 @@ function standInAvatar(name, i) {
 
 /* ---------- watching the game again ---------- */
 
-/* The copy, and the way about it. It takes the band the table has: the games
-   on file where the tables are, the rounds of the game where the scorecard is,
-   and the transport where Pause and Step are. Nothing here invents anything --
-   a replay puts back what happened, on a copy of its own -- so the one-shots
-   are away and the panels only read.
+/* The copy, and the way about it. It takes the band the table has: the rounds
+   of the game where the scorecard is, and the transport where Pause and Step
+   are. Nothing here invents anything -- a replay puts back what happened, on a
+   copy of its own -- so the one-shots are away and the panels only read.
 
    The rounds of a replay are drawn into the scrubber the card uses, because
-   they are the same thing: a strip of rounds, one of them where you are. */
+   they are the same thing: a strip of rounds, one of them where you are.
+
+   There is no way from one game to another here. A game is picked on the way
+   in and then watched; picking another is going back to the way in. A second
+   list of what the card already lists is a second place to keep right. */
 const replayAsk = (o) => send(Object.assign({ t: 'dev', action: 'replay' }, o));
 
 /* Every kind of point, as one mark and one plain word. A game is a sequence of
@@ -576,19 +579,18 @@ function renderMarks() {
    file. A game's own table may be long gone -- its trail is kept beside its
    scorecard -- so this is not only one table's.
 
-   `info` is whatever knows: the way-in card asks the server for it before
-   anything is open, and the band reads it off the copy it is already on. */
+   `info` is what the server said there was: the way-in card asks for it
+   before anything is open, which is the only place this list is drawn. */
 function renderGames(box, info) {
   if (!box || !info) return;
   const games = info.games || [];
-  const key = (info.here || '-') + ':' + games.map((g) => g.id).join(',')
-    + '@' + (info.game || info.code || '');
+  const key = (info.here || '-') + ':' + games.map((g) => g.id).join(',');
   if (box.dataset.key === key) return;
   box.dataset.key = key;
   box.innerHTML = '';
-  const row = (code, said, when, who, why, on, go) => {
+  const row = (code, said, when, who, why, go) => {
     const b = document.createElement('div');
-    b.className = 'btn grow' + (on ? ' on' : '');
+    b.className = 'btn grow';
     b.title = why;
     const top = document.createElement('div');
     top.className = 'gtop';
@@ -617,14 +619,13 @@ function renderGames(box, info) {
   };
   if (info.here) {
     row(info.here, 'playing now', '', '', 'The game this table is playing now',
-        !!info.code && !info.game, () => replayAsk({ do: 'open' }));
+        () => replayAsk({ do: 'open' }));
   }
   games.forEach((g) => {
     const names = g.names || [];
     row(g.code, wonBy(g), gameWhen(g.at),
         `${names.length} players · ${names.join(', ')}`,
-        'Watch this game again', info.game === g.id,
-        () => replayAsk({ do: 'open', game: g.id }));
+        'Watch this game again', () => replayAsk({ do: 'open', game: g.id }));
   });
   if (!info.here && !games.length) {
     const p = document.createElement('p');
@@ -654,7 +655,6 @@ function gameWhen(at) {
 // The band, on a game that has already happened.
 function renderReplay() {
   if (!replaying()) return;
-  renderGames($('#gamelist'), REPLAY);
   renderMarks();
   renderSteps();
   const play = $('#btn-play');
@@ -1048,7 +1048,7 @@ function applyGates() {
   ['#tables-tools', '#shots-dev', '#shots-sep'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = !DEVSRV || going;
   });
-  ['#games-tools', '#replay-run', '#steps-row'].forEach((sel) => {
+  ['#replay-run', '#steps-row'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = !going;
   });
   // The scrubber is the rounds either way; only a table is sent to one.
