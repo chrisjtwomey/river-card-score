@@ -3437,6 +3437,35 @@ part('the dev controls, on each kind of server');
          'pressing one opens the page on it  got ' + JSON.stringify(P.socks[0].sent[0]));
     }
 
+    {   /* A server older than this page does not know the question, so nothing
+           will answer it. The card is still drawn off what the page knows on
+           its own: a blank panel with a line and no doors is no way in. */
+      const P = loadPage('dev.js', {}, '', {});
+      P.pick('#state-panel').hidden = true;
+      P.start();
+      P.socks[0].onopen();
+      P.socks[0].onmessage({ data: JSON.stringify({
+        t: 'error', msg: 'Open a table first.' }) });
+      ok(P.pick('#ways').hidden === false, 'the way in is still the page');
+      ok(P.pick('#ways').querySelectorAll('.way').length === 3,
+         'with its three doors  got ' + P.pick('#ways').querySelectorAll('.way').length);
+      ok(P.pick('#ways').querySelectorAll('.way')[1].querySelectorAll('input').length === 2,
+         'and the one that still works there asking for a code and a key');
+      ok(P.pick('#dev-err').textContent === 'Open a table first.',
+         'the refusal stays under it  got ' + P.pick('#dev-err').textContent);
+    }
+
+    {   /* A line earned before the question does not outlive its answer. */
+      const P = cold(false);
+      P.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'no such thing' }) });
+      ok(P.pick('#dev-err').textContent === 'no such thing', 'a refusal is put up');
+      P.socks[0].sent.length = 0;
+      P.pick('#ways').querySelectorAll('.way')[1].querySelector('.btn').fire('click');
+      ok(P.pick('#dev-err').textContent === 'a table needs its code',
+         'and pressing a door with nothing in it earns its own  got '
+         + P.pick('#dev-err').textContent);
+    }
+
     {   // a code in the address is the question already answered
       const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }]);
       ok(P.pick('#ways').hidden === true, 'a code in the address opens straight onto that table');
@@ -3447,6 +3476,23 @@ part('the dev controls, on each kind of server');
          'and ⌂ puts the question back  got ' + JSON.stringify(P.socks[0].sent[0]));
       ok(P.pick('#ways').hidden === false, 'the way in comes back');
       ok(P.pick('#band').hidden === true, 'and the controls go');
+
+      /* A line earned before the question is answered by it, so it goes with
+         the answer; a line that is the reason for the question stays. */
+      P.pick('#dev-err').textContent = 'something older';
+      P.socks[0].onmessage({ data: JSON.stringify({
+        t: 'ways', srv: false, tables: [], here: null, games: [] }) });
+      ok(P.pick('#dev-err').textContent === '', 'an answered question leaves no line behind');
+
+      P.socks[0].onmessage({ data: JSON.stringify({
+        t: 'hello', role: 'host', code: 'AAAA', token: 'th', dev: true, srv: false,
+        stand: false, seats: [] }) });
+      P.socks[0].onmessage({ data: JSON.stringify({ t: 'error', msg: 'That table is gone.' }) });
+      ok(P.pick('#ways').hidden === false, 'a table that goes puts the question back');
+      P.socks[0].onmessage({ data: JSON.stringify({
+        t: 'ways', srv: false, tables: [], here: null, games: [] }) });
+      ok(P.pick('#dev-err').textContent === 'That table is gone.',
+         'and the reason for it outlives the answer  got ' + P.pick('#dev-err').textContent);
     }
   }
 

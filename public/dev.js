@@ -26,6 +26,10 @@ let stateLoaded = false;         // a record is in the box, read at some moment
 let stateReading = false;        // and one was asked for, so a change is not news
 let REPLAY = null;               // the copy being watched, and where it stands
 let WAYS = null;                 // what this server will take, and what to open with it
+/* The question, while it is on the wire, and what its answer does to the line
+   under the card: 'clear' for a line earned before it was asked, 'keep' for one
+   that is the reason it is being asked again. */
+let waysOut = false;
 let WANT = null;                 // a game named in the address, to open on arrival
 
 // A copy is only being watched once one has been made. Until then the games
@@ -72,7 +76,7 @@ function connect() {
   ws.onopen = () => {
     if (CODE) return act('open', { code: CODE, token: HOST_TOKEN });
     if (WANT) return replayAsk({ do: 'open', game: WANT });
-    act('ways');
+    askWays();
   };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
@@ -80,6 +84,8 @@ function connect() {
       /* What this server will take, and what there is to open with it. It
          comes before anything is drawn, because the way in is what it offers. */
       WAYS = m;
+      if (waysOut === 'clear') err('');   // what was refused before this is answered
+      waysOut = false;
       DEVSRV = m.srv !== false;
       paint();
     } else if (m.t === 'hello') {
@@ -154,6 +160,16 @@ function connect() {
       if (ST.dev && !polling) { polling = true; askTables(); setInterval(askTables, 5000); }
       paint();
     } else if (m.t === 'error') {
+      /* The question itself refused. A server older than this page does not
+         know it, so nothing will answer: draw the card off what the page knows
+         on its own rather than leave a panel with a line and no doors. The one
+         door that still works there is a code and a host key, typed in. */
+      if (waysOut) {
+        waysOut = false;
+        WAYS = WAYS || { srv: false, tables: [], here: null, games: [] };
+        paint();
+        return err(m.msg);
+      }
       /* The way in did not work out: a server that restarted, a game that
          ended, a code that was never here. Let it go and ask again. */
       if ((!onTable && CODE) || /table is gone/i.test(m.msg)) {
@@ -195,9 +211,12 @@ function toWays(msg) {
   topKey = seatKey = '';
   writeHash();
   err(msg || '');
-  act('ways');
+  askWays(!!msg);
   paint();
 }
+
+// The question, and the note that it is out: whatever comes back is its answer.
+function askWays(keep) { waysOut = keep ? 'keep' : 'clear'; act('ways'); }
 
 /* ---------- previews ---------- */
 
