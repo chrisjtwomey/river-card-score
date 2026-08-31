@@ -22,11 +22,18 @@
    the state, and every move goes back as a message.
 
    How a card moves: the transform on the style is where the card belongs, and
-   a CSS transition carries it there. Nothing on this table is animated with
-   the Web Animations API. A round lasts minutes, and a card that collects
-   animations loses its third dimension -- the back stops facing the room and a
-   blank front is painted instead. A style and a transition cannot pile up, and
-   a move interrupted half way carries on from where the card actually is.
+   a CSS transition carries it there. A round lasts minutes, and a card that
+   collects animations loses its third dimension -- the back stops facing the
+   room and a blank front is painted instead. A style and a transition cannot
+   pile up, and a move interrupted half way carries on from where the card
+   actually is.
+
+   The two ways round the table are the exception. A trick gathered in and a
+   pile unwound are each drawn as a run of places along an arc, and a
+   transition cannot draw a curve. The gather does not fill: where the card
+   belongs is written to the style before it sets off, so the arc is only the
+   way it gets there and the card is left owing nothing when it arrives. The
+   unwind does fill, because those cards are being put away for good.
 */
 const Felt = (function () {
   const { cardEl, tf, faceOf, parts } = Stage;
@@ -42,6 +49,12 @@ const Felt = (function () {
      real table while it is still being read, so this is spent inside
      TOOK_HOLD and the round is no slower for it. */
   const SWEEP = 420;
+
+  /* And the floor under one card's share of it: what the transition on a
+     .dcard takes, the pace every other card on this table moves at. The seat
+     next to the winner has the shortest way round, and it still has to read
+     as a card going round it. */
+  const CARD_MOVE = 140;
 
   /* How long what the round paid stands before the table is put away for the
      next one. A figure a player has to catch inside two seconds is a figure
@@ -62,6 +75,11 @@ const Felt = (function () {
      carries it, and how finely that arc is drawn. Half a turn is enough to
      read as going round the table and not as crossing it. */
   const ARC = 760, ARC_SWEEP = Math.PI, ARC_STEPS = 14;
+  /* And the hand both arcs are drawn with: away slowly, round, and down onto
+     the spot. A trick gathered in and a pile unwound are the same movement in
+     opposite directions, so they are drawn the same way. */
+  const ARC_EASE = 'cubic-bezier(.35,.05,.3,1)';
+  const TURN = Math.PI * 2;
   /* And how far apart two cards set off. They go one after another in one
      stream rather than a trick at a time in clumps: eight cards of a trick
      leaving together is a block of cards moving, not cards. Close enough to
@@ -225,13 +243,18 @@ const Felt = (function () {
       : tf(g.seat.x + spot.x, spot.y, tilt, 0, 1);
   }
 
+  // How far a card played into a seat is turned: by where that seat stands,
+  // so a glance down the table says whose it is.
+  const trickTilt = (g, p) => (g.R.at(p).x / (g.R.rx || 1)) * 12;
+
   /* A card played lies on the one the deck turned, pushed a little toward
      whoever played it, so a glance says whose it is and a tap can separate
-     them. */
+     them. The spots make a circle round the middle of the table, and that
+     circle is the way a trick comes in when it is gathered. */
   function trickAt(g, p, face) {
-    const s = g.R.at(p), d = dirTo(g, p), r = trickRing(g);
+    const d = dirTo(g, p), r = trickRing(g);
     return tf(d.x * r, g.R.cy + d.y * r,
-              (s.x / (g.R.rx || 1)) * 12, face || 0, Stage.seatScale(g.n));
+              trickTilt(g, p), face || 0, Stage.seatScale(g.n));
   }
 
   /* A card lifted off a seat's won pile and stood up where that seat sits.
@@ -1277,7 +1300,17 @@ const Felt = (function () {
      clockwise -- which is the way the seats run, and the order the cards were
      played -- and they meet on the winner's spot. Only then does the stack go
      to the pile beside them. A card that crosses the middle to get there says
-     nothing about who won; a card that comes round the table does. */
+     nothing about who won; a card that comes round the table does.
+
+     The way round is drawn rather than stepped from seat to seat, the same as
+     the putting away: a card set down at each seat in turn travels in straight
+     lines and reads as hopping, and this is meant to read as coming round the
+     table.
+
+     Where the card belongs is written to the style first and nothing fills
+     forwards, so the arc is only the way it gets there. A card gathered has a
+     round still to play -- it goes to a pile, and comes back out when the
+     table is put away -- and it must be left owing nothing when it arrives. */
   function sweepIn(taken, sig) {
     if (!T || still() || !UI.fx.on()) return;
     const g = geom(), n = ST.seats.length, win = taken.winner;
@@ -1290,20 +1323,48 @@ const Felt = (function () {
     });
     if (!legs.length) return;
     sweeping = sig;
-    // The longest way round takes the whole sweep, whatever the table size:
-    // eight seats must not take twice as long to come in as four.
+    /* The longest way round takes the whole sweep, whatever the table size:
+       eight seats must not take twice as long to come in as four. The nearer
+       seats have proportionally less to do, so they all set off together and
+       come in in the order they sit. */
     const most = legs.reduce((a, l) => Math.max(a, l.steps), 0);
-    const gap = Math.max(60, Math.round(SWEEP / most));
-    const k = key;
+    const home = trickAt(g, win);
     legs.forEach(({ el, from, steps }) => {
-      for (let s = 1; s <= steps; s++) {
-        const seat = (from + s) % n;
-        setTimeout(() => {
-          if (sweeping !== sig || key !== k || !el.parentNode) return;
-          at(el, trickAt(g, seat));
-        }, (s - 1) * gap);
-      }
+      at(el, home);              // where it belongs, before it sets off
+      if (!el.animate) return;   // and where it simply slides to, with no arc
+      el.animate(arcRound(g, from, win, home),
+        { duration: Math.max(CARD_MOVE, Math.round(SWEEP * steps / most)),
+          easing: ARC_EASE });
     });
+  }
+
+  /* The way a trick comes in: round the circle the played cards stand on,
+     clockwise from the seat that played the card to the seat that took it,
+     turning as it goes from the way it was lying to the way the winner's own
+     card lies. It sets off from where the card actually is and ends on the
+     spot the table says it belongs, so there is no jump into the movement and
+     none out of it.
+
+     Drawn as a run of places along that circle rather than a hop from seat to
+     seat -- the same as the putting away, the other way round. */
+  function arcRound(g, from, to, home) {
+    const r = trickRing(g), z = Stage.seatScale(g.n);
+    const d0 = dirTo(g, from), d1 = dirTo(g, to);
+    const a0 = Math.atan2(d0.y, d0.x);
+    // Clockwise: the ring runs clockwise as the angle grows, which is the way
+    // the seats -- and the cards played into them -- run.
+    const span = (((Math.atan2(d1.y, d1.x) - a0) % TURN) + TURN) % TURN;
+    const t0 = trickTilt(g, from), t1 = trickTilt(g, to);
+    // As finely as the putting away is drawn, for as far round as this goes.
+    const steps = Math.max(3, Math.round(ARC_STEPS * span / ARC_SWEEP));
+    const kf = [{ transform: trickAt(g, from) }];
+    for (let i = 1; i < steps; i++) {
+      const u = i / steps, a = a0 + span * u;
+      kf.push({ transform: tf(Math.cos(a) * r, g.R.cy + Math.sin(a) * r,
+                              t0 + (t1 - t0) * u, 0, z) });
+    }
+    kf.push({ transform: home });
+    return kf;
   }
 
   /* The table puts itself away. Each seat's pile of tricks unwinds: a card
@@ -1386,7 +1447,7 @@ const Felt = (function () {
            once and then a few would trickle in out of poses they had already
            taken. */
         el.animate(arcIn(g, q, t, j, face, rest),
-          { duration: ARC, delay: i * lead, easing: 'cubic-bezier(.35,.05,.3,1)', fill: 'forwards' });
+          { duration: ARC, delay: i * lead, easing: ARC_EASE, fill: 'forwards' });
         // And it is where the table says it is once it has got there.
         setTimeout(() => { if (key === k) el.style.transform = rest; }, i * lead + ARC);
       });

@@ -326,10 +326,15 @@ that band.
   hole.
 - **A trick taken is said out loud**: *"Otter won that trick"* comes up under
   the pile, so the card that took it is still there to see. It stays for two
-  seconds, and the cards come in while it is still up -- each one travels
-  round the ring clockwise, seat by seat, the way the seats run and the order
-  the cards were played, until the whole trick is stacked on the winner's
-  card. Then the trick goes to a little fanned stack beside their seat, all of
+  seconds, and the cards come in while it is still up -- each one curves round
+  the ring clockwise, the way the seats run and the order the cards were
+  played, until the whole trick is stacked on the winner's card. The way round
+  is one drawn arc, not a hop from seat to seat: a card comes round the table
+  in a single movement, the way it goes back out again when the round is put
+  away. The longest way round takes the whole sweep, whatever the size of the
+  table, and the nearer seats proportionally less, so they all set off
+  together and come in in the order they sit.
+  Then the trick goes to a little fanned stack beside their seat, all of
   it: those are the cards that were played, and they are what comes back out
   when the round is put away. The stacks count the
   tricks won. The table holds the trick a little longer than that before the

@@ -1636,7 +1636,7 @@ function tookTrick(motion) {
 }
 {
   /* The trick comes in the way it went out: each card goes round the ring
-     clockwise, seat by seat, and they meet on the winner's spot before the
+     clockwise, on a drawn arc, and they meet on the winner's spot before the
      stack goes to the pile. A card that crossed the middle would say nothing
      about who won it. */
   const n = 4, cards = 5, me = 1;
@@ -1667,22 +1667,78 @@ function tookTrick(motion) {
   // The cards set off inside the moment the trick is named, not after it.
   const off = timers.filter((t) => t.ms > 0 && t.ms < 2000);
   ok(off.length >= 1, 'they set off while the news is still up  got ' + timers.map((t) => t.ms).join(','));
-  const legs = [];
+
+  /* What the cards are asked to do, rather than where they are afterwards:
+     the way in is one movement, and a movement is not read off a style. */
+  const lying = stage.querySelectorAll('.dcard').map((el) => el.style.transform);
+  const arcs = [];
+  L.dom.El.prototype.animate = function (kf, opts) {
+    const a = { el: this, kf, opts: opts || {}, cancel() {}, commitStyles() {}, pause() {},
+                play() {}, finish() {}, finished: Promise.resolve(), onfinish: null };
+    arcs.push(a);
+    return a;
+  };
+  L.dom.El.prototype.getAnimations = () => [];
+  const later = [];
   timers.filter((t) => t.ms < 2000).forEach((t) => {
-    global.setTimeout = (f, ms) => { legs.push({ fn: f, ms }); return realSet(() => {}, 0); };
+    global.setTimeout = (f, ms) => { later.push({ fn: f, ms }); return realSet(() => {}, 0); };
     try { t.fn(); } finally { global.setTimeout = realSet; }
   });
-  /* Three cards to bring in, and the ways round are 3, 2 and 1 seats long:
-     six steps in all, not three jumps. */
-  ok(legs.length === 6, 'each card is given a step for every seat it passes  got ' + legs.length);
-  const fire = (ms) => legs.filter((t) => t.ms === ms).forEach((t) => t.fn());
-  const stops = legs.map((t) => t.ms).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
-  fire(stops[0]);
-  ok(onWinner() === 2, 'the first step brings in only the seat before the winner  got ' + onWinner());
-  fire(stops[1]);
-  ok(onWinner() === 3, 'the next brings in the one before that  got ' + onWinner());
-  stops.slice(2).forEach(fire);
-  ok(onWinner() === 4, 'and the whole trick ends up on the winner\'s spot  got ' + onWinner());
+  const onTable = stage.querySelectorAll('.dcard');
+  const runs = arcs.filter((a) => onTable.indexOf(a.el) >= 0);
+  /* Three cards to bring in, each in one movement -- and nothing set down at
+     a seat on the way, which is what would read as hopping. */
+  ok(runs.length === 3, 'each card is given one way in  got ' + runs.length);
+  ok(later.length === 0, 'and no card is set down at a seat on the way  got ' + later.length);
+  ok(runs.every((a) => a.kf.length > 5),
+     'it is an arc, not a hop from seat to seat  got ' + runs.map((a) => a.kf.length).join(','));
+  ok(runs.every((a) => !a.opts.fill),
+     'and nothing fills forwards on a card with a round still to play  got '
+     + runs.map((a) => String(a.opts.fill)).join(','));
+
+  /* It sets off from where the card is lying and ends on the spot the table
+     says it belongs, so there is no jump into the movement or out of it. */
+  ok(runs.every((a) => a.kf[0].transform === lying[onTable.indexOf(a.el)]),
+     'each one starts from where its card is lying');
+  ok(runs.every((a) => a.kf[a.kf.length - 1].transform === won.style.transform),
+     'and ends on the winner\'s spot');
+  ok(onWinner() === 4, 'which is where the table already says the whole trick is  got ' + onWinner());
+
+  /* Round the table, not across it: every place named on the way is the same
+     distance out from the middle as a card played, and the angle only ever
+     grows -- which is clockwise, the way the seats and the play run. */
+  const R = L.Stage.ring(n, me, 412, 860);
+  const out = (kf) => { const m = spotOfKf(kf); return Math.hypot(m.x, m.y - R.cy); };
+  ok(runs.every((a) => {
+    const rs = a.kf.map(out);
+    return rs.every((v) => Math.abs(v - rs[0]) < 1);
+  }), 'every place on the way is out where a played card lies, never across the middle');
+  const turned = runs.map((a) => {
+    const ang = (kf) => { const m = spotOfKf(kf); return Math.atan2(m.y - R.cy, m.x); };
+    let d = 0;
+    for (let i = 1; i < a.kf.length; i++) {
+      let step = ang(a.kf[i]) - ang(a.kf[i - 1]);
+      while (step > Math.PI) step -= 2 * Math.PI;
+      while (step < -Math.PI) step += 2 * Math.PI;
+      d += step;
+    }
+    return d;
+  }).sort((x, y) => x - y);
+  ok(turned.every((d) => d > 0.5), 'and it goes round clockwise  got '
+     + turned.map((d) => Math.round(d * 100) / 100).join(','));
+  /* The ways round are one, two and three seats long, and each is that far:
+     a quarter of the table, a half, three quarters. */
+  ok(turned.every((d, i) => Math.abs(d - (i + 1) * 2 * Math.PI / n) < 0.05),
+     'each going as far round as its card has seats to pass  got '
+     + turned.map((d) => Math.round(d * 100) / 100).join(','));
+
+  /* The longest way round takes the whole sweep and the nearer seats
+     proportionally less, so they set off together and come in in the order
+     they sit. */
+  const spans = runs.map((a) => a.opts.duration).sort((x, y) => x - y);
+  ok(spans.join(',') === '140,280,420',
+     'the longest way round takes the whole sweep, the rest proportionally less  got ' + spans.join(','));
+  ok(runs.every((a) => !a.opts.delay), 'and they all set off together');
 }
 {
   const t = tookTrick('off');
