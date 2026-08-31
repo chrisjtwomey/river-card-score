@@ -59,7 +59,7 @@ const Tables = TablesOf({ DATA, KEEP_HOURS });
 
 // What happened to each of them, written down as it happens, in a file of its
 // own: a table's record is rewritten whole every time, and a trail is appended.
-const Trail = TrailOf({ DATA, KEEP_HOURS, TRAIL_MAX, record: Tables.record });
+const Trail = TrailOf({ DATA, KEEP_HOURS, KEEP_GAMES, TRAIL_MAX, record: Tables.record });
 Trail.sweep();
 
 // The pages, the QR code, the addresses, a finished game, a picture. It reads
@@ -171,7 +171,11 @@ function newCode() {
 
 // The table as the game sees it: every verb that moves a game on, written
 // once. The server adds the sockets, the presence, and the telling.
-const Room = RoomOf({ G, A, token, saveGame, DEV, Trail });
+/* A game filed keeps the trail of how it was played beside its scorecard. The
+   table plays on and starts a fresh trail at its next game, so this copy is the
+   only one that outlives it. */
+const Room = RoomOf({ G, A, token, DEV, Trail,
+                      saveGame: (room) => { saveGame(room); Trail.keep(room); } });
 const { curRound, seatIndex, Deck } = Room;
 
 function createRoom() {

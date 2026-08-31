@@ -938,6 +938,19 @@ async function bidRound(P) {
        fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length);
     ok((await fetch(`http://127.0.0.1:${port4}/game/${id}`)).status === 404,
        'and the oldest is gone');
+
+    /* A game filed keeps the trail of how it was played, under the same name
+       as its scorecard, and falls off by the same cap. */
+    const trails = fs.readdirSync(path2.join(DATA_DIR, 'trail'))
+      .filter((f) => /^\d+-[0-9a-f]{12}\.jsonl$/.test(f));
+    ok(trails.length === 3, 'a game keeps the trail of how it was played  got ' + trails.length);
+    ok(!trails.some((f) => f.endsWith(`-${id}.jsonl`)),
+       'and the oldest trail goes when its scorecard does');
+    const one = fs.readFileSync(path2.join(DATA_DIR, 'trail', trails[0]), 'utf8')
+      .split('\n').filter(Boolean).map((l) => JSON.parse(l).k);
+    ok(one[0] === 'G' && one[one.length - 1] === 'E',
+       'a kept trail runs from the game starting to the game ending  got '
+       + one[0] + '..' + one[one.length - 1]);
     d.ws.close(); srv4.kill();
   }
 

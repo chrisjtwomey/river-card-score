@@ -47,7 +47,7 @@ function table(o) {
   /* The trail the room writes what happened onto. Its pure half only: the
      points are read straight off the room, and nothing here goes near a disk. */
   const Tables = require('./lib/tables.js')({ DATA: '/nowhere', KEEP_HOURS: 6 });
-  const Trail = require('./lib/trail.js')({ DATA: '/nowhere', KEEP_HOURS: 6,
+  const Trail = require('./lib/trail.js')({ DATA: '/nowhere', KEEP_HOURS: 6, KEEP_GAMES: 200,
                                             TRAIL_MAX: 1e9, record: Tables.record });
   const Room = RoomOf({ G, A, token, saveGame: (r) => saved.push(r.gameId), DEV: !!o.dev, Trail });
   const room = Room.create(o.code || 'TEST', 'hosttoken');

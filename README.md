@@ -929,7 +929,7 @@ A point is the thing that happened and not a picture of the table — twenty-odd
 
 It goes in a file of its own, `data/trail/CODE.jsonl`, one line a point, appended. That is not tidiness: a table's own record is rewritten whole after every broadcast, so a trail kept there would be written again for every card — some hundreds of megabytes over one game, on a machine that may well be a phone. Appending a line costs the line.
 
-One game at a time: a new game starts the file over, because a table lives six hours and plays several. A trail goes when its table goes, by the same rule, so it cannot outlive the game it is about. `TRAIL_MAX` (4 MB) is the point at which a table stops writing rather than filling the disk — a whole game is about ninety kilobytes, so reaching it means something is wrong.
+One game at a time: a new game starts the file over, because a table lives six hours and plays several. A game that finishes keeps its trail, copied beside its scorecard and under the same name, so it falls off by the same cap the scorecards do. A live table's trail goes when its table goes, by the same six-hour rule. Neither can outlive the thing it is a trail of. `TRAIL_MAX` (4 MB) is the point at which a table stops writing rather than filling the disk — a whole game is about ninety kilobytes, so reaching it means something is wrong.
 
 ## Test
 
