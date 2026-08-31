@@ -3297,11 +3297,23 @@ part('watching one game again, on a page of its own');
     ok(from()[0].classList.contains('on'), 'the table to start with');
     P.socks[0].sent.length = 0;
     from()[1].fire('click');
-    ok(P.pick('#screen').src === 'play.html#c=ZZZZ&w=rw1',
+    ok(P.pick('#screen').src === 'play.html?seat=s1#c=ZZZZ&w=rw1',
        'a seat puts that seat\'s screen up  got ' + P.pick('#screen').src);
     ok(from()[1].classList.contains('on') && !from()[0].classList.contains('on'),
        'and the row says which it is on');
     ok(P.socks[0].sent.length === 0, 'with nothing asked of the copy');
+
+    /* One seat to the next differs before the # as well as after it. A frame
+       handed an address that differs from its own only after the # follows the
+       fragment instead of loading the page again, and the screen would go on
+       showing the seat before it. */
+    from()[2].fire('click');
+    const two = P.pick('#screen').src;
+    ok(two === 'play.html?seat=s2#c=ZZZZ&w=rw2',
+       'and the next seat puts theirs up  got ' + two);
+    ok(two.split('#')[0] !== 'play.html?seat=s1',
+       'by an address that differs before the # as well as after it');
+
     from()[0].fire('click');
     ok(P.pick('#screen').src === 'host.html?c=ZZZZ', 'and back to the table');
 

@@ -195,10 +195,16 @@ const Viewer = (function () {
 
   /* Where that screen is. A seat is opened by its watching key, which shows
      that screen without putting anybody at the table -- and a copy has nobody
-     at it to put. */
+     at it to put.
+
+     The seat is named twice: once after the # where the page reads it, and once
+     before it where nothing does. A frame handed an address that differs from
+     its own only after the # follows the fragment instead of loading the page
+     again, so one seat's screen would go on showing the seat before it. */
   function screen(R, id) {
     const seat = id && (R.seats || []).find((s) => s.id === id);
-    return seat ? `play.html#c=${R.code}&w=${seat.watch}` : `host.html?c=${R.code}`;
+    return seat ? `play.html?seat=${seat.id}#c=${R.code}&w=${seat.watch}`
+                : `host.html?c=${R.code}`;
   }
 
   /* ---------- which round ---------- */
