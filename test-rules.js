@@ -982,6 +982,41 @@ part('the tables this server is running');
   ok(!isLocal('') && !isLocal(undefined) && !isLocal(null), 'and neither may an address that is not one');
 }
 
+part('a table becomes a record of one');
+
+/* The whole table replaced by a record -- what the dev page's State panel does,
+   and what a replay will do to seed its copy. What a record may not say is the
+   point: the code it is held under, the keys it is opened with, and the
+   server's own things. */
+{
+  const t = table().sit(['Ann', 'Bob']).rules({ max: 2, pattern: 'down', ones: 1 });
+  t.Room.startGame(t.room);
+  const seats = t.room.seats.map((s) => ({ id: s.id, token: s.token, watch: s.watch }));
+  const hostToken = t.room.hostToken;
+  const sockets = t.room.sockets;
+  t.room.seats[0].av = { ver: 'pic1' };
+
+  // A record that says everything it is not allowed to say.
+  t.Room.become(t.room, {
+    code: 'HACK', hostToken: 'EVIL', sockets: null, botTimer: 99,
+    phase: 'tricks', idx: 1, cfg: Object.assign({}, t.room.cfg),
+    seats: seats.map((s, i) => ({ id: s.id, name: ['Zoe', 'Yan'][i], token: 'EVIL' + i, watch: 'EVIL' + i })),
+    rounds: t.room.rounds, captainId: seats[0].id, firstDealerId: null,
+  });
+
+  ok(t.room.code === 'TEST', 'the code it is held under is not the text\'s to change');
+  ok(t.room.hostToken === hostToken, 'nor the key the table is opened with');
+  ok(t.room.sockets === sockets, 'and the server\'s own things are its own');
+  ok(t.room.seats[0].token === seats[0].token && t.room.seats[1].token === seats[1].token,
+     'each seat keeps the key its phone holds');
+  ok(t.room.seats[0].watch === seats[0].watch, 'and the one a window watches by');
+  ok(t.room.seats[0].av && t.room.seats[0].av.ver === 'pic1',
+     'and its picture, which no record ever carried');
+
+  ok(t.room.seats[0].name === 'Zoe' && t.room.phase === 'tricks' && t.room.idx === 1,
+     'everything else is what the record says');
+}
+
 part('table talk');
 
 {
