@@ -371,7 +371,12 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 function attach(ws, room, ctx) {
   if (ws.ctx && ws.ctx.room && ws.ctx.room !== room) ws.ctx.room.sockets.delete(ws);
+  /* A copy this socket opened is this socket's for as long as it is up, whatever
+     table it goes on to. Losing the name here would leave the copy with nobody
+     to close it. */
+  const copy = ws.ctx && ws.ctx.replay;
   ws.ctx = Object.assign({ room }, ctx);
+  if (copy) ws.ctx.replay = copy;
   room.sockets.add(ws);
   markPresence(room);
 }
@@ -387,12 +392,15 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    /* A copy of a table belongs to the page that asked for it, and goes when
+       that page does. Not when its last window goes: the windows on a copy are
+       panes the dev page draws, and it throws them away and makes them again
+       whenever it redraws. Counting them would let a redraw close the copy. */
+    if (ws.ctx && ws.ctx.replay) dropRoom(ws.ctx.replay);
     const room = ws.ctx && ws.ctx.room;
     if (!room) return;
     room.sockets.delete(ws);
-    /* A copy of a table belongs to the page watching it. With that page gone
-       there is nobody it could be for, and nothing on disk to come back to. */
-    if (room.replay && room.sockets.size === 0) { rooms.delete(room.code); return; }
+    if (room.replay) return;         // a copy is never filed, and tells nobody
     markPresence(room);
     broadcast(room);
   });

@@ -86,6 +86,9 @@ function client(name, url) {
   });
   c.send = o => ws.send(JSON.stringify(o));
   c.ready = new Promise(r => ws.on('open', r));
+  /* Closed, and known to be: the server sees the close and answers it, so this
+     resolving means the server has already done whatever a socket going does. */
+  c.gone = new Promise(r => ws.on('close', r));
   // Sent, and answered: everything before it has been dealt with.
   c.rt = () => { const n = c.pongs; c.send({ t: 'ping' }); return until(() => c.pongs > n); };
   // The line this socket was last told it could not do.
@@ -543,11 +546,37 @@ async function bidRound(P) {
     await okBy(() => h.replay.playing === false && h.replay.at === 1,
        'moving it by hand stops it playing itself');
 
+    /* The windows on a copy are panes the dev page draws, and it throws them
+       away and draws them again whenever it redraws. So a copy has to outlive
+       them: while it did not, the first press of a control was also the last
+       one that worked. */
+    eye2.ws.close();
+    await eye2.gone;
+    h.errors.length = 0;
+    h.send({ t: 'dev', action: 'replay', do: 'step', by: 1 });
+    await until(() => h.replay.at === 2 || h.errors.length);
+    ok(h.errors.length === 0 && h.replay.at === 2,
+       'a copy outlives the windows looking at it  got ' + h.replay.at + ' ' + h.last());
+
     h.send({ t: 'dev', action: 'replay', do: 'close' });
     await okBy(() => h.replay.code === null, 'the replay can be let go');
     const after2 = await (await fetch(`http://127.0.0.1:${PORT}/tables.json`)).json();
     ok(!after2.tables.some((x) => x.code === copy), 'and the copy goes with it');
-    eye2.ws.close();
+
+    /* What it does belong to is the page that asked for it. That page going is
+       the copy going, whether it was let go first or not. */
+    const dev2 = client('devpage'); await dev2.ready;
+    dev2.send({ t: 'dev', action: 'open', code, token: h.hello.token });
+    await okBy(() => dev2.hello && dev2.hello.code === code, 'a second dev page opens the table');
+    dev2.send({ t: 'dev', action: 'replay', do: 'open' });
+    await okBy(() => dev2.replay && dev2.replay.code, 'and a replay of its own');
+    const copy2 = dev2.replay.code, key2 = dev2.replay.seats[0].watch;
+    dev2.ws.close();
+    const gone = client('after'); await gone.ready;
+    gone.send({ t: 'watch', code: copy2, token: key2 });
+    await okBy(() => /table is gone/i.test(gone.last()),
+       'and the copy goes when that page does  got ' + gone.last());
+    gone.ws.close();
 
     // ---- the seats come back as watching windows, not as seats ----
     const seats = h.hello.seats;
