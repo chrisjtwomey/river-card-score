@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The boat, on the cream the pip in the app's own top bar uses. The art is
+     drawn on nothing, so the background layer is the ground you see.
+
+     boat_mark is 108dp with the picture inside the middle 72dp, which is all
+     Android promises to keep: a round launcher cuts the rest away.
+
+     The splashes still draw river_mark, the card-stack mark. The two disagree
+     on purpose, until the splash art is done. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-  <background android:drawable="@color/felt" />
-  <foreground android:drawable="@drawable/river_mark" />
+  <background android:drawable="@color/cream" />
+  <foreground android:drawable="@drawable/boat_mark" />
 </adaptive-icon>

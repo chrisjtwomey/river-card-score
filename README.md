@@ -25,6 +25,18 @@ where the browser offers no camera -- plain `http` to another machine, or
 Safari, which cannot read a code. In the Android app the scanner is on the
 app's own first screen instead, where it needs no server of ours at all.
 
+**The mark in the corner is the boat.** The front page, the TV screen, Past
+games and a seat all open with the same riverboat on a cream tile at the left
+of the bar. It was a ♠ before. The drawing is on nothing -- the tile's own
+cream is the ground behind it -- so the one drawing serves the corner and the
+app's launcher icon alike. Both are cut about the boat and not about the
+picture's own edges: the boat sits left of centre in it, with the waves
+trailing off to the right, so squaring it up by the edges leaves the boat
+small and off to one side. On your own device the tile is still yours the
+moment you set a photo: the boat gives way to your face. The replay page keeps
+its ▶ and the dev page its 🛠, because those say which page you are on, not
+which game.
+
 Every page carries one **⚙** button in the top bar, and it opens the settings
 page: the theme (system, light or dark), the animations (full, short or off),
 full screen, and on the TV screen the text size. The settings page lies over
@@ -849,14 +861,28 @@ left open overnight no longer costs a night of battery.
 it Android 16 and later cut the app off from the Wi-Fi, and no other phone can
 reach the table.
 
-**The mark.** The icon and the splash are the game drawn: five stacks of cards,
-1-2-3-2-1, the hand growing to the top of the river and shrinking back down,
-with the card at the peak in gold. One shape, three places, all the same size on
-screen so it does not jump as one hands over to the next: the phone's own splash
+**The icon is the boat.** The launcher icon is the same riverboat the pages
+carry in their corner, on the same cream (`res/mipmap*/ic_launcher*.xml`). It is
+an adaptive icon, so the cream is the background layer and the boat is the
+foreground drawn on nothing; `res/drawable-xxxhdpi/boat_mark.png` is 108dp with
+the drawing inside the middle 72dp, which is all Android promises to keep -- a
+round launcher cuts the rest away. It is as large as it goes with every inked
+pixel still inside that circle, and it is placed by where the ink is rather than
+by the edges of the picture, so the boat sits in the middle of the circle and
+not to the left of it. The corner's tile is a closer cut of the same drawing,
+because a 38px square has no room for the waters either side. Both come from
+`art/icon.jpeg` at the root of the tree, which is not shipped.
+
+**The splash is still the card mark:** five stacks of cards, 1-2-3-2-1, the hand
+growing to the top of the river and shrinking back down, with the card at the
+peak in gold. One shape, three places, all the same size on screen so it does not
+jump as one hands over to the next: the phone's own splash
 (`res/values-v31/themes.xml`), the window behind the pages
 (`res/drawable/splash_window.xml`), and the page the app opens on
 (`assets/chooser.html`). The shape itself lives in `res/drawable/river_mark.xml`
-and again, in SVG, in the chooser: change one and change the other.
+and again, in SVG, in the chooser: change one and change the other. So the icon
+and the splash disagree for now -- a boat on the home screen, cards on the way
+in -- until the splash art is done.
 
 **The Java.** `MainActivity` is the chooser, `TableActivity` the table in a
 WebView, `NodeService` the server and its notification, and `CameraForWeb` the
@@ -1376,6 +1402,8 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/play.html`, `play.js` — player device: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
 - `public/styles.css` — shared styles, light and dark.
+- `public/art/` — the pictures the pages load. `mark.png` is the game's mark, the riverboat drawn on nothing, in the corner of every page that carries the name.
+- `art/` — the drawings the marks are cut from, at the size they were drawn. Kept out of `public/` on purpose: everything under `public/` is packed into the APK and unpacked on the device at first run, and a source file no page loads has no business there.
 
 ## Notes
 

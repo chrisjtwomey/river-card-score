@@ -71,6 +71,12 @@ p{margin:0}
   background:#f3efe2;color:#14181a;border-radius:9px;font-size:22px;
   box-shadow:0 2px 0 rgba(0,0,0,.25);
 }
+/* The game's own mark, on the pages that carry the name. The art is drawn on
+   nothing, so the pip's own cream is the ground behind it. The file is already
+   square and already cut about the boat -- the drawing is wider than a tile and
+   the boat sits left in it -- so the tile only has to hold what it is given. */
+.pip.mark{background-image:url(art/mark.png);background-size:contain;
+  background-position:center;background-repeat:no-repeat}
 /* with a photo set, the pip is the player */
 .pip.avpic{background:#f3efe2 center/cover no-repeat;color:transparent}
 /* The way back, at the left of every bar but the front page's. A link and not
