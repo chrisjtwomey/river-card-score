@@ -672,7 +672,7 @@ const Table = (function () {
     const s = ST.seats[p], view = o.view, out = [];
     const r = ST.rounds[ST.idx] || null;
     if (s.id !== ST.captainId && !s.bot && !s.left) {
-      out.push({ label: 'Make table host', run: () => view.send({ t: 'captain', id: s.id }) });
+      out.push({ label: 'Make host', run: () => view.send({ t: 'captain', id: s.id }) });
     }
     /* A seat the table was given, given back. The player is not there to press
        anything -- that is why the table has their hand -- and their phone may
@@ -692,7 +692,7 @@ const Table = (function () {
        which is what makes it different from a seat that went quiet. Not a
        bot's, which is the table's own, and not on a game already over. */
     if (!s.bot && !s.left && Game.PLAY_PHASES.indexOf(ST.phase) >= 0) {
-      out.push({ label: 'Remove from the game', danger: true,
+      out.push({ label: 'Kick', danger: true,
                  run: () => putOut(view, s.name, s.id) });
     }
     /* Who dealt. With real cards a person did the dealing and can have been the
@@ -700,7 +700,7 @@ const Table = (function () {
        is the dealer's. */
     if (ST.phase === 'bid' && !Game.virtual(ST) && r && r.dealer !== p
         && (r.bids || []).every((b) => b === null)) {
-      out.push({ label: 'They dealt this hand', run: () => view.send({ t: 'dealer', id: s.id }) });
+      out.push({ label: 'Make dealer', run: () => view.send({ t: 'dealer', id: s.id }) });
     }
     /* Not the name. It is the column on the scorecard, and the head of that
        column is where it is changed -- one place, where the thing being
@@ -770,10 +770,10 @@ const Table = (function () {
   function putOut(view, who, id) {
     const gone = `${who} cannot come back to the seat on their own \u2014 you let them back in `
       + `by name, from this same menu.`;
-    return UI.ask(`Remove ${who} from the game?`,
+    return UI.ask(`Kick ${who} out of the game?`,
       `The seat keeps its name and its place on the scorecard, and the table takes its hand `
       + `from here on. ${gone}`,
-      'Remove', true).then((yes) => { if (yes) view.send({ t: 'remove', id }); });
+      'Kick', true).then((yes) => { if (yes) view.send({ t: 'remove', id }); });
   }
 
   /* Who won, and by how much. The places come back with it, because the host

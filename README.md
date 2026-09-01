@@ -247,7 +247,7 @@ is behind — and carries a ⋯ for whoever runs the table:
   behind, not only the one the table is standing on: they need not be holding
   the game up for their hand to be one nobody is behind. Only on a table dealt
   on the phones; with real cards their cards are on the table in front of them.
-- **Remove from the game** — a player put out of a game already in play,
+- **Kick** — a player put out of a game already in play,
   whether they are sitting at the table or not: one who has to stop and cannot
   press it themselves, or one the table wants rid of. The seat stays, because
   it is a column on the scorecard and the rounds already played are theirs, and
@@ -271,9 +271,9 @@ is behind — and carries a ⋯ for whoever runs the table:
   some phone can still open; a seat put out holds no key for any phone to open
   it with, so that gate is about nothing and the name is enough. Coming back by
   it is what mints the new key.
-- **Make table host** — the table passed on, mid-game. Never to a bot, and
+- **Make host** — the table passed on, mid-game. Never to a bot, and
   never to a seat the table is playing.
-- **They dealt this hand** — who dealt. Only with **real cards**, where a
+- **Make dealer** — who dealt. Only with **real cards**, where a
   person did the dealing and can have been the wrong one, and only while nobody
   has bid, because the order of bidding is the dealer's.
 A name is not on that menu. The name is the column on the scorecard, and the
@@ -281,8 +281,10 @@ head of that column is where it is changed — one place, where the thing being
 renamed is the thing being looked at.
 
 Before the game the same controls are on the lobby's own seat list, where they
-have always been, with **Kick** as well — a seat only goes while nothing has
-been played, because after that the scorecard is a column for it.
+have always been, and named the same. **Kick** is on both and means the nearest
+thing it can in each: in the lobby the seat itself goes, and once a hand has
+been played it cannot, because the scorecard is a column for it — so there the
+seat stays and the player goes.
 
 ### The scorecard is editable
 

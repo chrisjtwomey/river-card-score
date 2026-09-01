@@ -3087,7 +3087,7 @@ part('the front page, and the screen');
     sent.length = 0;
     let rows = openMenu('Ben').map(label);
     ok(rows.indexOf('Let back in') >= 0, 'a seat the table was given can be given back  got ' + rows.join(' | '));
-    ok(rows.indexOf('Make table host') < 0,
+    ok(rows.indexOf('Make host') < 0,
        'and is never handed the table itself: somebody has to be able to move the game on');
     openMenu('Ben').find((b) => label(b) === 'Let back in').fire('click');
     ok(JSON.stringify(sent[0]) === '{"t":"letback","id":"b"}',
@@ -3112,13 +3112,13 @@ part('the front page, and the screen');
        there was nothing the host could do about a player who was there. */
     R.Table.standings(box, ST(), { view: boss });
     rows = openMenu('Ben').map(label);
-    ok(rows.indexOf('Remove from the game') >= 0,
+    ok(rows.indexOf('Kick') >= 0,
        'a player at the table can be put out of it  got ' + rows.join(' | '));
     ok(rows.indexOf('Auto-play their hand') < 0,
        'which is the only thing there is for a seat somebody is behind');
     sent.length = 0; asked.length = 0;
-    openMenu('Ben').find((b) => label(b) === 'Remove from the game').fire('click');
-    ok(asked.length === 1 && /^Remove Ben from the game\?$/.test(asked[0].t),
+    openMenu('Ben').find((b) => label(b) === 'Kick').fire('click');
+    ok(asked.length === 1 && /^Kick Ben out of the game\?$/.test(asked[0].t),
        'asked about first, by name  got ' + JSON.stringify(asked[0]));
     ok(/let them back in/.test(asked[0].b || ''),
        'and told the way back, which is the host\'s  got ' + (asked[0].b || ''));
@@ -3127,11 +3127,11 @@ part('the front page, and the screen');
 
     // A seat the table already has, and a bot, are not put out of anything.
     R.Table.standings(box, given, { view: boss });
-    ok(openMenu('Ben').map(label).indexOf('Remove from the game') < 0,
+    ok(openMenu('Ben').map(label).indexOf('Kick') < 0,
        'a seat the table already holds is already out');
     const overNow = ST({ phase: 'done' });
     R.Table.standings(box, overNow, { view: boss });
-    ok(openMenu('Ben').map(label).indexOf('Remove from the game') < 0,
+    ok(openMenu('Ben').map(label).indexOf('Kick') < 0,
        'and a game that is over has nobody left to put out of it');
 
     // With real cards the table holds no hand of anybody's.
@@ -3141,10 +3141,10 @@ part('the front page, and the screen');
     rows = openMenu('Ben').map(label);
     ok(rows.indexOf('Auto-play their hand') < 0,
        'a table with real cards has no hand of theirs to take  got ' + rows.join(' | '));
-    ok(rows.indexOf('They dealt this hand') >= 0,
+    ok(rows.indexOf('Make dealer') >= 0,
        'but it has a deal that can have gone to the wrong person  got ' + rows.join(' | '));
     sent.length = 0;
-    openMenu('Ben').find((b) => label(b) === 'They dealt this hand').fire('click');
+    openMenu('Ben').find((b) => label(b) === 'Make dealer').fire('click');
     ok(JSON.stringify(sent[0]) === '{"t":"dealer","id":"b"}',
        'and the seat that really dealt can be said  got ' + JSON.stringify(sent[0]));
 
@@ -3152,13 +3152,13 @@ part('the front page, and the screen');
     const bidding = ST({ cfg: { deck: 'physical', trump: false } });
     bidding.rounds[0].bids = [null, 1, null];
     R.Table.standings(box, bidding, { view: boss });
-    ok(openMenu('Ben').map(label).indexOf('They dealt this hand') < 0,
+    ok(openMenu('Ben').map(label).indexOf('Make dealer') < 0,
        'a hand already being bid keeps its dealer');
 
     // The table passed on, and a name put right.
     R.Table.standings(box, ST(), { view: boss });
     sent.length = 0;
-    openMenu('Ben').find((b) => label(b) === 'Make table host').fire('click');
+    openMenu('Ben').find((b) => label(b) === 'Make host').fire('click');
     ok(JSON.stringify(sent[0]) === '{"t":"captain","id":"b"}',
        'the table is passed on by name  got ' + JSON.stringify(sent[0]));
     /* Not the name. That is the column on the scorecard, and the head of that
@@ -5374,7 +5374,7 @@ part('bidding for a seat that is not there, and leaving');
     // the words are on a span inside the button, and the fake DOM does not roll text up
     const label = (b) => b.querySelector('.menu-label').textContent;
     const names = menu ? menu.querySelectorAll('.menu-tap').map(label) : [];
-    ok(names.indexOf('Make table host') >= 0 && names.indexOf('Make dealer') >= 0 && names.indexOf('Kick') >= 0,
+    ok(names.indexOf('Make host') >= 0 && names.indexOf('Make dealer') >= 0 && names.indexOf('Kick') >= 0,
        'with the controls named  got ' + names.join(' | '));
     P.socks[0].sent.length = 0;
     menu.querySelectorAll('.menu-tap').find((b) => label(b) === 'Make dealer').fire('click');
@@ -5395,7 +5395,7 @@ part('bidding for a seat that is not there, and leaving');
     ok(host.join(' | ') === 'Make dealer', 'the seat that runs the table is offered the deal and nothing else  got ' + host.join(' | '));
     drows[1].querySelector('.more').fire('click');
     const dealer = drows[1].querySelector('.seatmenu').querySelectorAll('.menu-tap').map(label);
-    ok(dealer.indexOf('Make dealer') < 0 && dealer.indexOf('Make table host') >= 0,
+    ok(dealer.indexOf('Make dealer') < 0 && dealer.indexOf('Make host') >= 0,
        'and the seat that already deals first is not offered the deal  got ' + dealer.join(' | '));
     P.feed(table({ phase: 'lobby', boss: false }));
     ok(!P.pick('#lobby-seats').children[1].querySelector('.more'), 'a player who does not run the table has no menu');

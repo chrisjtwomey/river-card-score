@@ -119,7 +119,7 @@ const Lobby = (function () {
     const items = [];
     // Not on the seat that already runs the table: a row that does nothing.
     if (!s.bot && !is.isCap) {
-      items.push({ label: 'Make table host', run: () => view.send({ t: 'captain', id: s.id }) });
+      items.push({ label: 'Make host', run: () => view.send({ t: 'captain', id: s.id }) });
     }
     if (!is.isFirst) {
       items.push({ label: 'Make dealer', run: () => view.send({ t: 'dealer', id: s.id }) });
