@@ -9,3 +9,6 @@ Dockerfile
 compose.yaml
 .dockerignore
 art
+docs
+CONTRIBUTING.md
+CLAUDE.md

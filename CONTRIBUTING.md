@@ -1,0 +1,375 @@
+# Contributing
+
+For anyone working on this code — a person or an agent. It says how to run it,
+how to test it, where each thing lives, and the rules that keep two copies of
+the same idea from drifting apart.
+
+- [README.md](README.md) — what the project is, and how to start.
+- The [wiki](https://github.com/chrisjtwomey/up-and-down-the-river/wiki) — how to
+  use the game and every feature in it.
+- [CLAUDE.md](CLAUDE.md) — the design decisions that hold, and how Claude works here.
+
+---
+
+## Run it
+
+```sh
+npm install
+npm start          # the table server on 8787
+npm run dev        # the same, plus live reload
+```
+
+The console prints the addresses. The TV screen is at `/host.html`, a seat at
+`/`, the dev page at `/dev.html`. Devices must be on the same network as the
+server.
+
+`npm run dev` sets `DEV=1`, which turns on live reload and the dev page's
+table-making controls. The server watches `public/` and `game.js`, and every
+open page reloads itself when one changes. **A change to `server.js`, `lib/` or
+`game.js` needs a restart**; client files do not.
+
+Live reload holds a stream per tab, and a browser allows six connections to one
+origin, so a wall of dev previews would use them all up. A page inside a frame
+never opens the stream; the dev page keeps one and rebuilds its frames itself.
+
+### Environment
+
+| | |
+|---|---|
+| `PORT` | the port to listen on (8787) |
+| `HOST` | the address to bind (all) |
+| `DEV=1` | live reload, and the dev page's forcing controls |
+| `PUBLIC_URL` | the address that goes in the QR code; **replaces** the detected ones, and takes a comma-separated list |
+| `DATA_DIR` | where tables, finished games and trails are written |
+| `NO_TLS=1` | plain http even with certificates present |
+| `TLS_KEY` / `TLS_CERT` | your own certificate |
+| `LAN_ADDRS` | addresses to offer when the platform will not list interfaces |
+| `KEEP_HOURS` | how long a table nobody has touched is kept (6) |
+| `IDLE_MS` / `IDLE_WARN_MS` | the clock on a seat nobody is behind, and the warning before it |
+| `TABLE_IDLE_MS` / `GAME_IDLE_MS` | how long a table nobody is at is kept (5 min / 30 min) |
+| `BOT_DELAY` | how long a bot waits before it acts (1250 ms) |
+| `BOT_DEAL_WAIT` | the longest it waits for a device that says nothing (9000 ms) |
+| `TRICK_HOLD` | how long a finished trick stays on the table |
+
+`npm run cert` writes `certs/key.pem` and `certs/cert.pem` for this machine, and
+the server serves https from then on. Devices only keep their screens awake on a
+secure page, so a real table wants this.
+
+---
+
+## Test
+
+```sh
+npm test              # all three, in the order a failure is most useful in
+npm run test:rules    # test-rules.js alone
+npm run test:pages    # test-pages.js alone
+```
+
+**All three must be green after every change.** Together they take about twenty
+seconds, and nearly all of it is the games played over real sockets.
+
+### `test-rules.js` — the rules, in this process
+
+`game.js`, `lib/room.js`, `lib/deck.js` and `lib/messages.js`, called directly.
+`table()` builds a room with stand-in sockets; `t.say(who, msg)` sends one
+message as the server would and returns the line said back, or null.
+
+**A rule of the game goes here.** No port, no socket, no clock: the whole file
+runs in well under a second.
+
+### `test.js` — whole games over real WebSockets
+
+Ports 8899–8907, so stop anything of your own on those first.
+
+**What a socket adds goes here**: a refusal reaching the device that earned it,
+a change reaching every screen, presence, reconnect, and a table outliving its
+server.
+
+Nothing waits on the clock. `okBy(pred, msg)` polls until the table has made it
+true, `until(pred)` waits for a step with nothing to assert, and `c.rt()` is a
+ping and its pong. `tableOf(names, cfg, url)` makes a table and sits everybody
+at it. The game's own pauses are turned down by `TUNED` at the top — a bot's
+think, the trick hold, the wait on the devices — so a check never sits through
+one; what they are is checked in `test-rules.js`, and one server of its own
+proves each is really waited out.
+
+**A `SLOW` line in the output means a wait gave up**: something is wrong with the
+check, even if the check passed.
+
+### `test-pages.js` — the pages and the scenes in a fake DOM
+
+No server and no browser. It draws into a document just big enough to hold a
+page and drives real events at it: where every card on the felt lies at five
+screen sizes and every legal hand size, the thumb along the fan, the push that
+plays a card and the one that does not, the card that refuses, the trick taken
+and gathered, the bid numbers, the round held up, and the settings page opening
+and closing. `playPage`/`loadPage` load a screen.
+
+Where a screen arms a timer, the test catches it and lets it off by hand rather
+than waiting.
+
+**The fake DOM parses `innerHTML` only for `div|span|p` with a class.** Build
+widget innards with `createElement`, and assert on
+`pick('#container').querySelector('.btn')`, not on inner ids.
+
+### Reading a failure
+
+If a check in `test.js` fails and the same rule passes in `test-rules.js`, **the
+wiring is wrong, not the rule**.
+
+### What no suite can see
+
+The suites do not see a real screen. A change to a scene, a gesture, a layout or
+a flow still needs a game played on it — see [Running the game
+yourself](#running-the-game-yourself).
+
+---
+
+## The shape of it
+
+A **state** is the same shape on the server (`room`) and on every screen (`ST`
+from `publicState`). `game.js` functions accept either.
+
+### The server
+
+```
+game.js            THE RULES. Pure functions over plain data. Runs in Node and in the
+                   browser (IIFE, `module.exports` or `window.Game`). No DOM, no sockets.
+lib/room.js        THE TABLE. Every verb that moves a game on, once: openRound, startGame,
+                   seatBid, closeBidding, scoreRound, bumDeal, resetRound, setScore, toLobby,
+                   finishGame, kickSeat, standDown, letBack, giveUp, unstick, setDealer,
+                   renameSeat, seatVote, say, sweep, waitingOn, publicState.
+                   Owns lib/deck.js. Never broadcasts.
+lib/deck.js        The virtual dealer: dealHands, startPlay, refusal, putCard, settleTrick.
+                   Arithmetic over the room; no sockets, no timers.
+lib/bots.js        The players the table provides: what a hand is worth, which card to play,
+                   and the driver that takes their turn through the same verbs a device uses.
+lib/messages.js    THE PROTOCOL. A table of every message a seated socket may send: who may
+                   send it, when, and which Room verb it calls. Guards are declarative.
+lib/dev.js         The dev controls: the ways in (`ways`) -- a table of stand-ins
+                   (`setup`) and a table in play (`tables`/`open`). Calls Room verbs;
+                   invents nothing a real game cannot reach. `{ replay: true }` puts
+                   the two forcing controls (`patch`, `state`) onto the copy this
+                   socket has open, and forks it there.
+lib/watch.js       THE DOOR TO A REPLAY. One message, `{ t: 'replay', do: ... }`, that any
+                   socket may send: open a copy of a game on file, and move about in it.
+                   No table and no key -- only a table still in play is the host's.
+                   `forked` is where a copy stops being the game: lib/dev.js calls it
+                   after the record or the players panel writes to one.
+lib/http.js        Everything over plain HTTP: pages, QR, addresses, finished games, pictures,
+                   and the tables running here (`/tables.json`, to this machine alone).
+lib/games.js       A finished game on disk.
+lib/trail.js       What happened to a table, written down as it happens: a point a
+                   thing, appended to a file of its own. `point`/`frame` are pure and
+                   called from Room verbs; `flush` is the server's, at the broadcast.
+                   A copy being read writes nothing (`replay.reading`); a copy that
+                   has been changed writes onto its own `replay.points`, never disk.
+                   A live trail is filed before it is destroyed -- a game finishing,
+                   a table ending, one ageing out, or another game started over it.
+lib/tables.js      A table still in play, on disk: written after every broadcast,
+                   read back when the server comes up. Sockets and pictures left out.
+server.js          Wiring only: http/ws servers, the rooms map, the entry messages
+                   (create/join/resume/screen/watch/avatar), presence, broadcast, the trick
+                   hold timer, upkeep.
+```
+
+### The pages
+
+```
+public/ui.js       Page chrome shared by every page: the way back (backLink, off `data-back`
+                   on the top bar), the settings rows, theme, zoom, wake lock,
+                   full screen, the ask() dialog, the motion and speed settings, a strip that
+                   does not fit (fadeStrip/showCell), the small effects (fx).
+public/settings.js The settings page behind the ⚙: laid over the page that opened it, draws
+                   the rows a page hands it (`UI.commonSettings` plus its own) and, on a
+                   device, who the player is (name, photo). The front page opens it first
+                   when there is no name.
+public/net.js      The socket client: reconnect, sessions, one table per page address.
+public/table.js    The scorecard -- editable for `view.boss`: a figure, a round, or a name at
+                   the head of a column, all through one delegated listener on the table. A
+                   figure and a round open the same sheet, which holds the whole round,
+                   because the check (tricks total the hand) is a row's --
+                   the standings and the seat controls on them (badges, and the ⋯ of what may
+                   be done about one person mid-game -- never the name, which is changed at the
+                   head of its own column), the winner, vote line, presence and bid
+                   toasts, the row menu both lists of people use (`rowMenu`), and what the
+                   scenes read off the state (roundKey, dealOpts, finaleOpts).
+public/lobby.js    Widgets for the lobby: seats, bots, rulesForm, startButton.
+public/round.js    Widgets for a round in play: header, bidStrip, trickCount, bidFor, playFor,
+                   playout, winner, and the two dialogs (newGame, bumDeal).
+public/stage.js    The overlay both scenes play on, its parts, the round line (head), cards
+                   drawn off Game, the seat ring, the fan geometry and the mark on the
+                   dealer's seat (`dealerRing`). `Stage.peek` is the one
+                   "waiting on you" animation: the deal, the felt and the trick all use it.
+public/deal.js     The deal scene.   public/finale.js  The finish.   public/felt.js  The
+                   table a device plays a virtual round on; the deal hands it the stage.
+public/chat.js     Table talk.       public/accolades.js  Shared with the server (A.list/pick/bonus).
+public/host.js     THE HOST FLOW: connect, deal-hold policy, table panel, compose widgets.
+public/play.js     THE DEVICE FLOW: connect, felt/deal policy, vote buttons, who you are, compose.
+public/viewer.js   THE REPLAY VIEWER. A game watched again, drawn off the one message the
+                   server sends about a copy: `games`, `rounds`, `run`, `points` -- four
+                   widgets, each `(root, R, view)`, each building what it needs inside the
+                   root it is handed. `view = { send }` asks the copy for something
+                   (`{do:'seek', at}`); how that is addressed is the page's business.
+public/dev.js      The dev page: the way-in card (three doors), then two halves -- the
+                   screens on the left, and on the right the Players table and the
+                   State editor as two tabs of one full-height column (`setTab`,
+                   remembered; `Tools` folds that half away) -- and one band at the foot
+                   of the window, under both, which scroll above it. The band is the
+                   same rows in the same places on a table and on a game watched again;
+                   only the verbs change, and the replay half of them is `viewer.js` put
+                   where it goes.
+public/replay.html/.js  One game watched again: the table as it was in a frame, and the
+                   viewer under it. `?g=<id>` is the whole address.
+public/join.js, history.js   The other pages.
+```
+
+---
+
+## The rules that stop drift
+
+1. **One home per concept.** A rule of the game goes in `game.js`. A thing that
+   moves a game on goes in `lib/room.js`. A thing drawn on more than one screen goes
+   in `table.js`, `lobby.js` or `round.js`. If you are about to write the same
+   `if` in two files, you are in the wrong file.
+2. **Never re-derive a rule.** Ask `Game.onTurn`, `Game.awaySeat`, `Game.tablePlays`,
+   `Game.tablePlaysOn`, `Game.tableSelfPlays`, `Game.canPause`, `Game.handedOver`,
+   `Game.virtual`, `Game.firstLeader`, `Game.forbiddenBid`,
+   `Game.changeableSeat`, `Game.bidsHeld`, `Game.countingSeat`, `Game.mustDeal`,
+   `Game.paused` (the six `live` messages in `lib/messages.js` are refused while
+   the table is paused; every widget that sends one asks this before offering it),
+   `Game.played` (whether there is a game here worth filing: `lib/games.js` and
+   `public/games.js` both ask it, so a table that never dealt is kept nowhere).
+   `cfg.deck === 'virtual'` appears in `game.js` and nowhere else.
+3. **A new message is a row in `lib/messages.js`.** Give it `who`, `phase`, `deck`,
+   `live` and `when` guards and a one-line `run` that calls a Room verb. (`live`
+   means it is refused while the table is stopped: only what moves the hand on
+   carries it, because everything that puts a game right is what a table is
+   stopped for.) Never put game
+   logic in a message body. Never add a `trump` message: with real cards nothing is
+   recorded (the tests assert it is refused).
+4. **Room verbs are synchronous and silent.** They change the room and return.
+   `broadcast` lives in `server.js`, runs once after the verb, and nudges the bots.
+   Timers (trick hold, bot delay) live outside the room and re-check the room's
+   identity when they fire (`room.play !== tag`).
+5. **`openRound` is the only place a round is reset for bidding** (bids null,
+   tricks null, phase `bid`, vote null, play null, deal if virtual). `bumDeal`
+   bumps `redeals` *before* calling it: every screen keys its deal on
+   `Table.roundKey(ST)` = `idx:redeals`, and the felt hands over on it.
+   `resetRound` calls it too, for the round in play; a round already scored is
+   never reopened -- it is retyped in place (`setScore`).
+6. **`publicState.turn` is bid-only.** During tricks the seat on play is `play.turn`.
+   The device and the felt branch on `play ? play.turn : ST.turn`.
+7. **A widget is `(root, ST, view)`.** `view = { me, boss, send }`: this screen's
+   seat (-1 for a screen that belongs to nobody), whether it may act, and how a
+   message leaves. A widget queries inside `root` only, is null-tolerant (not every
+   page has every part), builds with `createElement` what the page does not carry,
+   and wires its own buttons once (`el._wired`). It never reads `ST`, `SHOW`,
+   `WATCH` or `$` from the page. Handlers read fresh state at tap time.
+8. **The flow files (`host.js`, `play.js`) own only what differs between screens:**
+   how they connect, when a scene plays and how long it holds, the vote buttons,
+   who you are on the settings page, the table panel. If a block in one looks like a block in the
+   other, move it into a widget.
+9. **Scenes are state-agnostic.** `deal.js`, `finale.js`, `felt.js` take options.
+   What those options are read off the state is `Table.dealOpts` / `finaleOpts`,
+   and the caller adds its own (`hold`, `key`, `hand`, `linger`, `keep`). Scenes ask
+   `Stage.parts()` for the overlay; they never query `#deal` or `.deal-stage`.
+10. **The motion setting is `UI.motion()` / `UI.setMotion()`.** `UI.fx.on()` is
+    `motion() === 'full'`. Nobody else reads the storage key.
+11. **Cards are strings** (`'TH'`, `'9S'`). Read them with `Game.suitOf`,
+    `cardFace`, `cardGlyph`, `cardRed`. `Stage.faceOf` is the only adapter to a
+    drawable face.
+12. **No build step, no ES modules.** Every file is an IIFE assigned to one top-level
+    `const`. Classic scripts share one lexical scope, so a new file declares no
+    top-level `$` or `esc` (the pages own those). `ui.js` goes in the `<head>`,
+    alone: it puts on the saved theme and swatch, and a page already drawn when
+    that happens shows the wrong ones and corrects itself in front of you
+    (`test-pages.js` checks the tag is there). The rest are at the end of the
+    body, in order: `game.js` → helpers (`net`, `stage`, `deal`, `finale`, `felt`)
+    → `table` → `lobby` → `round` → the page. `deal/felt/finale` destructure
+    `Stage` at load time.
+
+---
+
+## How to add things
+
+- **A rule** (e.g. a new scoring option): `game.js` + the `config` row in
+  `messages.js` that accepts it + `Lobby.rulesForm`'s `RULES` list + the `<select>`
+  in `host.html`, `play.html`, `dev.html` + a check in `test-rules.js`.
+- **A step in the game** (a new phase or transition): a Room verb, called from a
+  message row; `publicState` if screens need to see it; then the widget that draws it.
+- **A screen control that acts for the table**: a widget in `round.js` gated on
+  `view.boss`, using `Game.awaySeat`/`onTurn` for who it is about. If it is
+  about one *named* person rather than the seat on turn, it is a row in the
+  standings' ⋯ instead (the item list in `table.js`), which is the one list of
+  everybody a game in play has.
+- **A page setting**: a row from `UI.commonSettings(opts)` or a page-specific item in
+  its `Settings.wire` call.
+- **A behaviour that differs by mode** (real cards vs dealt on the devices): a `deck`
+  guard on the message row, or `Game.virtual(state)` at the one seam in the Room verb
+  (`openRound`, `closeBidding`). Not an `if` in a screen.
+- **A new file**: add it to the map above, and to the "Files" list in the
+  [wiki](https://github.com/chrisjtwomey/up-and-down-the-river/wiki).
+
+---
+
+## Running the game yourself
+
+The suites do not see a real screen. A change to a scene, a gesture, a layout
+or a flow still needs a game played on it.
+
+- **Browser.** `PORT=8790 npm run dev` (live reload; a change under `public/`
+  reloads every open page, a change to `server.js`, `lib/` or `game.js` needs a
+  restart). Host screen at `/host.html`, a seat at `/` (type a name, *Start a
+  table*), the whole table at once at `/dev.html` (needs `DEV=1`, which
+  `npm run dev` sets): it seats stand-ins and shows the host screen and every
+  device side by side, and its scrubber and one-shots reach any state a
+  real game can. A second device is a second browser profile or a private window;
+  a seat is one browser, so two tabs of `play.html` share it.
+- **What to play through.** Real cards: lobby → bid in turn → anybody taps who
+  takes each trick → a round scores → go back → new game. Dealt on the devices:
+  add a bot, the deal lands on the felt, bid on the felt, play a trick, a bum
+  deal, finish → finale. Then the odd paths: a device goes quiet at its turn
+  (bid for / play for / hand the seat over), *Show a table* on a second host
+  screen, a watching window from the dev page.
+- **Mobile.** A real device on the same network reaches the laptop's server at
+  the address the console prints; the QR code on the host screen carries it. For
+  the Android app, `android/tools/push-dev.sh` writes the tree into a debug build
+  on a device over USB (`adb`), and `adb logcat -s UpTheRiver-node` shows the
+  server's own output. A change under `public/` reloads the app's pages on its
+  own; a server change restarts the runtime.
+- **Say what you ran**: which port, and which of the paths above you played,
+  including the ones you did not. A screen that loads is not a game that plays.
+
+Never touch a server or a browser somebody else is running. Open your own, on a
+port of your own, and say which.
+
+---
+
+## Etiquette
+
+- **One change, one commit.** Commit titles are one plain sentence saying what is
+  true now — *"The room is a thing of its own"*. Comments say why, not what.
+- **A change that alters what a player sees or may do is a named behaviour
+  change**: say it in the commit body, and update the affected documentation in
+  the same commit.
+- **Stage named paths.** Never `git add -A`: the tree may hold work that is not
+  yours.
+- **All three suites green before every commit.**
+- Where documentation goes:
+  - **[README.md](README.md)** — what the project is and how to start. Brief.
+  - **[wiki](https://github.com/chrisjtwomey/up-and-down-the-river/wiki)** — how to
+    use the game and its features, in full.
+  - **CONTRIBUTING.md** (this file) — running, testing, architecture, style.
+  - **[CLAUDE.md](CLAUDE.md)** — the design decisions that hold, and how Claude works here.
+- **A change to what a player sees is the maintainer's decision.** Put up several
+  options first: say what each looks like on the screen and what it costs, name
+  the one you would pick, and wait. Then build that one. This holds for a fix as
+  much as for a feature — a bug whose cure is a different screen is a design
+  question in a bug's clothes.
+
+The game has modes — real cards or dealt on the devices, the host screen or a
+device in a hand, a screen that only watches — and they play and look different.
+They are still one game seen from different sides. So weigh every option against
+all of them, and where a change can only land in one, say why the others stay as
+they are. **Drift between the modes is the thing being guarded against.**
