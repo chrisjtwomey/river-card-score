@@ -5,8 +5,8 @@
      boat_mark is 108dp with the picture inside the middle 72dp, which is all
      Android promises to keep: a round launcher cuts the rest away.
 
-     The splashes still draw river_mark, the card-stack mark. The two disagree
-     on purpose, until the splash art is done. -->
+     The splash draws it too now, so the icon you tap and the picture that comes
+     up are one thing. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
   <background android:drawable="@color/cream" />
   <foreground android:drawable="@drawable/boat_mark" />

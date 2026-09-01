@@ -42,7 +42,7 @@ const Avatar = (function () {
     // The back of a card, behind whatever the picture does not cover. It is
     // baked into the picture as it is saved, so a photo keeps the colours of
     // the swatch it was cropped under.
-    cx.fillStyle = window.UI && UI.colour ? UI.colour('--felt-lo', '#0d3f2a') : '#0d3f2a';
+    cx.fillStyle = typeof UI !== 'undefined' && UI.colour ? UI.colour('--felt-lo', '#0d3f2a') : '#0d3f2a';
     cx.fillRect(0, 0, W, H);
     const k = Math.max(W / img.width, H / img.height);
     const w = img.width * k, h = img.height * k;

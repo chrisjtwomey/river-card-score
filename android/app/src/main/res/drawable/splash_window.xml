@@ -3,10 +3,10 @@
      code runs. Android 12 and later draw their own splash instead, from the
      windowSplashScreen items in values-v31.
 
-     The mark is set on the item itself, not wrapped in a <bitmap>: that tag
-     wants a real picture and throws on a vector. -->
+     Cream and the boat, which is the launcher icon and the mark the pages
+     carry: tapping the icon should open the icon. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-  <item android:drawable="@color/felt" />
-  <item android:drawable="@drawable/river_mark" android:gravity="center"
+  <item android:drawable="@color/cream" />
+  <item android:drawable="@drawable/boat_mark" android:gravity="center"
       android:width="282dp" android:height="282dp" />
 </layer-list>

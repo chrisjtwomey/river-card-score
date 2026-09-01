@@ -2017,6 +2017,115 @@ part('game speed');
      'the bar stops where the score starts  got ' + at.bar + ' and ' + at.pts);
 }
 
+part('the splash');
+
+/* The game introducing itself: the name and the boat, on the two screens that
+   are doors into it. It is a picture and a beat and nothing else, so what is
+   worth checking is that it goes away, that it only comes once where it is told
+   to, and that both doors ask the same file for it. */
+{
+  const load = (dom) => new Function('window', 'document', 'localStorage', 'console',
+    fs.readFileSync(path.join(ROOT, 'public/splash.js'), 'utf8') + '\n; return Splash;')(
+    dom.window, dom.document, dom.localStorage, { log() {}, warn() {}, error() {}, info() {} });
+  const session = () => {
+    const held = {};
+    return { getItem: (k) => (k in held ? held[k] : null), setItem: (k, v) => { held[k] = String(v); } };
+  };
+  const timers = (dom) => {
+    const q = [];
+    dom.window.setTimeout = (fn, ms) => { q.push({ fn, ms }); return q.length; };
+    return { fire: () => q.splice(0).forEach((t) => t.fn()), waiting: () => q.length };
+  };
+
+  {
+    const dom = makeDom(412, 860);
+    dom.window.sessionStorage = session();
+    const clock = timers(dom);
+    const Splash = load(dom);
+    ok(Splash.play({ once: true }) === true, 'it plays');
+    const el = dom.document.body.querySelector('#splash');
+    ok(!!el, 'and lays itself over the page');
+    ok(!!el.querySelector('.sp-title') && !!el.querySelector('.sp-boat'),
+       'with the name and the boat, which move apart from each other');
+    ok(!!el.querySelector('.sp-glow'), 'and a lamp behind them');
+
+    /* It has to go. A splash that stays is a page nobody can use, so the beat
+       is checked rather than watched. */
+    ok(clock.waiting() === 1, 'a beat is set for taking it away  got ' + clock.waiting());
+    clock.fire();
+    ok(el.classList.contains('gone'), 'the beat starts it going');
+    clock.fire();
+    ok(!dom.document.body.querySelector('#splash'), 'and it is gone');
+  }
+
+  // Once a session, where it is asked for once a session.
+  {
+    const dom = makeDom(412, 860);
+    dom.window.sessionStorage = session();
+    timers(dom);
+    const Splash = load(dom);
+    ok(Splash.play({ once: true }) === true, 'the first time, it plays');
+    ok(Splash.play({ once: true }) === false, 'the second time in a session, it does not');
+    ok(load(dom).play({ once: true }) === false, 'nor after the page is loaded again');
+    ok(load(dom).play({}) === true, 'but a screen that asks every time is given it');
+  }
+
+  // A tap is a way out. Nobody should sit through this twice.
+  {
+    const dom = makeDom(412, 860);
+    dom.window.sessionStorage = session();
+    const clock = timers(dom);
+    const Splash = load(dom);
+    Splash.play({});
+    const el = dom.document.body.querySelector('#splash');
+    el.fire('click');
+    ok(el.classList.contains('gone'), 'a tap takes it away early');
+    clock.fire();
+    ok(!dom.document.body.querySelector('#splash'), 'and it goes');
+  }
+
+  /* A splash is nothing but animation, so with the animations off there is
+     nothing to show. */
+  {
+    const dom = makeDom(412, 860);
+    dom.window.sessionStorage = session();
+    dom.localStorage.setItem('river-card-score:motion:v1', 'off');
+    const src = ['public/ui.js', 'public/splash.js']
+      .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
+    const Splash = new Function('window', 'document', 'localStorage', 'console',
+      src + '\n; return Splash;')(dom.window, dom.document, dom.localStorage,
+      { log() {}, warn() {}, error() {}, info() {} });
+    ok(Splash.play({}) === false, 'with the animations off it does not play');
+    ok(!dom.document.body.querySelector('#splash'), 'and nothing is laid over the page');
+  }
+
+  /* Both doors, and the same file for both. The app's screen lives outside
+     public/, so it reaches in by the path tools/prepare.sh writes the tree to;
+     if that ever stops being right the splash is a broken script tag on the one
+     screen nobody tests in a browser. */
+  {
+    const front = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
+    ok(/<script src="splash\.js"><\/script>/.test(front)
+       && front.indexOf('splash.js') < front.indexOf('</head>'),
+       'the front page loads it before it is drawn');
+    ok(/Splash\.play\(\{ once: true \}\)/.test(front),
+       'and plays it once a session');
+
+    const chooser = fs.readFileSync(
+      path.join(ROOT, 'android/app/src/main/assets/chooser.html'), 'utf8');
+    const asked = (chooser.match(/(?:src|href)="(nodejs-project\/[^"]+)"/g) || [])
+      .map((m) => /"([^"]+)"/.exec(m)[1]);
+    ok(asked.indexOf('nodejs-project/public/splash.js') >= 0,
+       'the app\'s own screen asks for the same file  got ' + asked.join(' '));
+    const missing = asked.filter((u) =>
+      !fs.existsSync(path.join(ROOT, u.replace('nodejs-project/', ''))));
+    ok(!missing.length,
+       'and everything it reaches for is really there  got ' + missing.join(' '));
+    ok(/Splash\.play\(\{ ground: /.test(chooser),
+       'on the ground the phone drew before it');
+  }
+}
+
 part('the swatch');
 
 /* A swatch is the whole palette, and there are two of them. The theme says

@@ -25,6 +25,16 @@ where the browser offers no camera -- plain `http` to another machine, or
 Safari, which cannot read a code. In the Android app the scanner is on the
 app's own first screen instead, where it needs no server of ours at all.
 
+**The game introduces itself.** The two screens that are doors into it -- the
+front page, and the app's own first screen -- open with the name and the boat
+arriving over about a second, then hand over to the page. They arrive at
+different rates on purpose: the boat rises out of the water and drifts a little
+upstream while the name drops from above, overshoots and settles. Two things
+moving at one rate read as one picture sliding; two at different rates read as
+one in front of the other. A tap takes it away early, it comes once a session in
+a browser and once a cold start in the app, and with **Animations** off there is
+no splash at all -- it is nothing but animation.
+
 **The mark in the corner is the boat.** The front page, the TV screen, Past
 games and a seat all open with the same riverboat on a cream tile at the left
 of the bar. It was a ♠ before. The drawing is on nothing -- the tile's own
@@ -948,16 +958,19 @@ by the edges of the picture. The corner's tile is a closer cut of the same
 drawing, because a 38px square is squarer than a boat. Both are cut from
 `art/boat.png` at the root of the tree, which is not shipped.
 
-**The splash is still the card mark:** five stacks of cards, 1-2-3-2-1, the hand
-growing to the top of the river and shrinking back down, with the card at the
-peak in gold. One shape, three places, all the same size on screen so it does not
-jump as one hands over to the next: the phone's own splash
-(`res/values-v31/themes.xml`), the window behind the pages
-(`res/drawable/splash_window.xml`), and the page the app opens on
-(`assets/chooser.html`). The shape itself lives in `res/drawable/river_mark.xml`
-and again, in SVG, in the chooser: change one and change the other. So the icon
-and the splash disagree for now -- a boat on the home screen, cards on the way
-in -- until the splash art is done.
+**A cold start is one picture handed along.** The phone draws the boat on cream
+before a line of our code runs -- `res/values-v31/themes.xml`, and
+`res/drawable/splash_window.xml` on older phones, which is also the window
+behind every page. The chooser then comes up on that same cream, and the name
+and the boat arrive on it. Then the chooser itself. The same drawing and the
+same ground the whole way through, so nothing jumps as one hands over to the
+next, and the icon you tapped is the picture that opens.
+
+The card-stack mark that used to do this -- five stacks, 1-2-3-2-1, the hand
+growing to the top of the river and shrinking back down -- is gone, and so are
+`res/drawable/river_mark.xml` and the copy of it drawn again in SVG inside the
+chooser. Two drawings of one thing, in two files, that had to be changed
+together: the reason to keep them went with the art.
 
 **The Java.** `MainActivity` is the chooser, `TableActivity` the table in a
 WebView, `NodeService` the server and its notification, and `CameraForWeb` the
@@ -1476,6 +1489,9 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player device: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
+- `public/splash.js` — the game introducing itself: the name and the boat. One file
+  for the two screens that are doors into it, the front page and the app's own
+  chooser, which reaches it through the tree `tools/prepare.sh` writes.
 - `public/styles.css` — shared styles. It opens with the swatches, each naming
   the same 47 colours in a light set and a dark one, and then three blocks
   that say which half is showing. Nothing below them writes a colour out: a

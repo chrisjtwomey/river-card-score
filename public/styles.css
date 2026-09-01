@@ -382,7 +382,7 @@ p{margin:0}
    nothing, so the pip's own cream is the ground behind it. The file is already
    square and already cut about the boat -- the drawing is wider than a tile and
    the boat sits left in it -- so the tile only has to hold what it is given. */
-.pip.mark{background-image:url(art/mark.png);background-size:contain;
+.pip.mark{background-image:url(art/mark.webp);background-size:contain;
   background-position:center;background-repeat:no-repeat}
 /* with a photo set, the pip is the player */
 .pip.avpic{background:var(--on-felt) center/cover no-repeat;color:transparent}
@@ -1823,6 +1823,59 @@ body.host .scorecard-panel .table-wrap{
    width of the card where a row's own border stops at its padding, and there
    is more air around it than between two rows of a kind. */
 .settings .menu-rule{height:1px;background:var(--line);margin:8px -16px 4px}
+
+/* ---------- the splash ---------- */
+/* The game introducing itself: the name and the boat, arriving at different
+   rates. That is the whole trick -- the boat rises from below over most of a
+   second while the name drops from above in two thirds of one and overshoots
+   coming back. Two things moving at one rate read as one picture sliding; two
+   at different rates read as one in front of the other. */
+#splash{
+  position:fixed;inset:0;z-index:200;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:clamp(8px,2.5vh,30px);padding:0 6vw;
+  background:var(--bg);cursor:pointer;
+  transition:opacity .42s ease;
+}
+#splash.gone{opacity:0}
+/* Short animations play the whole thing at about half. --sp is the one number
+   that says so, so no duration below is written twice. */
+#splash{--sp:1}
+#splash.short{--sp:.5}
+/* A lamp behind the boat. On a pale page it is a warm ground under it; on a
+   dark one it is the only thing keeping a dark hull off a dark page. */
+#splash .sp-glow{
+  position:absolute;left:50%;top:56%;pointer-events:none;
+  width:min(130vw,900px);height:min(130vw,900px);transform:translate(-50%,-50%);
+  background:radial-gradient(circle, rgba(var(--gold-soft-rgb),.24), rgba(var(--gold-soft-rgb),0) 62%);
+  opacity:0;animation:sp-lamp calc(1.1s * var(--sp)) ease calc(.2s * var(--sp)) forwards;
+}
+#splash .sp-title,#splash .sp-boat{
+  position:relative;width:100%;flex:none;opacity:0;
+  background:center/contain no-repeat;
+}
+#splash .sp-title{
+  background-image:url(art/title.webp);
+  max-width:min(88vw,520px);aspect-ratio:900 / 324;
+  animation:sp-drop calc(.72s * var(--sp)) cubic-bezier(.2,.9,.3,1) calc(.26s * var(--sp)) forwards;
+}
+#splash .sp-boat{
+  background-image:url(art/boat.webp);
+  max-width:min(80vw,440px);aspect-ratio:640 / 391;
+  animation:sp-rise calc(.95s * var(--sp)) cubic-bezier(.16,.8,.3,1) forwards;
+}
+@keyframes sp-lamp{to{opacity:1}}
+/* Up out of the water, and a little upstream with it. */
+@keyframes sp-rise{
+  from{opacity:0;transform:translate(-14px,32px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+/* Down, past where it lands, and back. */
+@keyframes sp-drop{
+  0%{opacity:0;transform:translateY(-36px)}
+  70%{opacity:1;transform:translateY(6px)}
+  100%{opacity:1;transform:none}
+}
 
 /* ---------- a theme, drawn as itself ---------- */
 /* Each tile is a little of the game in that theme's own colours: the bar, the

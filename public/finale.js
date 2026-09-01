@@ -324,7 +324,7 @@ const Finale = (function () {
         const colours = [['--gold-lit', '#f6d488'], ['--on-felt', '#f3efe2'],
                          ['--felt-hi', '#2f8f5b'], ['--card-red', '#c0271d'],
                          ['--gold-soft', '#f0c878']]
-          .map(([n, fb]) => (window.UI && UI.colour ? UI.colour(n, fb) : fb));
+          .map(([n, fb]) => (typeof UI !== 'undefined' && UI.colour ? UI.colour(n, fb) : fb));
         const fall = overlay.clientHeight + 80;
         for (let i = 0; i < 26; i++) {
           const bit = document.createElement('div');
