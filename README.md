@@ -37,8 +37,23 @@ moment you set a photo: the boat gives way to your face. The replay page keeps
 its ▶ and the dev page its 🛠, because those say which page you are on, not
 which game.
 
+**The game comes in two sets of colours.** **River** is what it opens as: the
+colours of its own drawing -- indigo and slate teal under a gold sun, on white --
+and the card table is the night river, deep indigo with a teal glow at the
+middle. **Table** is the green baize it was before, kept whole: pick it and
+nothing about the game has changed. **Colours** in the settings switches
+between them, under **Theme**, which still means system, light or dark. The two
+are separate questions -- a swatch is the whole palette, and the theme says
+which half of it is showing -- so every swatch works in both.
+
+It is this screen's choice and nobody else's: the table is not told, and two
+devices at one game can sit in different colours. The Android app's splash and
+its notification stay green whichever is picked, because those are compiled into
+the app and cannot read a browser setting.
+
 Every page carries one **⚙** button in the top bar, and it opens the settings
-page: the theme (system, light or dark), the animations (full, short or off),
+page: the theme (system, light or dark), the colours (river or table), the
+animations (full, short or off),
 full screen, and on the TV screen the text size. The settings page lies over
 the page it was opened from, with a back arrow of its own, so a game
 underneath keeps its place and its socket.
@@ -1401,7 +1416,11 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player device: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
-- `public/styles.css` — shared styles, light and dark.
+- `public/styles.css` — shared styles. It opens with the two swatches, each naming
+  every colour the game has in a light set and a dark one, and then three blocks
+  that say which half is showing. Nothing below them writes a colour out: a
+  number in the body of the file is a colour no swatch could change, and
+  `test-pages.js` fails on one.
 - `public/art/` — the pictures the pages load. `mark.png` is the game's mark, the riverboat drawn on nothing, in the corner of every page that carries the name.
 - `art/` — the drawings the marks are cut from, at the size they were drawn. Kept out of `public/` on purpose: everything under `public/` is packed into the APK and unpacked on the device at first run, and a source file no page loads has no business there.
 

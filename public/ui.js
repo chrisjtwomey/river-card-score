@@ -59,6 +59,53 @@ const UI = (function () {
     return t;
   }
 
+  /* ---------- which set of colours ---------- */
+
+  /* A swatch is the whole palette; the theme above only says which half of it
+     is showing. River is what :root already is, so a saved choice has to be
+     stamped only when it is the other one, and a page with nothing saved opens
+     as the game does. Nothing here knows a colour: which block of the
+     stylesheet wins is the whole of it. */
+  const SWATCH_KEY = 'river-card-score:swatch:v1';
+  const SWATCHES = ['river', 'table'];
+
+  function swatch() {
+    try {
+      const v = localStorage.getItem(SWATCH_KEY);
+      return SWATCHES.indexOf(v) >= 0 ? v : SWATCHES[0];
+    } catch (e) { return SWATCHES[0]; }
+  }
+
+  function setSwatch(v) {
+    const s = SWATCHES.indexOf(v) >= 0 ? v : SWATCHES[0];
+    if (s === SWATCHES[0]) root.removeAttribute('data-swatch');
+    else root.setAttribute('data-swatch', s);
+    try {
+      if (s === SWATCHES[0]) localStorage.removeItem(SWATCH_KEY);
+      else localStorage.setItem(SWATCH_KEY, s);
+    } catch (e) {}
+  }
+
+  // As early as startTheme, and for the same reason: no page should flash one
+  // set of colours and settle on the other.
+  function startSwatch() {
+    const s = swatch();
+    if (s !== SWATCHES[0]) root.setAttribute('data-swatch', s);
+    return s;
+  }
+
+  /* One colour out of the swatch, by the name the stylesheet gives it. For the
+     few things that are drawn rather than styled -- paper thrown on the table,
+     the ground behind a photo -- which cannot ask a stylesheet for themselves.
+     The fallback is what it was before there were swatches, so a screen that
+     will not answer still draws something right. */
+  function colour(name, fallback) {
+    try {
+      const v = window.getComputedStyle(root).getPropertyValue(name);
+      return (v || '').trim() || fallback;
+    } catch (e) { return fallback; }
+  }
+
   function wireTheme(sel) {
     startTheme();
     const btn = document.querySelector(sel);
@@ -225,6 +272,11 @@ const UI = (function () {
         options: [{ v: '', label: 'System' }, { v: 'light', label: 'Light' }, { v: 'dark', label: 'Dark' }],
         get: () => themeSaved() || '',
         set: (v) => setTheme(v || null) },
+      { kind: 'choice',
+        label: 'Colours',
+        options: [{ v: 'river', label: 'River' }, { v: 'table', label: 'Table' }],
+        get: swatch,
+        set: setSwatch },
     ];
     if (o.zoom) {
       list.push({ kind: 'choice',
@@ -838,9 +890,11 @@ const UI = (function () {
   startTheme();                       // before the first paint, so there is no flash
   document.addEventListener('DOMContentLoaded', measureTopbar);
 
-  // Every page wants the saved theme, and none of them should have to ask: this
-  // runs as the file loads, which is as early as any of them could.
+  // Every page wants the saved theme and the saved colours, and none of them
+  // should have to ask: this runs as the file loads, which is as early as any
+  // of them could.
   startTheme();
+  startSwatch();
   // The same, and for the same reason: the stylesheet cannot read a setting.
   stampSpeed();
 
@@ -850,5 +904,6 @@ const UI = (function () {
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
            addressPicker, fullAddress, fx, ask, tell, endTable,
            commonSettings, startZoom, zoomNow, setZoom,
-           wireTheme, startTheme, themeShown, setTheme, THEME_KEY };
+           wireTheme, startTheme, themeShown, setTheme, THEME_KEY,
+           swatch, setSwatch, startSwatch, SWATCHES, SWATCH_KEY, colour };
 })();

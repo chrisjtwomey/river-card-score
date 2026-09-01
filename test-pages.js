@@ -1978,6 +1978,83 @@ part('game speed');
   UI.setSpeed(1);
 }
 
+part('the swatch');
+
+/* A swatch is the whole palette, and there are two of them. The theme says
+   which half of one is showing; the swatch says which one it is a half of. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const head = css.slice(0, css.indexOf('*{box-sizing:border-box}'));
+  const namesIn = (re) => {
+    const r = re.exec(head);
+    return r ? (r[1].match(/--[a-z0-9-]+(?=\s*:)/g) || []) : null;
+  };
+  const river = namesIn(/\n:root\{([\s\S]*?)\n\}/);
+  const table = namesIn(/\n:root\[data-swatch="table"\]\{([\s\S]*?)\n\}/);
+  ok(!!river && river.length > 20, 'the swatch names every colour the game has  got ' + (river || []).length);
+  ok(!!table, 'and there is a second swatch');
+  const missing = (river || []).filter((n) => (table || []).indexOf(n) < 0);
+  const extra = (table || []).filter((n) => (river || []).indexOf(n) < 0);
+  ok(!missing.length && !extra.length,
+     'both say the same names, so neither can drift  got missing ' + missing.join(',')
+     + ' extra ' + extra.join(','));
+
+  /* Every name the rest of the file asks for is set three times over -- as it
+     is, in dark, and by a system set to dark -- and the three have to agree or
+     one of them shows a colour from the other half. */
+  const maps = head.split('which half of the swatch is showing')[1] || '';
+  const sets = (maps.match(/\{[\s\S]*?\n[ ]*\}/g) || [])
+    .map((b) => (b.match(/--[a-z0-9-]+(?=\s*:)/g) || []).filter((n) => n !== '--r' && n !== '--gap'));
+  ok(sets.length === 3, 'the half showing is said three times: as it is, dark, and a dark system  got '
+     + sets.length);
+  ok(sets.length === 3 && sets.every((set) => set.join(',') === sets[0].join(',')),
+     'and the three name the same colours  got ' + JSON.stringify(sets.map((x) => x.length)));
+
+  // Nothing is left painted by hand: a colour written out is a colour a swatch
+  // cannot change.
+  const body = css.slice(css.indexOf('*{box-sizing:border-box}'));
+  const loose = (body.match(/#[0-9a-fA-F]{6}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+[^)]*\)/g) || [])
+    .filter((c) => !/^#(ffffff|000000)$/i.test(c))
+    .filter((c) => !/\(\s*(0\s*,\s*0\s*,\s*0|255\s*,\s*255\s*,\s*255)\b/.test(c));
+  ok(!loose.length, 'and no colour is painted by hand outside them  got ' + loose.slice(0, 6).join(' '));
+}
+
+/* The page opens as the game does, and remembers being told otherwise. */
+{
+  const dom = makeDom(412, 860);
+  const quiet = { log() {}, info() {}, warn() {}, error() {} };
+  const load1 = () => new Function('window', 'document', 'localStorage', 'console',
+    fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8') + '\n; return UI;')(
+    dom.window, dom.document, dom.localStorage, quiet);
+  let UI = load1();
+  const root = dom.document.documentElement;
+
+  ok(UI.swatch() === 'river', 'with nothing chosen the game is the river  got ' + UI.swatch());
+  ok(!root.getAttribute('data-swatch'),
+     'and nothing is stamped, because that is what the stylesheet already is');
+
+  UI.setSwatch('table');
+  ok(UI.swatch() === 'table' && root.getAttribute('data-swatch') === 'table',
+     'the green baize is asked for by name  got ' + root.getAttribute('data-swatch'));
+  ok(load1().swatch() === 'table', 'and it is remembered');
+
+  UI.setSwatch('river');
+  ok(UI.swatch() === 'river' && !root.getAttribute('data-swatch'),
+     'going back takes the stamp off again  got ' + root.getAttribute('data-swatch'));
+
+  UI.setSwatch('sideboard');
+  ok(UI.swatch() === 'river', 'a swatch that is not offered is refused  got ' + UI.swatch());
+
+  // And the row is on the settings page, under the theme it is not.
+  const rows = UI.commonSettings({});
+  const i = rows.findIndex((r) => r.label === 'Colours');
+  const t = rows.findIndex((r) => r.label === 'Theme');
+  ok(i > 0 && t >= 0 && i === t + 1, 'the settings page offers it, under Theme  got ' + i + ' after ' + t);
+  ok(i >= 0 && rows[i].options.map((o) => o.v).join(',') === 'river,table',
+     'the one it opens as first  got ' + (i >= 0 ? rows[i].options.map((o) => o.v).join(',') : 'no row'));
+  UI.setSwatch('river');
+}
+
 /* The stylesheet divides by it too: a card placed by a style has to keep pace
    with a card drawn by an arc, or the two disagree at every speed but one. */
 {
@@ -6520,7 +6597,9 @@ part('the pages and the stylesheet agree');
   const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
   const colourOf = (sel) => {
     const r = new RegExp('\\n' + sel.replace('.', '\\.') + '\\{([^}]*)\\}').exec(css);
-    const c = r && /(?:^|;)\s*color:\s*(#[0-9a-fA-F]{3,8})/.exec(r[1]);
+    // Either way a colour can be written now: the swatch's name for it, or a
+    // number where one is still spelled out.
+    const c = r && /(?:^|;)\s*color:\s*(var\(--[a-z0-9-]+\)|#[0-9a-fA-F]{3,8})/.exec(r[1]);
     return c ? c[1].toLowerCase() : null;
   };
   const stamp = colourOf('.dstamp'), ring = colourOf('.dring-tag');

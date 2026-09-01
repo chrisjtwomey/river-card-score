@@ -319,7 +319,12 @@ const Finale = (function () {
       // Paper on the table.
       function burst(delay) {
         if (calm) return;
-        const colours = ['#e8c169', '#f3efe2', '#2f8f5b', '#c0271d', '#f0c878'];
+        // Off the swatch, and off the half of it that is laid on the table:
+        // paper falls on the felt, which is dark whichever way the page is.
+        const colours = [['--gold-lit', '#f6d488'], ['--on-felt', '#f3efe2'],
+                         ['--felt-hi', '#2f8f5b'], ['--card-red', '#c0271d'],
+                         ['--gold-soft', '#f0c878']]
+          .map(([n, fb]) => (window.UI && UI.colour ? UI.colour(n, fb) : fb));
         const fall = overlay.clientHeight + 80;
         for (let i = 0; i < 26; i++) {
           const bit = document.createElement('div');
