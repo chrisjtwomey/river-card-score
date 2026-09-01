@@ -18,9 +18,17 @@
      the screens off the top. */
   .devmain{display:flex;gap:14px;flex:1;min-height:0}
   .devleft,.devright{display:flex;flex-direction:column;gap:14px;min-width:0;
-    min-height:0;overflow-y:auto}
-  .devleft{flex:1 1 50%}
-  .devright{flex:1 1 50%}
+    min-height:0}
+  .devleft{flex:1 1 50%;overflow-y:auto}
+  /* The tools half takes the height rather than scrolls in it: the strip at
+     the top, and under it whichever table is on show, as tall as the column
+     and scrolling inside itself. Stacked, the two squeezed each other -- a
+     long record left the seats a sliver, and neither had the room it wanted. */
+  .devright{flex:1 1 50%;overflow:hidden}
+  .devtabs{flex:none;align-self:flex-start}
+  .devright > .panel{flex:1 1 auto;min-height:0;overflow-y:auto}
+  /* The record is one box, so it fills the column instead of scrolling it. */
+  .devright > .statebox{overflow:hidden}
   /* Folded away, and the screens have the width. Watching a hand play is not
      the same job as setting one up. */
   .devwrap.notools .devright{display:none}
@@ -135,9 +143,10 @@
 
   /* The state panel: the whole table as text. */
   .statebox{padding:14px 16px;gap:10px}
-  .statebox textarea{font:12.5px/1.5 ui-monospace,Menlo,monospace;min-height:320px;resize:vertical;
+  .statebox textarea{font:12.5px/1.5 ui-monospace,Menlo,monospace;flex:1 1 auto;min-height:160px;
+    resize:none;
     border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);padding:11px}
-  .statebox .btnrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .statebox .btnrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:none}
   .statebox .err{margin:0}
   .statebox .stale{margin:0;color:var(--gold);font-weight:650}
   body.livemode .topbar{background:linear-gradient(90deg,#5c1a12,#8d2a1c)}
@@ -158,13 +167,16 @@
      goes back to growing and the band goes back to riding with it. */
   @media (max-height:560px){
     .devwrap{height:auto}
-    .devleft,.devright{overflow-y:visible}
+    .devleft,.devright,.devright > .panel{overflow:visible}
+    .statebox textarea{min-height:240px;resize:vertical}
   }
   /* Too narrow to halve: the tools go under the screens and the page scrolls
      as one, which is what it did before there were two halves. */
   @media (max-width:1000px){
     .devmain{flex-direction:column;overflow-y:auto}
-    .devleft,.devright{flex:none;overflow-y:visible}
+    .devleft,.devright{flex:none}
+    .devleft,.devright,.devright > .panel{overflow:visible}
+    .statebox textarea{min-height:240px;resize:vertical}
   }
 </style>
 </head>
@@ -216,8 +228,15 @@
   </div>
 
   <!-- The tools, beside what they act on: who is at the table, and the table
-       itself as text. -->
-  <div class="devright" id="devright">
+       itself as text. One at a time, in the whole height of the column: they
+       are two views of one thing and neither is worth half a screen. -->
+  <div class="devright" id="devright" data-tab="players" hidden>
+  <div class="seg devtabs" id="dev-tabs" role="tablist">
+    <button class="btn devtab on" data-tab="players" type="button" role="tab"
+      aria-selected="true">Players</button>
+    <button class="btn devtab" data-tab="state" type="button" role="tab"
+      aria-selected="false">State</button>
+  </div>
   <div class="panel players" id="players-panel" hidden>
     <div class="phaserow" id="phase-row"></div>
     <div class="prow phead">

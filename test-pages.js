@@ -3474,10 +3474,27 @@ part('the dev controls, on each kind of server');
        'and an error still reaches the page  got ' + byGame.pick('#dev-err').textContent);
   }
 
+  /* The tab strip is markup, not something the page builds, so a fake page is
+     given one: the two buttons dev.html carries, clicked as a hand clicks
+     them. `P.tab('state')` is the tools half changing tables. */
+  const devTabs = (P) => {
+    const strip = P.pick('#dev-tabs');
+    const made = {};
+    ['players', 'state'].forEach((t) => {
+      const b = new P.dom.El('button');
+      b.className = 'btn devtab';
+      b.dataset.tab = t;
+      strip.appendChild(b);
+      made[t] = b;
+    });
+    return (t) => made[t].fire('click');
+  };
+
   // A table on the wire: the hello the dev page gets, then a state.
-  const devPage = (srv, seats) => {
-    const P = loadPage('dev.js', {}, '', { hash: '#c=AAAA&t=th', real: VIEWER });
-    P.pick('#state-panel').hidden = true;        // as the page ships it
+  const devPage = (srv, seats, tab) => {
+    const P = loadPage('dev.js', tab ? { 'rcs:dev:tab': tab } : {}, '',
+                       { hash: '#c=AAAA&t=th', real: VIEWER });
+    P.tab = devTabs(P);
     P.start();
     P.socks[0].onopen();
     P.socks[0].onmessage({ data: JSON.stringify({
@@ -3736,7 +3753,10 @@ part('the dev controls, on each kind of server');
     const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }]);
     P.pick('#state-text').blur = () => {};
     P.socks[0].onmessage({ data: devState(false) });
-    P.pick('#btn-state').fire('click');
+    P.socks[0].sent.length = 0;
+    P.tab('state');
+    ok(P.socks[0].sent.some((m) => m.action === 'state' && !('record' in m)),
+       'the record is read on the way into its tab  got ' + JSON.stringify(P.socks[0].sent));
     P.socks[0].onmessage({ data: JSON.stringify({ t: 'stateRaw', record: { code: 'AAAA', seats: [] } }) });
     ok(P.pick('#state-stale').hidden === true, 'a record just read is not stale');
 
@@ -3764,6 +3784,18 @@ part('the dev controls, on each kind of server');
     P.dom.window.navigator = {};              // a page that may not copy
     P.pick('#btn-state-copy').fire('click');
     ok(took.length === 1, 'and where it may not, it says so rather than doing nothing');
+  }
+
+  {   /* ---- the table the half was left on ----
+         A change under public/ reloads this page while it is being worked in,
+         so the tab outlives the reload: coming back to the seats every time a
+         file is saved is the page undoing what was just chosen. */
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }], 'state');
+    ok(P.pick('#state-panel').hidden === false && P.pick('#players-panel').hidden === true,
+       'the tools half opens on the table it was left on');
+    P.tab('players');
+    ok(P.dom.localStorage.getItem('rcs:dev:tab') === 'players',
+       'and changing tables is remembered  got ' + P.dom.localStorage.getItem('rcs:dev:tab'));
   }
 
   {   /* ---- the won column ----
@@ -4273,7 +4305,6 @@ part('the dev controls, on each kind of server');
        the trail says happened stops being what the copy is the moment it is
        changed, and the server says so: the change becomes the copy's last
        point and the rest of the trail goes with it. */
-    P.pick('#players-panel').hidden = false;
     P.pick('#btn-tools').fire('click');          // shut
     P.pick('#btn-tools').fire('click');          // and open again, drawing them
     const rows = P.pick('#prows').querySelectorAll('.prow');
@@ -4285,11 +4316,15 @@ part('the dev controls, on each kind of server');
     ok(!rows[0].querySelector('.pbtns').querySelector('.btn'),
        'but no invented photo, which is a table\'s and not a copy\'s');
     P.socks[0].sent.length = 0;
-    P.pick('#btn-tools').fire('click');
-    P.pick('#btn-tools').fire('click');
+    P.tab('state');
     ok(P.socks[0].sent.some((o) =>
          JSON.stringify(o) === '{"t":"dev","action":"state","replay":true}'),
        'the record read is the copy\'s  got ' + JSON.stringify(P.socks[0].sent));
+    ok(P.pick('#players-panel').hidden === true && P.pick('#state-panel').hidden === false,
+       'and the two tables take turns in the half rather than share it');
+    P.tab('players');
+    ok(P.pick('#players-panel').hidden === false && P.pick('#state-panel').hidden === true,
+       'either way about');
 
     /* And a change made in the panel goes to the copy, not to a table: the
        page has no table when it is watching one. */
@@ -6000,6 +6035,20 @@ part('the pages and the stylesheet agree');
      'and one Tools button folds the half away');
   ok(/\.devwrap\.notools \.devright\{display:none\}/.test(dev),
      'which is what gives the screens the whole width');
+
+  /* In that half the two take turns rather than share it. Stacked, each was
+     the other's ceiling: a record is a whole table as text and the seats are
+     a row each with a hand under them, and neither had the room it wanted. */
+  const tabs = dev.indexOf('id="dev-tabs"');
+  ok(tabs > right && tabs < dev.indexOf('id="players-panel"'),
+     'a tab strip heads the tools half  got ' + tabs);
+  ok((dev.match(/class="btn devtab/g) || []).length === 2, 'with a button a table');
+  ok(/\.devright\{flex:1 1 50%;overflow:hidden\}/.test(dev),
+     'the half itself does not scroll');
+  ok(/\.devright > \.panel\{flex:1 1 auto;min-height:0;overflow-y:auto\}/.test(dev),
+     'the table on show has the whole height, and scrolls inside itself');
+  ok(/\.statebox textarea\{[^}]*flex:1 1 auto/.test(dev),
+     'and the record grows into the height it is given');
 }
 
 /* The band is how a game is driven, so it does not scroll away from the thing

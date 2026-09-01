@@ -23,6 +23,7 @@ let polling = false;             // the list of tables, on a dev server only
 let onTable = false;             // this socket got onto a table
 let stateBusy = false;           // a record is out, and its answer is the panel's
 let TOOLS = true;                // the two tables beside the screens are on show
+let TAB = 'players';             // and which of the two the column is showing
 let stateLoaded = false;         // a record is in the box, read at some moment
 let stateReading = false;        // and one was asked for, so a change is not news
 let REPLAY = null;               // the copy being watched, and where it stands
@@ -46,6 +47,12 @@ const stateNow = () => (replaying() ? (REPLAY.state || null) : ST);
 // The size of the last table made here, so the band can make another like it.
 const N_KEY = 'rcs:dev:players';
 let NEW_N = Math.max(2, Math.min(8, Number(localStorage.getItem(N_KEY)) || 4));
+
+/* Which table the tools half was left on. A change under public/ reloads this
+   page while it is being worked in, so the tab outlives the reload rather than
+   sending you back to the seats every time. */
+const TAB_KEY = 'rcs:dev:tab';
+TAB = localStorage.getItem(TAB_KEY) === 'state' ? 'state' : 'players';
 
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
    lands on the game it was pressed from; #g=ID opens it on a game watched
@@ -1243,9 +1250,37 @@ function setTools(on) {
     btn.setAttribute('aria-expanded', String(TOOLS));
   }
   if (!TOOLS) return;
-  delete $('#prows').dataset.key;
-  renderPlayers();
-  askState();
+  setTab(TAB);
+}
+
+/* Which of the two tables the column is showing. They take turns in it rather
+   than share it: a record is a whole table as text, and the seats are a row
+   each with the hand under them -- stacked, each left the other a sliver of
+   the window. Whichever comes up is drawn fresh, because the table moves
+   while the other one is up. */
+function setTab(name) {
+  TAB = name === 'state' ? 'state' : 'players';
+  try { localStorage.setItem(TAB_KEY, TAB); } catch (e) { /* a browser that will not */ }
+  const half = $('#devright');
+  if (half) half.dataset.tab = TAB;
+  const tabs = $('#dev-tabs');
+  if (tabs) tabs.querySelectorAll('.devtab').forEach((b) => {
+    const on = b.dataset.tab === TAB;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  if ($('#players-panel')) $('#players-panel').hidden = TAB !== 'players';
+  if ($('#state-panel')) $('#state-panel').hidden = TAB !== 'state';
+  if (!TOOLS) return;
+  if (TAB === 'players') {
+    delete $('#prows').dataset.key;
+    renderPlayers();
+  } else {
+    /* The box is the table as it was when it was read. Coming to it is the
+       moment to read it again, rather than warn about a text nobody saw. */
+    stateStale(false);
+    askState();
+  }
 }
 
 /* ---------- wiring ---------- */
@@ -1272,10 +1307,11 @@ function applyGates() {
       ? 'Let the copy go, and ask again' : 'Leave this table, and ask again';
   }
   if (el('#ways')) el('#ways').hidden = !ways;
-  // The three panels below the band have nothing to say until something is on.
-  /* The two tables are the right half of the page, not panels that are opened
-     one at a time: they are up whenever there is something to be up about. */
-  ['#players-panel', '#state-panel', '#host-frame', '#seat-frames'].forEach((sel) => {
+  // The screens below the band have nothing to say until something is on.
+  /* The tools are the right half of the page, up whenever there is something
+     to be up about. Which of its two tables is showing is the tab's business,
+     not this one's -- so the half goes, and what is in it stays as it was. */
+  ['#devright', '#host-frame', '#seat-frames'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = ways;
   });
   if (el('#panel-toggles')) el('#panel-toggles').hidden = ways;
@@ -1296,6 +1332,7 @@ function applyGates() {
 
 document.addEventListener('DOMContentLoaded', () => {
   buildPhaseRow();
+  setTab(TAB);                    // whichever table the half was left on
   paint();
   UI.wireTheme('#btn-theme');
 
@@ -1349,6 +1386,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // The two tables go together: they are one half of the page, not two panels.
   $('#btn-tools').addEventListener('click', () => setTools(!TOOLS));
+  $('#dev-tabs').querySelectorAll('.devtab').forEach((b) =>
+    b.addEventListener('click', () => setTab(b.dataset.tab)));
 
   /* Pause is the table's own message, not a dev action: this page holds the
      host token, so it says it the way the host screen does. Step is the dev

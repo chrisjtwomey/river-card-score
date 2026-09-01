@@ -82,8 +82,9 @@ public/viewer.js   THE REPLAY VIEWER. A game watched again, drawn off the one me
                    root it is handed. `view = { send }` asks the copy for something
                    (`{do:'seek', at}`); how that is addressed is the page's business.
 public/dev.js      The dev page: the way-in card (three doors), then two halves -- the
-                   screens on the left, the Players table and the State editor on the
-                   right (`Tools` folds that half away) -- and one band at the foot
+                   screens on the left, and on the right the Players table and the
+                   State editor as two tabs of one full-height column (`setTab`,
+                   remembered; `Tools` folds that half away) -- and one band at the foot
                    of the window, under both, which scroll above it. The band is the
                    same rows in the same places on a table and on a game watched again;
                    only the verbs change, and the replay half of them is `viewer.js` put
