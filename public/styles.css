@@ -1882,8 +1882,11 @@ body.host .scorecard-panel .table-wrap{
   background:var(--gold);border-color:var(--gold);color:var(--on-gold);
 }
 .home-menu .btn.ghost{background:transparent;border-color:rgba(255,255,255,.28)}
-.home-art .sp-title,.home-art .sp-boat{
-  position:relative;background:center/contain no-repeat;flex:none;
+.home-sky .sp-title,.home-sky .sp-boat{
+  position:relative;flex:none;
+  /* `contain`, or a picture wider than its box is drawn at its own size and
+     what you get is the top left corner of it. */
+  background-position:center;background-size:contain;background-repeat:no-repeat;
 }
 .home-sky .sp-title{
   background-image:url(art/title.webp);

@@ -2059,7 +2059,7 @@ part("the app's menu screen");
 
   // No page served to a browser draws any of it.
   const drawn = ['index', 'host', 'play', 'history', 'replay', 'dev']
-    .filter((n) => /home-art|home-menu/.test(
+    .filter((n) => /home-sky|home-river|home-menu/.test(
       fs.readFileSync(path.join(ROOT, 'public/' + n + '.html'), 'utf8')));
   ok(!drawn.length, 'and no page served to a browser draws it  got ' + drawn.join(', '));
 
@@ -2094,8 +2094,22 @@ part("the app's menu screen");
   ok(/--dip:calc\(var\(--boat-h\)/.test(css)
      && /\.sp-boat\{[^}]*margin-bottom:calc\(var\(--dip\) \* -1\)/.test(css),
      'and the boat sits in it rather than on top of it');
-  const chooserSky = /\.home-sky\{background:#f4f1ea\}/.test(page);
-  ok(chooserSky, 'the sky is the cream the phone drew behind the page');
+  ok(/\.home-sky\{background:#f4f1ea\}/.test(page),
+     'the sky is the cream the phone drew behind the page');
+
+  /* The rules and the markup are in two files and one of them is not served, so
+     a part renamed in the page leaves rules behind that match nothing and say
+     nothing about it -- the pictures simply draw at their own size. Every part
+     the menu's rules name has to be a class the page really carries. */
+  const worn = new Set((page.match(/class="([^"]+)"/g) || [])
+    .flatMap((m) => /"([^"]+)"/.exec(m)[1].split(/\s+/)));
+  const menuCss = css.slice(css.indexOf("the app's menu screen"),
+                            css.indexOf('a theme, drawn as itself'));
+  const named = (menuCss.match(/\.(home-[a-z-]+|sp-[a-z-]+)(?![a-z-])/g) || [])
+    .map((c) => c.slice(1)).filter((c, i, a) => a.indexOf(c) === i);
+  const orphan = named.filter((c) => !worn.has(c));
+  ok(named.length > 4 && !orphan.length,
+     'every part the rules name is one the page carries  got ' + orphan.join(' '));
 }
 
 part('the swatch');
