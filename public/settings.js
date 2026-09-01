@@ -13,7 +13,8 @@
      { kind: 'group',  label }                      -- a heading: a panel of its own
      { kind: 'choice', label, options: [{ v, label }], get(), set(v) }
      { kind: 'toggle', label, get(), set() }        -- a tick, or nothing
-     { kind: 'pick',   label, v, get(), set(v) }    -- one row of several, ticked
+     { kind: 'tiles',  label, options: [{ v, label }], get(), set(v) }
+                                                    -- a grid, each one drawn as itself
      { kind: 'rule' }                               -- a line across the panel
      { kind: 'action', label, run(), danger }       -- does it and shuts the page
      { kind: 'link',   label, href }
@@ -106,6 +107,41 @@ const Settings = (function () {
       // A line inside a panel, for two sorts of thing that belong under one
       // heading without being the same sort of thing.
       if (it.kind === 'rule') { into.appendChild(el('div', 'menu-rule')); return; }
+
+      /* A choice whose options are worth looking at rather than reading. Each
+         is a little of the game drawn in its own colours -- the bar, the page,
+         the table and a card lying on it -- which it can do because the
+         stylesheet lets any box wear a swatch, not only the page. So nothing
+         here names a colour: the shot is empty boxes, and the swatch on it
+         answers what they are. */
+      if (it.kind === 'tiles') {
+        const grid = el('div', 'sw-grid');
+        const now = String(it.get());
+        it.options.forEach((opt) => {
+          const on = String(opt.v) === now;
+          const tile = el('button', 'sw-tile' + (on ? ' on' : ''));
+          tile.type = 'button';
+          tile.setAttribute('role', 'radio');
+          tile.setAttribute('aria-checked', String(on));
+          const shot = el('span', 'sw-shot');
+          shot.setAttribute('data-swatch', String(opt.v));
+          const bar = el('span', 'sw-bar');
+          const page = el('span', 'sw-page');
+          page.append(el('i', 'sw-writ'), el('i', 'sw-writ short'));
+          const table = el('span', 'sw-table');
+          const face = el('i', 'sw-card face');
+          face.appendChild(el('u', 'sw-pip'));
+          table.append(el('i', 'sw-gold'), el('i', 'sw-card back'), face);
+          shot.append(bar, page, table);
+          const name = el('span', 'sw-name');
+          name.textContent = opt.label;
+          tile.append(shot, name);
+          tile.addEventListener('click', () => { it.set(opt.v); draw(); });
+          grid.appendChild(tile);
+        });
+        into.appendChild(grid);
+        return;
+      }
       if (it.kind === 'choice') {
         const r = el('div', 'menu-row');
         const name = el('span', 'menu-label');
@@ -138,12 +174,9 @@ const Settings = (function () {
       const name = el('span', 'menu-label');
       name.textContent = words(it);
       b.appendChild(name);
-      /* A switch is on or off; a pick is one row of several and is on when the
-         setting is standing on it. They are drawn the same way, because to a
-         thumb they are the same thing: a row with a tick or without one. */
-      if (it.kind === 'toggle' || it.kind === 'pick') {
-        const on = it.kind === 'pick' ? String(it.get()) === String(it.v) : !!it.get();
-        b.setAttribute('role', it.kind === 'pick' ? 'radio' : 'switch');
+      if (it.kind === 'toggle') {
+        b.setAttribute('role', 'switch');
+        const on = !!it.get();
         b.setAttribute('aria-checked', String(on));
         const tick = el('span', 'menu-tick');
         tick.textContent = on ? '✓' : '';
@@ -151,7 +184,6 @@ const Settings = (function () {
       }
       b.addEventListener('click', () => {
         if (it.kind === 'toggle') { it.set(!it.get()); draw(); return; }
-        if (it.kind === 'pick') { it.set(it.v); draw(); return; }
         it.run();
         close();
       });

@@ -37,14 +37,14 @@ moment you set a photo: the boat gives way to your face. The replay page keeps
 its ▶ and the dev page its 🛠, because those say which page you are on, not
 which game.
 
-**The game comes in six sets of colours.** **River** is what it opens as: the
+**The game comes in seven sets of colours.** **River** is what it opens as: the
 colours of its own drawing. The bars and the buttons are the boat, in slate teal
 and indigo; the page they sit on is the sun, white going to warm sand, with the
 ink a warm near-black. That split is the drawing's own -- a cool boat against a
 warm sky -- and it is the point: a first cut tinted the page with the same cold
 hue as the bars, and with nothing to relieve it the whole screen sat in one cast
 and looked ill. The card table is the night river, deep indigo with a teal glow
-at the middle. There are six in all, each a cloth a card table really comes in
+at the middle. There are seven in all, each a cloth a card table really comes in
 and the room it would be in:
 
 | | the bars | the table | the page |
@@ -52,12 +52,19 @@ and the room it would be in:
 | **River** | slate teal into indigo | the night river | white to warm sand |
 | **Table** | the green baize, exactly as it was | | |
 | **Casino** | burgundy | red baize | cream |
+| **Parlour** | green | the green baize, under brass | cream |
 | **Midnight** | near-black | black baize edged in gold | cream |
 | **Saloon** | plum, the smoke the boat puts up | plum | warm white |
 | **Harbour** | navy | navy baize with brass | white |
 
-They are all in **Themes**, the first panel of the settings page, drawn as a
-list with a tick because six will not fit across a phone. **Appearance** heads
+They are all in **Themes**, the first panel of the settings page. Each is drawn
+as itself -- a tile with the bar across the top, the page under it, and the
+table with two cards lying on it and a bid stamped in gold -- because a name is
+a poor way to ask what a set of colours looks like. The cards in a tile are the
+proportion of a real one. Nothing in the tile names a colour: the stylesheet
+lets any box wear a swatch, not only the page, so the tile is empty boxes and
+the swatch on it answers what they are, and another theme needs no markup and no
+CSS of its own. **Appearance** heads
 that same panel -- system, light or dark -- with a line under it, because it
 belongs with the themes without being one of them: it is the half of a theme
 that is showing, not a theme. They used to be two panels with two names for the
@@ -71,7 +78,7 @@ its notification stay green whichever is picked, because those are compiled into
 the app and cannot read a browser setting.
 
 Every page carries one **⚙** button in the top bar, and it opens the settings
-page. It is three panels: **Themes** (appearance, a line, then the six sets of colours),
+page. It is three panels: **Themes** (appearance, a line, then the sets of colours),
 **Gameplay** (game speed, then the animations -- both of them change how long a
 hand takes to watch), and **This screen** (full screen, and on the TV the text
 size, which are how one display is set up and nothing about the game). The
@@ -1437,7 +1444,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player device: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
-- `public/styles.css` — shared styles. It opens with the six swatches, each naming
+- `public/styles.css` — shared styles. It opens with the swatches, each naming
   the same 47 colours in a light set and a dark one, and then three blocks
   that say which half is showing. Nothing below them writes a colour out: a
   number in the body of the file is a colour no swatch could change, and

@@ -12,7 +12,7 @@
    What is laid ON the table is in one set and not two, because the table is
    dark whichever way the page is: the cards, the stamps, and the cream on them
    read the same in a light room and a dark one. */
-:root{
+:root, [data-swatch="river"]{
   /* The bars and the buttons are the boat: cool. Everything the page is made
      of is the sun: warm. Tinting the ground with the same cold hue as the
      chrome was the first try, and it left nothing to relieve it -- the whole
@@ -57,7 +57,7 @@
   --table-edge-rgb:13,10,22;    /* and the dark it falls away to */
 }
 
-:root[data-swatch="table"]{
+[data-swatch="table"]{
   --sw-bg:#f4f1ea;        --sw-bg-d:#12140f;
   --sw-bg2:#ffffff;       --sw-bg2-d:#1b1e18;
   --sw-ink:#1c1f1a;       --sw-ink-d:#eceadf;
@@ -96,7 +96,7 @@
   --table-edge-rgb:7,11,8;
 }
 
-:root[data-swatch="casino"]{
+[data-swatch="casino"]{
   /* Red baize and brass: a card room, and a real cloth -- a table is as often
      red as green. The danger red is pushed away from the bar's burgundy on
      purpose, because a refusal must not read as more of the furniture. */
@@ -137,7 +137,48 @@
   --table-edge-rgb:21,7,8;
 }
 
-:root[data-swatch="midnight"]{
+[data-swatch="parlour"]{
+  /* The green baize of Table, in the room Casino is in: the same cloth and the
+     same cards, under brass and a warm cream page. The gold edge on a card is
+     where the two meet -- Table's own is cream, and this one is not. */
+  --sw-bg:#fffaf3;               --sw-bg-d:#100f0b;
+  --sw-bg2:#f8edda;              --sw-bg2-d:#1a1a13;
+  --sw-ink:#241611;              --sw-ink-d:#f3e9da;
+  --sw-ink-dim:#7c6553;          --sw-ink-dim-d:#a89383;
+  --sw-line:#ead8bf;             --sw-line-d:#2e2d20;
+  --sw-felt:#14603f;             --sw-felt-d:#1e8a5a;
+  --sw-felt-2:#0a3a24;           --sw-felt-2-d:#0f5537;
+  --sw-gold:#a8801a;             --sw-gold-d:#e0bb52;
+  --sw-red:#c33c26;              --sw-red-d:#f0806a;
+  --sw-good:#1f7a4d;             --sw-good-d:#4fc38a;
+  --sw-chip:#f3e4ca;             --sw-chip-d:#232219;
+  --sw-chip-on:#14603f;          --sw-chip-on-d:#1e8a5a;
+  --sw-shadow:0 1px 2px rgba(28,32,18,.07), 0 8px 24px rgba(28,32,18,.09); --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+
+  --felt-hi:#1c6b48;
+  --felt-lo:#0d3f2a;
+  --felt-edge:#e8cf9a;
+  --on-felt:#f7e9cf;
+  --on-felt-danger:#ffd6cc;
+  --card-face:#fcf7ec;
+  --card-ink:#1b1210;
+  --card-red:#c02a22;
+  --gold-lit:#f2d488;
+  --gold-soft:#e8c274;
+  --on-gold:#1c1405;
+  --gold-rgb:168,128,26;
+  --gold-soft-rgb:232,194,116;
+  --gold-lit-rgb:242,212,136;
+  --felt-rgb:20,96,63;
+  --red-rgb:195,60,38;
+  --good-rgb:31,122,77;
+  --good-lit-rgb:79,195,138;
+  --table-hi-rgb:30,138,90;
+  --table-rgb:21,88,60;
+  --table-edge-rgb:7,11,8;
+}
+
+[data-swatch="midnight"]{
   /* Black baize and gold. The colour is taken out and the gold and the card
      faces do the work, so a screen with little on it is meant to look bare. */
   --sw-bg:#fcfaf5;               --sw-bg-d:#100f0c;
@@ -177,7 +218,7 @@
   --table-edge-rgb:10,10,8;
 }
 
-:root[data-swatch="saloon"]{
+[data-swatch="saloon"]{
   /* The boat's inside rather than its outside: the plum of the smoke it puts
      up, and the same sun over it. Between River and Casino. */
   --sw-bg:#ffffff;               --sw-bg-d:#1a141c;
@@ -217,7 +258,7 @@
   --table-edge-rgb:18,12,22;
 }
 
-:root[data-swatch="harbour"]{
+[data-swatch="harbour"]{
   /* The other cloth a card table really comes in: navy, with brass on it. The
      coolest of them, and the nearest in spirit to the green it replaced. */
   --sw-bg:#ffffff;               --sw-bg-d:#101419;
@@ -259,8 +300,14 @@
 
 /* ---------- which half of the swatch is showing ---------- */
 /* The names below are what the rest of the file asks for. Only these three
-   blocks know that a swatch has two halves. */
-:root{
+   blocks know that a swatch has two halves.
+
+   Each also catches a box wearing a swatch of its own, so that the settings
+   page can draw one theme inside another. A custom property is answered where
+   it is declared and inherited as the answer, so a box that changes --sw-bg
+   under a root that already turned it into --bg would be handed the root's
+   answer. Asking again inside the box is the whole of the fix. */
+:root, [data-swatch]{
   --bg:var(--sw-bg);           --bg2:var(--sw-bg2);
   --ink:var(--sw-ink);         --ink-dim:var(--sw-ink-dim);
   --line:var(--sw-line);
@@ -271,7 +318,8 @@
   --r:14px;
   --gap:14px;                 /* between one section of a page and the next */
 }
-:root[data-theme="dark"], html.dark{
+:root[data-theme="dark"], html.dark,
+:root[data-theme="dark"] [data-swatch], html.dark [data-swatch]{
   --bg:var(--sw-bg-d);         --bg2:var(--sw-bg2-d);
   --ink:var(--sw-ink-d);       --ink-dim:var(--sw-ink-dim-d);
   --line:var(--sw-line-d);
@@ -281,7 +329,8 @@
   --shadow:var(--sw-shadow-d);
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
+  :root:not([data-theme="light"]),
+  :root:not([data-theme="light"]) [data-swatch]{
     --bg:var(--sw-bg-d);       --bg2:var(--sw-bg2-d);
     --ink:var(--sw-ink-d);     --ink-dim:var(--sw-ink-dim-d);
     --line:var(--sw-line-d);
@@ -1762,6 +1811,69 @@ body.host .scorecard-panel .table-wrap{
    width of the card where a row's own border stops at its padding, and there
    is more air around it than between two rows of a kind. */
 .settings .menu-rule{height:1px;background:var(--line);margin:8px -16px 4px}
+
+/* ---------- a theme, drawn as itself ---------- */
+/* Each tile is a little of the game in that theme's own colours: the bar, the
+   page with writing on it, and the table with two cards lying on it and a bid
+   stamped over them. Nothing in here names a colour -- the swatch on .sw-shot
+   answers every var() inside it -- so another theme needs no CSS at all. */
+.sw-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
+  gap:12px;margin:8px 0 2px;
+}
+.sw-tile{
+  display:flex;flex-direction:column;gap:7px;align-items:stretch;
+  padding:5px;border:0;border-radius:13px;background:none;cursor:pointer;
+  font:inherit;color:inherit;text-align:center;
+}
+.sw-tile:hover,.sw-tile.on{background:var(--chip)}
+/* Taller than it is wide: a card is, and the table has to hold two of them
+   lying at an angle without either running off the felt. */
+.sw-shot{
+  display:flex;flex-direction:column;overflow:hidden;
+  aspect-ratio:4 / 5;border-radius:10px;border:1px solid var(--line);
+  box-shadow:0 2px 6px rgba(0,0,0,.14);
+}
+.sw-tile.on .sw-shot{box-shadow:0 0 0 2px var(--felt), 0 2px 6px rgba(0,0,0,.14)}
+.sw-bar{flex:0 0 15%;background:linear-gradient(160deg,var(--felt),var(--felt-2))}
+.sw-page{
+  flex:1 1 auto;background:var(--bg);
+  display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 9px;
+}
+.sw-writ{height:3px;border-radius:2px;background:var(--ink);opacity:.72}
+.sw-writ.short{width:52%;opacity:.38}
+.sw-table{
+  flex:0 0 52%;position:relative;
+  background:radial-gradient(ellipse at 50% 40%,
+    rgb(var(--table-hi-rgb)), rgb(var(--table-edge-rgb)) 80%);
+}
+/* 52 by 72, which is what .pcard is: a card in here is the same card, drawn
+   small, and a card of the wrong shape is the first thing an eye picks up. */
+.sw-card{
+  position:absolute;top:23%;width:31%;aspect-ratio:52 / 72;
+  border-radius:3px;border:1px solid var(--felt-edge);
+  box-shadow:0 2px 5px rgba(0,0,0,.34);
+}
+.sw-card.back{
+  left:36%;transform:translateX(-50%) rotate(-9deg);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.10) 0 2px, transparent 2px 4px),
+    linear-gradient(160deg,var(--felt-hi),var(--felt-lo));
+}
+.sw-card.face{
+  left:64%;transform:translateX(-50%) rotate(8deg);
+  background:var(--card-face);
+}
+.sw-pip{
+  position:absolute;left:20%;top:15%;width:30%;height:26%;
+  border-radius:1px;background:var(--card-red);
+}
+.sw-gold{
+  position:absolute;left:50%;top:6%;width:36%;height:11%;
+  transform:translateX(-50%);border-radius:99px;background:var(--gold-lit);
+}
+.sw-name{font-size:13px;font-weight:650;color:var(--ink-dim)}
+.sw-tile.on .sw-name{color:var(--ink);font-weight:750}
 .settings .field{margin:2px 0 8px}
 .settings-note{margin-bottom:6px}
 .settings-note[hidden]{display:none}

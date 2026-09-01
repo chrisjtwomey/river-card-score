@@ -74,6 +74,7 @@ const UI = (function () {
     { v: 'river', label: 'River' },
     { v: 'table', label: 'Table' },
     { v: 'casino', label: 'Casino' },
+    { v: 'parlour', label: 'Parlour' },
     { v: 'midnight', label: 'Midnight' },
     { v: 'saloon', label: 'Saloon' },
     { v: 'harbour', label: 'Harbour' },
@@ -294,10 +295,11 @@ const UI = (function () {
        things listed under it: it is the half of a theme, not a theme. Under one
        heading, over one line. */
     list.push({ kind: 'rule' });
-    /* A list rather than a strip across the row: six will not fit across a
-       phone, and a list is what a settings page does with a choice that long. */
-    SWATCHES.forEach((sw) => list.push({
-      kind: 'pick', label: sw.label, v: sw.v, get: swatch, set: setSwatch }));
+    /* Not a strip across the row and not a list of names: they will not fit
+       across a phone, and a name is a poor way to ask what a set of colours
+       looks like. Each is drawn as itself instead. */
+    list.push({ kind: 'tiles', label: 'Colours', options: SWATCHES,
+                get: swatch, set: setSwatch });
 
     /* Not what the game looks like but what it does: how fast it plays, and how
        much of it is drawn on the way. Both change how long a hand takes to

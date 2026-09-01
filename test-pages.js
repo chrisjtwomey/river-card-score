@@ -1993,8 +1993,8 @@ part('the swatch');
     const r = re.exec(head);
     return r ? (r[1].match(/--[a-z0-9-]+(?=\s*:)/g) || []) : null;
   };
-  const river = namesIn(/\n:root\{([\s\S]*?)\n\}/);
-  const table = namesIn(/\n:root\[data-swatch="table"\]\{([\s\S]*?)\n\}/);
+  const river = namesIn(/\n:root, \[data-swatch="river"\]\{([\s\S]*?)\n\}/);
+  const table = namesIn(/\n\[data-swatch="table"\]\{([\s\S]*?)\n\}/);
   ok(!!river && river.length > 20, 'the swatch names every colour the game has  got ' + (river || []).length);
   ok(!!table, 'and there is a second swatch');
   const missing = (river || []).filter((n) => (table || []).indexOf(n) < 0);
@@ -2058,35 +2058,84 @@ part('the swatch');
      than a panel of its own with another word for the same thing. */
   ok((rows[g + 1] || {}).label === 'Appearance' && rows[g + 1].kind === 'choice',
      'light and dark heads it, called Appearance  got ' + (rows[g + 1] || {}).label);
-  ok(rows.every((r) => r.label !== 'Look' && r.label !== 'Colours' && r.label !== 'Play'),
+  ok(rows.every((r) => !(r.kind === 'group'
+       && (r.label === 'Look' || r.label === 'Colours' || r.label === 'Play'))),
      'and the panels it replaced are gone');
   /* Under the same heading, over a line: the half of a theme is not a theme,
      and the panel has to say so without a second heading for it. */
   ok((rows[g + 2] || {}).kind === 'rule',
-     'set apart from the list under it  got ' + (rows[g + 2] || {}).kind);
-  const picks = [];
-  for (let k = g + 3; k < rows.length && rows[k].kind === 'pick'; k++) picks.push(rows[k]);
-  ok(picks.length === UI.SWATCHES.length,
-     'one row for every swatch  got ' + picks.length + ' of ' + UI.SWATCHES.length);
-  ok(picks.length > 0 && picks[0].v === 'river',
-     'the one it opens as first  got ' + (picks[0] || {}).v);
-  ok(picks.every((r) => typeof r.get === 'function' && typeof r.set === 'function'),
-     'each asks and sets the same setting');
+     'set apart from what is under it  got ' + (rows[g + 2] || {}).kind);
+  const tiles = rows[g + 3] || {};
+  ok(tiles.kind === 'tiles', 'and the swatches are drawn, not listed  got ' + tiles.kind);
+  ok((tiles.options || []).length === UI.SWATCHES.length,
+     'one for every swatch  got ' + (tiles.options || []).length + ' of ' + UI.SWATCHES.length);
+  ok((tiles.options || [])[0] && tiles.options[0].v === 'river',
+     'the one it opens as first  got ' + ((tiles.options || [])[0] || {}).v);
 
   /* The list here and the blocks in the stylesheet are two halves of one thing:
      a swatch offered with no block behind it draws the one before it. */
   const sheetCss = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
-  const orphan = UI.SWATCHES.slice(1)
-    .filter((sw) => sheetCss.indexOf(':root[data-swatch="' + sw.v + '"]') < 0);
+  const orphan = UI.SWATCHES
+    .filter((sw) => sheetCss.indexOf('[data-swatch="' + sw.v + '"]') < 0);
   ok(!orphan.length,
      'and every one offered is a block in the stylesheet  got ' + orphan.map((x) => x.v).join(','));
   const offered = UI.SWATCHES.map((x) => x.v);
-  const spare = (sheetCss.match(/:root\[data-swatch="([a-z]+)"\]/g) || [])
+  const spare = (sheetCss.match(/\[data-swatch="([a-z]+)"\]/g) || [])
     .map((m) => /"([a-z]+)"/.exec(m)[1])
     .filter((v, k, a) => a.indexOf(v) === k)
     .filter((v) => offered.indexOf(v) < 0);
   ok(!spare.length, 'and every block is one offered  got ' + spare.join(','));
   UI.setSwatch('river');
+}
+
+/* And drawn: each tile is a little of the game in the colours it is offering,
+   which it can be because a swatch may sit on any box and not only on the page.
+   Nothing in the tile names a colour, so a seventh theme would need no markup
+   and no CSS of its own. */
+{
+  const dom = makeDom(412, 860);
+  const quiet2 = { log() {}, info() {}, warn() {}, error() {} };
+  const { Settings } = new Function('window', 'document', 'localStorage', 'console',
+    ['public/ui.js', 'public/settings.js']
+      .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
+      + '\n; return { Settings };')(dom.window, dom.document, dom.localStorage, quiet2);
+  let chosen = 'river';
+  const page = Settings.wire(null, { items: [
+    { kind: 'group', label: 'Themes' },
+    { kind: 'tiles', label: 'Colours',
+      options: [{ v: 'river', label: 'River' }, { v: 'table', label: 'Table' },
+                { v: 'casino', label: 'Casino' }],
+      get: () => chosen, set: (v) => { chosen = v; } },
+  ] });
+  page.open();
+  const box = page.el;
+  const tiles = box.querySelectorAll('.sw-tile');
+  ok(tiles.length === 3, 'one tile for each  got ' + tiles.length);
+  const shots = box.querySelectorAll('.sw-shot').map((e) => e.getAttribute('data-swatch'));
+  ok(shots.join(',') === 'river,table,casino',
+     'each wearing the swatch it is offering  got ' + shots.join(','));
+  ok(tiles[0].querySelector('.sw-bar') && tiles[0].querySelector('.sw-table')
+     && tiles[0].querySelector('.sw-gold')
+     && tiles[0].querySelectorAll('.sw-card').length === 2,
+     'and showing the bar, the table and two cards on it');
+  /* A card in the tile is the card in the game, drawn small. One of the wrong
+     shape is the first thing an eye picks up. */
+  const cardCss = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const pc = /\n\.pcard\{[^}]*width:\s*(\d+)px;height:\s*(\d+)px/.exec(cardCss);
+  const sc = /\n\.sw-card\{[\s\S]*?aspect-ratio:\s*(\d+) \/ (\d+)/.exec(cardCss);
+  ok(!!pc && !!sc && pc[1] === sc[1] && pc[2] === sc[2],
+     'in the same proportion as a real one  got ' + (sc ? sc[1] + '/' + sc[2] : 'none')
+     + ' against ' + (pc ? pc[1] + '/' + pc[2] : 'none'));
+  ok(tiles[0].getAttribute('aria-checked') === 'true'
+     && tiles[2].getAttribute('aria-checked') === 'false',
+     'the one in use is the one marked');
+
+  tiles[2].fire('click');
+  ok(chosen === 'casino', 'tapping one picks it  got ' + chosen);
+  const after = box.querySelectorAll('.sw-tile');
+  ok(after[2].getAttribute('aria-checked') === 'true'
+     && after[0].getAttribute('aria-checked') === 'false',
+     'and the mark moves with it');
 }
 
 /* The stylesheet divides by it too: a card placed by a style has to keep pace
