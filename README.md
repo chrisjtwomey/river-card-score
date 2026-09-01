@@ -946,7 +946,9 @@ round launcher cuts the rest away. It is as large as it goes with every inked
 pixel still inside that circle, and it is placed by where the ink is rather than
 by the edges of the picture. The corner's tile is a closer cut of the same
 drawing, because a 38px square is squarer than a boat. Both are cut from
-`art/boat.png` at the root of the tree, which is not shipped.
+`art/` at the root of the tree, which is not shipped -- from the boat as it was
+drawn with its sun, before the two were separated for the menu's horizon. The
+marks have not been recut since.
 
 **The app opens on a menu.** The phone draws the boat on cream before a line of
 our code runs -- `res/values-v31/themes.xml`, and `res/drawable/splash_window.xml`
@@ -962,6 +964,13 @@ rising and falling and turning by a third of a degree, for as long as the screen
 is up: a boat on water is never quite still. The sky is the cream the phone drew
 behind the page, whatever the theme is, so the two land on each other; everything
 below the horizon follows the theme.
+
+The sun is its own drawing now, set behind the boat and cut off by the water.
+Where it goes is not a number anybody chose: the boat and the sun were one
+picture on one canvas, so its width, how far it clears the funnels, and how far
+right of the middle it sits are measured off that drawing and written in boat
+widths. The composition is the artist's at any size of screen, and the cut is
+worked out from the waterline rather than guessed.
 
 The name is in the sky. The choices are on the water, and wear the water's
 colours rather than the page's — gold for the thing you came to do, and the

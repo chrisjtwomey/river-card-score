@@ -2116,8 +2116,15 @@ part("the app's menu screen");
      between them by the depth of its own hull. */
   ok(/\.home-river\{[^}]*radial-gradient/.test(css), 'the water is under the boat');
   ok(/--dip:calc\(var\(--boat-h\)/.test(css)
-     && /\.sp-boat\{[^}]*margin-bottom:calc\(var\(--dip\) \* -1\)/.test(css),
+     && /\.sp-scene\{[^}]*margin-bottom:calc\(var\(--dip\) \* -1\)/.test(css),
      'and the boat sits in it rather than on top of it');
+  /* The sun is set behind the boat by the numbers off the drawing the two were
+     cut from, so the composition is the artist's at any size. Read them here so
+     a hand-tuned number cannot creep back in. */
+  ok(/--sun-w:calc\(var\(--boat-w\)/.test(css) && /--sun-up:calc\(var\(--boat-w\)/.test(css),
+     'the sun is sized and placed off the boat, not off the screen');
+  ok(/\.sp-sun\{[^}]*clip-path:inset\(0 0 calc\(/.test(css),
+     'and the water cuts it, by what is worked out rather than guessed');
   ok(/\.home-sky\{background:#f4f1ea\}/.test(page),
      'the sky is the cream the phone drew behind the page');
 
@@ -2147,6 +2154,16 @@ part("the app's menu screen");
   const orphan = named.filter((c) => !worn.has(c));
   ok(named.length > 4 && !orphan.length,
      'every part the rules name is one the page carries  got ' + orphan.join(' '));
+
+  /* And a picture put on a box has to be told how big to be. A rule that names
+     one and not the other draws it at the size it was saved at and you get the
+     corner of it -- which has happened twice, both times by splitting a rule
+     that carried the sizing for several. */
+  const unsized = (menuCss.match(/[^{}]+\{[^{}]*background-image:url\(art[^{}]*\}/g) || [])
+    .filter((r) => !/background-size|background:[^;]*\//.test(r))
+    .map((r) => r.slice(0, r.indexOf('{')).trim());
+  ok(!unsized.length,
+     'and every picture is told how big to be  got ' + unsized.join(' | '));
 }
 
 part('the swatch');

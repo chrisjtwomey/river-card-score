@@ -1844,8 +1844,15 @@ body.host .scorecard-panel .table-wrap{
   /* The boat's own size, said once: the horizon is put where its hull is, and
      the hull is a fraction of a height that follows from the width. */
   --boat-w:min(64vw,300px);
-  --boat-h:calc(var(--boat-w) * 391 / 640);
+  --boat-h:calc(var(--boat-w) * 964 / 1707);
   --dip:calc(var(--boat-h) * .13);          /* how much of it is under water */
+  /* Where the sun goes, taken off the drawing the two were cut from: they were
+     one picture on one canvas, so the size and the offsets below are the
+     artist's own, in boat widths. Keeping them means the sun sits behind the
+     boat exactly where it was drawn, at any size of screen. */
+  --sun-w:calc(var(--boat-w) * .700);
+  --sun-up:calc(var(--boat-w) * .051);      /* how far it clears the funnels */
+  --sun-over:calc(var(--boat-w) * .012);    /* and how far right of the middle */
   min-height:100dvh;display:flex;flex-direction:column;
   /* The lamp behind the boat is deliberately wider than the screen, and an
      overhang nobody clips makes the whole page wider than the screen. That is
@@ -1930,23 +1937,40 @@ body:not(.motion-off) .home-ripple{animation:sp-drift 9s linear infinite}
   background:var(--gold);border-color:var(--gold);color:var(--on-gold);
 }
 .home-menu .btn.ghost{background:transparent;border-color:rgba(255,255,255,.28)}
-.home-sky .sp-title,.home-sky .sp-boat{
-  position:relative;flex:none;
-  /* `contain`, or a picture wider than its box is drawn at its own size and
-     what you get is the top left corner of it. */
-  background-position:center;background-size:contain;background-repeat:no-repeat;
-}
+/* Every picture on this screen says how big to be in the same rule that says
+   what it is. Split across two, the sizing gets lost the next time one of them
+   is renamed or moved -- which has happened twice, and both times the picture
+   drew at the size it was saved at and you saw the corner of it. */
 .home-sky .sp-title{
+  position:relative;flex:none;
   background-image:url(art/title.webp);
+  background-position:center;background-size:contain;background-repeat:no-repeat;
   width:100%;max-width:min(84vw,460px);aspect-ratio:900 / 324;
   filter:drop-shadow(0 6px 18px rgba(var(--table-edge-rgb),.28));
 }
-/* Hung over the edge of the sky by the depth of its own hull, and drawn over
-   the water rather than under it. */
-.home-sky .sp-boat{
-  background-image:url(art/boat.webp);
+/* The sun and the boat are one scene, hung over the edge of the sky by the
+   depth of the hull so the waterline runs through both of them. */
+.home-sky .sp-scene{
+  position:relative;flex:none;
   width:var(--boat-w);height:var(--boat-h);
-  margin-bottom:calc(var(--dip) * -1);z-index:2;
+  margin-bottom:calc(var(--dip) * -1);
+}
+/* Setting: it is cut off at the water, and the cut is worked out rather than
+   guessed -- the waterline is a dip above the scene's foot, and the sun starts
+   --sun-up above the scene's head. */
+.home-sky .sp-sun{
+  position:absolute;z-index:1;
+  width:var(--sun-w);height:var(--sun-w);
+  top:calc(var(--sun-up) * -1);
+  left:calc(50% + var(--sun-over));transform:translateX(-50%);
+  background:url(art/sun.webp) center/contain no-repeat;   /* size in the shorthand */
+  clip-path:inset(0 0 calc(var(--sun-w) - var(--boat-h) + var(--dip) - var(--sun-up)) 0);
+}
+/* In front of it, and drawn over the water rather than under it. */
+.home-sky .sp-boat{
+  position:absolute;inset:0;z-index:2;
+  background-image:url(art/boat.webp);
+  background-position:center;background-size:contain;background-repeat:no-repeat;
   filter:drop-shadow(0 10px 22px rgba(0,0,0,.3));
   /* The last of the hull goes soft, so it ends in the water rather than
      stopping in it. The ripples over it do the rest. */
