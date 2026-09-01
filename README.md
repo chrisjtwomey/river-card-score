@@ -13,6 +13,8 @@
 
 Over eight days, to 1 September 2026.
 
+---
+
 ![Up the River, Down the River](docs/img/banner.webp)
 
 A score tracker for the betting card game — the one where you say how many tricks
