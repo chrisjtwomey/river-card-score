@@ -25,7 +25,7 @@
   --sw-line:#ece2d2;      --sw-line-d:#342e38;
   --sw-felt:#3d5760;      --sw-felt-d:#4e707d;
   --sw-felt-2:#282040;    --sw-felt-2-d:#332b52;
-  --sw-gold:#a9711f;      --sw-gold-d:#e8a95c;
+  --sw-gold:#b4601e;      --sw-gold-d:#eb9859;
   --sw-red:#b03a30;       --sw-red-d:#e07a6e;
   --sw-good:#2f7a62;      --sw-good-d:#4fb79c;
   --sw-chip:#f4ecdf;      --sw-chip-d:#2b2530;
@@ -36,18 +36,16 @@
   /* the table, and what is on it */
   --felt-hi:#3d5760;            /* the back of a card, lit edge */
   --felt-lo:#221b38;            /* and its dark one */
-  --felt-edge:#ece5d8;          /* the line round a card */
   --on-felt:#f4efe4;            /* what is written on the table */
   --on-felt-danger:#ffd6d0;
-  --card-face:#fcf8f1;
   --card-ink:#1c1720;
   --card-red:#bd3a2e;
-  --gold-lit:#f3cf8a;           /* gold on the table, where white would shout */
-  --gold-soft:#eec078;
+  --gold-lit:#f5c588;           /* gold on the table, where white would shout */
+  --gold-soft:#f0b476;
   --on-gold:#1b1408;            /* and what is written on gold */
-  --gold-rgb:200,138,58;
-  --gold-soft-rgb:238,192,120;
-  --gold-lit-rgb:243,207,138;
+  --gold-rgb:180,96,30;
+  --gold-soft-rgb:240,180,118;
+  --gold-lit-rgb:245,197,136;
   --felt-rgb:61,87,96;
   --red-rgb:176,58,48;
   --good-rgb:47,122,104;
@@ -65,7 +63,7 @@
   --sw-line:#ddd7c9;      --sw-line-d:#2e332a;
   --sw-felt:#14603f;      --sw-felt-d:#1e8a5a;
   --sw-felt-2:#0f4d33;    --sw-felt-2-d:#166b46;
-  --sw-gold:#b8862b;      --sw-gold-d:#e0ab48;
+  --sw-gold:#bd7524;      --sw-gold-d:#e39945;
   --sw-red:#b3261e;       --sw-red-d:#e06a60;
   --sw-good:#1f7a4d;      --sw-good-d:#4fc38a;
   --sw-chip:#ece7db;      --sw-chip-d:#262b22;
@@ -75,18 +73,16 @@
 
   --felt-hi:#1c6b48;
   --felt-lo:#0d3f2a;
-  --felt-edge:#f0ead9;
   --on-felt:#f3efe2;
   --on-felt-danger:#ffd9d4;
-  --card-face:#fbf9f3;
   --card-ink:#15181a;
   --card-red:#c0271d;
-  --gold-lit:#f6d488;
-  --gold-soft:#f0c878;
+  --gold-lit:#f8c986;
+  --gold-soft:#f2bc76;
   --on-gold:#17130a;
-  --gold-rgb:184,134,43;
-  --gold-soft-rgb:240,200,120;
-  --gold-lit-rgb:246,212,136;
+  --gold-rgb:189,117,36;
+  --gold-soft-rgb:242,188,118;
+  --gold-lit-rgb:248,201,134;
   --felt-rgb:20,96,63;
   --red-rgb:179,38,30;
   --good-rgb:31,122,77;
@@ -107,7 +103,7 @@
   --sw-line:#ead8bf;             --sw-line-d:#382622;
   --sw-felt:#8c1f2b;             --sw-felt-d:#a8323f;
   --sw-felt-2:#4a0f18;           --sw-felt-2-d:#5d1520;
-  --sw-gold:#a8801a;             --sw-gold-d:#e0bb52;
+  --sw-gold:#b25f1c;             --sw-gold-d:#e3ab4f;
   --sw-red:#c33c26;              --sw-red-d:#f0806a;
   --sw-good:#3f7a4a;             --sw-good-d:#5cbf7d;
   --sw-chip:#f3e4ca;             --sw-chip-d:#2c1d1b;
@@ -116,18 +112,16 @@
 
   --felt-hi:#8c1f2b;
   --felt-lo:#3d0d15;
-  --felt-edge:#e8cf9a;
   --on-felt:#f7e9cf;
   --on-felt-danger:#ffd6cc;
-  --card-face:#fcf7ec;
   --card-ink:#1b1210;
   --card-red:#c02a22;
-  --gold-lit:#f2d488;
-  --gold-soft:#e8c274;
+  --gold-lit:#f4ca86;
+  --gold-soft:#eab772;
   --on-gold:#1c1405;
-  --gold-rgb:168,128,26;
-  --gold-soft-rgb:232,194,116;
-  --gold-lit-rgb:242,212,136;
+  --gold-rgb:178,95,28;
+  --gold-soft-rgb:234,183,114;
+  --gold-lit-rgb:244,202,134;
   --felt-rgb:140,31,43;
   --red-rgb:195,60,38;
   --good-rgb:63,122,74;
@@ -148,7 +142,7 @@
   --sw-line:#ead8bf;             --sw-line-d:#2e2d20;
   --sw-felt:#14603f;             --sw-felt-d:#1e8a5a;
   --sw-felt-2:#0a3a24;           --sw-felt-2-d:#0f5537;
-  --sw-gold:#a8801a;             --sw-gold-d:#e0bb52;
+  --sw-gold:#b06520;             --sw-gold-d:#e3ab4f;
   --sw-red:#c33c26;              --sw-red-d:#f0806a;
   --sw-good:#1f7a4d;             --sw-good-d:#4fc38a;
   --sw-chip:#f3e4ca;             --sw-chip-d:#232219;
@@ -157,18 +151,16 @@
 
   --felt-hi:#1c6b48;
   --felt-lo:#0d3f2a;
-  --felt-edge:#e8cf9a;
   --on-felt:#f7e9cf;
   --on-felt-danger:#ffd6cc;
-  --card-face:#fcf7ec;
   --card-ink:#1b1210;
   --card-red:#c02a22;
-  --gold-lit:#f2d488;
-  --gold-soft:#e8c274;
+  --gold-lit:#f4ca86;
+  --gold-soft:#eab772;
   --on-gold:#1c1405;
-  --gold-rgb:168,128,26;
-  --gold-soft-rgb:232,194,116;
-  --gold-lit-rgb:242,212,136;
+  --gold-rgb:176,101,32;
+  --gold-soft-rgb:234,183,114;
+  --gold-lit-rgb:244,202,134;
   --felt-rgb:20,96,63;
   --red-rgb:195,60,38;
   --good-rgb:31,122,77;
@@ -188,7 +180,7 @@
   --sw-line:#e2dccb;             --sw-line-d:#2f2b23;
   --sw-felt:#2a2721;             --sw-felt-d:#3a362d;
   --sw-felt-2:#100f0c;           --sw-felt-2-d:#16150f;
-  --sw-gold:#96780f;             --sw-gold-d:#d8b44a;
+  --sw-gold:#99620c;             --sw-gold-d:#dba447;
   --sw-red:#b03328;              --sw-red-d:#e0776a;
   --sw-good:#3b7350;             --sw-good-d:#5cb883;
   --sw-chip:#eee7d5;             --sw-chip-d:#26231c;
@@ -197,18 +189,16 @@
 
   --felt-hi:#33302a;
   --felt-lo:#15140f;
-  --felt-edge:#d9c78c;
   --on-felt:#efe7d0;
   --on-felt-danger:#ffd6cc;
-  --card-face:#fbf7ec;
   --card-ink:#17150f;
   --card-red:#b8332a;
-  --gold-lit:#e8ca74;
-  --gold-soft:#dcbc60;
+  --gold-lit:#eabf72;
+  --gold-soft:#deb05e;
   --on-gold:#171204;
-  --gold-rgb:150,120,15;
-  --gold-soft-rgb:220,188,96;
-  --gold-lit-rgb:232,202,116;
+  --gold-rgb:153,98,12;
+  --gold-soft-rgb:222,176,94;
+  --gold-lit-rgb:234,191,114;
   --felt-rgb:42,39,33;
   --red-rgb:176,51,40;
   --good-rgb:59,115,80;
@@ -228,7 +218,7 @@
   --sw-line:#eddfd5;             --sw-line-d:#3a2e3c;
   --sw-felt:#5a4560;             --sw-felt-d:#6b5271;
   --sw-felt-2:#2e2438;           --sw-felt-2-d:#3a2c44;
-  --sw-gold:#a9711f;             --sw-gold-d:#e8a95c;
+  --sw-gold:#ac5a1c;             --sw-gold-d:#eb9859;
   --sw-red:#b03a30;              --sw-red-d:#e07a6e;
   --sw-good:#35786a;             --sw-good-d:#52b9a4;
   --sw-chip:#f5e8df;             --sw-chip-d:#302535;
@@ -237,18 +227,16 @@
 
   --felt-hi:#5a4560;
   --felt-lo:#291d31;
-  --felt-edge:#ecdcc9;
   --on-felt:#f8f0e6;
   --on-felt-danger:#ffd6d0;
-  --card-face:#fcf8f1;
   --card-ink:#1e1722;
   --card-red:#bd3a2e;
-  --gold-lit:#f2cf8a;
-  --gold-soft:#e6bc78;
+  --gold-lit:#f4c588;
+  --gold-soft:#e8b176;
   --on-gold:#1b1408;
-  --gold-rgb:169,113,31;
-  --gold-soft-rgb:230,188,120;
-  --gold-lit-rgb:242,207,138;
+  --gold-rgb:172,90,28;
+  --gold-soft-rgb:232,177,118;
+  --gold-lit-rgb:244,197,136;
   --felt-rgb:90,69,96;
   --red-rgb:176,58,48;
   --good-rgb:53,120,106;
@@ -268,7 +256,7 @@
   --sw-line:#e0ddcd;             --sw-line-d:#2b323b;
   --sw-felt:#1b3a6b;             --sw-felt-d:#2f5c96;
   --sw-felt-2:#0e1f3d;           --sw-felt-2-d:#16294a;
-  --sw-gold:#a8781c;             --sw-gold-d:#dcae4c;
+  --sw-gold:#ab6119;             --sw-gold-d:#df9e49;
   --sw-red:#b2372a;              --sw-red-d:#e0796a;
   --sw-good:#2b7360;             --sw-good-d:#4fb59a;
   --sw-chip:#ece9dc;             --sw-chip-d:#232a33;
@@ -277,18 +265,16 @@
 
   --felt-hi:#1b3a6b;
   --felt-lo:#0d1b33;
-  --felt-edge:#e4dcc2;
   --on-felt:#f2efe0;
   --on-felt-danger:#ffd6d0;
-  --card-face:#fcfaf3;
   --card-ink:#141a24;
   --card-red:#bb3226;
-  --gold-lit:#efce84;
-  --gold-soft:#e0bc70;
+  --gold-lit:#f1c482;
+  --gold-soft:#e2b16e;
   --on-gold:#17120a;
-  --gold-rgb:168,120,28;
-  --gold-soft-rgb:224,188,112;
-  --gold-lit-rgb:239,206,132;
+  --gold-rgb:171,97,25;
+  --gold-soft-rgb:226,177,110;
+  --gold-lit-rgb:241,196,130;
   --felt-rgb:27,58,107;
   --red-rgb:178,55,42;
   --good-rgb:43,115,96;
@@ -296,6 +282,17 @@
   --table-hi-rgb:42,82,136;
   --table-rgb:29,53,89;
   --table-edge-rgb:7,11,20;
+}
+
+/* ---------- what a card is, in any room ---------- */
+/* A playing card is white paper with a white edge, and it is white paper in a
+   green room and in a red one. So these are not a swatch's to change: a card
+   that took the colour of the furniture would be the one thing on the table
+   that could not be trusted to look the same twice. Declared once for that
+   reason, and not seven times with the same number in each. */
+:root{
+  --card-face:#ffffff;
+  --felt-edge:#ffffff;
 }
 
 /* ---------- which half of the swatch is showing ---------- */

@@ -2003,6 +2003,14 @@ part('the swatch');
      'both say the same names, so neither can drift  got missing ' + missing.join(',')
      + ' extra ' + extra.join(','));
 
+  /* A card is white paper in any room. Its whites are declared once, outside
+     every swatch, so no theme can make the one thing on the table that has to
+     look the same twice into more of the furniture. */
+  ok(river.indexOf('--card-face') < 0 && river.indexOf('--felt-edge') < 0,
+     'a card\'s whites are not a swatch\'s to change');
+  ok(/--card-face:\s*#ffffff/.test(head) && /--felt-edge:\s*#ffffff/.test(head),
+     'they are full white, said once');
+
   /* Every name the rest of the file asks for is set three times over -- as it
      is, in dark, and by a system set to dark -- and the three have to agree or
      one of them shows a colour from the other half. */

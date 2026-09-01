@@ -72,6 +72,14 @@ same sort of thing, which asked the reader to know a difference that is not
 there. Every swatch works in both halves, and picking **Table** gives back
 exactly the game as it was in every particular.
 
+**Two things a theme does not touch.** A playing card is white paper with a
+white edge, in a green room and in a red one, so a card's whites are declared
+once and are not a swatch's to change -- the one thing on the table that has to
+look the same twice cannot be part of the furniture. And the gold every theme
+marks with -- the bid stamp, the winner, the lead, the trick just taken -- is
+turned toward copper in all of them, so a highlight carries some red without red
+being asked to mean two things. A refusal is still the only red thing.
+
 It is this screen's choice and nobody else's: the table is not told, and two
 devices at one game can sit in different colours. The Android app's splash and
 its notification stay green whichever is picked, because those are compiled into
