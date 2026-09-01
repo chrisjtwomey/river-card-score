@@ -318,12 +318,18 @@ const Deal = (function () {
       }
 
       /* Who deals is not in the round line any more: their seat is ringed. It
-         comes up with the names, since it is drawn round one of them. */
+         comes up with the names, since it is drawn round one of them.
+
+         Kept as a way to draw it again, because who dealt can be corrected
+         while the scene is still up: a real deck was dealt by a person, and
+         the table host says which person. The ring moves; the round is not
+         dealt again, because the hand did not change. */
+      const markDealer = (p) => Stage.dealerRing(stage, {
+        R, p, n, W, H, of: cards,
+        own: virtual && p === mine, nameEl: labels[p],
+      });
       if (!shuffleOnly) {
-        const ring = Stage.dealerRing(stage, {
-          R, p: dealer, n, W, H, of: cards,
-          own: virtual && dealer === mine, nameEl: labels[dealer],
-        });
+        const ring = markDealer(dealer);
         if (ring && ring.animate) anims.push(ring.animate(
           [{ opacity: 0 }, { opacity: 1 }],
           { duration: 260, delay: lastAt[dealer] + T.fly - 100, easing: 'ease-out', fill: 'both' }
@@ -534,6 +540,7 @@ const Deal = (function () {
       // Every deal is live while it is up, so the bids can land on it.
       S.live = {
         kind: 'deal', finish, stage, labels, cards: cardEls, landedAt, status, names, dealer,
+        markDealer: shuffleOnly ? null : markDealer,
         key: opts.key || null, settled: false, turn: null, turnAnim: null, calm,
         bids: null,                       // what was on the table at the last update
         pending: [],                      // stamps asked for before the cards were down
@@ -581,6 +588,13 @@ const Deal = (function () {
     if (o) last = o;
     if (!S.live || S.live.kind !== 'deal') return;
     if (o && o.trump && S.live.trumpSet) S.live.trumpSet(o.trump);
+    /* Who deals, corrected under a scene that is still up. Every other screen
+       reads it off the state on every render; a held scene drew it once, so
+       the TV screen kept ringing the seat that had stopped being the dealer. */
+    if (o && typeof o.dealer === 'number' && o.dealer !== S.live.dealer) {
+      S.live.dealer = o.dealer;
+      if (S.live.markDealer) S.live.markDealer(o.dealer);
+    }
     const bids = (o && o.bids) || [];
     // Anything new since the last push gets stamped on its card. A scene that
     // has just opened has nothing to compare with, so it stamps nothing.

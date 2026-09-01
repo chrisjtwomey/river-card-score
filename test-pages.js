@@ -4938,6 +4938,28 @@ part('bidding for a seat that is not there, and leaving');
        'and the phones on it draw at it too  got ' + played[played.length - 1]);
   }
 
+  {   /* The TV screen holds the deal scene up while the bids come in, and keeps
+         it current through one call. Who dealt is part of what it keeps: with
+         real cards a person dealt, and the table host can say it was somebody
+         else while the scene is still up. Every other screen reads the dealer
+         off the state on every render, so only the held scene was left ringing
+         the seat that had stopped being the dealer. */
+    const pushed = [];
+    const Deal = { play: () => Promise.resolve(), close() {}, isOpen: () => true,
+                   finale: () => Promise.resolve(), update: (o) => pushed.push(o) };
+    const H = hostPage('host', { given: { Deal } });
+    const st = table({});
+    H.feed(st);
+    const last = () => pushed[pushed.length - 1] || {};
+    ok(last().dealer === st.rounds[0].dealer,
+       'the scene is told who deals  got ' + last().dealer);
+    const moved = table({});
+    moved.rounds[0].dealer = (st.rounds[0].dealer + 1) % 3;
+    H.feed(moved);
+    ok(last().dealer === moved.rounds[0].dealer,
+       'and told again when it changes under it  got ' + last().dealer);
+  }
+
   {   // the table host sees the pad
     const P = playPage(seed, '?c=TEST');
     said.length = 0;
@@ -6139,6 +6161,22 @@ part('tapping the deal away');
        'the ring stands over that seat  got ' + dbox.y + '..' + (dbox.y + dbox.h) + ' for ' + dseat.y);
     ok(dbox.h > L.Stage.cardSize(1280).h,
        'and takes in the cards and the name, not a heading  got ' + dbox.h);
+
+    /* Who dealt can be corrected while the scene is still up -- a real deck
+       was dealt by a person, and the table host says which person. The ring
+       moves to them; the round is not dealt again, because the hand did not
+       change. It used to be drawn once with the cards, so every other screen
+       followed the change and the TV screen went on ringing the old seat. */
+    L.Deal.update({ key: '0:0', bids: [null, 1, null], turn: 2, dealer: 2 });
+    ok(overlay.querySelectorAll('.dring').length === 1, 'still one ring, one dealer');
+    const moved = boxOf(overlay.querySelector('.dring'));
+    const two = L.Stage.ring(3, 0, 1280, 720).at(2);
+    ok(moved.y < two.y && moved.y + moved.h > two.y,
+       'and it stands over the seat that deals now  got ' + moved.y + '..'
+       + (moved.y + moved.h) + ' for ' + two.y);
+    ok(moved.x !== dbox.x || moved.y !== dbox.y, 'which is not where it was');
+    L.Deal.update({ key: '0:0', bids: [null, 1, null], turn: 2, dealer: 0 });
+    ok(boxOf(overlay.querySelector('.dring')).y === dbox.y, 'and back again if it is put back');
     const body = L.dom.document.body;
     ok(body.classList.contains('stage-head'), 'the page is marked while a round line is up');
     const bandTop = Number(String(body.style.getPropertyValue('--stage-band')).replace('px', ''));

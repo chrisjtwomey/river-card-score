@@ -147,6 +147,7 @@ function pushDealStatus() {
     bids: r.bids || [],
     turn: ST.turn,
     trump: r.trump || null,
+    dealer: r.dealer,           // who dealt can be corrected while the scene holds
     text: (ST.phase !== 'bid' || ST.turn === null) ? 'All bids are in'
       : `Waiting for ${ST.seats[ST.turn].name} to bid`,
   });
