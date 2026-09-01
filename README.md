@@ -927,10 +927,9 @@ foreground drawn on nothing; `res/drawable-xxxhdpi/boat_mark.png` is 108dp with
 the drawing inside the middle 72dp, which is all Android promises to keep -- a
 round launcher cuts the rest away. It is as large as it goes with every inked
 pixel still inside that circle, and it is placed by where the ink is rather than
-by the edges of the picture, so the boat sits in the middle of the circle and
-not to the left of it. The corner's tile is a closer cut of the same drawing,
-because a 38px square has no room for the waters either side. Both come from
-`art/icon.jpeg` at the root of the tree, which is not shipped.
+by the edges of the picture. The corner's tile is a closer cut of the same
+drawing, because a 38px square is squarer than a boat. Both are cut from
+`art/boat.png` at the root of the tree, which is not shipped.
 
 **The splash is still the card mark:** five stacks of cards, 1-2-3-2-1, the hand
 growing to the top of the river and shrinking back down, with the card at the
@@ -1466,7 +1465,7 @@ and lets it off by hand rather than waiting. Run it alone with
   number in the body of the file is a colour no swatch could change, and
   `test-pages.js` fails on one.
 - `public/art/` — the pictures the pages load. `mark.png` is the game's mark, the riverboat drawn on nothing, in the corner of every page that carries the name.
-- `art/` — the drawings the marks are cut from, at the size they were drawn. Kept out of `public/` on purpose: everything under `public/` is packed into the APK and unpacked on the device at first run, and a source file no page loads has no business there.
+- `art/` — the drawings, at the size they were drawn. `boat.png` is what both marks are cut from; `icon.jpeg` is the same boat on a white ground, which the swatches' colours were read out of. Kept out of `public/` on purpose: everything under `public/` is packed into the APK and unpacked on the device at first run, and a source file no page loads has no business there.
 
 ## Notes
 
