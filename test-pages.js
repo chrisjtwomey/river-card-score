@@ -2057,6 +2057,22 @@ part("the app's menu screen");
   ok(!deaf.length, 'and the app answers everything the menu says to it  got ' + deaf.join(' '));
   ok(answered.indexOf('quit') >= 0, 'including quitting');
 
+  /* And the other way down the same wire: the app calls into the page to say
+     what only it knows -- whether a table is up, what went wrong while starting,
+     which build this is. A name on one side and not the other is a corner of
+     the screen that stays empty and never says why. */
+  const offers = (page.match(/window\.(app[A-Za-z]+)\s*=/g) || [])
+    .map((m) => /window\.(app[A-Za-z]+)/.exec(m)[1]);
+  const calls = (java.match(/window\.(app[A-Za-z]+)\s*&&/g) || [])
+    .map((m) => /window\.(app[A-Za-z]+)/.exec(m)[1])
+    .filter((v, i, a) => a.indexOf(v) === i);
+  ok(offers.length >= 3, 'the page answers to what the app tells it  got ' + offers.join(' '));
+  const unheard = offers.filter((f) => calls.indexOf(f) < 0);
+  const unanswered = calls.filter((f) => offers.indexOf(f) < 0);
+  ok(!unheard.length && !unanswered.length,
+     'and the two agree on the names  got page-only ' + unheard.join(' ')
+     + ' app-only ' + unanswered.join(' '));
+
   // No page served to a browser draws any of it.
   const drawn = ['index', 'host', 'play', 'history', 'replay', 'dev']
     .filter((n) => /home-sky|home-river|home-menu/.test(

@@ -61,6 +61,9 @@
     <button class="btn big" data-go="settings" type="button">Settings</button>
     <button class="btn ghost big" data-go="quit" type="button">Quit Game</button>
   </nav>
+  <!-- Which build this is. Empty until the app says, so it shows nothing at all
+       in a browser, where there is no build to name. -->
+  <span class="home-version" id="version" hidden></span>
   </div>
 </div>
 
@@ -124,6 +127,12 @@
     el.classList.toggle('bad', !!bad);
   };
   window.appSay = say;                       // the app calls this while starting
+  // The page is a file in the APK and cannot know which build it is in.
+  window.appVersion = (v) => {
+    const el = document.getElementById('version');
+    el.textContent = v ? 'v' + String(v).replace(/^v/, '') : '';
+    el.hidden = !el.textContent;
+  };
   /* The app knocks on the server's door and says what it found. The server is
      in another process, so this is the only honest answer -- and it is the one
      thing the menu changes shape for. */

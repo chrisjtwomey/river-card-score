@@ -66,8 +66,9 @@ public class MainActivity extends Activity {
 
       @Override
       public void onPageFinished(WebView view, String url) {
-        // Only now does the page have the function to answer to.
+        // Only now does the page have the functions to answer to.
         askTheTable();
+        sayVersion();
       }
     });
     setContentView(web);
@@ -111,6 +112,23 @@ public class MainActivity extends Activity {
   private void showChooser() {
     web.loadUrl(firstShow ? PAGE + "?splash=1" : PAGE);
     firstShow = false;
+  }
+
+  /**
+   * Which build this is. The page is a file in the APK and cannot know, and the
+   * version is the tag that built it, so the app has to say. Read from the
+   * package rather than from a generated constant: it is the number the phone
+   * itself would show you under the app's name, so the two cannot disagree.
+   */
+  private void sayVersion() {
+    String v;
+    try {
+      v = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+    } catch (Exception e) {
+      v = null;
+    }
+    if (v == null || web == null) return;
+    web.evaluateJavascript("window.appVersion && appVersion(" + quote(v) + ")", null);
   }
 
   /**

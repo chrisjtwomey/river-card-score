@@ -983,6 +983,12 @@ cream the table is written in for the rest:
   quit**, **Leave it running**, **Cancel** -- because those are two different
   things and the players at that table are not holding your phone.
 
+Which build it is sits quietly in the bottom right corner. The page is a file
+inside the APK and cannot know, so the app says — read off the installed package
+rather than a constant compiled in, so it is the same number the phone shows you
+under the app's name and the two cannot disagree. In a browser it says nothing,
+because there is no build to name.
+
 On a cold start the picture arrives: the boat fades up and lifts a little, the
 name drops from above, overshoots and settles, and the choices follow. They
 arrive at different rates on purpose -- at one rate they read as a single
