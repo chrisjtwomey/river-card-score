@@ -1,39 +1,29 @@
 'use strict';
-/* The game introducing itself: the name and the boat, on the two screens that
-   are doors into it -- the front page in a browser, and the app's own first
-   screen before any server is running.
+/* The game introducing itself: the name and the boat, on the app's own first
+   screen -- the one thing you see between tapping the icon and the chooser,
+   before any server is running.
+
+   The web pages do not show it. A page served over a network opens in a moment
+   and has nothing to cover, and the front page is one you come back to over and
+   over; an app has a cold start whether anybody wants one or not, and that is
+   what a splash is for.
 
    It is a picture and a beat, and nothing else: no state, no socket, nothing
-   the game reads back. So it lives in one small file that either door may load,
-   and the CSS that draws it is in styles.css with everything else, which is
-   also how the chooser gets it -- that page links the game's stylesheet, so
-   `url(art/boat.webp)` resolves against the stylesheet and lands in the same
-   place from both.
+   the game reads back. It lives in public/ all the same, with the CSS that
+   draws it in styles.css -- the chooser links the game's stylesheet already, so
+   `url(art/boat.webp)` resolves against it and lands in the right place, and
+   there is one home for the splash rather than a second copy in a page that
+   sits outside the tree the tests can see.
 
    Call it from the top of the body, before the page is drawn. Later than that
    and the page shows itself first, which is the one thing a splash must not
    let happen. */
 const Splash = (() => {
-  // One a session on a page that is come back to. The app's own screen asks
-  // for it by hand instead, because opening the app IS the once.
-  const KEY = 'river-card-score:splashed:v1';
-
-  // Off the window rather than bare, so a screen without one -- and a check
-  // standing in for a browser -- can say what it has.
-  const store = () => (window && window.sessionStorage) || null;
-  const seen = () => {
-    try { const s = store(); return !!(s && s.getItem(KEY)); } catch (e) { return false; }
-  };
-  const mark = () => {
-    try { const s = store(); if (s) s.setItem(KEY, '1'); } catch (e) {}
-  };
-
-  /* play({ once, hold, ground })
-       once    only the first time this session -- for a page that is returned to
+  /* play({ hold, ground })
        hold    how long it stands before it goes, in ms; the movement is over
                well before it
-       ground  a colour to lie on, where the page behind is not the right one:
-               the app's screen matches the splash the phone drew before it
+       ground  a colour to lie on, so it can begin on the one the phone drew
+               behind it rather than on whatever the theme is
      Returns whether anything was shown, so a caller can tell.
 
      The animations setting is obeyed: off means there is no splash at all,
@@ -45,10 +35,6 @@ const Splash = (() => {
     // window would always say no -- and quietly take the other branch.
     const motion = (typeof UI !== 'undefined' && UI.motion) ? UI.motion() : 'full';
     if (motion === 'off') return false;
-    if (o.once) {
-      if (seen()) return false;
-      mark();
-    }
 
     const el = document.createElement('div');
     el.id = 'splash';
@@ -81,7 +67,7 @@ const Splash = (() => {
     return true;
   }
 
-  return { play, KEY };
+  return { play };
 })();
 
 if (typeof module !== 'undefined') module.exports = Splash;

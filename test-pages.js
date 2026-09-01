@@ -2019,18 +2019,14 @@ part('game speed');
 
 part('the splash');
 
-/* The game introducing itself: the name and the boat, on the two screens that
-   are doors into it. It is a picture and a beat and nothing else, so what is
-   worth checking is that it goes away, that it only comes once where it is told
-   to, and that both doors ask the same file for it. */
+/* The game introducing itself, on the app's own first screen. It is a picture
+   and a beat and nothing else, so what is worth checking is that it goes away
+   again, and that the one page which shows it can really reach the file that
+   does it -- that page sits outside public/, so nothing else would notice. */
 {
   const load = (dom) => new Function('window', 'document', 'localStorage', 'console',
     fs.readFileSync(path.join(ROOT, 'public/splash.js'), 'utf8') + '\n; return Splash;')(
     dom.window, dom.document, dom.localStorage, { log() {}, warn() {}, error() {}, info() {} });
-  const session = () => {
-    const held = {};
-    return { getItem: (k) => (k in held ? held[k] : null), setItem: (k, v) => { held[k] = String(v); } };
-  };
   const timers = (dom) => {
     const q = [];
     dom.window.setTimeout = (fn, ms) => { q.push({ fn, ms }); return q.length; };
@@ -2039,10 +2035,9 @@ part('the splash');
 
   {
     const dom = makeDom(412, 860);
-    dom.window.sessionStorage = session();
     const clock = timers(dom);
     const Splash = load(dom);
-    ok(Splash.play({ once: true }) === true, 'it plays');
+    ok(Splash.play({}) === true, 'it plays');
     const el = dom.document.body.querySelector('#splash');
     ok(!!el, 'and lays itself over the page');
     ok(!!el.querySelector('.sp-title') && !!el.querySelector('.sp-boat'),
@@ -2058,22 +2053,9 @@ part('the splash');
     ok(!dom.document.body.querySelector('#splash'), 'and it is gone');
   }
 
-  // Once a session, where it is asked for once a session.
-  {
-    const dom = makeDom(412, 860);
-    dom.window.sessionStorage = session();
-    timers(dom);
-    const Splash = load(dom);
-    ok(Splash.play({ once: true }) === true, 'the first time, it plays');
-    ok(Splash.play({ once: true }) === false, 'the second time in a session, it does not');
-    ok(load(dom).play({ once: true }) === false, 'nor after the page is loaded again');
-    ok(load(dom).play({}) === true, 'but a screen that asks every time is given it');
-  }
-
   // A tap is a way out. Nobody should sit through this twice.
   {
     const dom = makeDom(412, 860);
-    dom.window.sessionStorage = session();
     const clock = timers(dom);
     const Splash = load(dom);
     Splash.play({});
@@ -2088,7 +2070,6 @@ part('the splash');
      nothing to show. */
   {
     const dom = makeDom(412, 860);
-    dom.window.sessionStorage = session();
     dom.localStorage.setItem('river-card-score:motion:v1', 'off');
     const src = ['public/ui.js', 'public/splash.js']
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
@@ -2099,17 +2080,16 @@ part('the splash');
     ok(!dom.document.body.querySelector('#splash'), 'and nothing is laid over the page');
   }
 
-  /* Both doors, and the same file for both. The app's screen lives outside
-     public/, so it reaches in by the path tools/prepare.sh writes the tree to;
-     if that ever stops being right the splash is a broken script tag on the one
-     screen nobody tests in a browser. */
+  /* The one screen that shows it lives outside public/ and reaches in by the
+     path tools/prepare.sh writes the tree to. If that ever stops being right
+     the splash is a broken script tag on the one screen nobody opens in a
+     browser, so the paths are read and checked rather than trusted. */
   {
-    const front = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
-    ok(/<script src="splash\.js"><\/script>/.test(front)
-       && front.indexOf('splash.js') < front.indexOf('</head>'),
-       'the front page loads it before it is drawn');
-    ok(/Splash\.play\(\{ once: true \}\)/.test(front),
-       'and plays it once a session');
+    /* The web pages do not show it: a page over a network opens in a moment and
+       has nothing to cover, and the front page is one you come back to. */
+    const pages = ['index', 'host', 'play', 'history', 'replay', 'dev']
+      .filter((n) => /splash/.test(fs.readFileSync(path.join(ROOT, 'public/' + n + '.html'), 'utf8')));
+    ok(!pages.length, 'no page served to a browser shows it  got ' + pages.join(', '));
 
     const chooser = fs.readFileSync(
       path.join(ROOT, 'android/app/src/main/assets/chooser.html'), 'utf8');
