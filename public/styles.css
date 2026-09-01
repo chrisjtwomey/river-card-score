@@ -1461,7 +1461,11 @@ body.host .scorecard-panel .table-wrap{
 .menu-label{white-space:nowrap}
 .menu-tick{color:var(--felt);font-weight:800;min-width:1em;text-align:right}
 :root[data-theme="dark"] .menu-tick, html.dark .menu-tick{color:var(--good)}
-/* a choice of two or three, side by side */
+/* A choice of two or three, side by side: a groove, and the one chosen
+   sitting in it as a pill. The one segmented control the app has -- a settings
+   row, the dev page's tabs and its phase and trump rows, the speed a game is
+   played back at -- so what changes between them is the size of the pill and
+   what colour says chosen, never the shape of the thing. */
 .seg{display:flex;gap:2px;padding:2px;background:var(--chip);border-radius:8px}
 .seg button{
   padding:4px 8px;border:0;border-radius:6px;background:none;
@@ -1525,9 +1529,15 @@ body.settings-open{overflow:hidden}
 .scell.played{background:rgba(31,122,77,.14)}
 .scell.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,43,.22)}
 .scell.bum{border-style:dashed}
-.seg{display:flex;flex:none;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-.seg .btn{border:0;border-radius:0;padding:7px 12px;font-size:12.5px}
+/* The same groove where a .btn goes in it rather than a bare button: bigger,
+   because these are pressed on a band and not read down a menu, and green for
+   chosen, because that is what chosen is everywhere but the settings page. */
+.seg{flex:none}
+.seg .btn{border:0;border-radius:6px;padding:7px 12px;font-size:12.5px;
+  background:none;color:var(--ink-dim)}
+.seg .btn:hover{background:var(--bg2);color:var(--ink)}
 .seg .btn.on{background:var(--felt);color:#fff}
+.seg .btn.on:hover{background:var(--felt-2);color:#fff}
 
 /* The round on show as a timeline: a rail, the points marked along it in
    the order they happened, and a head you can drag. What each mark wears is

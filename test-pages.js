@@ -6085,6 +6085,26 @@ part('the pages and the stylesheet agree');
   ok(!!z && Number(z[1]) > 40, 'the bid stamp lies over every card on the felt  got ' + (z ? z[1] : 'no z-index'));
 }
 
+/* A choice of two or three, side by side, is one thing in this app: a groove
+   with the choice sitting in it as a pill. There were two -- the settings
+   page's groove, and a framed box with square blocks in it on the dev page
+   and the replay band -- doing the same job in two shapes. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const segs = css.match(/\n\.seg\{([^}]*)\}/g) || [];
+  ok(!segs.some((r) => /border:1px/.test(r)),
+     'a segmented control is a groove, not a framed box  got ' + segs.join(' '));
+  const inner = /\n\.seg \.btn\{([^}]*)\}/.exec(css);
+  const r = inner && /border-radius:\s*(\d+)px/.exec(inner[1]);
+  ok(!!r && Number(r[1]) > 0,
+     'and what is in it is rounded  got ' + (r ? r[1] + 'px' : 'no radius'));
+  const track = /\n\.seg\{[^}]*border-radius:\s*(\d+)px[^}]*\}/.exec(css);
+  const pad = /\n\.seg\{[^}]*padding:\s*(\d+)px/.exec(css);
+  ok(!!track && !!pad && Number(r[1]) === Number(track[1]) - Number(pad[1]),
+     'by the groove\'s own corner less its padding, so the two are concentric'
+     + `  got ${r && r[1]} inside ${track && track[1]} with ${pad && pad[1]} of pad`);
+}
+
 /* The gold a bid is stamped in and the gold the dealer is ringed in are the
    same gold: two marks the table makes on the same felt, and two shades of it
    would read as two different kinds of thing. */
