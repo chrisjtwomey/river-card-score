@@ -5,14 +5,57 @@
    written once and never has to know about light and dark. Adding another is
    one more block of the same names.
 
-   River is what the game opens as: its own drawing, indigo and slate teal under
-   a gold sun, on white. Table is the green baize it was before, kept whole --
-   pick it and nothing about the game has changed.
+   Original is what the game opens as: the green baize it has always been. The
+   rest are rooms to move it into, River first -- the game's own drawing, indigo
+   and slate teal under a gold sun.
+
+   Original is the block :root carries, so it is the one a page falls back to
+   and the only one never stamped on the page. Every other block must come after
+   it in this file: they weigh the same, so the last one wins.
 
    What is laid ON the table is in one set and not two, because the table is
    dark whichever way the page is: the cards, the stamps, and the cream on them
    read the same in a light room and a dark one. */
-:root, [data-swatch="river"]{
+:root, [data-swatch="original"]{
+  /* The green baize: the game as it was for its first year, and what it opens
+     as. It is the block :root carries, so a page with nothing saved is this
+     one and the only swatch never stamped on the page or written down. */
+  --sw-bg:#f4f1ea;        --sw-bg-d:#12140f;
+  --sw-bg2:#ffffff;       --sw-bg2-d:#1b1e18;
+  --sw-ink:#1c1f1a;       --sw-ink-d:#eceadf;
+  --sw-ink-dim:#5d6357;   --sw-ink-dim-d:#9aa08f;
+  --sw-line:#ddd7c9;      --sw-line-d:#2e332a;
+  --sw-felt:#14603f;      --sw-felt-d:#1e8a5a;
+  --sw-felt-2:#0f4d33;    --sw-felt-2-d:#166b46;
+  --sw-gold:#bd7524;      --sw-gold-d:#e39945;
+  --sw-red:#b3261e;       --sw-red-d:#e06a60;
+  --sw-good:#1f7a4d;      --sw-good-d:#4fc38a;
+  --sw-chip:#ece7db;      --sw-chip-d:#262b22;
+  --sw-chip-on:#14603f;   --sw-chip-on-d:#1e8a5a;
+  --sw-shadow:0 1px 2px rgba(20,25,20,.06), 0 8px 24px rgba(20,25,20,.07);
+  --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+
+  --felt-hi:#1c6b48;
+  --felt-lo:#0d3f2a;
+  --on-felt:#f3efe2;
+  --on-felt-danger:#ffd9d4;
+  --card-ink:#15181a;
+  --card-red:#c0271d;
+  --gold-lit:#f8c986;
+  --gold-soft:#f2bc76;
+  --on-gold:#17130a;
+  --gold-rgb:189,117,36;
+  --gold-soft-rgb:242,188,118;
+  --gold-lit-rgb:248,201,134;
+  --felt-rgb:20,96,63;
+  --red-rgb:179,38,30;
+  --good-rgb:31,122,77;
+  --good-lit-rgb:79,195,138;
+  --table-hi-rgb:30,138,90;
+  --table-rgb:21,88,60;
+  --table-edge-rgb:7,11,8;
+}
+[data-swatch="river"]{
   /* The bars and the buttons are the boat: cool. Everything the page is made
      of is the sun: warm. Tinting the ground with the same cold hue as the
      chrome was the first try, and it left nothing to relieve it -- the whole
@@ -55,42 +98,6 @@
   --table-edge-rgb:13,10,22;    /* and the dark it falls away to */
 }
 
-[data-swatch="table"]{
-  --sw-bg:#f4f1ea;        --sw-bg-d:#12140f;
-  --sw-bg2:#ffffff;       --sw-bg2-d:#1b1e18;
-  --sw-ink:#1c1f1a;       --sw-ink-d:#eceadf;
-  --sw-ink-dim:#5d6357;   --sw-ink-dim-d:#9aa08f;
-  --sw-line:#ddd7c9;      --sw-line-d:#2e332a;
-  --sw-felt:#14603f;      --sw-felt-d:#1e8a5a;
-  --sw-felt-2:#0f4d33;    --sw-felt-2-d:#166b46;
-  --sw-gold:#bd7524;      --sw-gold-d:#e39945;
-  --sw-red:#b3261e;       --sw-red-d:#e06a60;
-  --sw-good:#1f7a4d;      --sw-good-d:#4fc38a;
-  --sw-chip:#ece7db;      --sw-chip-d:#262b22;
-  --sw-chip-on:#14603f;   --sw-chip-on-d:#1e8a5a;
-  --sw-shadow:0 1px 2px rgba(20,25,20,.06), 0 8px 24px rgba(20,25,20,.07);
-  --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
-
-  --felt-hi:#1c6b48;
-  --felt-lo:#0d3f2a;
-  --on-felt:#f3efe2;
-  --on-felt-danger:#ffd9d4;
-  --card-ink:#15181a;
-  --card-red:#c0271d;
-  --gold-lit:#f8c986;
-  --gold-soft:#f2bc76;
-  --on-gold:#17130a;
-  --gold-rgb:189,117,36;
-  --gold-soft-rgb:242,188,118;
-  --gold-lit-rgb:248,201,134;
-  --felt-rgb:20,96,63;
-  --red-rgb:179,38,30;
-  --good-rgb:31,122,77;
-  --good-lit-rgb:79,195,138;
-  --table-hi-rgb:30,138,90;
-  --table-rgb:21,88,60;
-  --table-edge-rgb:7,11,8;
-}
 
 [data-swatch="casino"]{
   /* Red baize and brass: a card room, and a real cloth -- a table is as often

@@ -69,10 +69,11 @@ const UI = (function () {
   const SWATCH_KEY = 'river-card-score:swatch:v1';
   /* Every set of colours the stylesheet holds, in the order they are offered.
      The first is what :root already is, so it is what a page opens as and the
-     only one that is never stamped or saved. */
+     only one that is never stamped or saved -- which also makes it what a
+     setting saved by an older page falls back to when its name has gone. */
   const SWATCHES = [
+    { v: 'original', label: 'Original' },
     { v: 'river', label: 'River' },
-    { v: 'table', label: 'Table' },
     { v: 'casino', label: 'Casino' },
     { v: 'parlour', label: 'Parlour' },
     { v: 'midnight', label: 'Midnight' },

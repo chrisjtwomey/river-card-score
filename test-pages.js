@@ -1993,12 +1993,12 @@ part('the swatch');
     const r = re.exec(head);
     return r ? (r[1].match(/--[a-z0-9-]+(?=\s*:)/g) || []) : null;
   };
-  const river = namesIn(/\n:root, \[data-swatch="river"\]\{([\s\S]*?)\n\}/);
-  const table = namesIn(/\n\[data-swatch="table"\]\{([\s\S]*?)\n\}/);
-  ok(!!river && river.length > 20, 'the swatch names every colour the game has  got ' + (river || []).length);
-  ok(!!table, 'and there is a second swatch');
-  const missing = (river || []).filter((n) => (table || []).indexOf(n) < 0);
-  const extra = (table || []).filter((n) => (river || []).indexOf(n) < 0);
+  const base = namesIn(/\n:root, \[data-swatch="original"\]\{([\s\S]*?)\n\}/);
+  const other = namesIn(/\n\[data-swatch="river"\]\{([\s\S]*?)\n\}/);
+  ok(!!base && base.length > 20, 'the swatch names every colour the game has  got ' + (base || []).length);
+  ok(!!other, 'and there is a second swatch');
+  const missing = (base || []).filter((n) => (other || []).indexOf(n) < 0);
+  const extra = (other || []).filter((n) => (base || []).indexOf(n) < 0);
   ok(!missing.length && !extra.length,
      'both say the same names, so neither can drift  got missing ' + missing.join(',')
      + ' extra ' + extra.join(','));
@@ -2006,7 +2006,7 @@ part('the swatch');
   /* A card is white paper in any room. Its whites are declared once, outside
      every swatch, so no theme can make the one thing on the table that has to
      look the same twice into more of the furniture. */
-  ok(river.indexOf('--card-face') < 0 && river.indexOf('--felt-edge') < 0,
+  ok(base.indexOf('--card-face') < 0 && base.indexOf('--felt-edge') < 0,
      'a card\'s whites are not a swatch\'s to change');
   ok(/--card-face:\s*#ffffff/.test(head) && /--felt-edge:\s*#ffffff/.test(head),
      'they are full white, said once');
@@ -2041,21 +2041,21 @@ part('the swatch');
   let UI = load1();
   const root = dom.document.documentElement;
 
-  ok(UI.swatch() === 'river', 'with nothing chosen the game is the river  got ' + UI.swatch());
+  ok(UI.swatch() === 'original', 'with nothing chosen the game is as it always was  got ' + UI.swatch());
   ok(!root.getAttribute('data-swatch'),
      'and nothing is stamped, because that is what the stylesheet already is');
 
-  UI.setSwatch('table');
-  ok(UI.swatch() === 'table' && root.getAttribute('data-swatch') === 'table',
-     'the green baize is asked for by name  got ' + root.getAttribute('data-swatch'));
-  ok(load1().swatch() === 'table', 'and it is remembered');
-
   UI.setSwatch('river');
-  ok(UI.swatch() === 'river' && !root.getAttribute('data-swatch'),
+  ok(UI.swatch() === 'river' && root.getAttribute('data-swatch') === 'river',
+     'another room is asked for by name  got ' + root.getAttribute('data-swatch'));
+  ok(load1().swatch() === 'river', 'and it is remembered');
+
+  UI.setSwatch('original');
+  ok(UI.swatch() === 'original' && !root.getAttribute('data-swatch'),
      'going back takes the stamp off again  got ' + root.getAttribute('data-swatch'));
 
   UI.setSwatch('sideboard');
-  ok(UI.swatch() === 'river', 'a swatch that is not offered is refused  got ' + UI.swatch());
+  ok(UI.swatch() === 'original', 'a swatch that is not offered is refused  got ' + UI.swatch());
 
   // And they are on the settings page, in a panel of their own: a list, not a
   // strip, because six will not fit across a phone.
@@ -2077,7 +2077,7 @@ part('the swatch');
   ok(tiles.kind === 'tiles', 'and the swatches are drawn, not listed  got ' + tiles.kind);
   ok((tiles.options || []).length === UI.SWATCHES.length,
      'one for every swatch  got ' + (tiles.options || []).length + ' of ' + UI.SWATCHES.length);
-  ok((tiles.options || [])[0] && tiles.options[0].v === 'river',
+  ok((tiles.options || [])[0] && tiles.options[0].v === 'original',
      'the one it opens as first  got ' + ((tiles.options || [])[0] || {}).v);
 
   /* The list here and the blocks in the stylesheet are two halves of one thing:
@@ -2093,7 +2093,7 @@ part('the swatch');
     .filter((v, k, a) => a.indexOf(v) === k)
     .filter((v) => offered.indexOf(v) < 0);
   ok(!spare.length, 'and every block is one offered  got ' + spare.join(','));
-  UI.setSwatch('river');
+  UI.setSwatch('original');
 }
 
 /* And drawn: each tile is a little of the game in the colours it is offering,
@@ -2107,11 +2107,11 @@ part('the swatch');
     ['public/ui.js', 'public/settings.js']
       .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n')
       + '\n; return { Settings };')(dom.window, dom.document, dom.localStorage, quiet2);
-  let chosen = 'river';
+  let chosen = 'original';
   const page = Settings.wire(null, { items: [
     { kind: 'group', label: 'Themes' },
     { kind: 'tiles', label: 'Colours',
-      options: [{ v: 'river', label: 'River' }, { v: 'table', label: 'Table' },
+      options: [{ v: 'original', label: 'Original' }, { v: 'river', label: 'River' },
                 { v: 'casino', label: 'Casino' }],
       get: () => chosen, set: (v) => { chosen = v; } },
   ] });
@@ -2120,7 +2120,7 @@ part('the swatch');
   const tiles = box.querySelectorAll('.sw-tile');
   ok(tiles.length === 3, 'one tile for each  got ' + tiles.length);
   const shots = box.querySelectorAll('.sw-shot').map((e) => e.getAttribute('data-swatch'));
-  ok(shots.join(',') === 'river,table,casino',
+  ok(shots.join(',') === 'original,river,casino',
      'each wearing the swatch it is offering  got ' + shots.join(','));
   ok(tiles[0].querySelector('.sw-bar') && tiles[0].querySelector('.sw-table')
      && tiles[0].querySelector('.sw-gold')

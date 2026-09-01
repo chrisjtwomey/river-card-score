@@ -37,25 +37,28 @@ moment you set a photo: the boat gives way to your face. The replay page keeps
 its ▶ and the dev page its 🛠, because those say which page you are on, not
 which game.
 
-**The game comes in seven sets of colours.** **River** is what it opens as: the
-colours of its own drawing. The bars and the buttons are the boat, in slate teal
-and indigo; the page they sit on is the sun, white going to warm sand, with the
-ink a warm near-black. That split is the drawing's own -- a cool boat against a
-warm sky -- and it is the point: a first cut tinted the page with the same cold
-hue as the bars, and with nothing to relieve it the whole screen sat in one cast
-and looked ill. The card table is the night river, deep indigo with a teal glow
-at the middle. There are seven in all, each a cloth a card table really comes in
-and the room it would be in:
+**The game comes in seven sets of colours.** **Original** is what it opens as --
+the green baize it has always been, kept in every particular. The other six are
+rooms to move it into, each a cloth a card table really comes in:
 
 | | the bars | the table | the page |
 |---|---|---|---|
+| **Original** | the green baize, as it always was | green | cream to white |
 | **River** | slate teal into indigo | the night river | white to warm sand |
-| **Table** | the green baize, exactly as it was | | |
 | **Casino** | burgundy | red baize | cream |
 | **Parlour** | deep red | the green baize, under brass | cream |
 | **Midnight** | near-black | black baize edged in gold | cream |
 | **Saloon** | plum, the smoke the boat puts up | plum | warm white |
 | **Harbour** | navy | navy baize with brass | white |
+
+**River** is the drawing the game is named for, and the one worth saying more
+about. The bars and the buttons are the boat, in slate teal and indigo; the page
+they sit on is the sun, white going to warm sand, with the ink a warm
+near-black. That split is the drawing's own -- a cool boat against a warm sky --
+and it is the point: a first cut tinted the page with the same cold hue as the
+bars, and with nothing to relieve it the whole screen sat in one cast and looked
+ill. Its card table is the night river, deep indigo with a teal glow at the
+middle.
 
 They are all in **Themes**, the first panel of the settings page. Each is drawn
 as itself -- a tile with the bar across the top, the page under it, and the
@@ -69,8 +72,7 @@ that same panel -- system, light or dark -- with a line under it, because it
 belongs with the themes without being one of them: it is the half of a theme
 that is showing, not a theme. They used to be two panels with two names for the
 same sort of thing, which asked the reader to know a difference that is not
-there. Every swatch works in both halves, and picking **Table** gives back
-exactly the game as it was in every particular.
+there. Every swatch works in both halves.
 
 **Two things a theme does not touch.** A playing card is white paper with a
 white edge, in a green room and in a red one, so a card's whites are declared
