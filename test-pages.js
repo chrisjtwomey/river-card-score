@@ -2121,6 +2121,19 @@ part("the app's menu screen");
   ok(/\.home-sky\{background:#f4f1ea\}/.test(page),
      'the sky is the cream the phone drew behind the page');
 
+  /* Something on this screen is wider than the screen on purpose -- the lamp
+     behind the boat. An overhang nobody clips makes the page wider than the
+     window, which shows as nothing at all here, and then anything laid over the
+     page with position:fixed sizes itself to the page rather than to the
+     window. That is what put the settings page half off the side. */
+  const menuRules = css.slice(css.indexOf("the app's menu screen"),
+                              css.indexOf('a theme, drawn as itself'));
+  const overhang = (menuRules.match(/(?:width|height):min\((\d+)vw/g) || [])
+    .map((m) => Number(/(\d+)vw/.exec(m)[1])).filter((n) => n > 100);
+  ok(overhang.length > 0, 'the lamp is wider than the screen, as it should be');
+  ok(/#home\{[^}]*overflow-x:hidden/.test(menuRules),
+     'so the page clips what hangs over its edges');
+
   /* The rules and the markup are in two files and one of them is not served, so
      a part renamed in the page leaves rules behind that match nothing and say
      nothing about it -- the pictures simply draw at their own size. Every part

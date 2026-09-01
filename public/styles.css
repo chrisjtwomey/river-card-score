@@ -1847,6 +1847,14 @@ body.host .scorecard-panel .table-wrap{
   --boat-h:calc(var(--boat-w) * 391 / 640);
   --dip:calc(var(--boat-h) * .13);          /* how much of it is under water */
   min-height:100dvh;display:flex;flex-direction:column;
+  /* The lamp behind the boat is deliberately wider than the screen, and an
+     overhang nobody clips makes the whole page wider than the screen. That is
+     invisible here -- there is nothing to scroll to -- but the WebView widens
+     its layout viewport to fit, and anything laid over the page with
+     position:fixed then sizes itself to that instead of to the screen. The
+     settings page did, and came up too wide to read. Clipped here rather than
+     on the sky, which has to let the boat hang over into the water. */
+  overflow-x:hidden;overflow-y:auto;
 }
 .home-sky{
   flex:0 0 auto;position:relative;
