@@ -234,8 +234,15 @@ the table host's.
 **The standings are the list of everybody**, once the lobby is gone, so that is
 where the seat controls live. Each row says where that seat is — **host**,
 **bot**, **auto-play** for one the table was given, **away 4m** for one nobody
-is behind — and carries a ⋯ for whoever runs the table:
+is behind — and carries a ⋯ for whoever runs the table. The two jobs come
+first, then the ways a seat is taken and given back, with the one thing on it
+that pressing again does not undo at the foot:
 
+- **Make host** — the table passed on, mid-game. Never to a bot, and
+  never to a seat the table is playing.
+- **Make dealer** — who dealt. Only with **real cards**, where a
+  person did the dealing and can have been the wrong one, and only while nobody
+  has bid, because the order of bidding is the dealer's.
 - **Let back in** — a seat the table was given, handed back. It cannot be that
   player's own button: whoever the table is playing for is not there to press
   anything, and their phone may have forgotten the table altogether. Once the
@@ -271,11 +278,6 @@ is behind — and carries a ⋯ for whoever runs the table:
   some phone can still open; a seat put out holds no key for any phone to open
   it with, so that gate is about nothing and the name is enough. Coming back by
   it is what mints the new key.
-- **Make host** — the table passed on, mid-game. Never to a bot, and
-  never to a seat the table is playing.
-- **Make dealer** — who dealt. Only with **real cards**, where a
-  person did the dealing and can have been the wrong one, and only while nobody
-  has bid, because the order of bidding is the dealer's.
 A name is not on that menu. The name is the column on the scorecard, and the
 head of that column is where it is changed — one place, where the thing being
 renamed is the thing being looked at.

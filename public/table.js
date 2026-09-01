@@ -674,6 +674,13 @@ const Table = (function () {
     if (s.id !== ST.captainId && !s.bot && !s.left) {
       out.push({ label: 'Make host', run: () => view.send({ t: 'captain', id: s.id }) });
     }
+    /* Who dealt. With real cards a person did the dealing and can have been the
+       wrong one -- and only while nobody has bid, because the order of bidding
+       is the dealer's. */
+    if (ST.phase === 'bid' && !Game.virtual(ST) && r && r.dealer !== p
+        && (r.bids || []).every((b) => b === null)) {
+      out.push({ label: 'Make dealer', run: () => view.send({ t: 'dealer', id: s.id }) });
+    }
     /* A seat the table was given, given back. The player is not there to press
        anything -- that is why the table has their hand -- and their phone may
        have forgotten the table, so they come back by the name they played
@@ -690,17 +697,13 @@ const Table = (function () {
        who has to stop and cannot press it themselves, or one the table wants
        rid of. The seat stays -- it is a column -- and the key goes with them,
        which is what makes it different from a seat that went quiet. Not a
-       bot's, which is the table's own, and not on a game already over. */
+       bot's, which is the table's own, and not on a game already over.
+
+       Last, and the only one on the list that cannot be undone by pressing it
+       again: the two jobs come first, then the ways a seat is taken. */
     if (!s.bot && !s.left && Game.PLAY_PHASES.indexOf(ST.phase) >= 0) {
       out.push({ label: 'Kick', danger: true,
                  run: () => putOut(view, s.name, s.id) });
-    }
-    /* Who dealt. With real cards a person did the dealing and can have been the
-       wrong one -- and only while nobody has bid, because the order of bidding
-       is the dealer's. */
-    if (ST.phase === 'bid' && !Game.virtual(ST) && r && r.dealer !== p
-        && (r.bids || []).every((b) => b === null)) {
-      out.push({ label: 'Make dealer', run: () => view.send({ t: 'dealer', id: s.id }) });
     }
     /* Not the name. It is the column on the scorecard, and the head of that
        column is where it is changed -- one place, where the thing being

@@ -3114,6 +3114,11 @@ part('the front page, and the screen');
     rows = openMenu('Ben').map(label);
     ok(rows.indexOf('Kick') >= 0,
        'a player at the table can be put out of it  got ' + rows.join(' | '));
+    /* And it reads in the order the lobby's own seat menu reads: the two jobs
+       first, then the ways a seat is taken, with the one that cannot be undone
+       by pressing it again at the foot. */
+    ok(rows.indexOf('Make host') === 0 && rows.indexOf('Kick') === rows.length - 1,
+       'the jobs first and the kick last  got ' + rows.join(' | '));
     ok(rows.indexOf('Auto-play their hand') < 0,
        'which is the only thing there is for a seat somebody is behind');
     sent.length = 0; asked.length = 0;
@@ -3143,6 +3148,8 @@ part('the front page, and the screen');
        'a table with real cards has no hand of theirs to take  got ' + rows.join(' | '));
     ok(rows.indexOf('Make dealer') >= 0,
        'but it has a deal that can have gone to the wrong person  got ' + rows.join(' | '));
+    ok(rows.indexOf('Make host') === 0 && rows.indexOf('Make dealer') === 1,
+       'the two jobs, in the order the lobby lists them  got ' + rows.join(' | '));
     sent.length = 0;
     openMenu('Ben').find((b) => label(b) === 'Make dealer').fire('click');
     ok(JSON.stringify(sent[0]) === '{"t":"dealer","id":"b"}',
