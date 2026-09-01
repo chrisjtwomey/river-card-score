@@ -30,9 +30,16 @@
   /* The record is one box, so it fills the column instead of scrolling it. */
   .devright > .statebox{overflow:hidden}
   /* Folded away, and the screens have the width. Watching a hand play is not
-     the same job as setting one up. */
+     the same job as setting one up.
+
+     They take the middle of it too. A row of screens left hard against the
+     side the tools used to be beside is the same view with a hole in it: what
+     the fold is for is putting the game in front of you. `safe center` so a
+     row wider than the window still scrolls from its own start rather than
+     having its first screen clipped off the left. */
   .devwrap.notools .devright{display:none}
   .devwrap.notools .devleft{flex:1 1 100%}
+  .devwrap.notools .frameset{justify-content:center;justify-content:safe center}
 
   /* The band: every control, under the screens. Three rows -- the table row
      (which table or which game, and the others to hop to), the game row (where

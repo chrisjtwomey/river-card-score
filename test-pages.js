@@ -6141,6 +6141,10 @@ part('the pages and the stylesheet agree');
      'and one Tools button folds the half away');
   ok(/\.devwrap\.notools \.devright\{display:none\}/.test(dev),
      'which is what gives the screens the whole width');
+  /* And puts them in the middle of it. A row left hard against the side the
+     tools used to be beside is the same view with a hole in it. */
+  ok(/\.devwrap\.notools \.frameset\{justify-content:center;justify-content:safe center\}/.test(dev),
+     'and the screens take the middle of what it frees');
 
   /* In that half the two take turns rather than share it. Stacked, each was
      the other's ceiling: a record is a whole table as text and the seats are
