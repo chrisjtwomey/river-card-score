@@ -1845,7 +1845,10 @@ body.host .scorecard-panel .table-wrap{
      the hull is a fraction of a height that follows from the width. */
   --boat-w:min(64vw,300px);
   --boat-h:calc(var(--boat-w) * 964 / 1707);
-  --dip:calc(var(--boat-h) * .13);          /* how much of it is under water */
+  --dip:calc(var(--boat-h) * .18);          /* how much of it is under water */
+  /* The ride, measured off the dip rather than in pixels: however deep the boat
+     sits, it can never ride higher than it sits. */
+  --bob:calc(var(--dip) * .22);
   /* Where the sun goes, taken off the drawing the two were cut from: they were
      one picture on one canvas, so the size and the offsets below are the
      artist's own, in boat widths. Keeping them means the sun sits behind the
@@ -1992,9 +1995,12 @@ body:not(.motion-off) .home-ripple{animation:sp-drift 9s linear infinite}
 body:not(.motion-off) .home-sky .sp-boat{
   animation:sp-bob 5.2s ease-in-out infinite;
 }
+/* Down from where it sits and back, never up. A boat that rides above its own
+   waterline lifts off the horizon at the top of every cycle, and once you have
+   seen it you cannot stop seeing it. So where it rests is the top of the ride. */
 @keyframes sp-bob{
   0%,100%{transform:translateY(0) rotate(0deg)}
-  50%{transform:translateY(-5px) rotate(.35deg)}
+  50%{transform:translateY(var(--bob)) rotate(.35deg)}
 }
 
 /* Arriving, on a cold start and only then. Coming back to the menu from Start

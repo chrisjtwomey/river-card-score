@@ -960,8 +960,11 @@ There is a horizon across it. Cream sky above, the game's own felt below
 standing in for the river, and the boat on the line between them with its hull
 in the water — hung over the edge by the depth of its own hull, so the waterline
 cuts across it rather than the boat sitting on top of a colour. It rides there,
-rising and falling and turning by a third of a degree, for as long as the screen
-is up: a boat on water is never quite still. The sky is the cream the phone drew
+settling and lifting and turning by a third of a degree, for as long as the
+screen is up: a boat on water is never quite still. It only ever rides *down*
+from where it sits, and how far is a fraction of how deep it sits -- a boat that
+can ride above its own waterline lifts off the horizon at the top of every
+cycle, and once you have seen that you cannot stop seeing it. The sky is the cream the phone drew
 behind the page, whatever the theme is, so the two land on each other; everything
 below the horizon follows the theme.
 

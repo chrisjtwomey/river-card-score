@@ -2112,6 +2112,15 @@ part("the app's menu screen");
   ok(rules.filter((r) => /infinite/.test(r.body)).length >= 2,
      'the boat rides and the water moves under it');
 
+  /* The ride is measured off how deep the boat sits, and it only ever goes
+     down: a boat that rides above its own waterline lifts off the horizon at
+     the top of every cycle. */
+  ok(/--bob:calc\(var\(--dip\)/.test(css),
+     'the ride is a fraction of the dip, so it can never out-run it');
+  const bob = /@keyframes sp-bob\{([\s\S]*?)\}/.exec(css);
+  ok(!!bob && !/translateY\(-/.test(bob[1]),
+     'and it never rides above where it rests  got ' + (bob ? bob[1].trim() : 'none'));
+
   /* A horizon: the sky above, the felt below, and the boat hung over the line
      between them by the depth of its own hull. */
   ok(/\.home-river\{[^}]*radial-gradient/.test(css), 'the water is under the boat');
