@@ -11,11 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
     onName: (n) => { Net.setName(n); showWho(); },
     /* The picture is picked here but sent from the player page: this page
        walks away the moment the seat exists, and a socket closing mid-send
-       would lose it. The phone keeps the copy, and the player page hands it
+       would lose it. The device keeps the copy, and the player page hands it
        over. */
     onPhoto: (d) => { Avatar.remember(d); showWho(); },
   } });
-  // The line that says who this phone plays as.
+  // The line that says who this device plays as.
   function showWho() {
     $('#who-name').textContent = Net.name() || '…';
     const pic = Avatar.saved();
@@ -25,20 +25,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   showWho();
   $('#btn-who').addEventListener('click', () => settings.open());
-  /* The phone that runs the server reads this page from 127.0.0.1. That phone
+  /* The device that runs the server reads this page from 127.0.0.1. That device
      already chose to host, so it wants a table of its own first. Every other
      browser came to join one that exists. Same page, two orders. */
   if (UI.servedHere()) {
     const mine = $('#new-panel');
     mine.parentNode.insertBefore(mine, $('#join-panel'));
     $('.brand .sub').textContent = 'Your table';
-    // and the one green button is the one this phone came for
+    // and the one green button is the one this device came for
     $('#btn-new-table').classList.add('primary');
     $('#btn-join').classList.remove('primary');
   }
 
   /* In the Android app this page is what Host opens, so it is also the way to
-     put the table down again. Only on the phone that runs it: another phone's
+     put the table down again. Only on the device that runs it: another device's
      table is not this one's to stop. The app is asked by following a link
      only it knows, and it comes back to its Host-or-Join screen. */
   if (UI.inApp() && UI.servedHere()) {
@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const code = new URLSearchParams(location.search).get('code');
   if (code) $('#in-code').value = code.toUpperCase().slice(0, 4);
 
-  /* The name this phone plays under is asked for once, before anything else:
-     a phone that has not said who it is sees the ask and nothing behind it.
+  /* The name this device plays under is asked for once, before anything else:
+     a device that has not said who it is sees the ask and nothing behind it.
      Coming back to join another table, the name is already there. */
   if (!Net.name()) settings.open({ first: true });
 
@@ -105,12 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
   /* A code typed here reaches this server and no other, and every table on it
      is listed above with a way in -- so on the machine that runs the server
      there is nothing for this panel to do. Joining somebody else's table from
-     here would mean running a server for a game played on another phone; the
+     here would mean running a server for a game played on another device; the
      app's own chooser opens their address without starting one. */
   const runsIt = UI.servedHere();
   if (runsIt) $('#join-panel').hidden = true;
 
-  /* Every table this phone is running, asked of the server itself. The list
+  /* Every table this device is running, asked of the server itself. The list
      above is what this browser remembers; this is what is actually there, and
      the two are not the same: a table started from a TV screen on this server,
      or one whose seat this browser has forgotten, is on the server and in no
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     /* The way in, when there is one. A table still in the lobby has a seat for
        anybody; a game already going has one only for the player it belongs to,
-       and this phone knows the name it plays under. Neither is a code to type:
+       and this device knows the name it plays under. Neither is a code to type:
        the table is right here. */
     const mine = t.seats.find((s) => !s.bot && !s.left && !s.online
       && s.name.toLowerCase() === (Net.name() || '\u0000').toLowerCase());
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sit.textContent = room ? 'Take a seat' : 'Take my seat';
       sit.addEventListener('click', () => { sit.disabled = true; takeSeat(t.code, sit); });
     }
-    /* The table is this phone's to take away: it runs it. Nothing else can --
+    /* The table is this device's to take away: it runs it. Nothing else can --
        a table has no other end but the hours running out. */
     const drop = document.createElement('button');
     drop.className = 'mini x';
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     drop.textContent = '×';
     drop.addEventListener('click', () => {
       UI.ask(`End table ${t.code}?`,
-        'Every phone at it is put off, and the game is not kept: nothing is scored and '
+        'Every device at it is put off, and the game is not kept: nothing is scored and '
         + 'nothing goes to Past games. The table cannot be started again.',
         'End the table', true).then((yes) => {
           if (!yes) return;
@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* The names, on one line. A table of eight ran onto a second line and
      pushed everything under it down the page, so what will not fit is counted
      instead: the names that do, then "and 3 more". Measured rather than
-     guessed at -- a name is as long as it is and a phone is as wide as it is --
+     guessed at -- a name is as long as it is and a device is as wide as it is --
      which is why it is done once the row is on the page and again when the
      page changes width. */
   function fitNames(el) {
@@ -230,10 +230,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.addEventListener('resize', fitEveryRow);
 
-  /* Sitting down at a table this phone is running. The same message the code
+  /* Sitting down at a table this device is running. The same message the code
      box sends -- the table is named instead of typed, and the name is the one
-     this phone plays under, which is also how a seat in a game already going
-     is given back to the phone that holds it. */
+     this device plays under, which is also how a seat in a game already going
+     is given back to the device that holds it. */
   function takeSeat(code, btn) {
     const name = Net.name();
     if (!name) { btn.disabled = false; settings.open({ first: true }); return; }
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Asked of the server, which is this phone. POST: never a link to wander into.
+  // Asked of the server, which is this device. POST: never a link to wander into.
   function endTable(code) {
     return fetch('/table/end?c=' + encodeURIComponent(code), { method: 'POST' })
       .catch(() => {});
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#in-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-join').click(); });
 
   /* Start a table and take the first seat, in one tap. The socket makes the
-     room, then joins it, so this phone ends up as a player who runs the table. */
+     room, then joins it, so this device ends up as a player who runs the table. */
   const newErr = (msg) => { $('#new-err').textContent = msg; $('#new-err').hidden = !msg; };
 
   $('#btn-new-table').addEventListener('click', () => {

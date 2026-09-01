@@ -1,7 +1,7 @@
 # Up the River, Down the River — score tracker
 
-A score tracker for the betting card game: one TV screen plus a phone for
-each player. Players bid in turn on their own phone.
+A score tracker for the betting card game: one TV screen plus a device for
+each player. Players bid in turn on their own device.
 
 ## Run the table server
 
@@ -15,11 +15,11 @@ The console prints the addresses. On the host machine:
 - TV screen: `http://localhost:8787/host.html`
 - players join: `http://localhost:8787/`
 
-The players' phones must be on the same network as the server. Scan the QR code on the TV screen, or type the `http://<your-ip>:8787/` address that the console prints. Set `PORT` to use a different port.
+The players' devices must be on the same network as the server. Scan the QR code on the TV screen, or type the `http://<your-ip>:8787/` address that the console prints. Set `PORT` to use a different port.
 
 The join panel also has **Scan the code**, which opens the camera and reads the
 table's QR code without leaving the page. The decoding is the browser's own, so
-nothing is downloaded and no picture leaves the phone. A camera needs a secure
+nothing is downloaded and no picture leaves the device. A camera needs a secure
 page, so the button is there over `https` (`npm run cert`), and it hides itself
 where the browser offers no camera -- plain `http` to another machine, or
 Safari, which cannot read a code. In the Android app the scanner is on the
@@ -31,7 +31,7 @@ full screen, and on the TV screen the text size. The settings page lies over
 the page it was opened from, with a back arrow of its own, so a game
 underneath keeps its place and its socket.
 Rows that a browser cannot honour leave themselves out -- full screen is not
-offered on Safari on an iPhone. On a phone the settings page also holds who
+offered on Safari on an iDevice. On a device the settings page also holds who
 you are: the name, and the photo that goes on the back of your cards. At a
 table they are the seat's, changed in the lobby; a change made during a game
 goes with the next table, because the scorecard is a column under the name it
@@ -61,66 +61,66 @@ The server builds the QR code itself, so nothing is sent to an outside service. 
 
 ### How a game runs
 
-**One phone is enough.** On the landing page, press **Start a table**. That makes a table, takes the first seat, and hands you the controls. The lobby then reads in the order it happens: the code and a QR code for the others to scan at the top, the seats, the bots and the rules under them, and **Start game** across the foot. A TV screen is optional.
+**One device is enough.** On the landing page, press **Start a table**. That makes a table, takes the first seat, and hands you the controls. The lobby then reads in the order it happens: the code and a QR code for the others to scan at the top, the seats, the bots and the rules under them, and **Start game** across the foot. A TV screen is optional.
 
-**The table host is a player.** The first player to take a seat runs the table from their own phone: rules, seat order, who deals first, start, undo, and new game. They can hand that over from the ⋯ menu beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
+**The table host is a player.** The first player to take a seat runs the table from their own device: rules, seat order, who deals first, start, undo, and new game. They can hand that over from the ⋯ menu beside any player. So a game needs no TV screen at all — but a TV screen is still nice on a TV, and it has the same powers.
 
-1. Someone starts the table, from a phone with **Start a table**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's phone — or, when a TV screen runs the table, on the TV screen alone, and the phone says the screen is there. A player points a phone camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
-2. Each player opens the site on their phone, types the code, and takes a seat. The first visit asks for a name before anything else; after that the front page says who the phone plays as, and the name and the photo are changed on the settings page under ⚙. The seat order is the order of play. The host can drag a player by the handle at the left of the row to a new place in the order, or remove one, until the game starts.
+1. Someone starts the table, from a device with **Start a table**, or from a TV screen. Either way the server makes a 4-character table code and a QR code with the join address, shown on the table host's device — or, when a TV screen runs the table, on the TV screen alone, and the device says the screen is there. A player points a device camera at it and lands on the join page with the code already filled in. If the machine has more than one network address, a picker on the TV screen chooses which one goes in the QR code.
+2. Each player opens the site on their device, types the code, and takes a seat. The first visit asks for a name before anything else; after that the front page says who the device plays as, and the name and the photo are changed on the settings page under ⚙. The seat order is the order of play. The host can drag a player by the handle at the left of the row to a new place in the order, or remove one, until the game starts.
 3. The ⋯ menu beside a player says who deals the first round, makes them the table host, or removes them. Without a choice, seat 1 deals. The deal then moves on one seat each round.
-4. The table host sets the rules and presses **Start game**. Every phone shows the rules in the lobby; only the table host's can change them. On a phone they fold away under a **Rules** heading that says what they are while it is shut — *14 rounds · real cards · screw the dealer* — and it opens itself for whoever is setting them. Nobody can join after that.
-5. **The deal.** Every round opens with the deal on every screen: the deck shuffled and dealt round the table, with a line over the deck naming whose deal it is — *Ann is dealing…* — on either deck. On the TV screen it stays up while the bids come in, each bid stamped onto that player's pile. On a phone with real cards only the shuffle plays, and the scene clears itself before any card goes out — a tap skips it.
-6. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other phone shows whose turn it is and the bids so far.
-7. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's phone.
-8. A player can change their bid until the player after them bids. Their phone keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
+4. The table host sets the rules and presses **Start game**. Every device shows the rules in the lobby; only the table host's can change them. On a device they fold away under a **Rules** heading that says what they are while it is shut — *14 rounds · real cards · screw the dealer* — and it opens itself for whoever is setting them. Nobody can join after that.
+5. **The deal.** Every round opens with the deal on every screen: the deck shuffled and dealt round the table, with a line over the deck naming whose deal it is — *Ann is dealing…* — on either deck. On the TV screen it stays up while the bids come in, each bid stamped onto that player's pile. On a device with real cards only the shuffle plays, and the scene clears itself before any card goes out — a tap skips it.
+6. **Bidding.** The server only accepts a bid from the player whose turn it is. The order starts left of the dealer and the dealer bids last. Every other device shows whose turn it is and the bids so far.
+7. With "screw the dealer" on, the server refuses the dealer's bid if it would make the bids total the number of tricks. The forbidden chip is disabled on the dealer's device.
+8. A player can change their bid until the player after them bids. Their device keeps the pad open and says so, and the TV screen marks the bid that can still change. Once the next player bids, the change is refused.
 9. **Bids are in.** The last bid does not start the hand. The bids stand for a
    couple of seconds first, on every screen at once: the TV screen says *Bids
-   are in* with what they total and who leads, the phones say the same, and on
+   are in* with what they total and who leads, the devices say the same, and on
    the felt it is said over the table. Nobody is on play through it, so no card
    goes down and no trick is counted — a tap that early is refused and the
-   phone is told why. Then the hand opens by itself.
-10. **Tricks.** The dealer keeps the round, as at a kitchen table: after each trick they tap who took it, on their own phone. A TV screen that runs the table can tap it too — it holds no seat, and it is the one everybody can see. Every other screen follows without touching it — the pills show won against bid, the tally counts the tricks played, a line says who took it — and the last trick scores the round. A wrong tap is undone with **Take back the last trick**.
-11. The round scores, the next round opens, and the deal moves on one seat. Every phone says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
+   device is told why. Then the hand opens by itself.
+10. **Tricks.** The dealer keeps the round, as at a kitchen table: after each trick they tap who took it, on their own device. A TV screen that runs the table can tap it too — it holds no seat, and it is the one everybody can see. Every other screen follows without touching it — the pills show won against bid, the tally counts the tricks played, a line says who took it — and the last trick scores the round. A wrong tap is undone with **Take back the last trick**.
+11. The round scores, the next round opens, and the deal moves on one seat. Every device says what the round paid you — made it or went down, what you bid, what you won, and the points — and the TV screen says what each player got.
 12. The table host, or the TV screen, can press **Undo last step** to reopen the last step — it asks first, and says which round it takes back — and **New game** to return the same players to the lobby.
 
-### When a phone goes
+### When a device goes
 
 A game stops dead on an empty seat: nobody may bid or play out of turn, so one
-phone in a pocket holds up everybody. The table tells the two cases apart.
+device in a pocket holds up everybody. The table tells the two cases apart.
 
-**A phone that has gone quiet** — a flat battery, a lost network, a browser
+**A device that has gone quiet** — a flat battery, a lost network, a browser
 that was closed — is waited for. Every screen says so: the seat is marked away,
 a line slides in saying *"Ann dropped out"*, and the felt says the table is
 waiting on them. Three ways back:
 
-- **The same phone comes back.** It holds the seat's token, so it always gets
+- **The same device comes back.** It holds the seat's token, so it always gets
   its seat, whatever the game has done in the meantime.
-- **A phone that lost the seat types the code and the same name.** This is
+- **A device that lost the seat types the code and the same name.** This is
   accepted only while the table is still waiting on that seat — bidding has not
   moved past them, or it is their card to play. Once the game has gone on
-  without them, a name is not enough and the phone that holds the seat must
+  without them, a name is not enough and the device that holds the seat must
   come back to it. A seat somebody is sitting in is never handed over.
 - **Whoever runs the table bids or plays for them.** *Bid for Ann* appears on
-  the table host's phone and on the TV screen while the bidding waits on an
+  the table host's device and on the TV screen while the bidding waits on an
   empty seat; the number is read off that seat's own hand, the same arithmetic
   the bots use, or the host taps the number the player at the table asks for.
   *Play a card for them* does the same once the cards are out.
 
-**A phone that is not coming back** can be handed to auto-play for good:
+**A device that is not coming back** can be handed to auto-play for good:
 **Auto-play their hand** appears beside the bid-for and play-for buttons
 whenever the game is waiting on an empty seat. The seat keeps its name and
-its column, auto-play takes it from there on, and the phone that holds the
+its column, auto-play takes it from there on, and the device that holds the
 seat takes it back by coming to the table. From the ⋯ on a
 player's standings row any seat nobody is behind can be handed over, not only
 the one the game is standing on — a player who has gone home need not be
 holding the table up for their hand to be one nobody is behind. Either way it
-is a table dealt on the phones: with real cards there is no hand for auto-play
+is a table dealt on the devices: with real cards there is no hand for auto-play
 to hold.
 
 **And handed back.** *Let back in*, on that same ⋯, gives the seat up again. It is not the player's own button, and it cannot be: whoever the table
-is playing for is not there to press anything, and their phone may have
+is playing for is not there to press anything, and their device may have
 forgotten the table altogether. Once the seat is open they come back to it the
-way any phone that lost its seat does — the table's code and the name they
+way any device that lost its seat does — the table's code and the name they
 played under. The seat's own clock starts again from that moment, so a seat
 opened and not taken up is handed over again in its own time rather than at
 once.
@@ -132,23 +132,23 @@ in, and nothing else.
 player page — is not waited for. Before the cards go out the seat simply goes.
 After that it cannot: the scorecard is a column for every seat and the rounds
 already played are that player's. So the seat stays, marked as gone, and
-auto-play takes its hand from there on. That phone can still come back to the seat
+auto-play takes its hand from there on. That device can still come back to the seat
 from the front page, and it is a player's again.
 
 **A seat nobody is behind leaves the table.** A clock runs on a seat while
 nobody holds it — no window open on it — and while the table is waiting on it
-and can go no further. A phone that is open with nothing to do is never idle,
-however long it sits there: at a table with real cards a phone is touched to
+and can go no further. A device that is open with nothing to do is never idle,
+however long it sits there: at a table with real cards a device is touched to
 bid and not again, and the players are all sat around the table. A minute
-before the clock runs out, a phone that is here is asked **Still there?**, and
+before the clock runs out, a device that is here is asked **Still there?**, and
 any tap on it is the answer. When it runs out, a lobby seat simply goes — its
-phone lands back on the front page — and in a game the hand is handed to
+device lands back on the front page — and in a game the hand is handed to
 auto-play, exactly as if that player had pressed *Leave the game*.
 `IDLE_MS`, five minutes by default, is the clock; `IDLE_WARN_MS`, one minute,
-is how long before it the phone is asked. Either at nought turns it off.
+is how long before it the device is asked. Either at nought turns it off.
 
 **With real cards the table stops instead.** That player's hand is on the table
-in front of them, not on a phone, so nothing can be taken from the seat and
+in front of them, not on a device, so nothing can be taken from the seat and
 only the people at the table can say what happens to it. Every screen says
 *Paused — Ann has not answered for 5 minutes*, and whoever runs the table taps
 **Carry on**. The seat is not asked about again until somebody is behind it;
@@ -169,7 +169,7 @@ A table of bots alone is worth looking at — a table of stand-ins on the dev
 page, a screen put up to watch one — so it plays while it is looked at. Close
 the last window on it and it stops.
 
-**Pausing it.** The host screen and the table host's phone both carry a
+**Pausing it.** The host screen and the table host's device both carry a
 **❚❚ Pause**, in the row of controls under the bids, whenever a hand is out. A paused
 table is paused for everybody: it plays none of its own hands — a bot's, or one
 handed over to it — and no bid, no card and no trick lands until it is let go.
@@ -191,7 +191,7 @@ can be paused like any other, and is the one most likely to want a moment: the
 food arrives, or somebody is arguing about a rule.
 
 *Paused* is only ever the hold somebody pressed, and *stopped* is only ever the
-final thing: a table that is over, or the phone hosting a game shutting its
+final thing: a table that is over, or the device hosting a game shutting its
 server down. A table held up on a seat nobody is behind is a third thing again
 and says so — **Waiting on Ann. No answer for 3 minutes.** Each has its own way
 out of it, so each has its own word.
@@ -199,12 +199,12 @@ out of it, so each has its own word.
 ### Running the table, mid-game
 
 Everything whoever runs a table does to a game already going is on the scores
-page they are already looking at — the TV screen, and the phone of the player
+page they are already looking at — the TV screen, and the device of the player
 who runs the table. There is no second page and no second key: whatever that
 screen may do at the table, this is it.
 
 **One row of controls**, the same five on both screens and in the same order —
-under the bids on the TV screen, and beside the turn on the phone:
+under the bids on the TV screen, and beside the turn on the device:
 
 | | |
 |---|---|
@@ -215,7 +215,7 @@ under the bids on the TV screen, and beside the turn on the phone:
 | **New game** | The same players, no scorecard. |
 
 **Reset round** is the round in play, back to the start of its bidding: the
-bids go, and on a table dealt on the phones the hand is dealt again. Where the
+bids go, and on a table dealt on the devices the hand is dealt again. Where the
 game is over it is the last round that comes back, so a game that ended on a
 round nobody agreed with is played again rather than argued about. It is not
 offered while the bids are still coming in — there is nothing behind them, and
@@ -245,37 +245,37 @@ that pressing again does not undo at the foot:
   has bid, because the order of bidding is the dealer's.
 - **Let back in** — a seat the table was given, handed back. It cannot be that
   player's own button: whoever the table is playing for is not there to press
-  anything, and their phone may have forgotten the table altogether. Once the
-  seat is open they come back the way any phone that lost its seat does — the
+  anything, and their device may have forgotten the table altogether. Once the
+  seat is open they come back the way any device that lost its seat does — the
   code and the name they played under. The seat's clock starts again from that
   moment, so a seat opened and not taken up is handed over again in its own
   time rather than at once.
 - **Auto-play their hand** — a player who has gone home. Any seat nobody is
   behind, not only the one the table is standing on: they need not be holding
   the game up for their hand to be one nobody is behind. Only on a table dealt
-  on the phones; with real cards their cards are on the table in front of them.
+  on the devices; with real cards their cards are on the table in front of them.
 - **Kick** — a player put out of a game already in play,
   whether they are sitting at the table or not: one who has to stop and cannot
   press it themselves, or one the table wants rid of. The seat stays, because
   it is a column on the scorecard and the rounds already played are theirs, and
   the table takes its hand where there is a hand to take. What goes with them
-  is the key: their phone cannot come back to the seat, which is the whole of
+  is the key: their device cannot come back to the seat, which is the whole of
   what makes this different from a seat that went quiet, and why *Auto-play
   their hand* is not it — the table refuses that for a seat somebody is behind.
   Both decks; with real cards there is no hand for the table to hold, but there
   is still a person to be rid of, and the host bids for the seat as they would
   for any other nobody is behind.
 
-  Their phone is told, and taken off the seat where it stands: a socket carries
+  Their device is told, and taken off the seat where it stands: a socket carries
   which seat it is on and not the key it opened with, so a page that ignored
   the word would otherwise go on bidding and playing as that seat, which is the
   whole of what this is for. It stays connected, watching.
 
   **Let back in** is the way back, and it is the host's alone. It opens the
-  seat, and the person comes to it the way any phone that lost its seat does —
+  seat, and the person comes to it the way any device that lost its seat does —
   the table code and the name they played under. Every other open seat is
   gated on the table waiting for it, so that a name alone cannot take a seat
-  some phone can still open; a seat put out holds no key for any phone to open
+  some device can still open; a seat put out holds no key for any device to open
   it with, so that gate is about nothing and the name is enough. Coming back by
   it is what mints the new key.
 A name is not on that menu. The name is the column on the scorecard, and the
@@ -316,7 +316,7 @@ The bids are bounded by the hand and nothing else: a bid that broke the
 screw-the-dealer rule was still the bid that was made.
 
 The round in play is not editable. It is already being typed on the bid pad and
-the trick counter, and on a table dealt on the phones its tricks are the cards
+the trick counter, and on a table dealt on the devices its tricks are the cards
 the server is holding. Put it back with *Reset round* and play it again.
 
 Every screen sees the corrected card at once, the totals follow it, and a game
@@ -333,24 +333,24 @@ and every page pins its table to its own address (`play.html?c=CODE`). A second
 table therefore cannot lose the seat at the first — which it used to, because
 there was one slot for a seat and every page wrote it on every reconnect.
 
-The name a phone plays under is kept with them, so coming back to join another
+The name a device plays under is kept with them, so coming back to join another
 table does not mean typing it again: the first visit asks for it before
 anything else, and after that it lives on the settings page with the photo.
 
-**The phone that runs the server sees every table on it.** That list is the
+**The device that runs the server sees every table on it.** That list is the
 browser's own memory, and a server can be running tables it knows nothing
 about: one started from a TV screen, or one whose seat this browser has
 forgotten. So the front page, read on the machine that serves it, asks the
-server what it is running and offers the rest under **Tables on this phone**,
+server what it is running and offers the rest under **Tables on this device**,
 each under **Running tables**. Each row carries what can be done with that
 table: **Take a seat** while it is still in the lobby, **Take my seat** when a
-seat carries this phone's name and nobody is behind it, and **Watch** — the
-screen a TV shows, which changes nothing at the table. So the phone that runs
+seat carries this device's name and nobody is behind it, and **Watch** — the
+screen a TV shows, which changes nothing at the table. So the device that runs
 the server never types a code: a code reaches that server and no other, and
 every table on it is already named here. The join panel is not offered there
-at all — joining somebody else's table from a phone that has just started a
+at all — joining somebody else's table from a device that has just started a
 server would be running that server for a game played somewhere else, and the
-app's own chooser opens their address without starting one. A player's phone
+app's own chooser opens their address without starting one. A player's device
 keeps it, code box and camera both. Each row reads the same way: the table's name, then the mark
 and the badge that end the line, the buttons on the line under it, and who is
 at the table under those — on one line, so a table of eight does not push the
@@ -364,7 +364,7 @@ could reach the page.
 
 A table is also that machine's to **end**: the × beside it in the list, or
 **End this table** on the settings page while watching one. It asks first.
-Every phone at the table is told it is gone, the bots stop, and the file the
+Every device at the table is told it is gone, the bots stop, and the file the
 table would have come back from is removed — nothing is scored and nothing
 goes to Past games. `POST /table/end?c=CODE`, local only and never a GET, so
 no link followed by mistake and no page fetching ahead of itself can end a
@@ -373,9 +373,9 @@ front page rather than sending the player back with nothing said.
 
 ### A table outlives the server it is on
 
-The phone that hosts a game is a phone: it is stopped from its own
+The device that hosts a game is a device: it is stopped from its own
 notification, or put away, or Android takes the memory back. The game is in
-that server's memory, and every other phone still holds its seat — so a table
+that server's memory, and every other device still holds its seat — so a table
 in play is written to disk after every change and read back when the server
 comes up. Rejoin then goes back to the game, in the round it was in, with the
 hands that were dealt. A trick that was being held up for the table to read
@@ -383,8 +383,8 @@ when the server stopped is settled as it comes back, because nothing is left
 to end that hold.
 
 Nobody is at a restored table until they connect to it, so every seat starts
-away and fills in as the phones come back. Pictures are not kept with the
-table — 48K apiece, and every phone hands its own over again. `KEEP_HOURS`,
+away and fills in as the devices come back. Pictures are not kept with the
+table — 48K apiece, and every device hands its own over again. `KEEP_HOURS`,
 6 by default, is how long a table nobody has touched is kept, in memory and on
 disk alike.
 
@@ -395,7 +395,7 @@ them (`TABLE_IDLE_MS`); a game in play is given half an hour (`GAME_IDLE_MS`),
 because a hand people are in the middle of is one they mean to come back to.
 It is not a game ending: nothing is scored and nothing is filed, the table
 itself is taken away, and its code opens nothing afterwards. A table restored
-from disk starts its clocks when the server comes up, so a phone that hosts and
+from disk starts its clocks when the server comes up, so a device that hosts and
 is restarted does not lose every table it was holding.
 
 ### Table talk
@@ -408,7 +408,7 @@ nothing.
 
 The talk belongs to the table, not to the game on it: it carries over into the
 next game and lasts as long as the table does. The last hundred lines are kept,
-in memory, and never written to disk -- not into a saved game, not into a phone's
+in memory, and never written to disk -- not into a saved game, not into a device's
 history. It travels the same socket as the bids, so like the rest of the game it
 needs no internet at all.
 
@@ -424,7 +424,7 @@ The finish plays in three moves:
 2. **Each accolade in turn, eight seconds each.** The name comes up with what it was for, the **+10** lands, and that player's score runs up in the list behind. The places shuffle as the points go in.
 3. **The winner** — whoever is top once every accolade is paid, which is not always whoever led before them.
 
-On a table dealt on the phones the felt is up when the last round is scored, and it hands the game straight to the finish: the stage is held at full through the handover, so the scorecard behind it is never shown. On a screen with nothing up the finish is a scene opening, and it fades in.
+On a table dealt on the devices the felt is up when the last round is scored, and it hands the game straight to the finish: the stage is held at full through the handover, so the scorecard behind it is never shown. On a screen with nothing up the finish is a scene opening, and it fades in.
 
 With three accolades the finish runs about 35 seconds. A tap lands the whole thing at once — every accolade paid, the list settled, the winner there — and another clears it.
 
@@ -452,14 +452,14 @@ An accolade is shared when two players earn it, and both are paid. It is not awa
 
 The table can play without real cards. In the lobby set **Cards** to *Virtual cards*, and the server becomes the dealer:
 
-1. It shuffles a 52-card deck and deals the hand to each phone. A hand is a secret: the server sends each socket the table and **its own cards only**, and the TV screen is dealt none.
+1. It shuffles a 52-card deck and deals the hand to each device. A hand is a secret: the server sends each socket the table and **its own cards only**, and the TV screen is dealt none.
 2. It turns the next card for trump, before the bidding, so everybody bids knowing it. With nothing left in the deck — four players at thirteen cards — the hand is played at no trumps.
 3. Bidding runs as it always does, in order, with screw the dealer if it is on.
 4. The bids stand to be read before a card is played, the same beat the whole
    table holds. The felt says *Bids are in* over the middle, with what they
    total and who leads, and every pile keeps saying what was bid until the
    hand opens.
-5. The player left of the dealer leads. On a phone the round is played on the
+5. The player left of the dealer leads. On a device the round is played on the
    felt -- see **The table** below. Cards you may not play are dimmed: you must
    follow the suit led if you hold it. On the TV screen the trick lies in the
    middle, and a card back stands for the seat the table waits on -- peeking,
@@ -468,13 +468,13 @@ The table can play without real cards. In the lobby set **Cards** to *Virtual ca
 6. The highest trump takes the trick, or the highest card of the suit led. The trick stays on the table for a second and a half so everybody sees it, then the winner leads.
 7. When the last trick is played the round scores itself. Nobody types anything in.
 
-The rules are held on the server, so a phone cannot renege, play out of turn, or play a card it does not hold. What changes on a virtual table:
+The rules are held on the server, so a device cannot renege, play out of turn, or play a card it does not hold. What changes on a virtual table:
 
 - Nobody counts the tricks: the cards count themselves, and a tap that says who took one is refused.
 - Nobody picks the trump. The deck turns it.
 - **Undo last step** deals that hand again, because those cards are gone.
 - The empty seats can be played by bots: see **Bots**.
-- A phone that goes quiet would stop the table, so whoever runs the table gets **Play a card for them**. The server picks, and only from the cards the rules allow, so nobody chooses another player's card.
+- A device that goes quiet would stop the table, so whoever runs the table gets **Play a card for them**. The server picks, and only from the cards the rules allow, so nobody chooses another player's card.
 
 ### Bots
 
@@ -499,20 +499,20 @@ the ⋯ menu beside it, as you would a person.
 - It plays through the same rules as everybody else, so it cannot renege, play
   out of turn, or play a card it does not hold.
 - It has no opinion about a bum deal, so it agrees to one.
-- It waits for the deal to be watched. The round is dealt on the phones before
+- It waits for the deal to be watched. The round is dealt on the devices before
   it is bid, and a bot that bid while the cards were in the air had bid before
-  anybody saw one. Each phone says when its table is up -- the deal played out,
+  anybody saw one. Each device says when its table is up -- the deal played out,
   or was tapped away, or was never played at all -- and the first hand of the
   round is bid only then.
 
 `BOT_DELAY` sets how long a bot waits before it acts, in milliseconds. The
 default is 1250: long enough that it does not answer before the table has read
 the last card, short enough that three of them are not a wait. `BOT_DEAL_WAIT`
-is the longest it waits for a phone that says nothing at all, 9000 by default.
+is the longest it waits for a device that says nothing at all, 9000 by default.
 
 ### The table
 
-With a virtual deck, a phone plays the round on the felt the deal lands on. It
+With a virtual deck, a device plays the round on the felt the deal lands on. It
 is the screen, not a flourish: the hand you were dealt is the fan in front of
 you, the card the deck turned lies in the middle, and the cards played ring it
 rather than pile onto it, so it is on show all round. The table sits a little
@@ -577,7 +577,7 @@ that band.
   deck turned, which stands over them the whole way. Only when the last one is
   in does that card turn face down on top of them, and what is left is a deck.
   A hand of thirteen tricks shortens the wait between cards rather than making
-  the round longer; a stand-in for a trick this phone never saw has no face to
+  the round longer; a stand-in for a trick this device never saw has no face to
   show, so it comes in face down. Where the round leaves everybody then
   stands over that deck for three seconds. It comes up as the round found it
   -- the scorecard's own rows, best first, with everybody where they stood
@@ -605,7 +605,7 @@ that band.
   screen gives the player to bid -- through the bidding and whenever a card
   is wanted from them. Your own seat never peeks: your hand, and the line
   under it, say when it is you.
-- What is said in passing -- a bid landing, a phone dropping out, a refusal
+- What is said in passing -- a bid landing, a device dropping out, a refusal
   -- comes up in the band under the round line, clear of the piles and the
   hand, and never over the round line itself.
 - The corner buttons are the way off the table: **Scores** drops the felt to
@@ -614,11 +614,11 @@ that band.
   the cards are out), the standings, and the card, open, never folded away --
   read as one page rather than a stack of cards,
   with **Leave the game** across the foot of it. One panel appears on it only
-  when the table needs a decision from that phone: a vote to answer, or a seat
+  when the table needs a decision from that device: a vote to answer, or a seat
   with nobody behind it that the table is waiting on.
   The other corner opens table talk.
 - **A table of many comes down in size.** Eight piles at full size do not go
-  round a phone, so the piles, the stacks of tricks won and the names under
+  round a device, so the piles, the stacks of tricks won and the names under
   them shrink as seats are added.
 - With **Animations** set to *Off* on the settings page the felt is drawn without the
   deal and without any movement. Everything is still reachable.
@@ -646,7 +646,7 @@ that band.
   while the table waits for it -- a trick left up to be read, what a round
   paid, the places at the end of one -- sits inside a window the table grants:
   a trick sits for `TRICK_HOLD` before the winner may lead, and the bots wait
-  `DEAL_WAIT` for the phones to say their tables are up. Those beats are cut
+  `DEAL_WAIT` for the devices to say their tables are up. Those beats are cut
   short at `2×` and left alone at `0.5×`; past the window the table moves on
   and cuts the beat anyway, which reads worse than never having asked. The
   movements themselves scale both ways.
@@ -660,7 +660,7 @@ If the cards were dealt wrong, throw the hand in and deal it again. The round ke
 
 - The **dealer** or the **table host** presses **Bum deal** and re-deals on their own. They are asked to confirm first, so one stray tap cannot throw a hand in.
 - Any other player presses **Ask for a bum deal** and the table votes. Every player must agree. One "no" ends it, and the player who asked can withdraw it. The table host, or the TV screen, can also throw the hand in without waiting for the vote.
-- On a table dealt on the phones the button is on the page under the felt (press **Scores**), and the vote shows on the felt as well, so a player answers it without leaving their cards.
+- On a table dealt on the devices the button is on the page under the felt (press **Scores**), and the vote shows on the felt as well, so a player answers it without leaving their cards.
 
 If the table host leaves the table, the badge moves to the first seat.
 
@@ -669,10 +669,10 @@ If the table host leaves the table, the badge moves to the first seat.
 A TV screen belongs to one table, and it asks which. **Start a table**
 makes one. Or type a table code and **Show a table**: the screen shows a
 game that is already running, and changes nothing at it — the players keep
-their seats and their phones still run the game. That screen cannot touch the
+their seats and their devices still run the game. That screen cannot touch the
 game, which is what lets it take a code alone: it is shown only what is already
 on show, and none of the table's controls — no bum deal, undo, new game, trick
-pad or vote buttons. Use it to put a game that started on a phone up on a
+pad or vote buttons. Use it to put a game that started on a device up on a
 television without moving anybody.
 
 - **Text size** under ⚙ scales the page from 100% to 200%, so the table can read
@@ -680,11 +680,11 @@ television without moving anybody.
 - **Dev controls** under ⚙ opens the dev page on this table, to put a game in
   play right. It is offered wherever this screen holds the table's host token.
   See [Fixing a real game](#fixing-a-real-game).
-- The TV screen and the player phones ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
+- The TV screen and the player devices ask the browser to keep the display awake while a game is on, and release it in the lobby and after the last round. A pill in the top bar says what happened: `☀ screen on` means the browser is holding it, `☀ screen on*` means a best-effort silent video is holding it, and `☾ may sleep` means neither worked.
 
-### Keeping phone screens on
+### Keeping device screens on
 
-The Screen Wake Lock API only exists on a **secure page**. `http://localhost` counts as secure, but `http://192.168.1.5:8787` on a phone does not, so phones fall back to the silent video, which an iPhone ignores.
+The Screen Wake Lock API only exists on a **secure page**. `http://localhost` counts as secure, but `http://192.168.1.5:8787` on a device does not, so devices fall back to the silent video, which an iDevice ignores.
 
 To fix it, serve https:
 
@@ -693,16 +693,16 @@ npm run cert     # makes certs/key.pem and certs/cert.pem for this machine
 npm start        # the console now says (https)
 ```
 
-`npm run cert` needs `openssl`, and it puts every address of this machine in the certificate. Nobody signed it, so each phone shows a warning the first time. Accept it once and the screen lock works. Set `TLS_KEY` and `TLS_CERT` to use your own certificate, or `NO_TLS=1` to force plain http.
+`npm run cert` needs `openssl`, and it puts every address of this machine in the certificate. Nobody signed it, so each device shows a warning the first time. Accept it once and the screen lock works. Set `TLS_KEY` and `TLS_CERT` to use your own certificate, or `NO_TLS=1` to force plain http.
 
-Both screens play the deal animation at the start of every round. On the TV screen, and on a phone at a table dealt on the phones, a card flies to each seat in dealing order, with the player names.
+Both screens play the deal animation at the start of every round. On the TV screen, and on a device at a table dealt on the devices, a card flies to each seat in dealing order, with the player names.
 
 What the deck turned is not said in words: the card is turned face up in the middle of the table and stays there, and the band under the round line is left for what the table has to say.
 
-Who deals is not said in words either. The round line across the top is the round and the hand size -- *Round 3 · 5 cards* -- and the dealer is ringed where they sit: a gold dashed outline round their cards and the name under them, with **dealer** cutting the line at the top. A name in a line has to be read and then matched to a seat; the ring is the answer where the question is asked. When the dealer is you, the word stands over the heading of your own hand with no outline round it -- your cards are a fan across the bottom of the screen, a box round that would be most of the screen wide and would shrink with every card you played, and a box round the heading alone crowded the hand. Every screen that draws seats draws the mark: the TV screen, the deal on a phone, and the felt. It goes when the round does. Who dealt can be corrected while the deal is still on the TV screen — with real cards a person dealt, and the table host says which person — so the ring moves to the seat that deals now. The round is not dealt again: the hand did not change.
+Who deals is not said in words either. The round line across the top is the round and the hand size -- *Round 3 · 5 cards* -- and the dealer is ringed where they sit: a gold dashed outline round their cards and the name under them, with **dealer** cutting the line at the top. A name in a line has to be read and then matched to a seat; the ring is the answer where the question is asked. When the dealer is you, the word stands over the heading of your own hand with no outline round it -- your cards are a fan across the bottom of the screen, a box round that would be most of the screen wide and would shrink with every card you played, and a box round the heading alone crowded the hand. Every screen that draws seats draws the mark: the TV screen, the deal on a device, and the felt. It goes when the round does. Who dealt can be corrected while the deal is still on the TV screen — with real cards a person dealt, and the table host says which person — so the ring moves to the seat that deals now. The round is not dealt again: the hand did not change.
 
 - On the **TV screen** the scene holds while the bids come in. Each player's name gains their bid as it arrives -- a bid that lands while the cards are still in the air is stamped once they are down -- the player to act glows and their pile peeks -- the top card tips up and shivers every few seconds -- and a line reads "Waiting for Amy to bid". It closes itself when the last bid lands. One tap lands the deal early, a second tap dismisses it.
-- On a **phone** at a table with real cards only the shuffle plays: the deck is riffled and squared up, and the scene fades before any card goes out -- the real dealer deals the real cards. A tap skips it. It does not replay when a phone reloads part way through a game.
+- On a **device** at a table with real cards only the shuffle plays: the deck is riffled and squared up, and the scene fades before any card goes out -- the real dealer deals the real cards. A tap skips it. It does not replay when a device reloads part way through a game.
 
 When a **player** bids, every other screen says so: a line slides in — **"Hugh bid 2 · Joe to bid"** — waits a couple of seconds, and goes. A bot's bid is not said. A line is for what somebody did while you were looking away, and a bot answers the moment it is asked: a table with three of them kept three lines stacked up through the whole of the bidding. What a bot did is still shown — its chip pops in the strip, and its number slams onto its pile — it is only not said. It comes up under the top bar on a page with no table up, and while a scene is on it comes up in the empty band between the round line and the top of the ring, clear of the piles. Your own bid is not announced, because your own pad already shows it. A refusal from the table — a bid out of turn, a rule that cannot change with bots seated — is said the same way, in red, so it is seen over the felt and in the lobby alike. On the TV screen, while the deal is held open, the bid is stamped onto that player's card instead: the number slams down in gold, the card takes the hit, and the name below it keeps the bid from then on.
 
@@ -710,7 +710,7 @@ When the last round is scored, both screens play the finish: the places come up 
 
 The `?motion=` flag under [Motion](#motion) works on `host.html` and `play.html`.
 
-Phones reconnect on their own. A player who closes the page and comes back is offered their seat again, because the seat token is kept in that browser, and the table is still there because it is [kept on disk](#a-table-outlives-the-server-it-is-on).
+Devices reconnect on their own. A player who closes the page and comes back is offered their seat again, because the seat token is kept in that browser, and the table is still there because it is [kept on disk](#a-table-outlives-the-server-it-is-on).
 
 ### Rules the host can set
 
@@ -723,13 +723,13 @@ Phones reconnect on their own. A player who closes the page and comes back is of
   - **0 points**, **minus 1 per trick off**, or **tricks won only**.
 - Screw the dealer, and -- on a virtual deck -- whether a card is turned for
   trumps. With real cards the deck on the table decides everything about
-  trumps, so nothing on a phone or the TV screen asks about them.
-- Real cards on the table, or a virtual deck dealt on the phones. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
+  trumps, so nothing on a device or the TV screen asks about them.
+- Real cards on the table, or a virtual deck dealt on the devices. See [Playing with a virtual deck](#playing-with-a-virtual-deck).
 - How many accolades are drawn at the end, from none to five, what each one pays -- 20, 10, 5, or nothing -- and which of the eleven the table plays for at all. See [Accolades](#accolades).
 
 **Cards** is not a list to pick from. It decides what everybody at the table
 will be doing for the whole game -- dealing a real deck between them, or
-watching their own phone -- so both answers stand on the page at once: *Real
+watching their own device -- so both answers stand on the page at once: *Real
 cards* and *Virtual cards*, two regions side by side, an outline each, with the
 mark of the mode at the left and what the mode means beside it. The one in
 force wears the outline, and it moves as the table changes. The words live in
@@ -747,19 +747,19 @@ shuts one region today -- a bot at the table shuts *Real cards*.
 ## Play with no internet
 
 The game never talks to the internet. The pages, the fonts and the QR code all
-come from the server, so a table works anywhere the phones can reach the
+come from the server, so a table works anywhere the devices can reach the
 machine that runs it — a plane included. The internet was never the
 requirement; a machine on the same network running the server is.
 
-One phone makes the network, a laptop runs the table:
+One device makes the network, a laptop runs the table:
 
 1. **Before the trip, with internet:** put the project on the laptop and run
    `npm install` once.
-2. **On the plane:** turn on one phone's hotspot. It needs no signal — the
+2. **On the plane:** turn on one device's hotspot. It needs no signal — the
    hotspot is only a local network.
 3. Join the laptop to that hotspot and run `npm start`.
 4. The console prints the address the hotspot gave the laptop. Open the host
-   screen there, or open the site on any phone and press **Start a table and
+   screen there, or open the site on any device and press **Start a table and
    play** — the table host is a player, so no TV screen is needed.
 5. Everyone else joins the hotspot and scans the QR code as normal.
 
@@ -768,22 +768,22 @@ Worth knowing:
 - If the laptop holds more than one address, the picker on the TV screen
   chooses which one goes into the QR code. Pick the hotspot one.
 - Some hotspots keep their devices apart from each other ("client
-  isolation"). The phones only need to reach the laptop, and that path
-  generally stays open. If a phone cannot load the page, look for that
+  isolation"). The devices only need to reach the laptop, and that path
+  generally stays open. If a device cannot load the page, look for that
   setting on the hotspot.
-- Over plain `http` a phone may dim and sleep between turns. `npm run cert`
+- Over plain `http` a device may dim and sleep between turns. `npm run cert`
   and a restart give the server `https`, and then the pages hold the screen
   awake.
-- No laptop? An Android phone can be the server: Node runs in Termux, so the
-  hotspot phone itself can run `node server.js`. An iPhone cannot run the
+- No laptop? An Android device can be the server: Node runs in Termux, so the
+  hotspot device itself can run `node server.js`. An iDevice cannot run the
   server.
 - On Android the server cannot read the interface list (the OS hides it from
   apps), so it asks the routing table instead: a UDP socket is connected to an
   address that is never routed, and the local address the kernel picks is the
-  phone's own. That address goes in the banner and in the QR code, the same as
+  device's own. That address goes in the banner and in the QR code, the same as
   on a laptop. If it still shows none, `PUBLIC_URL=http://<address>:8787` names
   it by hand, and `HOST=0.0.0.0` pins the listening address.
-- **Termux from Google Play cannot serve the other phones.** That build targets
+- **Termux from Google Play cannot serve the other devices.** That build targets
   Android 17 and declares no local network permission, so Android blocks it in
   both directions: it reaches the internet, and nothing on the Wi-Fi. The
   handshake even completes and then no byte passes, which reads like a broken
@@ -994,9 +994,9 @@ Worth knowing:
 PUBLIC_URL=http://192.168.1.5:8787 docker compose up --build
 ```
 
-`PUBLIC_URL` is the address the phones use. A container cannot see it, so the QR code shows this instead of the container's own address. Use the address of the machine that runs Docker. Without it, the QR code says `localhost`, which no phone can reach.
+`PUBLIC_URL` is the address the devices use. A container cannot see it, so the QR code shows this instead of the container's own address. Use the address of the machine that runs Docker. Without it, the QR code says `localhost`, which no device can reach.
 
-`PUBLIC_URL` **replaces** the detected addresses, it does not add to them. Behind a proxy or in a container the detected ones are private and useless to a phone, so the TV screen offers only what you name here.
+`PUBLIC_URL` **replaces** the detected addresses, it does not add to them. Behind a proxy or in a container the detected ones are private and useless to a device, so the TV screen offers only what you name here.
 
 The compose file mounts `./certs` read only. Run `npm run cert` on the host first for https, or delete that line. `NO_TLS=1` forces plain http.
 
@@ -1110,7 +1110,7 @@ When the socket cannot connect, the page now says so at the bottom of the screen
 
 ## Motion
 
-The deal animation lives in `public/deal.js` and the finish in `public/finale.js`, on the shared overlay in `public/stage.js`. Both are used by the TV screen and the phones.
+The deal animation lives in `public/deal.js` and the finish in `public/finale.js`, on the shared overlay in `public/stage.js`. Both are used by the TV screen and the devices.
 
 The screens also move in smaller ways. When a round is scored the standings slide to their new order, each score runs up or down to its new value, and what the round paid floats up out of it in green or red. When a bid lands that player's pill springs, and a ring spreads out of the seat that has to bid next.
 
@@ -1152,13 +1152,13 @@ Then open **`/dev.html`**. It asks what you are here for before it draws anythin
 
 A code in the address is that question already answered: `dev.html#c=CODE&t=TOKEN` opens straight onto that table, which is what **Dev controls** under ⚙ on the TV screen writes. `dev.html#g=ID` opens straight onto a game watched again, and the page writes back whichever it lands on, so a reload comes to the same place. It still asks the question, second: a table answers with a hello, which says what the server will take, but a copy answers with the copy, which says nothing about the server — so without asking, a replay opened by address believed it was on a server that invents nothing and put away every control that needs one. **⌂** in the band puts the question back at any time.
 
-Whichever door it is, what follows is the same page: every screen at once, the TV screen across the top and under it one phone per seat, live, side by side. Press a button and every pane updates together.
+Whichever door it is, what follows is the same page: every screen at once, the TV screen across the top and under it one device per seat, live, side by side. Press a button and every pane updates together.
 
-The phone of whoever runs the table stands first in that row, ringed in gold. It moves with the job, not with the seating, so the pane that has the table's buttons on it is always in the same place.
+The device of whoever runs the table stands first in that row, ringed in gold. It moves with the job, not with the seating, so the pane that has the table's buttons on it is always in the same place.
 
-It talks the same protocol as a phone, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
+It talks the same protocol as a device, so the states it makes are states a real game can reach. The only extra is a dev-only message that forces values the protocol would refuse, such as jumping to round 12.
 
-The page is two halves. The screens are on the left — the TV screen, then every phone — and the tools are on the right, where **Players** and **State** are two tabs of one column rather than two panels stacked in it. Whichever tab is up has the whole height of the window and scrolls inside itself: a record is a whole table as text and the seats are a row each with a hand under them, and side by side each was the other's ceiling. Coming to the **State** tab reads the record afresh, so the box is the table as it is now. The tab you left the page on is the one it comes back on, which matters because a saved file reloads this page while you are working in it. Each half scrolls on its own, so reading a long record does not send the screens off the top. **Tools ▴** in the band folds the right half away and gives the screens the whole width, with the rows of screens in the middle of it rather than hard against the side the tools used to be beside — which is what you want when you are watching a hand play rather than building one. The bar carries the ⚙ every other page has and nothing of its own: the theme is in it, and so is **Preview size** — 50%, 65%, 80% or 100%, how big the panes are drawn, remembered like the tab. A select and a half-moon used to sit on the bar, which was this page keeping its own settings beside the app's. Under 1000px wide there is no room to halve anything, so the tools go back under the screens and the page scrolls as one. The tab strip, the **phase** and **trump** rows and the speed a replay plays back at are one control, the one the settings page has: a groove, with the choice sitting in it as a rounded pill. They used to be a framed box with square blocks in it — the same job in a second shape.
+The page is two halves. The screens are on the left — the TV screen, then every device — and the tools are on the right, where **Players** and **State** are two tabs of one column rather than two panels stacked in it. Whichever tab is up has the whole height of the window and scrolls inside itself: a record is a whole table as text and the seats are a row each with a hand under them, and side by side each was the other's ceiling. Coming to the **State** tab reads the record afresh, so the box is the table as it is now. The tab you left the page on is the one it comes back on, which matters because a saved file reloads this page while you are working in it. Each half scrolls on its own, so reading a long record does not send the screens off the top. **Tools ▴** in the band folds the right half away and gives the screens the whole width, with the rows of screens in the middle of it rather than hard against the side the tools used to be beside — which is what you want when you are watching a hand play rather than building one. The bar carries the ⚙ every other page has and nothing of its own: the theme is in it, and so is **Preview size** — 50%, 65%, 80% or 100%, how big the panes are drawn, remembered like the tab. A select and a half-moon used to sit on the bar, which was this page keeping its own settings beside the app's. Under 1000px wide there is no room to halve anything, so the tools go back under the screens and the page scrolls as one. The tab strip, the **phase** and **trump** rows and the speed a replay plays back at are one control, the one the settings page has: a groove, with the choice sitting in it as a rounded pill. They used to be a framed box with square blocks in it — the same job in a second shape.
 
 The controls are one band at the foot of the window, three rows — the same rows in the same places whether the page is on a table or on a game watched again. The page is as tall as the window less the top bar it measured, the screens and the panels scroll inside it, and the band stays where it is. It used to sit over the screens, where it went off the top the moment there was more to look at than fitted — which on this page is always. The replay page is built the same shape and for the same reason. What changes is the verbs:
 
@@ -1174,18 +1174,18 @@ The controls are one band at the foot of the window, three rows — the same row
 
 - **Players** — the upper of the two tables in the right half. What a live game reaches for is now on the scores page itself — the row of controls under the bids, the ⋯ on each standings row, and the [editable scorecard](#the-scorecard-is-editable) — all of which stay inside the rules. This is the forcing half, for the states the rules cannot reach. It opens with the round it is editing named — *Round 3 of 7 · 5 cards* — and under that a line each for the things that belong to the hand rather than to any one player. **Phase** forces the game to lobby, bid, tricks or done, which is the one thing the round's own numbers cannot unstick: every bid in and the phase never turned. **Trump** turns this round's trump, and **Deal again** winds the redeal count on — every screen keys its deal scene on `round:redeals`, so that is what makes a fresh deal land without a bum-deal vote. **Trick** counts the trick to a seat, or takes the last one back. **Vote** opens a bum-deal vote or cancels it, and says who asked and how it stands. **Photos** puts a stand-in picture on every seat, or takes them all off — the same verb the 📷 and ✕ on each row do to one seat, which is why it lives here and not in the band. A photo is a look and not a state: it is not in the record, so a game watched again takes one and stays the game it is a copy of. That makes it the one control on this panel that works on a copy without forking it.
 
-A line that does not apply to this table is not there, rather than offered and refused a press at a time. **Trump** is a table that deals the cards: with real cards the deck on the table decides everything about trumps. **Trick** is the other way round — where the cards are dealt they count themselves, so it is a real-cards row, and the tool for a hand on the phones is *Play for*. Trick and Vote are the table's own messages, said the way the host screen says them, because this page holds the host token. Then one row a seat: name, who hosts, who deals, bot, this round's bid and tricks, a photo on or off, and **Hand over**. Everything lands as it is changed; the tricks go as one column, once every seat has a number, and the cells still wanted are ringed until they do. The rows are not rebuilt under a word half typed — a row redrawn mid-word loses it — but only a word: a button, a tick box or a radio keeps the focus after it is pressed and the press is over the moment it fires, so holding off for those meant nothing landed until you clicked away, which read as the table ignoring you.
+A line that does not apply to this table is not there, rather than offered and refused a press at a time. **Trump** is a table that deals the cards: with real cards the deck on the table decides everything about trumps. **Trick** is the other way round — where the cards are dealt they count themselves, so it is a real-cards row, and the tool for a hand on the devices is *Play for*. Trick and Vote are the table's own messages, said the way the host screen says them, because this page holds the host token. Then one row a seat: name, who hosts, who deals, bot, this round's bid and tricks, a photo on or off, and **Hand over**. Everything lands as it is changed; the tricks go as one column, once every seat has a number, and the cells still wanted are ringed until they do. The rows are not rebuilt under a word half typed — a row redrawn mid-word loses it — but only a word: a button, a tick box or a radio keeps the focus after it is pressed and the press is over the moment it fires, so holding off for those meant nothing landed until you clicked away, which read as the table ignoring you.
 
-  Under each seat's values is a row of verbs — **Phone off · Leave · Kick · Time out · Rejoin** — and every one of them is a state a real table reaches on its own. **Phone off** is the odd one: nothing is sent. Presence is not a flag on the table — `markPresence` works it out again from the live sockets on every broadcast, so a forced one would be wiped by the next thing that happened. A phone goes quiet by its socket going, which here means its pane not being drawn. Then the table decides for itself that nobody is behind that seat, and every away path lights up together: bidding for them, playing for them, the peek, the toasts, and the clock. **Phone on** draws the pane again and the socket comes back. **Leave** is what that phone's own Leave button does — in the lobby the seat goes, mid-game the seat stays and the table plays its hand. **Kick** is the seat put out, which only the lobby allows, so mid-game the button says so rather than earning a refusal a press at a time. **Time out** is the idle clock run out on that seat and whatever the table then does about it (`Room.giveUp`, which the clock in `Room.sweep` also calls) — a table of stand-ins is never idle, so this is the only way to reach it. **Rejoin** gives a seat the table took over back, by name. The last column says what the seat is rather than offering one of the things that changes it.
+  Under each seat's values is a row of verbs — **Device off · Leave · Kick · Time out · Rejoin** — and every one of them is a state a real table reaches on its own. **Device off** is the odd one: nothing is sent. Presence is not a flag on the table — `markPresence` works it out again from the live sockets on every broadcast, so a forced one would be wiped by the next thing that happened. A device goes quiet by its socket going, which here means its pane not being drawn. Then the table decides for itself that nobody is behind that seat, and every away path lights up together: bidding for them, playing for them, the peek, the toasts, and the clock. **Device on** draws the pane again and the socket comes back. **Leave** is what that device's own Leave button does — in the lobby the seat goes, mid-game the seat stays and the table plays its hand. **Kick** is the seat put out, which only the lobby allows, so mid-game the button says so rather than earning a refusal a press at a time. **Time out** is the idle clock run out on that seat and whatever the table then does about it (`Room.giveUp`, which the clock in `Room.sweep` also calls) — a table of stand-ins is never idle, so this is the only way to reach it. **Rejoin** gives a seat the table took over back, by name. The last column says what the seat is rather than offering one of the things that changes it.
 
-  Beside them, acting *for* a seat: **Bid for** and **Play for** are the table's own two messages, said the way the host screen says them, so they appear on exactly the seat the table would take them for — the one it is waiting on that nobody is behind. Anywhere else they would be a button that earns a refusal. **✓** and **✗** are that seat's answer to a bum-deal vote, and **💬** says a line in the talk as that seat. Those two need a door of their own: a vote is answered by the phone it is put to and a line is said by whoever said it, so no host-side message can say either. `Room.seatVote` and `Room.say` are the verbs, and the phone's own vote and chat now go through the same two — the counting and the shape of a line are written once.
+  Beside them, acting *for* a seat: **Bid for** and **Play for** are the table's own two messages, said the way the host screen says them, so they appear on exactly the seat the table would take them for — the one it is waiting on that nobody is behind. Anywhere else they would be a button that earns a refusal. **✓** and **✗** are that seat's answer to a bum-deal vote, and **💬** says a line in the talk as that seat. Those two need a door of their own: a vote is answered by the device it is put to and a line is said by whoever said it, so no host-side message can say either. `Room.seatVote` and `Room.say` are the verbs, and the device's own vote and chat now go through the same two — the counting and the shape of a line are written once.
 
-  Every seat verb goes through the one door and not through the table's own messages, because this page's socket is not always at the table it is driving: watching a game again it is at no table at all, and the copy is reached by name. So they work on a copy too, and pressing one there forks it — changing a copy is changing a copy, whichever control does it. The rules they lean on stay in the room: `Room.kickSeat` will not take a seat off a table that has started, whoever asks, because mid-game a seat that went would be a hole in the scorecard. Three doors reach that rule — a phone leaving, the table host putting a seat out, and this page doing either from outside — and it is stated once rather than agreed three times.
+  Every seat verb goes through the one door and not through the table's own messages, because this page's socket is not always at the table it is driving: watching a game again it is at no table at all, and the copy is reached by name. So they work on a copy too, and pressing one there forks it — changing a copy is changing a copy, whichever control does it. The rules they lean on stay in the room: `Room.kickSeat` will not take a seat off a table that has started, whoever asks, because mid-game a seat that went would be a hole in the scorecard. Three doors reach that rule — a device leaving, the table host putting a seat out, and this page doing either from outside — and it is stated once rather than agreed three times.
 
   **Trick** and **Vote**, in the round's own lines, are the exception: they are the table's own messages said on this page's socket, so they belong to a table and are simply not there on a copy, rather than there and refused.
 
   **Hand ▾** opens the cards a seat holds, on a table that deals them. It has a door of its own, because a hand is a secret: the state every screen is sent says how many cards a seat holds and never which (`play.counts`, never `play.hands`), so the panel asks the table for them (`{ t: 'dev', action: 'hands' }`) and draws nothing until they come. That answer is every player's cards at once, so it needs `DEV=1` and says so. It asks again whenever the table moves under an open picker — what it draws has to be the hand now, not the hand the picker opened on. The picker is the deck itself: this seat's cards marked, a card another seat holds shut with a line saying whose, and the rest there to be taken. One seat's picker is open at a time — fifty-two buttons a seat would be four hundred elements redrawn on every state. Moving a card changes two hands, so every hand is sent, and the table holds what comes in to a real deck and to the round it is in: what is not a card is dropped, a card an earlier seat already holds is not dealt again, and a hand stops at the round's own size — a round of five is five cards a hand. None of those is a state a real game reaches, and the ones it does reach are the point of the page. The picker says how many of the round the hand holds (*3 of 5 cards*), and once it is full the rest are shut with the reason on them, rather than offering a card the table would silently drop.
-- **Hand over** takes a player out of a game in play. Mid-game the seat cannot simply go — the rounds already played are that player's, and the scorecard is a column for it — so the seat stays, is marked gone, and the table plays its hand from there on. It is a pair: **Take back** gives the seat to whoever holds its phone again. Removing a seat outright is the lobby's business, and the table host's.
+- **Hand over** takes a player out of a game in play. Mid-game the seat cannot simply go — the rounds already played are that player's, and the scorecard is a column for it — so the seat stays, is marked gone, and the table plays its hand from there on. It is a pair: **Take back** gives the seat to whoever holds its device again. Removing a seat outright is the lobby's business, and the table host's.
 - **State** — the whole table as JSON, the same record it is saved to disk as: rounds, seats, rules, hands, everything. The box says what it holds as you type in it: a head naming the record (*table AAAA · 3 seats · round 2 of 15*), the lines numbered down the side, the JSON coloured — a name in gold, a word in green, a number in red — and a foot with its size. Whether the text is even JSON is a ✓ or a ✗ in the head, with the parse error where the name was and a red frame round the box; Apply goes dim until it parses, so a half-typed record is caught here rather than by the table. A table that has moved under the text rings the box in gold. It is still a plain text box underneath — what is typed is what is sent — with a coloured copy of the same text lying under it and the caret showing through. Edit it and press Apply, and the table becomes what the text says; Reload throws the edits away and reads the table afresh. A record the table will not have says why beside the Apply button, and the edit stays in the box to be put right — it is the thing being worked on. **Copy** takes the record to the clipboard, which is how a broken table is kept before it is mended. The table's code, its keys and the pictures stay as they are, whatever the text says. This is the raw way to any state the other controls cannot reach, and it works on any server: it is how a real game nothing else reaches is put right.
 
 **Rules** is still to come back — the rules form, editable after the start. The server answers its action already; only the control is missing.
@@ -1202,9 +1202,9 @@ What the page may do follows the **server**, not the table. On a server started 
 
 What is left on a live table is the forcing half — for the states the rules themselves cannot reach. (Everything that stays inside the rules is on the scores page, which needs no dev page and no token in a link.) It is all in one place: the **Players** panel. The round it is editing, the phase to force, and a row a seat — the bid, the tricks, whether the seat is a bot, who runs the table, and taking a player out of it. Nothing there invents anything; every one of them is a forced value, which is what the host token has always been allowed. Anything those cannot reach is the **State** record's job.
 
-The phones are there, one pane a player, so you can see what each of them sees. On a real table they open as **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping phone still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
+The devices are there, one pane a player, so you can see what each of them sees. On a real table they open as **watching windows**: the same page, off the same state, with a 👁 badge and nothing on the game that can be pressed — the settings page is still the reader's own. A watching window cannot send anything to the game, and it does not put that player back at the table, so a sleeping device still reads as offline. It opens with `play.html#c=CODE&w=WATCHTOKEN`, and that link never saves itself in the browser, so watching cannot evict your own seat.
 
-On a dev server each of those panes carries an **act as** button. It asks the server for the seat itself and puts it in the pane, which then bids and plays as that player — the phone that holds the seat is not thrown off, so mind that two screens are then the one player. **Stop acting** puts the pane back to only watching.
+On a dev server each of those panes carries an **act as** button. It asks the server for the seat itself and puts it in the pane, which then bids and plays as that player — the device that holds the seat is not thrown off, so mind that two screens are then the one player. **Stop acting** puts the pane back to only watching.
 
 The server decides this, not the page:
 
@@ -1213,11 +1213,11 @@ The server decides this, not the page:
 - Opening the page on a table needs that table's host token, or `DEV=1`. Nothing else: the page cannot ask for a seat.
 - Forcing a state needs only the host or the table host of that table, which is authority they already have. So does reading and rewriting the record whole: it is the same authority, made complete.
 - A real table never hands its seat tokens out. It hands out a watch token a seat instead, which opens that screen and can do nothing else. The record read off a real table carries neither — nor the cards in anybody's hand, which the screen is never shown either.
-- The keys are the table's own, never the text's. A pasted record cannot change the host token, cannot hand anybody a seat, and cannot leave a table nobody can open: whatever the text says, each seat keeps the key its phone holds.
+- The keys are the table's own, never the text's. A pasted record cannot change the host token, cannot hand anybody a seat, and cannot leave a table nobody can open: whatever the text says, each seat keeps the key its device holds.
 - A watching socket is refused every message but `ping`, and is left out of who counts as online.
 - Forced bids and tricks are checked for shape: one whole number a seat, no bigger than the hand. Junk is dropped rather than stored.
 
-On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another phone.
+On a table of stand-ins the previews open with a `#c=CODE&t=TOKEN` link, which puts that seat in that frame. Inside a frame the seat is kept in memory only, so the panes do not overwrite each other, and none of them touches your own saved seat. The same link opened in a tab does claim the seat, which is also how you move a seat to another device.
 
 Making a table of stand-ins needs `DEV=1`. On a normal server the way-in card shows that door shut and says why — but the other two are open: **Dev controls** under ⚙ on the TV screen is the way in to a real table, offered wherever that screen holds the host token, and a game on file is watched back with nothing at all. That is the point: a game broken by a bug is broken on the server it is running on, not on the one with `DEV=1` set.
 
@@ -1227,19 +1227,19 @@ Every table writes down what happened to it, as it happens: the game starting, e
 
 A point is the thing that happened and not a picture of the table — twenty-odd bytes against three kilobytes. A picture is taken only where the game could not be worked out again without one: the game starting, because it is the one point with nothing behind it to work out from; a round opening, because the deal is shuffled and will never come round the same way twice; and the finish, because the accolades are drawn rather than reckoned. Those pictures carry no table talk, no keys and no hands out of anybody's seat.
 
-It goes in a file of its own, `data/trail/CODE.jsonl`, one line a point, appended. That is not tidiness: a table's own record is rewritten whole after every broadcast, so a trail kept there would be written again for every card — some hundreds of megabytes over one game, on a machine that may well be a phone. Appending a line costs the line.
+It goes in a file of its own, `data/trail/CODE.jsonl`, one line a point, appended. That is not tidiness: a table's own record is rewritten whole after every broadcast, so a trail kept there would be written again for every card — some hundreds of megabytes over one game, on a machine that may well be a device. Appending a line costs the line.
 
 #### Watching a game again
 
 The trail says what happened; a **replay** puts it back. Never onto the table it happened at — a real game has people at it, and taking their screens over to look at the past would be its own kind of bug. A copy of the table is made instead, seeded from the trail, and the dev page points its screens at that. The game carries on beside it, untouched.
 
-What a point is put back through is the game's own verbs: a bid through the same door a phone's bid goes through, a card through the deck, a round scored the way a round scores. So a replayed table is one the rules could have reached, and a replay that could not happen is one that stops rather than one that lies. The only points set outright are the ones carrying a picture, and they carry one exactly because the game could not be worked out again without it — the deal, and the accolades at the finish.
+What a point is put back through is the game's own verbs: a bid through the same door a device's bid goes through, a card through the deck, a round scored the way a round scores. So a replayed table is one the rules could have reached, and a replay that could not happen is one that stops rather than one that lies. The only points set outright are the ones carrying a picture, and they carry one exactly because the game could not be worked out again without it — the deal, and the accolades at the finish.
 
 Moving about in it is that same thing from the nearest picture: back to the round, then forward one point at a time. That is the only honest way, because the pictures are the only states the trail actually holds. It is also why the game starting carries one: without it a copy had nothing to stand on at the first point there is, and opened on the second. A trail written before that — a game already on file — still opens on its second point, because the state at its first was never written down and a replay stops rather than invents.
 
-Beside **Replay** on each card is the **⋯** of what else can be done with that game — the same menu the standings use for one person. It holds **Delete this game**, which asks first and then takes it off *this phone*. The table keeps its own copy, so *Look on the table* brings it back with the code; the confirm says so, because deleting a game everybody played sounds like more than it is. The swipe stays where it was rather than snapping back to the newest.
+Beside **Replay** on each card is the **⋯** of what else can be done with that game — the same menu the standings use for one person. It holds **Delete this game**, which asks first and then takes it off *this device*. The table keeps its own copy, so *Look on the table* brings it back with the code; the confirm says so, because deleting a game everybody played sounds like more than it is. The swipe stays where it was rather than snapping back to the newest.
 
-**Replay**, on a past game's card, opens `replay.html?g=<id>`: the table as it was, on the screen a table is shown on, with the rounds, the transport and the points under it and nothing else on the page. **Seen from** above it switches whose screen you are watching — the table, or any player's own phone, hand and all. A copy hands over a watching key a seat, and that key opens that seat's screen without putting anybody at the table; changing it asks the copy for nothing, because it is the same moment of the same game looked at from somewhere else. The button is offered only where the table can meet it — the listing at `/games.json` says which games still have a trail beside them, because a scorecard outlives its trail by the cap they share.
+**Replay**, on a past game's card, opens `replay.html?g=<id>`: the table as it was, on the screen a table is shown on, with the rounds, the transport and the points under it and nothing else on the page. **Seen from** above it switches whose screen you are watching — the table, or any player's own device, hand and all. A copy hands over a watching key a seat, and that key opens that seat's screen without putting anybody at the table; changing it asks the copy for nothing, because it is the same moment of the same game looked at from somewhere else. The button is offered only where the table can meet it — the listing at `/games.json` says which games still have a trail beside them, because a scorecard outlives its trail by the cap they share.
 
 It is drawn by `public/viewer.js`, which is the whole of it: what there is to watch, the rounds, the transport and the points, in four widgets that know nothing about the page they are on. The dev page says where each goes and how a word gets back to the copy; anything else that wants a replay does the same.
 
@@ -1281,7 +1281,7 @@ It is a point like any other, so moving about still works. Step back over it and
 
 **And a fork can be played.** A copy is watched and never played at — what happened at it has already happened — but a fork is no longer that game, so it is a table of its own and takes the game's own verbs. Its seats stop being watching keys and become seats: the panes on one hold them and act as the players. It is paused when it is made, because forking is setting a game up rather than starting one, and **▶ Play** starts it — the panes can bid and play, and the bots take their turns.
 
-There is still one button, and it still means what it always meant: *go forward from here*. What is in front depends on where the head is. On a tape there is tape, and it is played back at the pace the table played it. At the end of a fork's own tape there is no tape left — there is a game — so the same button carries the table on, and ❚❚ Pause stops it. Scrub back and there is tape in front again, so it plays that. Two buttons for this were two clocks wearing one face, both green and both starting with ▶: press the wrong one and the table sits there while the tape runs, the phones say ❚❚ paused, and nothing else on the page agrees.
+There is still one button, and it still means what it always meant: *go forward from here*. What is in front depends on where the head is. On a tape there is tape, and it is played back at the pace the table played it. At the end of a fork's own tape there is no tape left — there is a game — so the same button carries the table on, and ❚❚ Pause stops it. Scrub back and there is tape in front again, so it plays that. Two buttons for this were two clocks wearing one face, both green and both starting with ▶: press the wrong one and the table sits there while the tape runs, the devices say ❚❚ paused, and nothing else on the page agrees.
 
 Beside the word, **Reset** puts the fork back. Everything the copy became goes — the change, and whatever was played on it after — and what is left is the game it is a copy of, standing at the point it was changed at, watched rather than held. It asks first, because it is the one thing on the band that pressing again does not undo. There is a way back at all because the game itself was never touched: forking makes a new list of points rather than writing into the one the copy was opened with, so that one is still exactly what it was.
 
@@ -1291,7 +1291,7 @@ None of it reaches disk. `room.trail` is what `flush` writes and a copy never ha
 
 None of it touches the game. The trail on disk is never opened for writing, the copy is never filed, and watching the same game again a second time is the whole game as it was played. The copy is in memory, it belongs to the socket that asked for it, and it goes when that page goes.
 
-A **game on file** needs nothing at all to watch back: no table, no host token, on any server. It is finished, and its scorecard is already served to anybody who asks at `/games.json` and on the history page; putting it back adds only the order it happened in. A **table still in play** is the one thing that stays behind the host token, because its trail holds the cards in every hand — a phone at that table is told *only the host can watch this table back*. Either way it invents nothing: it puts back what already happened, on a copy.
+A **game on file** needs nothing at all to watch back: no table, no host token, on any server. It is finished, and its scorecard is already served to anybody who asks at `/games.json` and on the history page; putting it back adds only the order it happened in. A **table still in play** is the one thing that stays behind the host token, because its trail holds the cards in every hand — a device at that table is told *only the host can watch this table back*. Either way it invents nothing: it puts back what already happened, on a copy.
 
 One game at a time: a new game starts the file over, because a table lives six hours and plays several.
 
@@ -1317,8 +1317,8 @@ in, a step back, and who may send what and when. A rule of the game is checked
 here. Run it alone with `npm run test:rules`.
 
 `test.js` starts the server on port 8899 and plays whole games over WebSockets.
-It proves what only a socket can: a refusal comes back to the phone that earned
-it, a bid made on one phone is on every screen a moment later, a phone that
+It proves what only a socket can: a refusal comes back to the device that earned
+it, a bid made on one device is on every screen a moment later, a device that
 drops out is waited for and let back in, a table outlives the server it was on,
 and the pauses that are meant to be felt — the trick held up, the bots thinking,
 the moment between two lines of talk — are real pauses on a real clock. It also
@@ -1350,9 +1350,9 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/ui.js` — shared page bits: the way back at the left of the bar, the full-screen button, the wake lock, the motion setting every scene and flourish asks.
 - `public/stage.js` — the overlay both scenes are played on, its parts, the slot that says which one is open, and the peek: the one way a screen shows the seat it is waiting on.
 - `public/deal.js` — the deal animation. `public/finale.js` — the game-over finish. Both used by every screen.
-- `public/felt.js` — the table a phone plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
-- `public/table.js` — the scorecard (editable, for whoever runs the table), the standings and the seat controls on them, the winner and the vote line, drawn the same on a TV screen and a phone; the ⋯ menu both lists of people use; and what the deal and the finish read off the state.
-- `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the TV screen, the table host's phone and the dev page.
+- `public/felt.js` — the table a device plays a virtual round on: the fan, the pile, the gestures, the bid numbers. The deal hands it the stage and it keeps it for the round.
+- `public/table.js` — the scorecard (editable, for whoever runs the table), the standings and the seat controls on them, the winner and the vote line, drawn the same on a TV screen and a device; the ⋯ menu both lists of people use; and what the deal and the finish read off the state.
+- `public/lobby.js` — the lobby: the seats, the bots, the rules form and the start button, drawn the same on the TV screen, the table host's device and the dev page.
 - `public/round.js` — the round in play: the round line, the bids as they land, the count of tricks taken, the pads for a seat with nobody behind it, and the winner. Each widget takes the element it draws into and a view of who is looking.
 - `public/chat.js` — the table talk sheet, the unread count, and the toast a line raises when the sheet is shut.
 - `public/ui.js` also lists the settings every page has, as rows. `public/settings.js` draws them: the page behind the ⚙, laid over the page that opened it.
@@ -1373,7 +1373,7 @@ and lets it off by hand rather than waiting. Run it alone with
 - `android/tools/build-local.sh` — the same build on this machine, no runner.
 - `public/index.html`, `join.js` — landing page: join a table or start one.
 - `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
-- `public/play.html`, `play.js` — player phone: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
+- `public/play.html`, `play.js` — player device: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
 - `public/styles.css` — shared styles, light and dark.
 

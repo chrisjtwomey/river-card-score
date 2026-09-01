@@ -79,7 +79,7 @@ const UI = (function () {
     label();
   }
 
-  // Hides itself on browsers without full screen, such as Safari on iPhone.
+  // Hides itself on browsers without full screen, such as Safari on iDevice.
   function wireFullscreen(sel) {
     const btn = document.querySelector(sel);
     if (!btn) return;
@@ -100,9 +100,9 @@ const UI = (function () {
 
   let lock = null, wanted = false, vid = null, paint = null, retryHooked = false;
 
-  // navigator.wakeLock only exists in a secure context, so a phone on
+  // navigator.wakeLock only exists in a secure context, so a device on
   // http://192.168.x.x does not have it. Fall back to a silent looping video,
-  // which holds the screen on some phones but not on an iPhone.
+  // which holds the screen on some devices but not on an iDevice.
   function videoFallback() {
     if (vid) return Promise.resolve('video');
     const c = document.createElement('canvas');
@@ -252,18 +252,18 @@ const UI = (function () {
         set: setSpeed });
     }
     list.push({ kind: 'group', label: 'This screen' });
-    // Safari on an iPhone has no full screen at all, so the row is not offered.
+    // Safari on an iDevice has no full screen at all, so the row is not offered.
     list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
                 get: isFull, set: () => { try { toggleFullscreen(); } catch (e) {} } });
     return list;
   }
 
-  /* ---------- where phones should connect ---------- */
+  /* ---------- where devices should connect ---------- */
 
   const ADDR_KEY = 'rcs:hostaddr:v1';
   const isLocalUrl = (u) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(u);
 
-  // A phone cannot reach "localhost", so prefer a network address.
+  // A device cannot reach "localhost", so prefer a network address.
   async function serverAddresses() {
     let urls = [], ok = true;
     try {
@@ -292,7 +292,7 @@ const UI = (function () {
   }
 
   // '192.168.1.5' -> 'http://192.168.1.5:8787'. What a person reads off a
-  // phone's Wi-Fi details is an address, not a URL.
+  // device's Wi-Fi details is an address, not a URL.
   function fullAddress(typed) {
     let u = String(typed || '').trim().replace(/\/+$/, '');
     if (!u) return '';
@@ -303,7 +303,7 @@ const UI = (function () {
 
   /* The address that goes in the QR code, and the ways to put it right.
 
-     A table normally knows where it is. A phone that is sharing its own hotspot
+     A table normally knows where it is. A device that is sharing its own hotspot
      -- on a plane, with no mobile data -- may not: Android hides the interface
      list, and there is nowhere off the link to ask the routing table about. Then
      the only address the page can offer is its own, which is no use to anybody
@@ -321,7 +321,7 @@ const UI = (function () {
       '<p class="err addr-warn" hidden></p>' +
       '<label class="field addr-field" hidden><span>Address in the QR code</span>' +
       '<select class="addr-pick"></select></label>' +
-      '<label class="field addr-other" hidden><span>The address of this phone</span>' +
+      '<label class="field addr-other" hidden><span>The address of this device</span>' +
       '<input class="addr-typed" type="text" inputmode="url" autocapitalize="off"' +
       ' autocomplete="off" spellcheck="false" placeholder="192.168.1.5"></label>';
     const warn = el.querySelector('.addr-warn');
@@ -348,9 +348,9 @@ const UI = (function () {
       field.hidden = quiet || (found.urls.length < 2 && !found.onlyLocal);
       if (found.onlyLocal) {
         warn.hidden = false;
-        warn.textContent = 'This phone cannot see its own address, so the code below only works '
-          + 'here. Ask somebody who has joined for the address their phone shows, or read it '
-          + 'from this phone\u2019s hotspot settings, and type it in.';
+        warn.textContent = 'This device cannot see its own address, so the code below only works '
+          + 'here. Ask somebody who has joined for the address their device shows, or read it '
+          + 'from this device\u2019s hotspot settings, and type it in.';
         other.hidden = false;
         field.hidden = false;
       }
@@ -441,7 +441,7 @@ const UI = (function () {
      because it asked. Resolves to whether it went ahead. */
   function endTable(code, before) {
     return ask(`End table ${code}?`,
-      'Every phone at it is put off, and the game is not kept: nothing is scored and '
+      'Every device at it is put off, and the game is not kept: nothing is scored and '
       + 'nothing goes to Past games. The table cannot be started again.',
       'End the table', true).then((yes) => {
         if (!yes) return false;
@@ -570,7 +570,7 @@ const UI = (function () {
      a trick is left up to be read, what a round paid, the places at the end of
      one. The table grants the window, not the screen: a trick sits for
      TRICK_HOLD before the winner may lead, and the bots wait DEAL_WAIT for the
-     phones to say their tables are up. So a beat may be cut short, which is
+     devices to say their tables are up. So a beat may be cut short, which is
      this screen's business, and may not be drawn out, which is not: past the
      window the table moves on and cuts the beat anyway, which reads worse than
      never having asked for it. */

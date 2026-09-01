@@ -31,7 +31,7 @@ const newGame = () => Round.newGame(view());
 
 function loadAddresses() {
   // The control, the choice and the warning when this machine cannot see its
-  // own address are all the same on the player's phone, so they live in UI.
+  // own address are all the same on the player's device, so they live in UI.
   UI.addressPicker($('#addr-mount'), (u) => { addr = u; renderJoin(); });
 }
 
@@ -229,7 +229,7 @@ function renderLobby() {
   const capSeat = ST.seats.find((s) => s.id === ST.captainId);
   $('#first-dealer-hint').textContent = fd
     ? `${fd.name} deals the first round` +
-      (capSeat ? `, and ${capSeat.name} runs the table from their phone.` : '.') +
+      (capSeat ? `, and ${capSeat.name} runs the table from their device.` : '.') +
       ' Drag a player by the handle to change the order; the ⋯ beside a player changes either, or removes them.'
     : '';
   const v = view();
@@ -304,7 +304,7 @@ function renderTurn(r, n) {
   $('#turn-head').hidden = !r;
   if (!r) {
     $('#turn-hint').textContent = SHOW
-      ? 'The table host starts a new game from their phone.'
+      ? 'The table host starts a new game from their device.'
       : 'Press "New game" to play again with the same players.';
     return;
   }
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* A host screen is read from across the room, so text size belongs here.
      The page holds settings and nothing else: a new game is a button on the
      page, where the game-over line says it is. */
-  /* The table is the phone's to take away when the phone is the one running
+  /* The table is the device's to take away when the device is the one running
      it -- watching a table is otherwise a screen with no way to put it down.
      Never on a TV or a laptop across the room: they only show what is there. */
   const canEnd = () => !!(CODE && UI.servedHere());

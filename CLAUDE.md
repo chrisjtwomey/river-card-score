@@ -1,6 +1,6 @@
 # Up the River, Down the River — how this code is built
 
-A score tracker for the card game: one server, one host screen, one phone per
+A score tracker for the card game: one server, one host screen, one device per
 player. Read this before changing anything. It says where each thing lives,
 and the rules that keep two copies of the same idea from drifting apart.
 
@@ -17,7 +17,7 @@ lib/room.js        THE TABLE. Every verb that moves a game on, once: openRound, 
 lib/deck.js        The virtual dealer: dealHands, startPlay, refusal, putCard, settleTrick.
                    Arithmetic over the room; no sockets, no timers.
 lib/bots.js        The players the table provides: what a hand is worth, which card to play,
-                   and the driver that takes their turn through the same verbs a phone uses.
+                   and the driver that takes their turn through the same verbs a device uses.
 lib/messages.js    THE PROTOCOL. A table of every message a seated socket may send: who may
                    send it, when, and which Room verb it calls. Guards are declarative.
 lib/dev.js         The dev controls: the ways in (`ways`) -- a table of stand-ins
@@ -52,7 +52,7 @@ public/ui.js       Page chrome shared by every page: the way back (backLink, off
                    does not fit (fadeStrip/showCell), the small effects (fx).
 public/settings.js The settings page behind the ⚙: laid over the page that opened it, draws
                    the rows a page hands it (`UI.commonSettings` plus its own) and, on a
-                   phone, who the player is (name, photo). The front page opens it first
+                   device, who the player is (name, photo). The front page opens it first
                    when there is no name.
 public/net.js      The socket client: reconnect, sessions, one table per page address.
 public/table.js    The scorecard -- editable for `view.boss`: a figure, a round, or a name at
@@ -72,10 +72,10 @@ public/stage.js    The overlay both scenes play on, its parts, the round line (h
                    dealer's seat (`dealerRing`). `Stage.peek` is the one
                    "waiting on you" animation: the deal, the felt and the trick all use it.
 public/deal.js     The deal scene.   public/finale.js  The finish.   public/felt.js  The
-                   table a phone plays a virtual round on; the deal hands it the stage.
+                   table a device plays a virtual round on; the deal hands it the stage.
 public/chat.js     Table talk.       public/accolades.js  Shared with the server (A.list/pick/bonus).
 public/host.js     THE HOST FLOW: connect, deal-hold policy, table panel, compose widgets.
-public/play.js     THE PHONE FLOW: connect, felt/deal policy, vote buttons, who you are, compose.
+public/play.js     THE DEVICE FLOW: connect, felt/deal policy, vote buttons, who you are, compose.
 public/viewer.js   THE REPLAY VIEWER. A game watched again, drawn off the one message the
                    server sends about a copy: `games`, `rounds`, `run`, `points` -- four
                    widgets, each `(root, R, view)`, each building what it needs inside the
@@ -130,7 +130,7 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
    `resetRound` calls it too, for the round in play; a round already scored is
    never reopened -- it is retyped in place (`setScore`).
 6. **`publicState.turn` is bid-only.** During tricks the seat on play is `play.turn`.
-   The phone and the felt branch on `play ? play.turn : ST.turn`.
+   The device and the felt branch on `play ? play.turn : ST.turn`.
 7. **A widget is `(root, ST, view)`.** `view = { me, boss, send }`: this screen's
    seat (-1 for a screen that belongs to nobody), whether it may act, and how a
    message leaves. A widget queries inside `root` only, is null-tolerant (not every
@@ -168,7 +168,7 @@ This holds for a fix as much as for a feature: a bug whose cure is a different s
 is a design question in a bug's clothes. It does not hold when the user has already
 said which change they want, or has told you to go ahead without asking.
 
-The game has modes -- real cards or dealt on the phones, the host screen or a phone
+The game has modes -- real cards or dealt on the devices, the host screen or a device
 in a hand, a screen that only watches -- and they play and look different. They are
 still one game seen from different sides. So weigh every option against all of them:
 say what it does to each, and where it can only land in one, say why the others stay
@@ -188,7 +188,7 @@ as they are. Drift between the modes is the thing being guarded against.
   everybody a game in play has.
 - **A page setting**: a row from `UI.commonSettings(opts)` or a page-specific item in
   its `Settings.wire` call.
-- **A behaviour that differs by mode** (real cards vs dealt on the phones): a `deck`
+- **A behaviour that differs by mode** (real cards vs dealt on the devices): a `deck`
   guard on the message row, or `Game.virtual(state)` at the one seam in the Room verb
   (`openRound`, `closeBidding`). Not an `if` in a screen.
 
@@ -202,13 +202,13 @@ as they are. Drift between the modes is the thing being guarded against.
     would and returns the line said back, or null. **A rule goes here.** No port,
     no socket, no clock: the whole file runs in well under a second.
   - `test.js` — whole games over real WebSockets, ports 8899–8907. **What a
-    socket adds goes here**: a refusal reaching the phone that earned it, a
+    socket adds goes here**: a refusal reaching the device that earned it, a
     change reaching every screen, presence, reconnect, and a table outliving its
     server. Nothing waits on the clock: `okBy(pred, msg)` polls until the table
     has made it true, `until(pred)` waits for a step with nothing to assert, and
     `c.rt()` is a ping and its pong. `tableOf(names, cfg, url)` makes a table and
     sits everybody at it. The game's own pauses are turned down by `TUNED` at the
-    top — a bot's think, the trick hold, the wait on the phones — so a check
+    top — a bot's think, the trick hold, the wait on the devices — so a check
     never sits through one; what they are is checked in `test-rules.js`, and one
     server of its own proves each is really waited out.
     A `SLOW` line in the output means a wait gave up: something is wrong with the
@@ -234,9 +234,9 @@ as they are. Drift between the modes is the thing being guarded against.
 The suites do not see a real screen. A change to a scene, a gesture, a layout
 or a flow still needs a game played on it.
 
-**Ask first.** Before you open a browser, drive a phone, or start a server,
+**Ask first.** Before you open a browser, drive a device, or start a server,
 ask the user whether they want to check it themselves. Many do: they have the
-server running, the phones on the table, and they know what it should look
+server running, the devices on the table, and they know what it should look
 like. Only run the game yourself when they say so, or when they have told you
 to test autonomously. Never touch a browser or a server the user is already
 running -- open your own, on a port of your own, and say which.
@@ -248,18 +248,18 @@ When you do run it:
   restart). Host screen at `/host.html`, a seat at `/` (type a name, *Start a
   table*), the whole table at once at `/dev.html` (needs `DEV=1`, which
   `npm run dev` sets): it seats stand-ins and shows the host screen and every
-  phone side by side, and its scrubber and one-shots reach any state a
-  real game can. A second phone is a second browser profile or a private window;
+  device side by side, and its scrubber and one-shots reach any state a
+  real game can. A second device is a second browser profile or a private window;
   a seat is one browser, so two tabs of `play.html` share it.
-- **What to play through.** Real cards: lobby → bid in turn → anybody taps who takes each trick → a round scores → go back → new game. Dealt on the phones: add a
+- **What to play through.** Real cards: lobby → bid in turn → anybody taps who takes each trick → a round scores → go back → new game. Dealt on the devices: add a
   bot, the deal lands on the felt, bid on the felt, play a trick, a bum deal,
-  finish → finale. Then the odd paths: a phone goes quiet at its turn (bid for /
+  finish → finale. Then the odd paths: a device goes quiet at its turn (bid for /
   play for / hand the seat over), *Show a table* on a second host screen, a
   watching window from the dev page.
-- **Mobile.** A real phone on the same network reaches the laptop's server at
+- **Mobile.** A real device on the same network reaches the laptop's server at
   the address the console prints; the QR code on the host screen carries it. For
   the Android app, `android/tools/push-dev.sh` writes the tree into a debug build
-  on a phone over USB (`adb`), and `adb logcat -s UpTheRiver-node` shows the
+  on a device over USB (`adb`), and `adb logcat -s UpTheRiver-node` shows the
   server's own output. A change under `public/` reloads the app's pages on its
   own; a server change restarts the runtime.
 - **Say what you saw.** Report what you ran, on which port, and which of the

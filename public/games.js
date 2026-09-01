@@ -1,10 +1,10 @@
 'use strict';
-/* Games that are over. The table keeps one file each, and the phone keeps its
+/* Games that are over. The table keeps one file each, and the device keeps its
    own copy of every game it sat at, so a player can look back with no table
    open and no server to ask. */
 const Games = (function () {
   const KEY = 'river-card-score:games:v1';
-  const CAP = 60;                          // how many a phone holds, newest first
+  const CAP = 60;                          // how many a device holds, newest first
 
   function all() {
     try {
@@ -32,7 +32,7 @@ const Games = (function () {
   function clear() { try { localStorage.removeItem(KEY); } catch (e) {} }
   function get(id) { return all().find((g) => g.id === id) || null; }
 
-  /* The state, as a game to keep. `me` is the seat this phone held, or -1 for
+  /* The state, as a game to keep. `me` is the seat this device held, or -1 for
      a screen with no seat. It is the same shape the table writes, with the
      seat added, so one reader draws either. */
   function record(ST, me) {

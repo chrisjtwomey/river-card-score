@@ -10,7 +10,7 @@ const Finale = (function () {
 
   function finale(opts, force) {
     /* Whether the stage is already on screen, asked before anything is shut.
-       On a table dealt on the phones the felt is up when the last round scores,
+       On a table dealt on the devices the felt is up when the last round scores,
        and it hands the game straight over to the finish: an overlay faded in
        from nothing then shows the page behind it -- the scorecard -- for the
        length of the fade, which reads as being taken to the scores and brought

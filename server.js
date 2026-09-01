@@ -1,6 +1,6 @@
 'use strict';
 /* Up the River, Down the River — table server.
-   One host screen per room. Players join on their phones and bid in turn. */
+   One host screen per room. Players join on their devices and bid in turn. */
 
 const http = require('http');
 const https = require('https');
@@ -23,7 +23,7 @@ const ReplayOf = require('./lib/replay.js');
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = __dirname;
 const PUB = path.join(ROOT, 'public');
-// A phone only gets the screen lock (and other secure-context features) over
+// A device only gets the screen lock (and other secure-context features) over
 // https. Drop a key and certificate in certs/ (npm run cert) to serve https.
 const DATA = process.env.DATA_DIR || path.join(__dirname, 'data');
 const KEEP_GAMES = Math.max(1, Number(process.env.KEEP_GAMES) || 200);
@@ -40,7 +40,7 @@ const span = (name, dflt) => {
 };
 /* How long a seat may have nobody behind it -- no window open, or a window
    that does not answer its turn -- before the table does something about it,
-   and how long before that the phone is asked whether anybody is there. */
+   and how long before that the device is asked whether anybody is there. */
 const IDLE_MS = span('IDLE_MS', 5 * 60e3);
 const IDLE_WARN_MS = span('IDLE_WARN_MS', 60e3);
 /* And how long a table nobody is at is kept: nobody playing at it, and no
@@ -116,7 +116,7 @@ function endTable(code) {
 }
 
 /* Every table this server is running, newest first, for the machine it runs
-   on. The phone that hosts has one page for all of them: a seat it holds is
+   on. The device that hosts has one page for all of them: a seat it holds is
    rejoined, a table it holds no seat at is watched. Names and seat ids only --
    the tokens that make a seat yours never leave the server. */
 function listTables() {
@@ -171,7 +171,7 @@ function pictureOf(code, seatId) {
 // The two smallest verbs on a socket, and everything uses them: they are
 // declared before anything that could ask.
 function send(ws, obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
-// A bot plays through the same door as a phone and has no socket to be told on.
+// A bot plays through the same door as a device and has no socket to be told on.
 /* Every refusal leaves here, so this is where it is made a sentence: a
    capital and a full stop, the same voice the pages use, whichever file the
    words came from. */
@@ -244,7 +244,7 @@ function broadcast(room) {
   const shared = JSON.stringify(base);
   room.sockets.forEach((ws) => {
     if (ws.readyState !== 1) return;
-    // Only a deck dealt on the phones has hands to give; the count a table
+    // Only a deck dealt on the devices has hands to give; the count a table
     // with real cards keeps in the same place has none.
     const seat = (room.play && room.play.hands && ws.ctx && ws.ctx.seatId) ? seatIndex(room, ws.ctx.seatId) : -1;
     if (seat < 0) { ws.send(shared); return; }
@@ -287,9 +287,9 @@ function holdBids(room) {
   }, Room.BID_HOLD);
 }
 
-/* The tables this machine had when it was last up. A phone that hosts a game
+/* The tables this machine had when it was last up. A device that hosts a game
    is stopped and started again -- from its own notification, or by Android --
-   and every seat at that table is held on another phone with nothing to come
+   and every seat at that table is held on another device with nothing to come
    back to unless the table comes back too. */
 function restore() {
   Tables.all().forEach((rec) => {
@@ -300,7 +300,7 @@ function restore() {
     room.seats.forEach((s) => { s.online = !!s.bot; s.idleAt = Date.now(); s.warned = false; });
     /* This server has just seen it. Without this the clocks would read from
        before it came up, and the first sweep would take away every table on
-       the machine -- which is exactly what a phone hosting a game does every
+       the machine -- which is exactly what a device hosting a game does every
        time it is stopped and started again. */
     room.lastSeen = Date.now();
     /* A beat was being held up for the table to read when the server stopped --
@@ -327,7 +327,7 @@ function markPresence(room) {
   room.seen = Array.from(room.sockets).some((w) => w.ctx && w.ctx.role !== 'player');
 }
 
-/* One card, from a phone or from a bot. The deck says whether it may go and
+/* One card, from a device or from a bot. The deck says whether it may go and
    moves it; this is where a full trick is held up long enough for the table
    to read it before the winner leads. */
 function playCard(ws, room, p, card) {
@@ -525,8 +525,8 @@ function handle(ws, m) {
     const held = room.seats.find((s) => s.name.toLowerCase() === name.toLowerCase());
 
     /* The game has started, so there is no new seat to be had. There is one
-       way in: back into your own. A phone that lost its seat -- a flat
-       battery, a browser that forgot, a second table on the same phone -- has
+       way in: back into your own. A device that lost its seat -- a flat
+       battery, a browser that forgot, a second table on the same device -- has
        nothing but the code and the name it played under, and that is enough.
        A seat somebody is sitting in is never handed over. */
     if (room.phase !== 'lobby') {
@@ -537,12 +537,12 @@ function handle(ws, m) {
       /* A seat whose key was destroyed: a player put out of the game, and then
          let back in by whoever runs the table. Nobody holds a key to it, so
          the gate below is about nothing -- it is there to stop a name alone
-         taking a seat some phone can still open, and this is not one. The way
+         taking a seat some device can still open, and this is not one. The way
          back in is the name, and coming back by it is what mints the new key.
          Every other seat is still gated: the table has to be waiting on it. */
       const barred = !held.token;
       if (!barred && !Room.waitingOn(room, seatIndex(room, held.id))) {
-        return fail(ws, `the game has gone on without ${held.name}. Only the phone that holds that seat can come back to it`);
+        return fail(ws, `the game has gone on without ${held.name}. Only the device that holds that seat can come back to it`);
       }
       if (barred) held.token = token();
       attach(ws, room, { role: 'player', seatId: held.id });
@@ -648,10 +648,10 @@ setInterval(() => {
 /* Whether anybody is at a table on this server, for whoever is holding the
    machine awake on its behalf. The phone app takes a wake lock so the table
    keeps answering with the screen off, and a table nobody is at does not need
-   one: it would hold the phone awake all night for a game that ended hours
+   one: it would hold the device awake all night for a game that ended hours
    ago. Written to BUSY_FILE, and only when the answer changes.
 
-   A socket that has just gone does not make a table idle. A phone whose
+   A socket that has just gone does not make a table idle. A device whose
    network drops is coming back in a moment, and the table must not go to
    sleep underneath it, so the last change to any table counts for a while
    after it. */
@@ -685,7 +685,7 @@ if (IDLE_MS || TABLE_IDLE_MS || GAME_IDLE_MS) setInterval(() => {
     if (room.replay) return;
     const out = Room.sweep(room, now, { idle: IDLE_MS, warn: IDLE_WARN_MS,
                                         table: TABLE_IDLE_MS, game: GAME_IDLE_MS });
-    // Still there? Only a phone that is here is asked, and only once.
+    // Still there? Only a device that is here is asked, and only once.
     out.warn.forEach((p) => {
       const seat = room.seats[p];
       room.sockets.forEach((w) => {
@@ -733,11 +733,11 @@ server.listen({ port: PORT, host: process.env.HOST || undefined }, async () => {
     console.log(hiddenNets
       ? '  this device hides its network addresses from apps (Android does), so none can be shown.'
       : '  no network address was found on this device.');
-    console.log('  To find it: on a phone that has joined this network, open the Wi-Fi details;');
+    console.log('  To find it: on a device that has joined this network, open the Wi-Fi details;');
     console.log(`  the "router" or "gateway" address is this device. Players join at ${SCHEME}://<that address>:${PORT}/`);
     console.log(`  Start with PUBLIC_URL=${SCHEME}://<that address>:${PORT} and the QR code will carry it.`);
-    console.log('  If phones still cannot connect, start with HOST=0.0.0.0 as well.');
+    console.log('  If devices still cannot connect, start with HOST=0.0.0.0 as well.');
   }
-  if (!tls) console.log('  note: phones keep the screen awake only over https. Run "npm run cert" and restart.');
+  if (!tls) console.log('  note: devices keep the screen awake only over https. Run "npm run cert" and restart.');
   if (DEV) console.log('  live reload is on: a change under public/ reloads every open page');
 });

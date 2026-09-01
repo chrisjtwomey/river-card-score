@@ -1,6 +1,6 @@
 'use strict';
 /* The deal flourish: a card flies to each seat, then a card turns over.
-   Used by the host screen and the player phones.
+   Used by the host screen and the player devices.
 
    The overlay, the card, the fade and the motion setting are the Stage's, and
    so is the slot for whichever scene is open. The finish is in finale.js.
@@ -30,7 +30,7 @@ const Deal = (function () {
      land on it while it is up: update() stamps them onto the piles.
      With shuffleOnly the scene stops at the end of the shuffle: the deck is
      squared up, held a moment, and the scene fades before any card goes
-     out. For a phone at a table with real cards, where the real dealer
+     out. For a device at a table with real cards, where the real dealer
      deals the real cards. Nothing lands on it. */
   /* A scene that throws half-built is worse than no scene at all. The overlay
      is already up, and the tap that closes it is bound at the end of the
@@ -122,7 +122,7 @@ const Deal = (function () {
       // turned, nobody is named.
       const shuffleOnly = !!(opts && opts.shuffleOnly);
       // A scene that neither holds nor keeps plays and goes. It used to wait
-      // for a tap on a phone at a table with real cards, which was a tap
+      // for a tap on a device at a table with real cards, which was a tap
       // before every round and a scene the dealer never saw.
       if (skipEl) skipEl.textContent = 'tap to skip';
       let ended = false, settled = false;
@@ -406,7 +406,7 @@ const Deal = (function () {
       /* Nothing is shuffled under reduced motion, so there is nothing to say.
          The deal is the dealer's on either deck, and the same words say so:
          the shuffle is the front of the deal, not a thing of its own -- a
-         phone at a table with real cards plays only the shuffle and has
+         device at a table with real cards plays only the shuffle and has
          always called it the deal. */
       const doing = calm ? '' : `${names[dealer]} is dealing…`;
       if (doing) {
@@ -480,8 +480,8 @@ const Deal = (function () {
       }
       /* The cards are down: the player to act peeks, and the bids that
          landed while the cards were in the air are stamped now, one after
-         another. A bot bids as soon as the phones are ready, and a TV's
-         deal is longer than a phone's, so on the TV the first bids of a
+         another. A bot bids as soon as the devices are ready, and a TV's
+         deal is longer than a device's, so on the TV the first bids of a
          round with bots used to land before the piles did, and were lost. */
       function landed() {
         if (!S.live || S.live.finish !== finish || S.live.settled) return;

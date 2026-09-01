@@ -433,17 +433,17 @@ function frame(box, label, page, addr, kind, entry, boss) {
 
 const seatOf = (id) => SEATS.find((s) => s.id === id) || null;
 
-/* Seats whose phone the page has shut. Presence is not a flag on the table --
+/* Seats whose device the page has shut. Presence is not a flag on the table --
    `markPresence` works it out again from the live sockets on every broadcast,
-   so a forced one would be wiped by the next thing that happened. A phone goes
+   so a forced one would be wiped by the next thing that happened. A device goes
    quiet by its socket going away, which here means its pane not being drawn.
    Then the table decides on its own that nobody is behind that seat, and every
    away path lights up: bidding for them, playing for them, the peek, the
    toasts, and the clock that gives up on a seat. */
-const PHONE_OFF = new Set();
-const phoneOff = (id) => PHONE_OFF.has(id);
-function setPhone(id, on) {
-  if (on) PHONE_OFF.delete(id); else PHONE_OFF.add(id);
+const DEVICE_OFF = new Set();
+const deviceOff = (id) => DEVICE_OFF.has(id);
+function setDevice(id, on) {
+  if (on) DEVICE_OFF.delete(id); else DEVICE_OFF.add(id);
   seatKey = '';                      // the panes are a different set now
   renderFrames();
   renderPlayers();                   // and the row says which way the switch is
@@ -470,22 +470,22 @@ function renderFrames() {
           replaying() ? `?c=${at}` : `#c=${CODE}&t=${HOST_TOKEN}`, 'host');
   }
 
-  // bottom row: the phones, the one that runs the table always first. Whoever
+  // bottom row: the devices, the one that runs the table always first. Whoever
   // that is, that pane stands in the same place, so the eye is not sent
   // hunting for it. The key follows the order, so a new table host re-draws.
-  /* The phones with a socket to hold. One whose phone has been shut is not
+  /* The devices with a socket to hold. One whose device has been shut is not
      drawn -- that is the whole of how a seat goes quiet here -- and the table
      host is no exception: it is a seat like any other with the pane in a fixed
      place, not a pane that must always be there. */
-  const list = (replaying() ? REPLAY.seats : SEATS).filter((s) => !phoneOff(s.id));
-  const first = (!replaying() && cap && !phoneOff(cap.id)) ? cap : null;
-  const phones = first ? [first].concat(list.filter((s) => s.id !== first.id)) : list;
-  const seats = `${at}:${phones.map((s) => seatHash(s, at)).join(',')}:${scale}:${DEVSRV}`;
+  const list = (replaying() ? REPLAY.seats : SEATS).filter((s) => !deviceOff(s.id));
+  const first = (!replaying() && cap && !deviceOff(cap.id)) ? cap : null;
+  const devices = first ? [first].concat(list.filter((s) => s.id !== first.id)) : list;
+  const seats = `${at}:${devices.map((s) => seatHash(s, at)).join(',')}:${scale}:${DEVSRV}`;
   if (seats !== seatKey) {
     seatKey = seats;
     const box = $('#seat-frames');
     box.innerHTML = '';
-    phones.forEach((s) => frame(box, s === cap ? `${s.name} · table host` : s.name,
+    devices.forEach((s) => frame(box, s === cap ? `${s.name} · table host` : s.name,
                                 'play.html', seatHash(s, at), 'seat', s, s === cap));
   }
 }
@@ -977,7 +977,7 @@ function renderPhaseRow() {
   if (av) av.hidden = !(DEVSRV || replaying()) || !S.seats.length;
 
   /* Who took the trick. Where the cards are dealt they count themselves, so
-     this is a real-cards row: the tool for a hand on the phones is Play for. */
+     this is a real-cards row: the tool for a hand on the devices is Play for. */
   const tk = line('ptrick');
   if (tk) {
     /* Counting a trick and cancelling a vote are the table's own messages,
@@ -1065,7 +1065,7 @@ function renderPlayers() {
   const key = S.seats.map((s, p) =>
     `${s.name}/${s.bot}/${s.left}/${s.id === S.captainId}/${r ? r.dealer : S.firstDealerId}` +
     `/${r && r.bids ? r.bids[p] : ''}/${r && r.tricks ? r.tricks[p] : ''}` +
-    `/${s.online}/${phoneOff(s.id)}`).join('|') +
+    `/${s.online}/${deviceOff(s.id)}`).join('|') +
     `@${S.idx}:${S.phase}:${invent}:${Game.awaySeat(S)}:${S.play ? S.play.turn : ''}:${!!S.vote}` +
     `:${HAND_OPEN}:${(handsNow() || []).map((h) => (h || []).join('')).join('/')}`;
   if (box.dataset.key === key || typingIn(box)) return;
@@ -1144,7 +1144,7 @@ function renderPlayers() {
     const held = (S.play && S.play.counts) ? S.play.counts[p] : null;
     how.textContent = s.left ? 'the table has this hand'
       : s.bot ? 'a bot'
-      : phoneOff(s.id) ? 'phone off'
+      : deviceOff(s.id) ? 'device off'
       : s.online ? 'at the table' : 'quiet';
     if (held !== null && held !== undefined) how.textContent += ` \u00b7 ${held} cards`;
 
@@ -1246,7 +1246,7 @@ function handEditor(s, p, S) {
 /* What can be done to one seat, as a row of verbs under its values. Each is a
    state a real table reaches on its own; the page only reaches it sooner.
 
-   `phone` is the page's own and nothing is sent: a phone goes quiet by its
+   `device` is the page's own and nothing is sent: a device goes quiet by its
    socket going, which here is its pane not being drawn. The rest are the
    table's, and are refused where the table would refuse them. */
 function seatTools(s, p, S) {
@@ -1267,17 +1267,17 @@ function seatTools(s, p, S) {
   };
 
   /* A copy has nobody behind any of its seats -- its panes are watching
-     windows -- so a phone to shut is a table's alone. */
+     windows -- so a device to shut is a table's alone. */
   if (!replaying() && !s.bot) {
-    const off = phoneOff(s.id);
-    add(off ? 'Phone on' : 'Phone off',
+    const off = deviceOff(s.id);
+    add(off ? 'Device on' : 'Device off',
         off ? 'Draw this seat\'s pane again. Its socket comes back and the table sees it.'
             : 'Close this seat\'s pane. Its socket goes, so the table sees nobody behind it.',
-        () => setPhone(s.id, off), { on: off });
+        () => setDevice(s.id, off), { on: off });
   }
   add('Leave', lobby
-        ? 'What the phone\'s own Leave does in the lobby: the seat goes.'
-        : 'What the phone\'s own Leave does mid-game: the seat stays and the table plays its hand.',
+        ? 'What the device\'s own Leave does in the lobby: the seat goes.'
+        : 'What the device\'s own Leave does mid-game: the seat stays and the table plays its hand.',
       () => doing('leave'));
   add('Kick', lobby
         ? 'The seat put out. Only in the lobby: mid-game the scorecard is a column for it.'
@@ -1304,7 +1304,7 @@ function seatTools(s, p, S) {
           () => send({ t: 'playfor' }));
     }
     // This seat's answer to a vote, which no host-side message can say: a vote
-    // is answered by the phone it is put to.
+    // is answered by the device it is put to.
     if (S.vote) {
       add('\u2713', `${s.name} agrees to the bum deal`, () => doing('yes'));
       add('\u2717', `${s.name} refuses it, which ends the vote`, () => doing('no'));

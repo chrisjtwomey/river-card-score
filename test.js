@@ -11,10 +11,10 @@ const DATA_DIR = fs.mkdtempSync(path2.join(os.tmpdir(), 'rcs-games-'));
 
    A bot waits a moment before it answers so that a table of them can be read;
    the bids stand to be read before the hand is played; a trick sits on the
-   table before it is gathered; and a bot bidding a round waits for the phones
+   table before it is gathered; and a bot bidding a round waits for the devices
    to say the deal has been watched. Every one of them is
    seconds, on purpose, and none of them is what these checks are about -- the
-   clients here are not phones and never say their table is up, so the last one
+   clients here are not devices and never say their table is up, so the last one
    would run its whole course every round. What the pauses actually are is
    checked in test-rules.js, and that each is really waited out is checked on a
    server of its own below. */
@@ -40,7 +40,7 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) fai
    or a step that only sets the table up -- `c.rt()` sends a ping and waits for
    the pong, which proves the server has dealt with everything that socket sent
    before it. The waits that are left are the ones being measured: a trick held
-   up, a bot thinking, a phone timed out. */
+   up, a bot thinking, a device timed out. */
 const truthy = (pred) => { try { return !!pred(); } catch (e) { return false; } };
 async function until(pred, ms = 2000) {
   const end = Date.now() + ms;
@@ -110,7 +110,7 @@ function client(name, url) {
 }
 
 /* A table, made and sat at. Nearly every block below opens with one, and the
-   dance is the same each time: a screen makes it, the phones join it, the
+   dance is the same each time: a screen makes it, the devices join it, the
    rules are set on it. */
 async function tableOf(names, cfg, url) {
   const h = client('screen', url); await h.ready;
@@ -238,19 +238,19 @@ async function bidRound(P) {
 
   P[1].send({ t: 'dealt' });
   await okBy(() => /real cards/.test(P[1].last()),
-     'a table with real cards deals nothing on the phones, so it is told nothing');
+     'a table with real cards deals nothing on the devices, so it is told nothing');
 
   /* ---- a whole round, over real sockets ----
      Every rule the bidding and the counting obey is settled in test-rules.js,
      against the room itself. What a socket adds is what is checked here: a
-     refusal comes back to the phone that earned it, and a bid landing on one
-     phone is on every screen at the table a moment later. */
+     refusal comes back to the device that earned it, and a bid landing on one
+     device is on every screen at the table a moment later. */
   P[0].send({ t: 'bid', v: 1 });
-  await okBy(() => /turn to bid/.test(P[0].last()), 'a bid out of turn is refused, and the phone is told why');
+  await okBy(() => /turn to bid/.test(P[0].last()), 'a bid out of turn is refused, and the device is told why');
 
   P[1].send({ t: 'bid', v: 1 });
-  await okBy(() => host.state.turn === 2, 'a bid made on a phone moves the turn on every screen');
-  await okBy(() => P[2].state.rounds[0].bids[1] === 1, 'and the number is on the other phones too');
+  await okBy(() => host.state.turn === 2, 'a bid made on a device moves the turn on every screen');
+  await okBy(() => P[2].state.rounds[0].bids[1] === 1, 'and the number is on the other devices too');
 
   P[2].send({ t: 'bid', v: 1 });
   await until(() => host.state.turn === 0);          // round to the dealer
@@ -260,18 +260,18 @@ async function bidRound(P) {
      'and the table opens the count with nobody having taken a trick');
 
   /* ---- the bids stand before anything is counted ----
-     The beat is the room's, and a phone that taps over it hears why from the
+     The beat is the room's, and a device that taps over it hears why from the
      table rather than from its own screen. */
   P[0].send({ t: 'trick', p: 0 });                   // seat 0 deals this round
   await okBy(() => /bids are still up/.test(P[0].last()),
-     'a trick counted while the bids stand is refused, and the phone is told why');
+     'a trick counted while the bids stand is refused, and the device is told why');
   await okBy(() => host.state.play.held === false, 'the bids are read, and the count opens');
   ok(host.state.play.won.join() === '0,0,0', 'with nothing counted over the moment');
 
   // ---- the tricks are counted by the dealer ----
   P[1].send({ t: 'trick', p: 0 });
   await okBy(() => /dealer counts the tricks/i.test(P[1].last()),
-     'a phone that is not the dealer is told whose job it is  got ' + JSON.stringify(P[1].last()));
+     'a device that is not the dealer is told whose job it is  got ' + JSON.stringify(P[1].last()));
   ok(host.state.play.won.join() === '0,0,0', 'and nothing lands on any screen');
   P[0].send({ t: 'trick', p: 0 });
   await okBy(() => host.state.play.won.join() === '1,0,0', 'the dealer counts a trick');
@@ -280,7 +280,7 @@ async function bidRound(P) {
   P[0].send({ t: 'trickback' });
   await okBy(() => host.state.play.won.join() === '0,0,0', 'the dealer takes it back');
   host.send({ t: 'trick', p: 0 });
-  await okBy(() => P[0].state.play.won.join() === '1,0,0', 'the host screen counts one too, and the phones see it');
+  await okBy(() => P[0].state.play.won.join() === '1,0,0', 'the host screen counts one too, and the devices see it');
   P[0].send({ t: 'trick', p: 1 });
   await okBy(() => host.state.idx === 1 && host.state.phase === 'bid',
      'the last trick scores the round, and the next one opens');
@@ -302,7 +302,7 @@ async function bidRound(P) {
   await okBy(() => JSON.stringify(host.state.rounds[0].tricks) === '[0,1,1]',
      'a trick moved onto another seat lands  got ' + JSON.stringify(host.state.rounds[0].tricks));
   await okBy(() => JSON.stringify(host.state.totals) !== was0, 'and the scores follow it');
-  await okBy(() => JSON.stringify(P[1].state.rounds[0].tricks) === '[0,1,1]', 'on every phone too');
+  await okBy(() => JSON.stringify(P[1].state.rounds[0].tricks) === '[0,1,1]', 'on every device too');
 
   host.send({ t: 'score', round: 0, bids: bid0, tricks: [0, 0, 1] });
   await okBy(() => /have to total 2/.test(host.last()),
@@ -343,7 +343,7 @@ async function bidRound(P) {
   /* ---- a player put out of a game in play ----
      The seat cannot go: it is a column on the scorecard. So it stays, the
      table takes its hand, and the key stops working -- which is what stops the
-     phone walking back in, and the only thing that separates this from a seat
+     device walking back in, and the only thing that separates this from a seat
      that simply went quiet. */
   {
     const outTok = P[1].hello.token;
@@ -355,7 +355,7 @@ async function bidRound(P) {
     host.send({ t: 'remove', id: P[1].seatId });
     await okBy(() => host.state.seats[1].left === true, 'the host can, and the table takes the hand');
     ok(host.state.seats.length === 3, 'the seat stays: it is a column on the card');
-    await okBy(() => P[1].kicked, 'and the phone is told it is out  got ' + P[1].kicked);
+    await okBy(() => P[1].kicked, 'and the device is told it is out  got ' + P[1].kicked);
 
     /* And taken off the seat where it stands. Telling it is not enough: a
        socket carries which seat it is on, not the key it opened with, so a
@@ -382,8 +382,8 @@ async function bidRound(P) {
 
     /* And then the name is the way in, whatever the table is doing. Every
        other seat is gated on the table waiting for it -- a name alone must not
-       take a seat some phone can still open -- but a seat put out holds no key
-       for any phone to open it with, so that gate is about nothing. Coming
+       take a seat some device can still open -- but a seat put out holds no key
+       for any device to open it with, so that gate is about nothing. Coming
        back by name is what mints the new key. */
     const who = host.state.seats[1].name;
     const again = client('again'); await again.ready;
@@ -394,10 +394,10 @@ async function bidRound(P) {
        'with a key of its own, and not the one that was taken away');
     await okBy(() => host.state.seats[1].online === true, 'and the table sees them at it');
 
-    // Which is a key that works: the phone can go and come back as any can.
+    // Which is a key that works: the device can go and come back as any can.
     const fresh = again.hello.token;
     again.ws.close();
-    await okBy(() => host.state.seats[1].online === false, 'the phone goes');
+    await okBy(() => host.state.seats[1].online === false, 'the device goes');
     const third = client('third'); await third.ready;
     third.send({ t: 'resume', code, token: fresh });
     await okBy(() => third.hello && third.hello.seatId === P[1].seatId,
@@ -442,13 +442,13 @@ async function bidRound(P) {
     await okBy(() => seats[0].state.idx === 1, 'and the round scores');
     seats[0].send({ t: 'score', round: 0, bids: seats[0].state.rounds[0].bids, tricks: [0, 1] });
     await okBy(() => JSON.stringify(seats[0].state.rounds[0].tricks) === '[0,1]',
-       'the table host puts a scored round right from a phone  got '
+       'the table host puts a scored round right from a device  got '
        + JSON.stringify(seats[0].state.rounds[0].tricks));
     seats[0].send({ t: 'reset' });
     await okBy(() => seats[0].state.phase === 'lobby', 'and can call a new game');
   }
 
-  // ---- start a table and take a seat, from one phone ----
+  // ---- start a table and take a seat, from one device ----
   {
     const solo = client('solo'); await solo.ready;
     solo.send({ t: 'create' }); await until(() => solo.hello);
@@ -464,9 +464,9 @@ async function bidRound(P) {
   /* ---- a table that plays with a virtual deck ----
      One whole round, dealt by the server and played card by card over real
      sockets. Which card may go is the deck's business and is settled in
-     test-rules.js; what is proved here is that the hands reach the phones that
+     test-rules.js; what is proved here is that the hands reach the devices that
      hold them and nobody else, that a trick played out moves every screen on,
-     and that a hand comes back to a phone that comes back. */
+     and that a hand comes back to a device that comes back. */
   {
     const { h: vh, P, code } = await tableOf(['Ann', 'Bob', 'Cal'],
                                              { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
@@ -517,7 +517,7 @@ async function bidRound(P) {
     vh.send({ t: 'trick', p: 0 });
     await okBy(() => /count themselves/.test(vh.last()), 'nobody may count a trick by hand');
 
-    // ---- a hand survives a phone going away and coming back ----
+    // ---- a hand survives a device going away and coming back ----
     const held = P[2].state.hand.join(',');
     const seatTok = P[2].hello.token;
     P[2].ws.close();
@@ -525,7 +525,7 @@ async function bidRound(P) {
     const back = client('vCal2'); await back.ready;
     back.send({ t: 'resume', code, token: seatTok });
     await okBy(() => back.state && back.state.hand.join(',') === held,
-       'a phone that comes back gets its own hand again');
+       'a device that comes back gets its own hand again');
     ok(back.state.seats[2].online === true, 'and the seat is at the table again');
   }
 
@@ -592,7 +592,7 @@ async function bidRound(P) {
     const seatBack = client('seatback'); await seatBack.ready;
     seatBack.send({ t: 'resume', code, token: p1.hello.token });
     await okBy(() => seatBack.state && seatBack.state.code === code,
-       'and a seat keeps the key its phone holds');
+       'and a seat keeps the key its device holds');
 
     h.send({ t: 'dev', action: 'state', record: [1, 2] });
     await okBy(() => /not a table/.test(h.last()), 'junk in the editor is refused whole');
@@ -725,14 +725,14 @@ async function bidRound(P) {
        'a real table gives the dev page a watch token a seat, never the seat itself');
 
     const bobWatch = seats.find((x) => x.name === 'Bob').watch;
-    p2.ws.close();                                        // Bob puts his phone down
-    await okBy(() => h.state.seats[1].online === false, 'Bob is offline once his phone goes');
+    p2.ws.close();                                        // Bob puts his device down
+    await okBy(() => h.state.seats[1].online === false, 'Bob is offline once his device goes');
 
     const eye = client('watcher'); await eye.ready;
     eye.send({ t: 'watch', code, token: bobWatch });
     await okBy(() => eye.hello && eye.hello.role === 'watch' && eye.hello.seatId === h.state.seats[1].id,
        'a watch token opens that seat and says which one it is');
-    await okBy(() => eye.state && eye.state.code === code, 'and the window gets the same state the phone gets');
+    await okBy(() => eye.state && eye.state.code === code, 'and the window gets the same state the device gets');
     ok(h.state.seats[1].online === false, 'and watching does not put the player back at the table');
 
     eye.send({ t: 'bid', v: 1 });
@@ -760,7 +760,7 @@ async function bidRound(P) {
        'the host token opens the dev page on that table');
     ok(gate.hello.stand === false && gate.hello.seats.length === 2
        && gate.hello.seats.every((x) => x.watch && !x.token),
-       'and the phones come with it as watching windows, before anything is pressed');
+       'and the devices come with it as watching windows, before anything is pressed');
     await h.rt();
     ok(h.state.seats[1].online === false, 'and the page opening on it puts nobody back at the table');
     gate.send({ t: 'dev', action: 'seat', id: h.state.seats[0].id });
@@ -931,7 +931,7 @@ async function bidRound(P) {
       await holds('a patch of nothing at all', { action: 'patch', patch: {} });
 
       /* A photo is a look and not a state. It is not in the record -- the
-         phone that owns one brings it back -- so a copy takes one and stays
+         device that owns one brings it back -- so a copy takes one and stays
          the game it is a copy of. It is the one control on that panel that
          changes what is on the screen without changing what happened. */
       const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -1044,7 +1044,7 @@ async function bidRound(P) {
     await okBy(() => live.h.state.phase === 'bid', 'a table in play is being written down');
     live.P[1].send({ t: 'replay', do: 'open' });
     await okBy(() => /only the host/i.test(live.P[1].last()),
-       'a phone at that table may not put it back  got ' + live.P[1].last());
+       'a device at that table may not put it back  got ' + live.P[1].last());
     live.h.send({ t: 'replay', do: 'open' });
     await okBy(() => live.h.replay && live.h.replay.code, 'the screen that runs it may');
 
@@ -1334,7 +1334,7 @@ async function bidRound(P) {
     /* ---- a hand stacked on purpose, played over real sockets ----
        What the rules of a trick are is settled in test-rules.js, against the
        deck itself. What is proved here is the wire: hands forced onto a table
-       of stand-ins reach the phones that resume into it, and a card the rules
+       of stand-ins reach the devices that resume into it, and a card the rules
        refuse comes back as a refusal to the one socket that played it. */
     {
       d.send({ t: 'dev', action: 'setup', players: 3 });
@@ -1515,7 +1515,7 @@ async function bidRound(P) {
     ok(JSON.stringify(rec).indexOf('token') < 0, 'and no token rides along with it');
 
     /* The tables this server is running, for the machine it runs on: the
-       phone that hosts has no other way to find a table it holds no seat at. */
+       device that hosts has no other way to find a table it holds no seat at. */
     const here = await fetch(`http://127.0.0.1:${port4}/tables.json`).then((r) => r.json());
     const mine = (here.tables || []).find((x) => x.code === d.state.code);
     ok(!!mine, 'GET /tables.json says which tables this server is running  got '
@@ -1550,7 +1550,7 @@ async function bidRound(P) {
        that used to file a record with no seats, no rounds and no winner, on
        the table and in every browser at it. Every screen keeps the game it is
        shown, so one forced phase put a nought-round game in Past games on
-       every phone in the room. */
+       every device in the room. */
     d.send({ t: 'dev', action: 'lobby' }); await until(() => d.state.phase === 'lobby');
     const before = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length;
     d.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
@@ -1606,7 +1606,7 @@ async function bidRound(P) {
 
   /* ---- table talk ----
      What a line is made of, and how many a table keeps, are settled in
-     test-rules.js. Over the wire what matters is that a line said on one phone
+     test-rules.js. Over the wire what matters is that a line said on one device
      is on every screen, and that the pause between lines is a real pause on a
      real clock. This server keeps five (CHAT_KEEP above). */
   {
@@ -1631,7 +1631,7 @@ async function bidRound(P) {
     await okBy(() => h.state.chat.length === 3, 'and a moment later the same socket may speak again');
 
     /* One line each, from sockets that have not spoken, so nothing here waits
-       out the pause between two lines from the same phone. Past the cap the
+       out the pause between two lines from the same device. Past the cap the
        list stops growing, so what is watched is the number on the newest line:
        every line is numbered, and the numbering runs on past the ones let go. */
     const newest = () => h.state.chat[h.state.chat.length - 1].n;
@@ -1714,7 +1714,7 @@ async function bidRound(P) {
     h.send({ t: 'addbot' });
     await okBy(() => h.state.seats.length === 2 && h.state.seats[1] && h.state.seats[1].bot === true,
        'the host can add a bot  got ' + JSON.stringify(h.state.seats.map((x) => x.name + (x.bot ? '(bot)' : ''))));
-    ok(h.state.cfg.deck === 'virtual', 'and asking for one asks for cards on the phones');
+    ok(h.state.cfg.deck === 'virtual', 'and asking for one asks for cards on the devices');
     ok(h.state.seats[1].online === true, 'and it is always at the table');
     ok(h.state.captainId === h.state.seats[0].id, 'the table is not handed to it');
     ok(/^[A-Z][a-z]+$/.test(h.state.seats[1].name), 'it has a name  got ' + h.state.seats[1].name);
@@ -1729,7 +1729,7 @@ async function bidRound(P) {
 
     you.send({ t: 'addbot' });
     await okBy(() => h.state.seats.length === 4 && you.errors.length === 0,
-       'the table host may add one from their phone too');
+       'the table host may add one from their device too');
 
     h.send({ t: 'kick', id: h.state.seats[3].id });
     await okBy(() => h.state.seats.length === 3, 'a bot is removed like any other seat');
@@ -1781,12 +1781,12 @@ async function bidRound(P) {
     h.ws.close(); you.ws.close();
   }
 
-  /* ---- a bot waits for the phones before it bids ----
+  /* ---- a bot waits for the devices before it bids ----
 
-     The round is dealt on the phones before it can be bid: the deck is
+     The round is dealt on the devices before it can be bid: the deck is
      shuffled, the cards fly out and the trump is turned. A bot that bids while
      that is playing has bid before anybody saw a card. This table is given a
-     long wait, so what answers here has to be the phone saying it is up and
+     long wait, so what answers here has to be the device saying it is up and
      not the fallback running out. */
   {
     console.log('\n-- a bot waits for the deal to be watched --');
@@ -1810,11 +1810,11 @@ async function bidRound(P) {
     ok(you.state.phase === 'bid' && you.state.turn === 1,
        'the bot bids first  got turn ' + you.state.turn);
     ok(bids().every((b) => b === null || b === undefined),
-       'and nothing is bid while the phone is still watching the deal  got ' + JSON.stringify(bids()));
+       'and nothing is bid while the device is still watching the deal  got ' + JSON.stringify(bids()));
 
     you.send({ t: 'dealt' });
     await okBy(() => bids()[1] !== null && bids()[1] !== undefined,
-       'the phone says its table is up, and the bot bids  got ' + JSON.stringify(bids()));
+       'the device says its table is up, and the bot bids  got ' + JSON.stringify(bids()));
 
     /* This server keeps the real pauses, so it is also where the beat after
        the last bid is shown to be waited out and not merely declared: the
@@ -1835,8 +1835,8 @@ async function bidRound(P) {
 
   /* ---- a table outlives the server it is on ----
 
-     The phone that hosts a game is a phone: it is stopped from its own
-     notification, or Android takes the memory back. Every other phone still
+     The device that hosts a game is a device: it is stopped from its own
+     notification, or Android takes the memory back. Every other device still
      holds its seat, and used to come back to a table that was not there. */
   {
     console.log('\n-- a table that outlives its server --');
@@ -1847,7 +1847,7 @@ async function bidRound(P) {
     let srv7 = spawn('node', [path + '/server.js'], { env, stdio: 'ignore' });
     await upAt(port7);
 
-    // Dealt on the phones, so the hands are the table's to keep and the test
+    // Dealt on the devices, so the hands are the table's to keep and the test
     // can ask for one back.
     const { h, P: [ann, ben], code } = await tableOf(['Ann', 'Ben'],
       { deck: 'virtual', max: 2, pattern: 'down', ones: 1 }, url);
@@ -1868,7 +1868,7 @@ async function bidRound(P) {
     await until(() => h.state.chat.length === 3);
     await wait(400);                          // the gap a burst is written down after
 
-    // the phone hosting it is stopped, and started again
+    // the device hosting it is stopped, and started again
     h.ws.close(); ann.ws.close(); ben.ws.close();
     srv7.kill();
     await until(() => new Promise((r) => srv7.once('exit', () => r(true))), 4000);
@@ -1885,7 +1885,7 @@ async function bidRound(P) {
     ok(!!back.state && back.state.seats.length === 2 && back.state.seats[0].name === 'Ann',
        'and everybody still in their seat');
     ok(!!back.state && back.state.seats[1].online === false,
-       'the phone that has not come back yet is away, not still at the table');
+       'the device that has not come back yet is away, not still at the table');
     ok(Array.isArray(back.state.hand) && back.state.hand.length === back.state.rounds[0].cards,
        'the hand that was dealt is the hand that comes back  got ' + JSON.stringify(back.state.hand));
     ok(back.state.chat.map((c) => c.text).join(',') === 'one,two,three',
@@ -1899,10 +1899,10 @@ async function bidRound(P) {
 
   /* ---- the table says when it is in use ----
 
-     The phone that hosts a game holds a wake lock, so the table keeps
+     The device that hosts a game holds a wake lock, so the table keeps
      answering with the screen off. It used to hold it from the moment the
      server started until the process died: a table nobody had touched since
-     last night kept the phone awake all night. The server writes down whether
+     last night kept the device awake all night. The server writes down whether
      anybody is at a table, and the app takes the lock only while they are. */
   {
     console.log('\n-- the table says whether anybody is at it --');
@@ -1923,7 +1923,7 @@ async function bidRound(P) {
     await okBy(() => says() === '1', 'a screen at a table is  got ' + says());
 
     one.ws.close(); await wait(250);          // less than the quiet time above
-    ok(says() === '1', 'a phone that has just gone does not put the table to sleep  got ' + says());
+    ok(says() === '1', 'a device that has just gone does not put the table to sleep  got ' + says());
     await okBy(() => says() === '0', 'but a table nobody comes back to falls quiet  got ' + says());
 
     const two = client('busytwo', url); await two.ready;
@@ -1934,11 +1934,11 @@ async function bidRound(P) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 
-  /* ---- a phone that goes, and a phone that comes back ----
+  /* ---- a device that goes, and a device that comes back ----
 
      A game was lost to this. A player's browser held one table, a second table
      was started on the same browser, and the seat at the first was written
-     over. When the phone dropped out mid-bid there was no way back into it:
+     over. When the device dropped out mid-bid there was no way back into it:
      the token was gone, a name was not accepted once a game had started, and
      nobody could bid for the empty seat, so the table could not move at all.
 
@@ -1954,7 +1954,7 @@ async function bidRound(P) {
 
     // the seat the table is waiting on drops out
     (away === 'Ann' ? ann : ben).ws.close();
-    await okBy(() => h.state.seats[onTurn].online === false, 'the table sees the phone go  got ' + away);
+    await okBy(() => h.state.seats[onTurn].online === false, 'the table sees the device go  got ' + away);
     ok(h.state.turn === onTurn, 'and it waits there, because nobody may bid out of turn');
 
     // a name is not enough to sit in a seat somebody is in
@@ -1965,11 +1965,11 @@ async function bidRound(P) {
     ok(!imp.hello, 'and nothing is handed to them');
     imp.ws.close();
 
-    // but the phone that lost its seat comes back to it with the name it used
+    // but the device that lost its seat comes back to it with the name it used
     const back = client('back'); await back.ready;
     back.send({ t: 'join', code, name: away.toLowerCase() });
     await okBy(() => back.hello && back.hello.seatId === h.state.seats[onTurn].id,
-       'the phone that lost its seat comes back with the name it played under');
+       'the device that lost its seat comes back with the name it played under');
     await okBy(() => h.state.seats[onTurn].online === true, 'and the table has it back');
     ok(Array.isArray(back.state.hand) && back.state.hand.length === h.state.rounds[0].cards,
        'with the hand it was dealt  got ' + JSON.stringify(back.state && back.state.hand));
@@ -2028,8 +2028,8 @@ async function bidRound(P) {
     nowhere.send({ t: 'screen', code: 'ZZZZ' });
     await okBy(() => /no table with that code/i.test(nowhere.last()), 'a screen needs a table that exists');
 
-    // the phones are told when a TV screen runs the table, and only then
-    ok(ann.state.tv === true, 'a phone knows a TV screen runs this table');
+    // the devices are told when a TV screen runs the table, and only then
+    ok(ann.state.tv === true, 'a device knows a TV screen runs this table');
     h.ws.close();
     await okBy(() => ann.state.tv === false,
        'and knows when it has gone; a screen that only shows the table does not count');
@@ -2111,7 +2111,7 @@ async function bidRound(P) {
 
     /* And with every window gone it stands still. Bob leaves the game but
        keeps his page open, so there is still a socket to ask with -- and a
-       phone that has left the game is not somebody watching it. */
+       device that has left the game is not somebody watching it. */
     const { h: h2, P: [bob] } = await tableOf(['Bob'],
       { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
     h2.send({ t: 'addbot' });
@@ -2147,7 +2147,7 @@ async function bidRound(P) {
     cal.send({ t: 'leave' });
     await okBy(() => h.state.seats.length === 2,
        'in the lobby, leaving gives the seat up  got ' + h.state.seats.length);
-    await okBy(() => cal.left === true, 'and the phone that left is told  got ' + cal.left);
+    await okBy(() => cal.left === true, 'and the device that left is told  got ' + cal.left);
     cal.ws.close();
 
     h.send({ t: 'config', patch: { deck: 'virtual', max: 2 } }); await h.rt();
@@ -2167,20 +2167,20 @@ async function bidRound(P) {
        'and a name does not take it back  got ' + JSON.stringify(grab.errors));
     grab.ws.close();
 
-    // the table plays that hand rather than waiting for a phone that has gone
+    // the table plays that hand rather than waiting for a device that has gone
     await okBy(() => h.state.rounds[0].bids[turn] !== null,
        'the table bids the hand it was left  got ' + JSON.stringify(h.state.rounds[0].bids));
 
-    // and the phone that left can still come back to its own seat
+    // and the device that left can still come back to its own seat
     const rejoin = client('rejoin'); await rejoin.ready;
     rejoin.send({ t: 'resume', code, token: goer.hello.token });
     await okBy(() => rejoin.hello && rejoin.hello.seatId === h.state.seats[turn].id,
-       'the phone that left comes back with its own token');
+       'the device that left comes back with its own token');
     await okBy(() => h.state.seats[turn].left === false, 'and the seat is a player\'s again');
     rejoin.ws.close(); ann.ws.close(); ben.ws.close(); h.ws.close();
   }
 
-  /* ---- a phone that is not coming back at all ---- */
+  /* ---- a device that is not coming back at all ---- */
   {
     console.log('\n-- handing a seat to the table --');
     const { h, P: [ann, ben], code } = await tableOf(['Ann', 'Ben']);
@@ -2203,7 +2203,7 @@ async function bidRound(P) {
     const token = gone.hello.token;
     const stay = who === 'Ann' ? ben : ann;
 
-    // not while that phone is there
+    // not while that device is there
     h.send({ t: 'playout' });
     await okBy(() => /is at the table/.test(h.last()),
        'a seat somebody is at is not handed over  got ' + JSON.stringify(h.errors));
@@ -2213,7 +2213,7 @@ async function bidRound(P) {
     h.send({ t: 'playout' });
     await okBy(() => h.state.seats[p].left === true, 'an empty seat is handed to the table  ' + JSON.stringify(h.errors));
     ok(h.state.seats.length === 2, 'the scorecard keeps its column');
-    await okBy(() => stay.state.seats[p].left === true, 'and every phone is told');
+    await okBy(() => stay.state.seats[p].left === true, 'and every device is told');
 
     await okBy(() => h.state.rounds[0].bids[p] !== null,
        'the table bids that hand without being asked again  ' + JSON.stringify(h.state.rounds[0].bids));
@@ -2224,27 +2224,27 @@ async function bidRound(P) {
     await okBy(() => /already playing|is at the table/.test(h.last()),
        'and it is not handed over twice  got ' + JSON.stringify(h.errors));
 
-    // the phone it belongs to takes it back
+    // the device it belongs to takes it back
     const back = client('hback'); await back.ready;
     back.send({ t: 'resume', code, token });
     await okBy(() => back.hello && back.hello.seatId === h.state.seats[p].id,
-       'the phone that holds the seat takes it back');
+       'the device that holds the seat takes it back');
     await okBy(() => h.state.seats[p].left === false, 'and it is a player\'s again');
     back.ws.close(); stay.ws.close(); h.ws.close();
   }
 
   /* ---- the table controls: a seat given back, and the table stopped ----
      The rules are checked in test-rules.js. What is proved here is that they
-     reach the phone: the seat comes back to a player who has nothing left --
+     reach the device: the seat comes back to a player who has nothing left --
      no token, only the name they played under -- and a stopped table refuses
-     a bid to the phone that made it. */
+     a bid to the device that made it. */
   {
     const { h, P, code } = await tableOf(['Ann', 'Ben', 'Cal'],
       { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
     h.send({ t: 'start' });
     await until(() => h.state.phase === 'bid');
 
-    /* Ben's phone goes, and the seat is handed over. Then his browser forgets
+    /* Ben's device goes, and the seat is handed over. Then his browser forgets
        everything -- a flat battery, a cleared browser -- so his token is no
        use: the only way back is the name, and the table has to open the seat
        before that name means anything. */
@@ -2257,7 +2257,7 @@ async function bidRound(P) {
     const lost = client('ben-again'); await lost.ready;
     lost.send({ t: 'join', code, name: 'Ben' });
     await okBy(() => /left the game/.test(lost.last()),
-       'a phone with nothing but the name cannot take a seat the table is playing  got ' + lost.last());
+       'a device with nothing but the name cannot take a seat the table is playing  got ' + lost.last());
 
     h.send({ t: 'letback', id: h.state.seats[p].id });
     await okBy(() => h.state.seats[p].left === false, 'whoever runs the table gives the seat back');
@@ -2268,18 +2268,18 @@ async function bidRound(P) {
        'and the name alone is enough to sit back down  got ' + lost.last());
     await okBy(() => h.state.seats[p].online === true, 'with the table saying he is back');
 
-    // A paused table is paused for the phone as well as for the bots.
+    // A paused table is paused for the device as well as for the bots.
     const turn = h.state.turn;
     h.send({ t: 'pause', on: true });
     await okBy(() => h.state.paused === true, 'the table is paused');
-    // Ben's first socket still remembers the seat and is long closed: the phone
+    // Ben's first socket still remembers the seat and is long closed: the device
     // behind it now is the one that came back.
     const sitter = [P[0], P[1], P[2], lost]
       .find((c) => c.ws.readyState === 1 && c.seatId === h.state.seats[turn].id);
     sitter.errors.length = 0;
     sitter.send({ t: 'bid', v: 1 });
     await okBy(() => /paused/i.test(sitter.last()),
-       'and the phone on turn is told so, in its own words  got ' + sitter.last());
+       'and the device on turn is told so, in its own words  got ' + sitter.last());
     ok(h.state.rounds[0].bids[turn] === null, 'with nothing landing on the table');
 
     h.send({ t: 'pause', on: false });
@@ -2323,13 +2323,13 @@ async function bidRound(P) {
     {
       const { h, P } = await tableOf(['Ann', 'Bob'], null, url);
       P[1].ws.close(); await P[1].gone;
-      await okBy(() => h.state.seats.length === 1, 'a phone gone from the lobby loses its seat');
+      await okBy(() => h.state.seats.length === 1, 'a device gone from the lobby loses its seat');
       ok(h.state.seats[0].name === 'Ann' && h.state.seats[0].online,
-         'and the phone that is still there keeps its own');
+         'and the device that is still there keeps its own');
       h.ws.close(); P[0].ws.close();
     }
 
-    // in a game, a phone that is here but does not answer its turn
+    // in a game, a device that is here but does not answer its turn
     {
       const { h, P } = await tableOf(['Ann', 'Bob'],
                                     { deck: 'virtual', max: 2, pattern: 'down', ones: 1 }, url);
@@ -2337,10 +2337,10 @@ async function bidRound(P) {
       await until(() => h.state.phase === 'bid');
       const turn = h.state.turn;
       ok(turn === 1, 'the player left of the dealer bids first');
-      await okBy(() => P[1].idles > 0, 'the table asks that phone whether anybody is there');
+      await okBy(() => P[1].idles > 0, 'the table asks that device whether anybody is there');
       ok(!h.state.seats[1].left, 'and takes nothing away while it is asking');
       await okBy(() => h.state.seats[1].left, 'nobody answers, so auto-play takes the hand');
-      ok(P[1].left, 'and the phone is told the seat is not its any more');
+      ok(P[1].left, 'and the device is told the seat is not its any more');
       ok(h.state.seats.length === 2, 'the seat keeps its column on the scorecard');
       h.ws.close(); P[0].ws.close(); P[1].ws.close();
     }
@@ -2359,7 +2359,7 @@ async function bidRound(P) {
       h.ws.close(); P[0].ws.close();
     }
 
-    // and a phone that does answer keeps its seat, however long it sits there
+    // and a device that does answer keeps its seat, however long it sits there
     {
       const { h, P } = await tableOf(['Cal', 'Dee'],
                                     { deck: 'virtual', max: 2, pattern: 'down', ones: 1 }, url);
@@ -2368,7 +2368,7 @@ async function bidRound(P) {
       });
       h.send({ t: 'start' });
       await until(() => P[1].idles >= 3, 5000);
-      ok(P[1].idles >= 3, 'a phone is asked again each time the clock comes round');
+      ok(P[1].idles >= 3, 'a device is asked again each time the clock comes round');
       ok(!h.state.seats[1].left, 'and answering keeps the seat, however long the table waits');
       h.ws.close(); P[0].ws.close(); P[1].ws.close();
     }
@@ -2394,7 +2394,7 @@ async function bidRound(P) {
     srv9.kill();
   }
 
-  /* ---- the addresses a phone cannot find for itself ----
+  /* ---- the addresses a device cannot find for itself ----
      Android hides the interface list, so the app reads it in Java and hands the
      answer over, and a player who arrives brings one more. Both have to reach
      /net.json, or the host's QR code carries an address nobody can use. */

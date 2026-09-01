@@ -1,5 +1,5 @@
 'use strict';
-/* The round in play, drawn the same on the host screen and the phone: the
+/* The round in play, drawn the same on the host screen and the device: the
    round line, the bids as they land, the count of tricks taken, the pads for
    a seat with nobody behind it, and the winner.
 
@@ -97,7 +97,7 @@ const Round = (function () {
   /* ---------- the bids against the hand ----------
      "Bids total 3 · 5 tricks" while the bids come in; "2 of 5 tricks played"
      once the cards are out and the table counts them. The TV screen and the
-     phone said it two ways; the figure is the same figure. */
+     device said it two ways; the figure is the same figure. */
   function tally(el, ST, r) {
     if (!el) return;
     if (!r) { el.textContent = ''; return; }
@@ -146,7 +146,7 @@ const Round = (function () {
   }
 
   /* ---------- a seat with nobody behind it ----------
-     Nobody may bid or play out of turn, so a phone that has gone quiet stops
+     Nobody may bid or play out of turn, so a device that has gone quiet stops
      the whole table. Whoever runs the table can act for that seat: bid for
      it -- off its own cards where there are cards to read -- play a card for
      it, or hand the seat to auto-play for good. */
@@ -196,8 +196,8 @@ const Round = (function () {
     onClick(btn, () => view.send({ t: 'playfor' }));
   }
 
-  /* A phone that is not coming back. The seat keeps its name and its column,
-     auto-play takes it from here on, and the phone that holds the seat takes
+  /* A device that is not coming back. The seat keeps its name and its column,
+     auto-play takes it from here on, and the device that holds the seat takes
      it back by coming to the table. Only a table that deals the cards has a
      hand to play. */
   function playout(root, ST, view) {
@@ -216,7 +216,7 @@ const Round = (function () {
 
   /* The table is waiting on a seat nobody is behind, at a table with real
      cards. Nothing can be taken from that player -- their hand is on the table
-     in front of them, not on a phone -- so every screen says the table is
+     in front of them, not on a device -- so every screen says the table is
      held up, and whoever runs it says when to go on. */
   function stalled(root, ST, view) {
     if (!root) return;
@@ -227,7 +227,7 @@ const Round = (function () {
     const hint = part(root, '.hint', () => make('p', 'hint'));
     /* Not "paused": that is the hold somebody pressed, and this is the table
        held up on a seat nobody is behind. Two things with two ways out of
-       them, and one word for both left a player pressing Play at a phone that
+       them, and one word for both left a player pressing Play at a device that
        had gone quiet. */
     hint.textContent = `Waiting on ${ST.seats[p].name}. No answer for `
       + `${mins} minute${mins === 1 ? '' : 's'}.`;
@@ -243,7 +243,7 @@ const Round = (function () {
   /* The table is standing on a beat that nothing is left to end: a finished
      trick held up to be read, or the bids. Both are ended by a timer, and a
      timer belongs to the server that armed it -- so a server stopped over the
-     moment, or a table read back off the disk, leaves every phone waiting on
+     moment, or a table read back off the disk, leaves every device waiting on
      a table that will never move.
 
      Held is normal for a beat: the table is reading it. So this offers nothing
@@ -315,9 +315,9 @@ const Round = (function () {
   }
 
   /* ---------- a bum deal, and the vote on one ----------
-     The button and the vote box were each page's own, and the phone's went
-     with the panel it sat in: on a table dealt on the phones that panel is
-     not there, so no phone could throw a hand in. The dealer and whoever runs
+     The button and the vote box were each page's own, and the device's went
+     with the panel it sat in: on a table dealt on the devices that panel is
+     not there, so no device could throw a hand in. The dealer and whoever runs
      the table throw it in; a player asks, and the table votes. */
 
   // `root` is the button, or a row that carries one.
@@ -335,7 +335,7 @@ const Round = (function () {
     onClick(btn, () => bumDeal(view, !!root._now));
   }
 
-  /* The sentence, and the answers. A phone answers; a screen that runs the
+  /* The sentence, and the answers. A device answers; a screen that runs the
      table ends it either way; a screen that only shows the table reads it. */
   function vote(root, ST, view) {
     if (!root) return;

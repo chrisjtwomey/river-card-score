@@ -1,5 +1,5 @@
 'use strict';
-/* The scorecard table, shared by the host screen and the player phones. */
+/* The scorecard table, shared by the host screen and the player devices. */
 const Table = (function () {
 
   /* A movement on this screen, at the speed the screen is playing at. Every
@@ -81,7 +81,7 @@ const Table = (function () {
   /* The card on screen, drawn only when it has something new to say.
 
      It is built from the state, and a state arrives for everything: a card
-     played, a line of talk, a phone coming back. Drawing it parses a table of
+     played, a line of talk, a device coming back. Drawing it parses a table of
      HTML, lays it out, and then reads it back to keep the round in play in
      view -- and most states do not change a single figure on it. So the HTML
      is compared with what is already there, and an unchanged card is left
@@ -128,7 +128,7 @@ const Table = (function () {
   }
 
   /* One round of the card, retyped. It is a sheet rather than an edit in the
-     table itself: the row is four figures wide on a phone before it carries
+     table itself: the row is four figures wide on a device before it carries
      any boxes, and the thing being checked -- that the tricks total the hand --
      belongs under them where it can be read as it changes.
 
@@ -439,7 +439,7 @@ const Table = (function () {
   /* ---------- the round on screen ---------- */
 
   // The deal on screen belongs to one round and one re-deal of it. Every
-  // screen keys its deal on this, so the felt, the host and the phone agree.
+  // screen keys its deal on this, so the felt, the host and the device agree.
   const roundKey = (ST) => {
     const r = ST.rounds[ST.idx];
     return r ? `${ST.idx}:${r.redeals || 0}` : null;
@@ -513,7 +513,7 @@ const Table = (function () {
   }
 
   /* ---------- the standings, the winner, the vote ----------
-     The host screen and a player's phone drew these apart, and they drifted:
+     The host screen and a player's device drew these apart, and they drifted:
      the same list, one with "(you)" on it, written twice. They are drawn here
      once, and each page says what is different about its own. */
 
@@ -521,7 +521,7 @@ const Table = (function () {
      Returns what the scores are now, which the caller keeps to see the next
      round's change. */
   /* Who is at the table, and who is not. A bid is announced the moment it
-     lands; a phone going quiet is just as much a part of the game, and it is
+     lands; a device going quiet is just as much a part of the game, and it is
      the thing that stops it, so it is said the same way.
 
      `last` is what presence looked like on the state before. The first state a
@@ -549,7 +549,7 @@ const Table = (function () {
   }
 
   /* What the round just scored paid, said once, as it lands. The felt holds
-     the same words up over the last trick; a phone at a table with real cards
+     the same words up over the last trick; a device at a table with real cards
      and the TV screen had nothing but the figures moving. `last` is how many
      rounds were scored on the state before -- the first state a page sees
      says nothing, and a step back says nothing either. `me` is the seat
@@ -571,9 +571,9 @@ const Table = (function () {
     return done;
   }
 
-  /* A trick counted at a table with real cards, said as it lands: the phone
+  /* A trick counted at a table with real cards, said as it lands: the device
      that tapped it knows, the rest do not. `last` is how many were counted
-     on the state before. A table dealt on the phones has no count to say. */
+     on the state before. A table dealt on the devices has no count to say. */
   function sayTrick(ST, last) {
     const p = ST.play;
     const k = (p && p.log) ? p.log.length : 0;
@@ -682,7 +682,7 @@ const Table = (function () {
       out.push({ label: 'Make dealer', run: () => view.send({ t: 'dealer', id: s.id }) });
     }
     /* A seat the table was given, given back. The player is not there to press
-       anything -- that is why the table has their hand -- and their phone may
+       anything -- that is why the table has their hand -- and their device may
        have forgotten the table, so they come back by the name they played
        under, which needs the seat opened first. */
     if (Game.handedOver(s)) {
@@ -762,7 +762,7 @@ const Table = (function () {
   function handOver(view, who, id) {
     return UI.ask(`Auto-play ${who}'s hand?`,
       `The seat keeps its name and its place on the scorecard, and auto-play takes the hand `
-      + `from here on. ${who} takes it back by coming to the table on the phone that holds the seat.`,
+      + `from here on. ${who} takes it back by coming to the table on the device that holds the seat.`,
       'Auto-play', true).then((yes) => {
         if (yes) view.send(id ? { t: 'playout', id } : { t: 'playout' });
       });
@@ -780,7 +780,7 @@ const Table = (function () {
   }
 
   /* Who won, and by how much. The places come back with it, because the host
-     screen lists them and a phone does not. */
+     screen lists them and a device does not. */
   function winner(ST) {
     const t = ST.totals;
     const order = t.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
@@ -792,7 +792,7 @@ const Table = (function () {
     return { title, order, top, champs };
   }
 
-  // The bum-deal sentence. `me` is this phone's seat, or -1 on a host screen.
+  // The bum-deal sentence. `me` is this device's seat, or -1 on a host screen.
   function voteText(ST, me) {
     const v = ST.vote;
     if (!v) return '';

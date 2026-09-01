@@ -5,7 +5,7 @@
    has and Safari does not. Nothing is downloaded and nothing is sent anywhere,
    which is the same promise the server makes when it draws the code.
 
-   The camera needs a secure context, so this works on https, and on the phone
+   The camera needs a secure context, so this works on https, and on the device
    that hosts, where the page is served from 127.0.0.1. Over plain http to
    another machine the browser offers no camera at all, and the button that
    opens this hides itself. */
@@ -46,7 +46,7 @@ const Scan = (function () {
 
     box.querySelector('.scan-close').addEventListener('click', () => shut(null));
 
-    // The back camera, if the phone says which is which.
+    // The back camera, if the device says which is which.
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
       .then((s) => {
         stream = s;

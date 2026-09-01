@@ -1,7 +1,7 @@
 'use strict';
-/* Past games, one to a screen. Everything here is read off this phone, so it
+/* Past games, one to a screen. Everything here is read off this device, so it
    works with no table open and no server to ask. The one thing that does ask
-   is the rescue for a phone that lost its copies: a table code, and the games
+   is the rescue for a device that lost its copies: a table code, and the games
    that table still has on file. */
 
 const $ = (s) => document.querySelector(s);
@@ -88,14 +88,14 @@ function gameEl(g) {
 
 /* ---------- watching one again ---------- */
 
-/* This phone keeps its own copy of every game it sat at, and the table keeps a
+/* This device keeps its own copy of every game it sat at, and the table keeps a
    trail beside each one it still holds -- the same cap, but a shorter memory
-   for the table, which never had the game this phone was at unless it was that
+   for the table, which never had the game this device was at unless it was that
    table. So the offer is only made where the table says it can be met: the
    listing says which games it can still put back, and a card with no answer
    yet, or none at all, simply does not offer it.
 
-   Asked once, for the whole page. A phone with no table to ask gets nothing,
+   Asked once, for the whole page. A device with no table to ask gets nothing,
    which is the same page it has always had. */
 let CAN = null;
 
@@ -123,14 +123,14 @@ function offerReplay(card) {
 
 /* ---------- letting one go ---------- */
 
-/* This phone's copy, and only this phone's. Each phone keeps its own and the
+/* This device's copy, and only this device's. Each device keeps its own and the
    table keeps its own, so the table's is still there to be taken back with the
    code -- which is said outright, because "delete" on a game everybody played
    sounds like more than it is. */
 function askDelete(g) {
   const names = (g.seats || []).map((s) => s.name).join(', ');
   UI.ask('Delete this game?',
-    `${when(g.at)}${names ? ' · ' + names : ''}. It goes from Past games on this phone. `
+    `${when(g.at)}${names ? ' · ' + names : ''}. It goes from Past games on this device. `
     + 'The table keeps its own copy, so you can take it back with the table code.',
     'Delete', true).then((yes) => {
       if (!yes) return;
@@ -178,7 +178,7 @@ function goTo(i) {
   else deck.scrollLeft = x;
 }
 
-/* ---------- a phone that lost its copies ---------- */
+/* ---------- a device that lost its copies ---------- */
 
 function findOnTable() {
   const code = $('#in-code').value.trim().toUpperCase();

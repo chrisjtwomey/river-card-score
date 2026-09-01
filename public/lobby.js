@@ -1,5 +1,5 @@
 'use strict';
-/* The lobby, drawn the same on the host screen, the table host's phone and
+/* The lobby, drawn the same on the host screen, the table host's device and
    the dev page: the seats in the order of play, the bots, the rules, and the
    start button.
 
@@ -175,7 +175,7 @@ const Lobby = (function () {
   const OPTIONS = {
     pattern: [['downup', 'Down then up'], ['updown', 'Up then down'], ['down', 'Down only'], ['up', 'Up only']],
     bonus: [[10, '10 + tricks won'], [5, '5 + tricks won'], [1, '1 + tricks won'], [0, 'tricks won only']],
-    // Short enough for a phone's select; the line under the field says it in full.
+    // Short enough for a device's select; the line under the field says it in full.
     miss: [['atleast', 'Must make it · short pays 0'], ['atleastdiff', 'Must make it · short pays −1 each'],
            ['zero', '0 points'], ['diff', '−1 per trick off'], ['tricks', 'Tricks won only']],
     accoladeCount: [[0, 'none'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']],
@@ -183,7 +183,7 @@ const Lobby = (function () {
   };
   /* A rule answered by two regions rather than by a list. What kind of cards
      are on the table decides what everybody will be doing for the whole game
-     -- dealing a real deck between them, or watching their own phone -- so
+     -- dealing a real deck between them, or watching their own device -- so
      both answers stand on the page at once, each saying what it means. The
      words are here and nowhere else: there is no line under the rule to keep
      in step with it. */
@@ -196,7 +196,7 @@ const Lobby = (function () {
         shut: (ST) => Game.mustDeal(ST),
         why: 'Not while a player the table provides is sitting there: a bot has no cards to hold.' },
       { v: 'virtual', icon: '\uD83D\uDCF1', label: 'Virtual cards',
-        says: 'The server deals to each phone, turns the trump, and counts the tricks.' },
+        says: 'The server deals to each device, turns the trump, and counts the tricks.' },
     ],
   };
   // The field's id, the rule it holds, what kind of field, its label, and a
@@ -454,7 +454,7 @@ const Lobby = (function () {
     const c = ST.cfg;
     const n = Game.schedule(c.max, c.pattern, c.ones).length;
     const bits = [`${n} round${n === 1 ? '' : 's'}`,
-                  Game.virtual(ST) ? 'dealt on the phones' : 'real cards'];
+                  Game.virtual(ST) ? 'virtual cards' : 'real cards'];
     if (c.screw) bits.push('screw the dealer');
     return bits.join(' · ');
   }

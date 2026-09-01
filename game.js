@@ -43,7 +43,7 @@
       miss: 'atleast',
       screw: true,
       trump: true,
-      deck: 'physical',        // 'virtual' deals the cards on the phones
+      deck: 'physical',        // 'virtual' deals the cards on the devices
       accoladePay: 10,         // what each accolade pays at the end
       accoladeCount: 3,        // how many are drawn
     };
@@ -182,13 +182,13 @@
 
   /* ---------- the table, as the server and every screen ask about it ---------- */
 
-  // A table that deals the cards on the phones. `state` is a room on the
+  // A table that deals the cards on the devices. `state` is a room on the
   // server or the state a screen holds: both carry the rules as cfg.
   const virtual = (state) => !!(state && state.cfg && state.cfg.deck === 'virtual');
 
   /* A table that has no choice about it. A bot has nothing to hold at a table
      with real cards and nothing it could do, so a seat filled by one puts the
-     deck on the phones and holds it there. Asking for a bot asks for that; the
+     deck on the devices and holds it there. Asking for a bot asks for that; the
      switch back is refused while any are seated, and a screen greys the answer
      it would be refused. */
   const mustDeal = (state) => !!(state && (state.seats || []).some((s) => s.bot));
@@ -205,7 +205,7 @@
   }
 
   // A seat the table plays itself: a bot, or a player who left a table that
-  // deals on the phones. With real cards a left seat has no hand the table
+  // deals on the devices. With real cards a left seat has no hand the table
   // could hold, so somebody at the table has to play it.
   const tablePlays = (seat, cfg) =>
     !!seat && (!!seat.bot || (!!seat.left && !!cfg && cfg.deck === 'virtual'));
@@ -244,7 +244,7 @@
      and nobody may bid, play a card or count a trick until it is let go. So
      the question is only whether a hand is out -- both decks have one, and a
      table of people with real cards is exactly the table most likely to want
-     to stop for a moment. The host screen, the phone that runs the table, the
+     to stop for a moment. The host screen, the device that runs the table, the
      dev page and the message that carries it all ask this one question. */
   const canPause = (state) =>
     !!state && PLAY_PHASES.indexOf(state.phase) >= 0;
@@ -293,7 +293,7 @@
 
   /* Who says who took a trick, at a table with real cards, or -1 where
      nobody does. The dealer keeps the round, as at a kitchen table: one pair
-     of hands on the tally, so two phones cannot count the same trick twice.
+     of hands on the tally, so two devices cannot count the same trick twice.
      A screen that runs the table and holds no seat counts for the table --
      it is the one everybody can see, and it is nobody's hand. */
   function countingSeat(state) {

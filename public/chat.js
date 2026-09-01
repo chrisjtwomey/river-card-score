@@ -3,7 +3,7 @@
 
    The talk is the table's, and it arrives the way everything else does -- in
    the state, on the same socket as the bids. Nothing leaves the table: no
-   service, no account, no internet. A phone sharing its own hotspot on a plane
+   service, no account, no internet. A device sharing its own hotspot on a plane
    runs this exactly as a laptop on a home network does.
 
    The page owns the button in its top bar; everything below the button is

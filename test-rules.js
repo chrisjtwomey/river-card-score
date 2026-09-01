@@ -180,7 +180,7 @@ part('the rules the server and every screen ask alike');
   ok(G.tablePlays({ bot: true }, real) && G.tablePlays({ bot: true }, v), 'the table plays a bot at either kind of table');
   ok(G.tablePlays({ left: true }, v), 'and a seat that left, where it deals the cards');
   ok(!G.tablePlays({ left: true }, real), 'but not where the cards are real: nobody can hold that hand');
-  ok(!G.tablePlays({ online: false }, v), 'a phone that went quiet is waited for');
+  ok(!G.tablePlays({ online: false }, v), 'a device that went quiet is waited for');
   st = { phase: 'bid', cfg: real, seats: seats(3), rounds: [round(0, [null, null, null])], idx: 0, play: null };
   ok(G.awaySeat(st) === -1, 'everybody here: no seat is away');
   st.seats[1].online = false;
@@ -296,15 +296,15 @@ part('a round opens in one place, whatever brought it there');
     ok(t.room.play === null, `${why}: and real cards are dealt on the table, not here`);
   });
 
-  // and on a table dealt on the phones, the same again with a hand each
+  // and on a table dealt on the devices, the same again with a hand each
   Object.keys(ways).forEach((why) => {
     const t = table().sit(['Ann', 'Bob', 'Cal']).rules({ deck: 'virtual', max: 3, pattern: 'down', ones: 2 });
     ways[why](t);
     const play = t.room.play;
-    ok(!!play && play.round === t.room.idx, `${why}, dealt on the phones: the hands are this round's`);
-    ok(play.hands.every((h) => h.length === t.round().cards), `${why}, dealt on the phones: a full hand each`);
+    ok(!!play && play.round === t.room.idx, `${why}, dealt on the devices: the hands are this round's`);
+    ok(play.hands.every((h) => h.length === t.round().cards), `${why}, dealt on the devices: a full hand each`);
     ok(new Set(play.hands.flat()).size === play.hands.flat().length,
-       `${why}, dealt on the phones: and no card twice`);
+       `${why}, dealt on the devices: and no card twice`);
   });
 }
 
@@ -449,7 +449,7 @@ part('one bid at a time, and only from the seat on turn');
   const t = started(['Ann', 'Bob', 'Cal'], { max: 2, pattern: 'down', ones: 3 });
   ok(/only the table host/.test(t.say(2, { t: 'bidfor', v: 1 })), 'no player bids for another');
   ok(/is here and can bid/.test(t.say('host', { t: 'bidfor', v: 1 }) || ''),
-     'and nobody bids for a seat whose phone is at the table');
+     'and nobody bids for a seat whose device is at the table');
   t.room.seats[1].online = false;
   ok(t.say('host', { t: 'bidfor', v: 1 }) === null, 'the table host bids for the seat that is away');
   ok(t.round().bids[1] === 1, 'and the number lands in it');
@@ -463,7 +463,7 @@ part('one bid at a time, and only from the seat on turn');
 }
 
 {
-  // where the cards are dealt on the phones, the number is read off the hand
+  // where the cards are dealt on the devices, the number is read off the hand
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   t.room.seats[1].online = false;
   ok(t.say('host', { t: 'bidfor', v: null }) === null, 'a bid asked for is read off that seat\'s own hand');
@@ -511,7 +511,7 @@ part('the trump card, and who may set it');
 
 {
   // With real cards the trump is lying on the table for everybody to see, so
-  // there is nothing for a phone to say about it. There is no such message.
+  // there is nothing for a device to say about it. There is no such message.
   const t = started(['Ann', 'Bob', 'Cal'], { max: 2, pattern: 'down', ones: 3 });
   ok(t.say(1, { t: 'trump', k: 'H' }) === 'unknown message', 'nobody sets a trump by hand');
   ok(t.round().trump === null, 'and the round is left as it was');
@@ -558,7 +558,7 @@ part('a round put back')
      'and the one before is not reached backwards: the scorecard puts it right');
 }
 {
-  // where the cards were dealt on the phones, they are dealt again
+  // where the cards were dealt on the devices, they are dealt again
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   const first = t.room.play.hands.map((h) => h.join()).join('|');
   t.bidAll(1);
@@ -813,7 +813,7 @@ part('who may send what, and when');
 
   // deck
   ok(/real cards/.test(t.say(1, { t: 'dealt' }) || ''),
-     'a table with real cards deals nothing on the phones, so it is told nothing');
+     'a table with real cards deals nothing on the devices, so it is told nothing');
   ok(/this table plays with real cards/.test(t.say(1, { t: 'play', card: 'AS' }) || ''),
      'and no card is played on it');
   ok(/real cards/.test(t.say('host', { t: 'playfor', }) || ''), 'nor played for a seat');
@@ -823,13 +823,13 @@ part('who may send what, and when');
 {
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   ok(/count themselves/.test(t.say(1, { t: 'trick', p: 0 }) || ''),
-     'a table dealt on the phones counts its own tricks');
+     'a table dealt on the devices counts its own tricks');
   ok(/count themselves/.test(t.say(1, { t: 'trickback' }) || ''), 'and takes them back itself');
   ok(/no hand in play/.test(t.say(1, { t: 'play', card: 'AS' }) || ''), 'no card goes down before the bids are in');
   t.bidAll(1);
-  /* A phone says its deal has been watched. It can arrive after the bidding
+  /* A device says its deal has been watched. It can arrive after the bidding
      has closed -- the table bid that seat's hand while the cards were still in
-     the air, or the phone is coming back to a round that moved on -- and it is
+     the air, or the device is coming back to a round that moved on -- and it is
      nothing to record then, not something to tell a player off for. */
   t.casts.n = 0;
   ok(t.say(1, { t: 'dealt' }) === null, 'a deal watched after the bids are in is quiet, not a refusal');
@@ -874,7 +874,7 @@ part('who may send what, and when');
   }
 
   /* The bum-deal vote's counting, and a line in the talk: both are room verbs
-     because two doors reach each. A phone answers a vote and says a line; the
+     because two doors reach each. A device answers a vote and says a line; the
      dev page does both for a seat, and neither writes the rule out twice. */
   {
     const v = table().sit(['Ann', 'Bob', 'Cal']).rules({ max: 1, pattern: 'down', ones: 1 });
@@ -915,7 +915,7 @@ part('who may send what, and when');
     ok(g.Room.giveUp(g.room, 2) === 'kicked' && g.room.seats.length === 2,
        'in the lobby the seat itself goes');
     /* A seat only leaves the table in the lobby, and the room says so rather
-       than the three doors that reach it agreeing separately: a phone leaving,
+       than the three doors that reach it agreeing separately: a device leaving,
        the table host putting a seat out, and the dev page doing either from
        outside. Mid-game a seat that went would be a hole in the scorecard. */
     const started = table().sit(['Ann', 'Bob']).rules({ max: 1, pattern: 'down', ones: 1 });
@@ -938,7 +938,7 @@ part('who may send what, and when');
 
   ok(t.say(t.boss(), { t: 'addbot' }) === null, 'the table host adds a player the table provides');
   ok(t.room.seats.length === 3 && t.room.seats[2].bot, 'and it takes a seat');
-  ok(t.room.cfg.deck === 'virtual', 'a bot needs cards to hold, so the deck goes onto the phones');
+  ok(t.room.cfg.deck === 'virtual', 'a bot needs cards to hold, so the deck goes onto the devices');
   ok(/take the bots off the table first/.test(t.say(t.boss(), { t: 'config', patch: { deck: 'physical' } }) || ''),
      'and the table cannot go back to real cards while one is sitting there');
   /* One rule, asked and not worked out twice: the guard above and the screen
@@ -978,7 +978,7 @@ part('who may send what, and when');
 }
 
 
-part('leaving on purpose, which is not the same as a phone going quiet');
+part('leaving on purpose, which is not the same as a device going quiet');
 
 {
   // before the cards go out, a seat simply goes
@@ -1015,7 +1015,7 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   t.Bots.nudge(t.room);
   ok(!t.room.botTimer, 'and nothing is set going: the game stands where it was left');
   const bids = JSON.stringify(t.round().bids);
-  t.room.seats[0].left = false;                  // the phone comes back to the seat
+  t.room.seats[0].left = false;                  // the device comes back to the seat
   ok(JSON.stringify(t.round().bids) === bids, 'the round is untouched by the wait');
   ok(G.tablePlaysOn(t.room) && t.Bots.anyAuto(t.room), 'and with the player back the table plays on');
 }
@@ -1120,10 +1120,10 @@ part('leaving on purpose, which is not the same as a phone going quiet');
 }
 
 {
-  // a phone that is not coming back is handed over by whoever runs the table
+  // a device that is not coming back is handed over by whoever runs the table
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 3, pattern: 'down', ones: 1 });
   ok(/only the table host/.test(t.say(2, { t: 'playout' }) || ''), 'no player hands over another\'s seat');
-  ok(/is at the table/.test(t.say('host', { t: 'playout' }) || ''), 'and a seat whose phone is here is not handed over');
+  ok(/is at the table/.test(t.say('host', { t: 'playout' }) || ''), 'and a seat whose device is here is not handed over');
   t.room.seats[1].online = false;
   ok(t.say('host', { t: 'playout' }) === null, 'a seat that is away can be');
   ok(t.room.seats[1].left, 'and it is marked gone, exactly as if that player had left');
@@ -1214,7 +1214,7 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   // The cards a virtual deck dealt went where they went.
   const v = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
   ok(/already out/.test(v.say('host', { t: 'dealer', id: v.room.seats[1].id }) || ''),
-     'a table that deals on the phones throws the hand in instead');
+     'a table that deals on the devices throws the hand in instead');
 }
 
 {
@@ -1259,7 +1259,7 @@ part('a seat nobody is behind');
 
 /* The clock runs while nobody holds a seat, and while the table is stopped on
    it. It never runs on a player who is at the table with nothing to do: at a
-   table with real cards a phone is touched to bid and not again, and dropping
+   table with real cards a device is touched to bid and not again, and dropping
    those players would empty a room of people sat around a table. */
 const MS = { idle: 5 * 60e3, warn: 60e3 };
 const later = (mins) => Date.now() + mins * 60e3;
@@ -1267,13 +1267,13 @@ const later = (mins) => Date.now() + mins * 60e3;
 {
   const t = table().sit(['Ann', 'Bob', 'Cal']);
   t.room.seats[1].online = false;
-  ok(!t.Room.idleSeat(t.room, 0), 'a phone open in the lobby is never idle, however long it waits');
+  ok(!t.Room.idleSeat(t.room, 0), 'a device open in the lobby is never idle, however long it waits');
   ok(t.Room.idleSeat(t.room, 1), 'a seat with no window on it is');
   let out = t.Room.sweep(t.room, later(4), MS);
   ok(t.room.seats.length === 3 && !out.gone.length, 'and it keeps its seat until the clock runs out');
   out = t.Room.sweep(t.room, later(6), MS);
   ok(t.room.seats.length === 2 && out.gone.length === 1, 'then the seat goes');
-  ok(out.gone[0].how === 'kicked' && out.gone[0].seat.name === 'Bob', 'and the server is told whose phone to tell');
+  ok(out.gone[0].how === 'kicked' && out.gone[0].seat.name === 'Bob', 'and the server is told whose device to tell');
   ok(t.room.seats.every((x) => x.name !== 'Bob'), 'nothing of a lobby seat is kept: nothing was played');
 }
 
@@ -1304,7 +1304,7 @@ const later = (mins) => Date.now() + mins * 60e3;
   ok(t.Room.idleSeat(t.room, p), 'the table is waiting on them, so their clock runs');
   ok(!t.Room.idleSeat(t.room, 2), 'and the players waiting their turn are not idle at all');
   let out = t.Room.sweep(t.room, later(4.5), MS);
-  ok(out.warn.length === 1 && out.warn[0] === p, 'a minute before the end, the phone is asked whether anybody is there');
+  ok(out.warn.length === 1 && out.warn[0] === p, 'a minute before the end, the device is asked whether anybody is there');
   ok(!t.Room.sweep(t.room, later(4.6), MS).warn.length, 'and asked once, not again on every look');
   ok(!out.gone.length && !out.changed, 'nothing has happened to the seat yet');
   out = t.Room.sweep(t.room, later(6), MS);
@@ -1315,11 +1315,11 @@ const later = (mins) => Date.now() + mins * 60e3;
 }
 
 {
-  // any message a phone sends winds the clock back
+  // any message a device sends winds the clock back
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual' });
   const p = G.onTurn(t.room);
   t.room.seats[p].idleAt = Date.now() - 4.5 * 60e3;    // stopped on them, a while ago now
-  ok(t.Room.sweep(t.room, Date.now(), MS).warn.length === 1, 'the phone is asked');
+  ok(t.Room.sweep(t.room, Date.now(), MS).warn.length === 1, 'the device is asked');
   ok(t.room.seats[p].warned, 'and the table remembers asking');
   t.say(p, { t: 'here' });
   ok(!t.room.seats[p].warned, 'it answers, and the table stops asking');
@@ -1441,7 +1441,7 @@ part('the tables this server is running');
   ok(isLocal('::1') && isLocal('::ffff:127.0.0.1'), 'by whichever name the loopback goes under');
   ok(isLocal('127.0.0.53'), 'the whole loopback range is that machine');
   ok(!isLocal('192.168.1.5') && !isLocal('10.0.0.2') && !isLocal('::ffff:192.168.1.5'),
-     'a phone on the network may not: it has the code or it has nothing');
+     'a device on the network may not: it has the code or it has nothing');
   ok(!isLocal('') && !isLocal(undefined) && !isLocal(null), 'and neither may an address that is not one');
 }
 
@@ -1965,7 +1965,7 @@ part('a table becomes a record of one');
   ok(t.room.hostToken === hostToken, 'nor the key the table is opened with');
   ok(t.room.sockets === sockets, 'and the server\'s own things are its own');
   ok(t.room.seats[0].token === seats[0].token && t.room.seats[1].token === seats[1].token,
-     'each seat keeps the key its phone holds');
+     'each seat keeps the key its device holds');
   ok(t.room.seats[0].watch === seats[0].watch, 'and the one a window watches by');
   ok(t.room.seats[0].av && t.room.seats[0].av.ver === 'pic1',
      'and its picture, which no record ever carried');
@@ -1999,7 +1999,7 @@ part('the pauses a game is built around');
 /* Four waits are what makes a game readable rather than a flicker: a bot
    thinks before it answers, the bids stand to be read before the hand is
    played, a finished trick lies on the table before it is gathered, and a bot
-   bidding a round waits until the phones say the deal has been watched. Each
+   bidding a round waits until the devices say the deal has been watched. Each
    can be turned down for a test, and the bots' two have a floor under them, so
    turning those down cannot turn them off. */
 {
@@ -2024,7 +2024,7 @@ part('the pauses a game is built around');
   ok(bots({}).DELAY === 1250, 'a bot thinks for a moment before it answers  got ' + bots({}).DELAY);
   ok(bots({ BOT_DELAY: '400' }).DELAY === 400, 'and the moment can be turned down');
   ok(bots({ BOT_DELAY: '1' }).DELAY === 120, 'but not to nothing: there is a floor under it');
-  ok(bots({}).DEAL_WAIT === 9000, 'a bot waits on the phones for as long as a deal takes to watch');
+  ok(bots({}).DEAL_WAIT === 9000, 'a bot waits on the devices for as long as a deal takes to watch');
   ok(bots({ BOT_DEAL_WAIT: '150' }).DEAL_WAIT === 150, 'and that wait can be turned down too');
   ok(deck({}).TRICK_HOLD === 2300, 'a finished trick lies on the table for a moment  got ' + deck({}).TRICK_HOLD);
   ok(deck({ TRICK_HOLD: '120' }).TRICK_HOLD === 120, 'and that moment can be turned down');
@@ -2043,7 +2043,7 @@ part('the pauses a game is built around');
   const felt = require('fs').readFileSync('./public/felt.js', 'utf8');
   const took = /TOOK_HOLD\s*=\s*(\d+)/.exec(felt);
   ok(took && Number(took[1]) < deck({}).TRICK_HOLD,
-     'the table holds the trick longer than the phones take to gather it  got '
+     'the table holds the trick longer than the devices take to gather it  got '
      + (took && took[1]) + ' against ' + deck({}).TRICK_HOLD);
   /* The cards come in round the ring while the trick is still named, so the
      sweep is spent inside that moment and costs the round nothing. */

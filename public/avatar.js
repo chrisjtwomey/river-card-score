@@ -1,5 +1,5 @@
 'use strict';
-/* A player's picture. It is cropped to the shape of a card on the phone that
+/* A player's picture. It is cropped to the shape of a card on the device that
    picked it, so what goes to the table is small. The table keeps it and hands
    it back over HTTP, and it lands on the back of that player's cards. */
 const Avatar = (function () {

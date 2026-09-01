@@ -51,7 +51,7 @@ const Stage = (function () {
      sits a little above the middle: it has to be in the middle of the band
      between those two, which is not the middle of the screen. */
   // How deep the ring is. A wider screen gives it more room, so the piles stand
-  // clear of the round line above and the turned card in the middle; a phone
+  // clear of the round line above and the turned card in the middle; a device
   // has none to spare and keeps the tighter ring. The fan below asks this too.
   const ringRy = (W, H) => Math.min(H * 0.27, W < 560 ? 160 : 192);
   // And how far above the middle of the screen it sits. The fan below asks
@@ -74,7 +74,7 @@ const Stage = (function () {
   const cardSize = (W) => (W <= 420 ? { w: 52, h: 74 } : { w: 64, h: 90 });
 
   /* How big a seat's furniture is drawn. Eight piles at full size do not go
-     round a phone: they run into their neighbours, into the names under them,
+     round a device: they run into their neighbours, into the names under them,
      and into the row of bid numbers. A table of many comes down in size, and
      a table of few is left alone. */
   const seatScale = (n) => Math.max(0.55, Math.min(1, 5.4 / Math.max(1, n)));

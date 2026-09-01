@@ -7,7 +7,7 @@ let ST = null, ME = null;      // ME = my seat id
 let WATCH = false;             // this window only shows the seat, it cannot act
 let lastTotals = null;         // seat id -> score, to show what a round paid
 let lastBids = null;           // { key, bids, turn }, to catch a bid landing
-let dealtKey = null;           // the round already dealt on this phone
+let dealtKey = null;           // the round already dealt on this device
 let lastPhase = null;          // to catch the moment the game ends
 let lastDone = null;           // rounds scored, to catch a round landing
 let lastTrick = null;          // tricks counted, to catch one landing
@@ -17,7 +17,7 @@ let stateAt = 0;               // when the last state landed, so a quiet clock c
 
 const mySeat = () => (ST && ME ? ST.seats.findIndex((s) => s.id === ME) : -1);
 const amHost = () => !!(ST && ME && ST.captainId === ME);
-// This phone's seat, and whether it runs the table. A watching window runs nothing.
+// This device's seat, and whether it runs the table. A watching window runs nothing.
 const view = () => ({ me: mySeat(), boss: !WATCH && amHost(), send: (m) => Net.send(m) });
 
 function boot() {
@@ -106,7 +106,7 @@ function render() {
   /* On a virtual table the felt is the game, so this page is the scorecard:
      the round, the bids, the standings, the card. The bidding and the hand
      live on the felt. What stays beyond those is the attention panel, and
-     only while the table actually needs a decision from this phone. */
+     only while the table actually needs a decision from this device. */
   const virtual = Game.virtual(ST);
   // No turn panel once the game is over: the round line and the winner
   // panel say so between them.
@@ -128,7 +128,7 @@ function render() {
 }
 
 /* The panel that is only there when the table needs a decision from this
-   phone: a vote to answer, or a seat with nobody behind it that the table is
+   device: a vote to answer, or a seat with nobody behind it that the table is
    waiting on. renderVote has already said whether the vote box shows. */
 function renderAttention(r, me) {
   const v = view();
@@ -142,8 +142,8 @@ function renderAttention(r, me) {
 
 /* The table is waiting on this seat and has been for a while, so it asks
    whether anybody is there. Any tap is the answer -- the clock is wound back
-   by every message a phone sends, and this dialog sends one. What happens if
-   nobody taps depends on the table: a hand dealt on the phones is one
+   by every message a device sends, and this dialog sends one. What happens if
+   nobody taps depends on the table: a hand dealt on the devices is one
    auto-play can take, and a hand of real cards is not. */
 function stillThere() {
   if (WATCH || mySeat() < 0) return;
@@ -154,8 +154,8 @@ function stillThere() {
     "I'm here").then(() => Net.send({ t: 'here' }));
 }
 
-/* Leaving on purpose, which the table can tell from a phone going quiet: a
-   quiet phone is waited for, a player who has left is played out. */
+/* Leaving on purpose, which the table can tell from a device going quiet: a
+   quiet device is waited for, a player who has left is played out. */
 function renderLeave() {
   const row = $('#leave-row');
   const seated = !WATCH && mySeat() >= 0;
@@ -178,11 +178,11 @@ function renderVote() {
   Round.vote($('#votebox'), ST, view());
 }
 
-// The finish plays once, when the last round is scored. A phone that opens on
+// The finish plays once, when the last round is scored. A device that opens on
 // a game already over does not replay it.
 function finaleWatch() {
   if (Table.justFinished(ST, lastPhase)) {
-    // a phone gets a second longer to read it
+    // a device gets a second longer to read it
     Deal.finale(Object.assign(Table.finaleOpts(ST), { linger: 1000 }));
   }
   lastPhase = ST.phase;
@@ -213,7 +213,7 @@ function feltView(on) {
   bar.hidden = !!on || !live;
 }
 
-// The deal plays at the start of each round, on every phone, the dealer's
+// The deal plays at the start of each round, on every device, the dealer's
 // too -- the shuffle only. The real cards are on the real table, dealt by
 // the real dealer, so the scene stops before a card goes out, and the bid
 // pad is not kept waiting. A tap skips it.
@@ -235,7 +235,7 @@ function dealWatch(r) {
   }
 }
 
-// The table host runs the game from their phone: rules, seats, start, go
+// The table host runs the game from their device: rules, seats, start, go
 // back, new game. No host screen needed.
 /* What the player who runs the table can do to a game already going. The
    lobby's own controls are in the lobby, drawn with it. */
@@ -262,8 +262,8 @@ function renderJoinBox() {
   $('#code-badge').textContent = ST.code;
   if (joinAddr === null) {
     joinAddr = '';                                    // built once, then it tells us
-    /* Quiet: the phone takes the best address it has and shows no choice
-       about it. The one case it still asks is a phone that cannot see its own
+    /* Quiet: the device takes the best address it has and shows no choice
+       about it. The one case it still asks is a device that cannot see its own
        address at all -- hosting a hotspot, most often -- where the code is
        useless until somebody types one in. */
     UI.addressPicker($('#addr-mount'), (u) => { joinAddr = u; renderJoinBox(); }, { quiet: true });
@@ -279,7 +279,7 @@ function renderJoinBox() {
 }
 
 /* Inside the dev previews every seat is a frame in one browser, so the
-   phone's remembered name and photo belong to nobody in particular. A frame
+   device's remembered name and photo belong to nobody in particular. A frame
    sets only what is picked in it, and neither keeps that pick nor helps
    itself to one another frame made. */
 const framed = () => window.top !== window.self;
@@ -340,7 +340,7 @@ function renderLobby(me) {
   const capName = (ST.seats.find((s) => s.id === ST.captainId) || {}).name || 'nobody';
   /* The way in at the top, and the button that ends the waiting at the foot:
      both are the table host's, and both belong where the thing is done. A TV
-     screen that runs the table has the code up already, so the phone says the
+     screen that runs the table has the code up already, so the device says the
      screen is there instead of repeating it. */
   $('#cap-join').hidden = !v.boss || !!ST.tv;
   $('#cap-tv').hidden = !v.boss || !ST.tv;
@@ -449,7 +449,7 @@ function renderTurn(r, me) {
     if (p && p.turn === me) panel.classList.add('mine');
     return;
   }
-  /* With real cards the dealer keeps the round, so their phone is the one lit
+  /* With real cards the dealer keeps the round, so their device is the one lit
      and the one with the rows on it. Everybody else reads the count off the
      pills, and is told whose job it is rather than left wondering. */
   const taken = ST.play && ST.play.log ? ST.play.log.length : 0;
@@ -477,11 +477,11 @@ function renderBidStrip(r) {
 // what the round paid floats up out of them.
 function renderStandings(me) {
   const t = ST.totals;
-  // A phone shows its own score in big figures above the list, and counts up
+  // A device shows its own score in big figures above the list, and counts up
   // to it, so the change is readable without hunting for your row.
   const mine = lastTotals ? lastTotals[ST.seats[me].id] : undefined;
   UI.fx.count($('#my-score'), mine === undefined ? t[me] : mine, t[me], { fmt: (v) => `You: ${v}` });
-  // Who is where, and -- on the phone that runs the table -- what may be done
+  // Who is where, and -- on the device that runs the table -- what may be done
   // about each of them: the one list of everybody a game in play has.
   lastTotals = Table.standings($('#standings'), ST, { me, lastTotals, view: view(), quietAt: stateAt });
 }
@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lobby
         ? 'Your seat is given up. Join again with the table code while the game has not started.'
         : 'Your seat stays on the scorecard and auto-play takes your hand from here. '
-          + 'This phone can come back to it from the front page.',
+          + 'This device can come back to it from the front page.',
       'Leave', true).then((yes) => { if (yes) Net.send({ t: 'leave' }); });
   });
   $('#btn-reset').addEventListener('click', () => Round.newGame(view()));

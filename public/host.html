@@ -39,7 +39,7 @@
              placeholder="4F2K" class="code-input" aria-label="Table code">
       <button class="btn ghost" id="btn-show" type="button">Show a table</button>
     </div>
-    <p class="hint">Showing a table changes nothing at it: the players keep their seats and their phones
+    <p class="hint">Showing a table changes nothing at it: the players keep their seats and their devices
       still run the game. This screen only shows it.</p>
     <p class="err" id="pick-err" hidden></p>
   </section>
@@ -56,7 +56,7 @@
           <div id="addr-mount"></div>
         </div>
       </div>
-      <p class="hint">Point a phone camera at the code. The phone must be on the same network as this machine.</p>
+      <p class="hint">Point a device's camera at the code. The device must be on the same network as this machine.</p>
       <p class="err" id="qr-err" hidden>The QR code needs the newer server. Stop it and run <b>npm start</b> again.</p>
     </div>
 
@@ -113,7 +113,7 @@
       </div>
       <div class="bidstrip" id="bidstrip"></div>
       <p class="hint" id="turn-hint"></p>
-      <!-- a phone has gone quiet at the bidding, and the table cannot move -->
+      <!-- a device has gone quiet at the bidding, and the table cannot move -->
       <div id="bidfor-pad" hidden>
         <p class="hint"></p>
         <div class="chips"></div>
@@ -121,7 +121,7 @@
           <button class="btn ghost" type="button">Bid for them</button>
         </div>
       </div>
-      <!-- and a phone that is not coming back at all -->
+      <!-- and a device that is not coming back at all -->
       <div class="row-actions" id="playout-row" hidden>
         <button class="btn ghost danger" type="button">Auto-play that hand</button>
       </div>

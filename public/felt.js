@@ -18,7 +18,7 @@
    to reach it.
 
    Nothing here decides anything. The rules live on the server, which is what
-   stops a phone from reneging; every card, bid and trick in here came out of
+   stops a device from reneging; every card, bid and trick in here came out of
    the state, and every move goes back as a message.
 
    How a card moves: the transform on the style is where the card belongs, and
@@ -181,9 +181,9 @@ const Felt = (function () {
   function mount() {
     const overlay = parts().overlay;
     // The stage is made hidden, and the deal is what usually shows it. A table
-    // built without one -- a phone that arrived in the middle of a round, or a
+    // built without one -- a device that arrived in the middle of a round, or a
     // reader with animations off -- has to show it itself. The page is told
-    // too: what it says in passing (a bid landing, a phone going) moves to the
+    // too: what it says in passing (a bid landing, a device going) moves to the
     // foot of the felt, off the round line.
     if (want) { overlay.hidden = false; document.body.classList.add('felt-up'); }
     overlay.classList.add('table');
@@ -406,7 +406,7 @@ const Felt = (function () {
   /* ---------------- building it ---------------- */
 
   // A hand, a pile per seat, the turned card, a name under each pile: the deal
-  // leaves exactly this standing, and a phone that arrives in the middle of a
+  // leaves exactly this standing, and a device that arrives in the middle of a
   // round has to draw it without one.
   function build(r) {
     const { stage } = mount();
@@ -562,7 +562,7 @@ const Felt = (function () {
         const k = T.piles[x.p].length - 1;
         el = T.piles[x.p].pop();
         /* Only a card this screen watched lying on the pile has anywhere to
-           come from. A table being stood up for the first time -- a phone that
+           come from. A table being stood up for the first time -- a device that
            arrived in the middle of a round -- has cards already played and
            piles it has not placed yet, and those simply belong where they
            belong. */
@@ -584,7 +584,7 @@ const Felt = (function () {
     /* The stacks of won tricks, against what the server counted. A trick that
        is still on the table has been counted but not yet gathered, so it is not
        on the stack yet either -- that is what makes the gather something the
-       table can see. A phone that arrived in the middle of a round has no cards
+       table can see. A device that arrived in the middle of a round has no cards
        to gather, so plain backs stand in for the tricks it missed. */
     const wonBy = (p && p.won) || [];
     const holding = !!taken && !gone;
@@ -1236,7 +1236,7 @@ const Felt = (function () {
   /* ---------------- coming and going ---------------- */
 
   function start(r, carry) {
-    // A phone that arrives in the middle of a round has missed the deal, and
+    // A device that arrives in the middle of a round has missed the deal, and
     // replaying it would be a lie about where the game is. Only an untouched
     // round is dealt.
     const untouched = ST.phase === 'bid'
@@ -1264,7 +1264,7 @@ const Felt = (function () {
       onTable: (ctx) => {
         dealing = false;
         // The round may have moved on while the cards were in the air -- a bum
-        // deal, or a phone that came back slowly. Then this table is out of
+        // deal, or a device that came back slowly. Then this table is out of
         // date before it is stood up, and the next sync builds the right one.
         if (mine !== key || !want) return;
         const now = round();
@@ -1510,7 +1510,7 @@ const Felt = (function () {
 
     /* A trick with a face shows it on the way in: a card put away face down
        says nothing about the hand that was played. A stand-in for a trick this
-       phone never saw taken has no face to show, so it stays face down. */
+       device never saw taken has no face to show, so it stays face down. */
     /* Card by card, trick by trick, and the seats anticlockwise: what leaves
        the table is one stream of cards, each following the last round the same
        arc, rather than a trick landing whole every so often. */

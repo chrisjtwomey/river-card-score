@@ -321,7 +321,7 @@ part('a hand being played');
 
 part('coming and going');
 
-/* A phone that joins after the bidding has started gets no deal -- there is
+/* A device that joins after the bidding has started gets no deal -- there is
    nothing to replay -- so the table has to stand itself up, and show itself. */
 {
   const n = 4, cards = 5, me = 3;
@@ -329,7 +329,7 @@ part('coming and going');
   const L = load(412, 860, 'full');
   L.Felt.sync(made.ST, me, { send: () => {} });
   const overlay = L.dom.document.getElementById('deal');
-  ok(!overlay.hidden, 'a phone joining part way through sees the table');
+  ok(!overlay.hidden, 'a device joining part way through sees the table');
   ok(overlay.querySelector('.deal-stage').querySelectorAll('.dcard.mine').length === cards,
     'with its hand on it');
   ok(overlay.querySelectorAll('.bidchip').length === cards + 1, 'and its bid to make');
@@ -747,7 +747,7 @@ part('the pile in the middle');
   }
 }
 
-/* A phone that arrives in the middle of a round has no cards to gather, so the
+/* A device that arrives in the middle of a round has no cards to gather, so the
    stacks are stood up from the count alone. */
 {
   const n = 4, cards = 5, me = 1, W = 412, H = 860;
@@ -908,7 +908,7 @@ function bidding(o) {
 
 /* A table of many: the piles, the cards played and the turned card all have to
    lie somewhere without lying on each other. Eight seats at full size did not
-   go round a phone -- the piles ran into their neighbours, the names under
+   go round a device -- the piles ran into their neighbours, the names under
    them, and the row of bid numbers. */
 {
   // where a card actually covers, turned as it is
@@ -1167,7 +1167,7 @@ part('off the table, and on to the next round');
 /* A round is scored and the next dealt in the same breath, so what the round
    paid is held up over the trick that ended it. */
 /* The moment a scored round is held up for is a real second and a bit on a
-   phone. Waiting it out here would be the whole of this file's running time
+   device. Waiting it out here would be the whole of this file's running time
    spent asleep, so the timer the felt arms is caught instead and let off by
    hand -- which is what the clock would have done. */
 function scored(motion) {
@@ -1341,7 +1341,7 @@ function scored(motion) {
   ok(tricks().filter(middle).length === 5, 'and they all end in the middle  got ' + tricks().filter(middle).length);
   ok(middle(hero()) && spotOf(hero()).face === 180,
      'the card the deck turned goes face down on top of them  got ' + JSON.stringify(spotOf(hero())));
-  /* These stand for tricks this phone never saw taken, so they have no face to
+  /* These stand for tricks this device never saw taken, so they have no face to
      show and come in face down. A trick with a face travels face up. */
   ok(stack.every((el) => spotOf(el).face === 180),
      'a stand-in for a trick with no face is never turned over to a blank front');
@@ -1782,7 +1782,7 @@ function tookTrick(motion) {
      + scale.map((v) => Math.round(v * 100) / 100).join(','));
 }
 {
-  /* A phone that arrives in the middle of a round has cards already played and
+  /* A device that arrives in the middle of a round has cards already played and
      piles it has never placed. Those belong where they belong: nothing is
      thrown across the table on the first paint of a round. */
   const n = 4, cards = 5, me = 1, them = 3;
@@ -1944,7 +1944,7 @@ part('game speed');
   ok(UI.ms(400) === 800, 'a movement takes twice as long  got ' + UI.ms(400));
   /* A beat is a window the table grants, not one this screen may lengthen: a
      trick sits for TRICK_HOLD before the winner may lead, and the bots wait
-     DEAL_WAIT for the phones. Past that the table moves on and cuts the beat
+     DEAL_WAIT for the devices. Past that the table moves on and cuts the beat
      anyway, which reads worse than never having asked. */
   ok(UI.hold(2000) === 2000, 'but a beat the table is waiting through is not drawn out  got '
      + UI.hold(2000));
@@ -2131,47 +2131,47 @@ part('the settings page');
 
   // A screen with a player behind it: the name and the photo are at the top.
   let name = 'Ann', named = [], photos = [];
-  const phone = Settings.wire(null, { items: [{ kind: 'group', label: 'Look' }],
+  const device = Settings.wire(null, { items: [{ kind: 'group', label: 'Look' }],
     who: { name: () => name, photo: () => 'pic:' + name, note: () => 'A line about now',
            onName: (n) => { name = n; named.push(n); }, onPhoto: (d) => photos.push(d) } });
-  const you = () => phone.el.querySelector('.settings-you');
-  phone.open();
-  ok(!!you() && phone.el.querySelector('.settings-main').children[0] === you(), 'the player comes first');
-  ok(you().querySelector('.settings-name').value === 'Ann', 'with the name this phone plays under');
+  const you = () => device.el.querySelector('.settings-you');
+  device.open();
+  ok(!!you() && device.el.querySelector('.settings-main').children[0] === you(), 'the player comes first');
+  ok(you().querySelector('.settings-name').value === 'Ann', 'with the name this device plays under');
   ok(shown === 'pic:Ann', 'and the photo it has');
   ok(you().querySelector('.settings-note').textContent === 'A line about now', 'and the page\'s line about it');
-  ok(!phone.el.querySelector('.settings-done'), 'no Done: the back arrow is the way out');
+  ok(!device.el.querySelector('.settings-done'), 'no Done: the back arrow is the way out');
   you().querySelector('.avrow').pick('data:new');
   ok(photos[0] === 'data:new', 'a photo picked goes to the page at once');
-  phone.close();
+  device.close();
   ok(named.length === 0, 'a name left as it was is not sent again');
-  phone.open();
+  device.open();
   you().querySelector('.settings-name').value = '  Bea ';
-  phone.close();
+  device.close();
   ok(named[0] === 'Bea' && name === 'Bea', 'a new name goes to the page when the page shuts  got ' + named[0]);
-  phone.open();
+  device.open();
   you().querySelector('.settings-name').value = '';
-  phone.close();
+  device.close();
   ok(named.length === 1 && name === 'Bea', 'a name rubbed out is not a name: the old one stays');
 
   // The first time: the name alone, and no way out without one.
   name = '';
-  phone.open({ first: true });
-  ok(!phone.el.hidden && phone.el.querySelector('h1').textContent === 'Who are you?', 'the first ask says what it is');
-  ok(phone.el.querySelector('.settings-back').hidden, 'with no back arrow');
-  ok(phone.el.querySelector('.settings-main').children.length === 2, 'the player and Done, nothing else');
-  const done = phone.el.querySelector('.settings-done');
+  device.open({ first: true });
+  ok(!device.el.hidden && device.el.querySelector('h1').textContent === 'Who are you?', 'the first ask says what it is');
+  ok(device.el.querySelector('.settings-back').hidden, 'with no back arrow');
+  ok(device.el.querySelector('.settings-main').children.length === 2, 'the player and Done, nothing else');
+  const done = device.el.querySelector('.settings-done');
   ok(done.disabled === true, 'Done waits for a name');
   dom.document.fire('keydown', { key: 'Escape' });
-  ok(!phone.el.hidden, 'Escape is no way out');
-  phone.close();
-  ok(!phone.el.hidden, 'nor is closing it');
-  const inp = phone.el.querySelector('.settings-name');
+  ok(!device.el.hidden, 'Escape is no way out');
+  device.close();
+  ok(!device.el.hidden, 'nor is closing it');
+  const inp = device.el.querySelector('.settings-name');
   inp.value = 'Cal';
   inp.fire('input');
   ok(done.disabled === false, 'a name typed frees Done');
   done.fire('click');
-  ok(phone.el.hidden && named[1] === 'Cal', 'and Done keeps it and shuts the page  got ' + named[1]);
+  ok(device.el.hidden && named[1] === 'Cal', 'and Done keeps it and shuts the page  got ' + named[1]);
 }
 
 function done() {
@@ -2399,7 +2399,7 @@ part('who came, and who went');
   ok(said.length === 0, 'the first state a page sees announces nothing');
 
   const away = Table.sayPresence(st({ benOn: false }), 0, first);
-  ok(said.length === 1 && /^Ben dropped out/.test(said[0]), 'a phone going quiet is said  got ' + said[0]);
+  ok(said.length === 1 && /^Ben dropped out/.test(said[0]), 'a device going quiet is said  got ' + said[0]);
   ok(/waiting on them/.test(said[0]), 'and it says the table is stopped  got ' + said[0]);
 
   said.length = 0;
@@ -2417,7 +2417,7 @@ part('who came, and who went');
 
   said.length = 0;
   Table.sayPresence(st({ benOn: false }), 1, first);
-  ok(said.length === 0, 'your own phone is not announced to you');
+  ok(said.length === 0, 'your own device is not announced to you');
 
   // a seat that is not on turn: nothing is held up
   said.length = 0;
@@ -2637,13 +2637,13 @@ part('the front page, and the screen');
     ok(P.Net.tables().length === 1 && P.Net.tables()[0].code === 'AAAA', 'and it is the one that goes');
   }
 
-  {   // the name this phone plays under is asked for once, before anything else
+  {   // the name this device plays under is asked for once, before anything else
     const who = { real: ['public/ui.js', 'public/settings.js'] };
     const P = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '', who);
     P.start();
     const pageOf = (X) => X.dom.document.body.querySelector('.settings');
     ok(P.pick('#who-name').textContent === 'Chris',
-       'the front page says who this phone plays as  got ' + P.pick('#who-name').textContent);
+       'the front page says who this device plays as  got ' + P.pick('#who-name').textContent);
     ok(pageOf(P).hidden, 'and asks nothing');
     P.pick('#btn-who').fire('click');
     ok(!pageOf(P).hidden && pageOf(P).querySelector('h1').textContent === 'Settings',
@@ -2652,7 +2652,7 @@ part('the front page, and the screen');
     const Q = loadPage('join.js', {}, '?code=ab2k', who);
     Q.start();
     ok(!pageOf(Q).hidden && pageOf(Q).querySelector('h1').textContent === 'Who are you?',
-       'a phone that has not said who it is is asked first');
+       'a device that has not said who it is is asked first');
     const inp = pageOf(Q).querySelector('.settings-name');
     inp.value = 'Ann';
     inp.fire('input');
@@ -2677,7 +2677,7 @@ part('the front page, and the screen');
     ok(!P.Net.tables().some((t) => t.code === 'AAAA'), 'and it is not offered again');
   }
 
-  {   /* The tables this phone is running, asked of the server. A seat this
+  {   /* The tables this device is running, asked of the server. A seat this
          browser holds is offered above as Rejoin; what is left is watched. */
     const running = { tables: [
       { code: 'AAAA', phase: 'bid', round: 2, rounds: 16, seats: [{ id: 'sa', name: 'Ann' }, { id: 'sb', name: 'Otter' }] },
@@ -2691,10 +2691,10 @@ part('the front page, and the screen');
     const P = loadPage('join.js', seedOne, '',
       { hostname: '127.0.0.1', fetch: answer, real: ['public/ui.js'] });
     P.pick('#server-panel').hidden = true;
-    const box = P.dom.document.createElement('div');       // Start goes above Join, on this phone
+    const box = P.dom.document.createElement('div');       // Start goes above Join, on this device
     box.append(P.pick('#join-panel'), P.pick('#new-panel'));
     P.start();
-    ok(asked[0] === '/tables.json', 'the phone that runs the server asks it what it is running  got ' + asked[0]);
+    ok(asked[0] === '/tables.json', 'the device that runs the server asks it what it is running  got ' + asked[0]);
     // the answer arrives in a microtask, and the list is built in the one after it
     Promise.resolve().then(() => Promise.resolve()).then(() => {
       ok(P.pick('#server-panel').hidden === false, 'and offers what it finds');
@@ -2735,12 +2735,12 @@ part('the front page, and the screen');
       rows[0].querySelectorAll('.btn').find((b) => b.textContent === 'Take a seat').fire('click');
       P.socks[P.socks.length - 1].onopen();
       ok(JSON.stringify(P.socks[P.socks.length - 1].sent[0]) === '{"t":"join","code":"CCCC","name":"Chris"}',
-         'under the name this phone plays  got ' + JSON.stringify(P.socks[P.socks.length - 1].sent[0]));
+         'under the name this device plays  got ' + JSON.stringify(P.socks[P.socks.length - 1].sent[0]));
 
       ok(P.pick('#join-panel').hidden === true,
-         'and the phone that runs the server is not asked for a code at all');
+         'and the device that runs the server is not asked for a code at all');
 
-      // the table is this phone's to take away: it runs it
+      // the table is this device's to take away: it runs it
       P.dom.window.confirm = () => true;               // the fake DOM has no <dialog>
       rows[0].querySelector('.x').fire('click');
       Promise.resolve().then(() => {
@@ -2751,7 +2751,7 @@ part('the front page, and the screen');
     });
 
     {   /* A game already going has a seat only for the player it belongs to.
-           The phone knows the name it plays under, so the row offers that seat
+           The device knows the name it plays under, so the row offers that seat
            back instead of asking for a code and a name again. */
       const started = { tables: [{ code: 'DDDD', phase: 'bid', round: 1, rounds: 16, seats: [
         { id: 'd0', name: 'Chris', bot: false, left: false, online: false },
@@ -2766,7 +2766,7 @@ part('the front page, and the screen');
       Promise.resolve().then(() => Promise.resolve()).then(() => {
         const b = S.pick('#server-list').querySelectorAll('.btn').map((x) => x.textContent);
         ok(b.join(' | ') === 'Take my seat | Watch',
-           'the seat that is waiting for this phone is offered back  got ' + b.join(' | '));
+           'the seat that is waiting for this device is offered back  got ' + b.join(' | '));
         ok(S.pick('#server-list').querySelector('.tmark').classList.contains('play'),
            'and the table is marked as a game in play');
       });
@@ -2794,7 +2794,7 @@ part('the front page, and the screen');
       const F = loadPage('join.js', { 'rcs:name:v1': 'Chris' }, '',
         { hostname: '127.0.0.1', real: ['public/ui.js'],
           fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve(full) }) });
-      // A line as wide as its text, and a row as wide as the phone: the fake
+      // A line as wide as its text, and a row as wide as the device: the fake
       // DOM measures nothing by itself, so this is what a browser would say.
       Object.defineProperty(F.dom.El.prototype, 'scrollWidth',
         { configurable: true, get() { return (this._text || '').length * 12; } });
@@ -2812,13 +2812,13 @@ part('the front page, and the screen');
       });
     }
 
-    // a browser that is not the phone running the server asks nothing
+    // a browser that is not the device running the server asks nothing
     const none = [];
     const Q = loadPage('join.js', seedOne, '',
       { fetch: (u) => { none.push(u); return answer(u); } });
     Q.pick('#server-panel').hidden = true;
     Q.start();
-    ok(none.length === 0, 'a player\'s phone does not ask: the listing is not its to read');
+    ok(none.length === 0, 'a player\'s device does not ask: the listing is not its to read');
     ok(Q.pick('#server-panel').hidden === true, 'and is offered no such list');
     ok(Q.pick('#join-panel').hidden !== true, 'a code is how it finds a table, so it is still asked for one');
   }
@@ -2828,14 +2828,14 @@ part('the front page, and the screen');
          no such button. */
     const app = { real: ['public/ui.js', 'public/settings.js'] };
     const APP_UA = 'Mozilla/5.0 (Linux; Android 15) UpTheRiverApp/1';
-    /* The app marks its WebView; the hostname says whether the phone reading
+    /* The app marks its WebView; the hostname says whether the device reading
        the page is the one serving it. The fake DOM has no <dialog>, so the
        question falls back to window.confirm, which is answered here. */
     const inApp = (ua, hostname) => {
       const X = loadPage('join.js', { 'rcs:name:v1': 'Chris' },
                          '', Object.assign({ hostname }, app));
       X.pick('#app-row').hidden = true;
-      // on the phone that serves it, the page puts Start above Join: the two
+      // on the device that serves it, the page puts Start above Join: the two
       // need a parent between them for that
       const box = X.dom.document.createElement('div');
       box.append(X.pick('#join-panel'), X.pick('#new-panel'));
@@ -2846,9 +2846,9 @@ part('the front page, and the screen');
     };
 
     const P = inApp(APP_UA, '127.0.0.1');
-    ok(P.pick('#app-row').hidden === false, 'the phone that hosts is offered the way to stop');
+    ok(P.pick('#app-row').hidden === false, 'the device that hosts is offered the way to stop');
     P.pick('#btn-stop-host').fire('click');
-    ok(P.asked === true, 'which asks first: every phone at the table is put off it');
+    ok(P.asked === true, 'which asks first: every device at the table is put off it');
     // the answer arrives in a microtask, so the check waits one behind it
     Promise.resolve().then(() => {
       ok(P.gone[P.gone.length - 1] === 'uptheriver://stop',
@@ -2856,9 +2856,9 @@ part('the front page, and the screen');
     });
 
     const R = inApp(APP_UA, '192.168.1.5');
-    ok(R.pick('#app-row').hidden === true, "another phone's table is not this one's to stop");
+    ok(R.pick('#app-row').hidden === true, "another device's table is not this one's to stop");
 
-    const Q = inApp('Mozilla/5.0 (iPhone) Safari/605', '127.0.0.1');
+    const Q = inApp('Mozilla/5.0 (iDevice) Safari/605', '127.0.0.1');
     ok(Q.pick('#app-row').hidden === true, 'and a browser is offered nothing of the sort');
   }
 
@@ -2962,7 +2962,7 @@ part('the front page, and the screen');
   /* ---- the table has hung, and is moved on by hand ----
      Both beats a hand is built around are ended by a timer, and a timer belongs
      to the server that armed it. A table whose server was stopped over the
-     moment sits there with every phone waiting on it. */
+     moment sits there with every device waiting on it. */
   part('a table that has hung');
   {
     const R = load(900, 800);
@@ -3067,7 +3067,7 @@ part('the front page, and the screen');
     ok(marks('Ann').indexOf('host') >= 0, 'the seat that runs the table says so  got ' + marks('Ann').join('|'));
     ok(marks('Ben').length === 0, 'a seat with nothing to say says nothing  got ' + marks('Ben').join('|'));
 
-    // A phone that has gone, and how long for: the clock is the room's.
+    // A device that has gone, and how long for: the clock is the room's.
     const away = ST();
     away.seats[1].online = false;
     away.seats[1].quiet = 4 * 60000 + 3000;
@@ -3093,7 +3093,7 @@ part('the front page, and the screen');
     ok(JSON.stringify(sent[0]) === '{"t":"letback","id":"b"}',
        'and one tap opens it  got ' + JSON.stringify(sent[0]));
 
-    // A phone that has gone home, on a table that deals the cards.
+    // A device that has gone home, on a table that deals the cards.
     R.Table.standings(box, away, { view: boss });
     rows = openMenu('Ben').map(label);
     ok(rows.indexOf('Auto-play their hand') >= 0,
@@ -3107,7 +3107,7 @@ part('the front page, and the screen');
 
     /* A player put out of the game, whether they are at the table or not: one
        who has to stop and cannot press it themselves, or one the table wants
-       rid of. Auto-play only ever reaches a phone that has already gone
+       rid of. Auto-play only ever reaches a device that has already gone
        quiet -- the table refuses it for a seat somebody is sitting at -- so
        there was nothing the host could do about a player who was there. */
     R.Table.standings(box, ST(), { view: boss });
@@ -3382,7 +3382,7 @@ part('past games, and the ones the table can still put back');
                                totals: [12, 3], bonus: [0, 0], winners: [0], mine: 0 });
   const held = JSON.stringify([one('a1b2c3d4e5f6', 'BBBB'), one('f6e5d4c3b2a1', 'QRST')]);
 
-  /* The phone keeps its own copy of every game it sat at; the table keeps a
+  /* The device keeps its own copy of every game it sat at; the table keeps a
      trail beside the ones it still holds, and by a shorter memory. So the
      offer is made only where the table says it can be met. */
   const page = (answer) => {
@@ -3397,9 +3397,9 @@ part('past games, and the ones the table can still put back');
   };
   const watchers = (P) => P.pick('#deck').querySelectorAll('.watch-again');
 
-  {   /* What a phone will keep. Every screen files the game it is shown the
+  {   /* What a device will keep. Every screen files the game it is shown the
          moment the table says `done`, so a phase forced to `done` over an
-         empty card put a nought-round game in Past games on every phone in the
+         empty card put a nought-round game in Past games on every device in the
          room -- and on the table too. A game reached by playing it always has
          a scored round behind it. */
     const P = page(() => Promise.resolve({ json: () => Promise.resolve({ games: [] }) }));
@@ -3421,13 +3421,13 @@ part('past games, and the ones the table can still put back');
        'so nothing of it is kept');
   }
 
-  {   /* Letting one go. Each phone keeps its own copy and the table keeps its
-         own, so this is this phone's and says so: the table's is still there
+  {   /* Letting one go. Each device keeps its own copy and the table keeps its
+         own, so this is this device's and says so: the table's is still there
          to be taken back with the code. It is asked about first, because
          nothing here can be undone from the page. */
     const P = page(() => Promise.resolve({ json: () => Promise.resolve({ games: [] }) }));
     const cards = () => P.pick('#deck').querySelectorAll('.gamecard');
-    ok(cards().length === 2, 'two games on the phone to begin with');
+    ok(cards().length === 2, 'two games on the device to begin with');
     const more = cards()[0].querySelector('.mini.more');
     ok(!!more, 'each carries the ⋯ of what may be done with it');
     more.fire('click');
@@ -3452,7 +3452,7 @@ part('past games, and the ones the table can still put back');
       ok(cards()[0].dataset.game === 'f6e5d4c3b2a1',
          'the other one is the one left  got ' + cards()[0].dataset.game);
       ok(JSON.parse(P.dom.localStorage.getItem('river-card-score:games:v1')).length === 1,
-         'and it is gone from the phone, not just off the screen');
+         'and it is gone from the device, not just off the screen');
       ok(P.pick('#nav').hidden === true, 'with nothing to swipe between any more');
     });
   }
@@ -3467,7 +3467,7 @@ part('past games, and the ones the table can still put back');
     ok(asked[0] === '/games.json',
        'the page asks the table what it can still put back  got ' + asked[0]);
     ok(P.pick('#deck').querySelectorAll('.gamecard').length === 2,
-       'both games this phone kept are on the page  got '
+       'both games this device kept are on the page  got '
        + P.pick('#deck').querySelectorAll('.gamecard').length);
     ok(watchers(P).length === 0, 'and nothing is offered before the table answers');
 
@@ -3779,7 +3779,7 @@ part('the dev controls, on each kind of server');
     ok(tools.length === 2, 'every seat carries its own row of verbs  got ' + tools.length);
     const verb = (i, word) =>
       tools[i].querySelectorAll('button').find((b) => b.textContent === word);
-    ['Phone off', 'Leave', 'Kick', 'Time out', 'Rejoin'].forEach((w) =>
+    ['Device off', 'Leave', 'Kick', 'Time out', 'Rejoin'].forEach((w) =>
       ok(!!verb(0, w), 'the seat can be told to ' + w));
 
     P.socks[0].sent.length = 0;
@@ -3808,17 +3808,17 @@ part('the dev controls, on each kind of server');
     P.socks[0].onmessage({ data: devState(false) });
     ok(verb(0, 'Rejoin').disabled === true, 'and only a seat the table took over comes back');
 
-    /* A phone goes quiet by its socket going, which here is its pane not being
+    /* A device goes quiet by its socket going, which here is its pane not being
        drawn: presence is worked out from the live sockets on every broadcast,
        so a flag would be wiped by the next thing that happened. */
     P.socks[0].sent.length = 0;
     const panes = () => P.pick('#seat-frames').querySelectorAll('.frame').length;
     const had = panes();
-    verb(0, 'Phone off').fire('click');
-    ok(P.socks[0].sent.length === 0, 'shutting a phone tells the table nothing');
+    verb(0, 'Device off').fire('click');
+    ok(P.socks[0].sent.length === 0, 'shutting a device tells the table nothing');
     ok(panes() === had - 1, 'it takes the pane away  got ' + panes() + ' of ' + had);
     const back = P.pick('#prows').querySelectorAll('.ptools')[0]
-      .querySelectorAll('button').find((b) => b.textContent === 'Phone on');
+      .querySelectorAll('button').find((b) => b.textContent === 'Device on');
     ok(!!back, 'and offers to draw it again');
     back.fire('click');
     ok(panes() === had, 'which brings the socket back  got ' + panes());
@@ -3828,7 +3828,7 @@ part('the dev controls, on each kind of server');
        behind -- because anywhere else they are a button that earns a refusal. */
     const toolsOf = (i) => P.pick('#prows').querySelectorAll('.ptools')[i];
     const wordOn = (i, w) => toolsOf(i).querySelectorAll('button').find((b) => b.textContent === w);
-    ok(!wordOn(0, 'Bid for'), 'nobody bids for a seat whose phone is at the table');
+    ok(!wordOn(0, 'Bid for'), 'nobody bids for a seat whose device is at the table');
     P.socks[0].onmessage({ data: devState(false, {
       seats: [{ id: 's1', name: 'Ann', online: false }, { id: 's2', name: 'Bob', online: true }],
       rounds: [{ cards: 3, dealer: 1, bids: [null, null], tricks: null },
@@ -3840,7 +3840,7 @@ part('the dev controls, on each kind of server');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"bidfor"}',
        'as the table\'s own message  got ' + JSON.stringify(P.socks[0].sent[0]));
 
-    // A vote is answered by the phone it is put to, so this is the one thing
+    // A vote is answered by the device it is put to, so this is the one thing
     // here that no host-side message can say.
     ok(!wordOn(0, '\u2713'), 'no vote open, nothing to answer');
     P.socks[0].onmessage({ data: devState(false, {
@@ -4874,7 +4874,7 @@ part('the dev controls, on each kind of server');
 
 /* ---- the pad that unsticks the table ----
 
-   Scenario 3 on the player page: a phone has gone quiet at the bidding, so
+   Scenario 3 on the player page: a device has gone quiet at the bidding, so
    nobody may bid and the table stops. What the table host sees, and what the
    tap actually puts on the wire. And scenario 5: leaving on purpose. */
 part('bidding for a seat that is not there, and leaving');
@@ -5040,7 +5040,7 @@ part('bidding for a seat that is not there, and leaving');
     played.length = 0;
     Q.feed(Object.assign(table({}), { rate: 2 }));
     ok(played[played.length - 1] === 2,
-       'and the phones on it draw at it too  got ' + played[played.length - 1]);
+       'and the devices on it draw at it too  got ' + played[played.length - 1]);
   }
 
   {   /* The TV screen holds the deal scene up while the bids come in, and keeps
@@ -5097,7 +5097,7 @@ part('bidding for a seat that is not there, and leaving');
     ok(P.pick('#bidfor-pad').hidden === true, 'a player who does not run the table is not offered it');
   }
 
-  {   /* The phone's own bid pad, on a table with real cards. A stopped table
+  {   /* The device's own bid pad, on a table with real cards. A stopped table
          takes no bid, so it is not offered one -- and a bid the table would
          not take leaves the pad usable, because a refusal is an answer and the
          pad dims its chips as it sends. Both together were the bug: the pad
@@ -5105,13 +5105,13 @@ part('bidding for a seat that is not there, and leaving');
     const mine = () => {
       const st = table({ away: false });
       st.cfg.deck = 'physical';
-      st.turn = 0;                            // this phone's seat, and its bid
+      st.turn = 0;                            // this device's seat, and its bid
       st.rounds[0].bids = [null, null, null];
       return st;
     };
     const P = playPage(seed, '?c=TEST');
     P.feed(mine());
-    ok(P.pick('#bid-pad').hidden === false, 'a phone on turn is offered the numbers');
+    ok(P.pick('#bid-pad').hidden === false, 'a device on turn is offered the numbers');
     const chips = () => P.pick('#bid-chips').querySelectorAll('.chip');
     ok(chips().length === 3, 'one a trick in the hand  got ' + chips().length);
 
@@ -5146,7 +5146,7 @@ part('bidding for a seat that is not there, and leaving');
   {   // nor when the seat is there
     const P = playPage(seed, '?c=TEST');
     P.feed(table({ away: false }));
-    ok(P.pick('#bidfor-pad').hidden === true, 'and not while that phone is at the table');
+    ok(P.pick('#bidfor-pad').hidden === true, 'and not while that device is at the table');
     ok(P.pick('#attn-panel').hidden === true,
        'with nothing to decide, the panel is not there at all');
   }
@@ -5204,7 +5204,7 @@ part('bidding for a seat that is not there, and leaving');
        'with a radio inside, for a keyboard and a reader');
     ok(!form.querySelector('#cfg-deck-hint'),
        'and nothing under it repeating what the regions already say');
-    // The one in force wears the outline: this table deals on the phones.
+    // The one in force wears the outline: this table deals on the devices.
     ok(deck.querySelector('#cfg-deck-virtual').checked
        && deck.querySelector('#cfg-deck-virtual').parentNode.classList.contains('on'),
        'the mode in force wears the outline');
@@ -5224,7 +5224,7 @@ part('bidding for a seat that is not there, and leaving');
     /* A bot has nothing to hold at a table with real cards. The table refuses
        the switch back while one is seated, so the region is shut rather than
        offered and refused: it says why instead of how, and cannot be pressed.
-       Asking for a bot put the deck on the phones in the first place, which is
+       Asking for a bot put the deck on the devices in the first place, which is
        the table's doing and reaches the screen as any other change does. */
     const withBot = table({ phase: 'lobby' });
     withBot.seats[2].bot = true;
@@ -5303,7 +5303,7 @@ part('bidding for a seat that is not there, and leaving');
        'the regions with them: one that cannot be pressed should not look as though it can');
   }
 
-  {   /* Folded away on a phone, the heading still says what the rules are, and
+  {   /* Folded away on a device, the heading still says what the rules are, and
          it is opened for whoever runs the table: they came to set them. */
     const P = playPage(seed, '?c=TEST');
     const st = table({ phase: 'lobby' });
@@ -5323,7 +5323,7 @@ part('bidding for a seat that is not there, and leaving');
     Q.feed(qst);
     ok(Q.pick('#rules-box').open === false, 'a player who is not setting them is not opened into a form');
     const qrounds = Game.schedule(qst.cfg.max, qst.cfg.pattern, qst.cfg.ones).length;
-    ok(Q.pick('#rules-sum').textContent === `${qrounds} rounds · dealt on the phones`,
+    ok(Q.pick('#rules-sum').textContent === `${qrounds} rounds · virtual cards`,
        'and reads them on the heading, with no rule that is off  got ' + Q.pick('#rules-sum').textContent);
   }
 
@@ -5334,7 +5334,7 @@ part('bidding for a seat that is not there, and leaving');
     const alone = table({ phase: 'lobby' });
     P.feed(alone);
     ok(P.pick('#cap-join').hidden === false && P.pick('#cap-tv').hidden === true,
-       'with no TV screen the phone shows the code');
+       'with no TV screen the device shows the code');
     ok(P.pick('#btn-start').hidden === false, 'and carries the start button itself');
     ok(P.pick('#bum-row').hidden === true, 'with no row of game controls: there is no game yet');
     ok(P.pick('#lobby-hint').hidden === true,
@@ -5343,7 +5343,7 @@ part('bidding for a seat that is not there, and leaving');
 
     const shared = table({ phase: 'lobby' }); shared.tv = true;
     P.feed(shared);
-    ok(P.pick('#cap-join').hidden === true, 'with a TV screen at the table the phone does not repeat the code');
+    ok(P.pick('#cap-join').hidden === true, 'with a TV screen at the table the device does not repeat the code');
     ok(P.pick('#cap-tv').hidden === false, 'and says the screen is there');   // the words are the page's own
     ok(P.pick('#btn-start').disabled === false, 'and can still start the game');
 
@@ -5390,7 +5390,7 @@ part('bidding for a seat that is not there, and leaving');
        + JSON.stringify(P.socks[0].sent[0]));
     ok(!rows[1].querySelector('.seatmenu'), 'the menu shuts on the tap');
     ok(names.indexOf('Move up') < 0 && names.indexOf('Move down') < 0, 'the order is changed by dragging, not from the menu');
-    // seat 1 runs the table and deals first, and it is this phone's: nothing to offer
+    // seat 1 runs the table and deals first, and it is this device's: nothing to offer
     ok(!rows[0].querySelector('.more'), 'a seat with nothing left to offer has no ⋯');
     const D = playPage(seed, '?c=TEST');
     const dealt = table({ phase: 'lobby' });
@@ -5519,11 +5519,11 @@ part('bidding for a seat that is not there, and leaving');
     ok(H.pick('#btn-bum').hidden === true, 'while the vote box carries the bum deal');
   }
 
-  {   // the bids are tallied in the same words on the phone and the TV screen
+  {   // the bids are tallied in the same words on the device and the TV screen
     const P = playPage(seed, '?c=TEST');
     P.feed(table({ away: false }));
     ok(P.pick('#bid-tally').textContent === 'Bids total 1 · 2 tricks',
-       'the phone tallies the bids against the hand  got ' + P.pick('#bid-tally').textContent);
+       'the device tallies the bids against the hand  got ' + P.pick('#bid-tally').textContent);
     const H = hostPage('host');
     H.feed(table({ away: false }));
     ok(H.pick('#turn-tally').textContent === 'Bids total 1 · 2 tricks',
@@ -5569,7 +5569,7 @@ part('bidding for a seat that is not there, and leaving');
     const P = playPage(seed, '?c=TEST');
     P.feed(held());
     ok(P.pick('#turn-eyebrow').textContent === 'Bids are in',
-       'the phone names it in the same words  got ' + P.pick('#turn-eyebrow').textContent);
+       'the device names it in the same words  got ' + P.pick('#turn-eyebrow').textContent);
     ok(/leads the first trick$/.test(P.pick('#turn-text').textContent),
        'and says who leads  got ' + P.pick('#turn-text').textContent);
     ok(P.pick('#bid-title').textContent === 'Bids', 'its strip is still the bids  got ' + P.pick('#bid-title').textContent);
@@ -5580,7 +5580,7 @@ part('bidding for a seat that is not there, and leaving');
        'and both turn over together when the hand opens');
   }
 
-  {   // what the round paid is said on the phone and on the TV screen
+  {   // what the round paid is said on the device and on the TV screen
     const before = table({ away: false, phase: 'tricks' }); before.cfg.deck = 'physical'; before.turn = null;
     before.rounds[0].bids = [1, 1, 0];
     const after = JSON.parse(JSON.stringify(before)); after.rounds[0].tricks = [1, 0, 1]; after.phase = 'done'; after.idx = 1;
@@ -5588,7 +5588,7 @@ part('bidding for a seat that is not there, and leaving');
     P.feed(before);
     said.length = 0;
     P.feed(after);
-    ok(said.some((s) => /^You made it · \+11 points/.test(s)), 'a phone at a table with real cards is told what the round paid it  got ' + said.join(' | '));
+    ok(said.some((s) => /^You made it · \+11 points/.test(s)), 'a device at a table with real cards is told what the round paid it  got ' + said.join(' | '));
     const H = hostPage('host');
     H.feed(before);
     said.length = 0;
@@ -5610,7 +5610,7 @@ part('bidding for a seat that is not there, and leaving');
     said.length = 0;
     P.feed(counting([]));
     const pad = P.pick('#trick-count');
-    ok(pad.hidden === false, 'a phone at a table with real cards is offered the count');
+    ok(pad.hidden === false, 'a device at a table with real cards is offered the count');
     const rows = pad.querySelectorAll('.countrow');
     ok(rows.length === 3, 'one row a seat  got ' + rows.length);
     ok(/Tap who takes it/.test(P.pick('#turn-text').textContent), 'and told what to do  got ' + P.pick('#turn-text').textContent);
@@ -5655,13 +5655,13 @@ part('bidding for a seat that is not there, and leaving');
     Q.feed(counting([]));
     ok(Q.pick('#trick-count').hidden === false, 'and gets it back when the table is let go');
 
-    /* The phone above is the dealer's, which is why it has the rows. Move the
-       deal one seat and the same phone is a player like any other: it reads
+    /* The device above is the dealer's, which is why it has the rows. Move the
+       deal one seat and the same device is a player like any other: it reads
        the count off the pills and is told whose job it is. */
     const notMine = counting([]); notMine.rounds[0].dealer = 1;
     const O = playPage(seed, '?c=TEST');
     O.feed(notMine);
-    ok(O.pick('#trick-count').hidden === true, 'a phone that is not the dealer is offered no count');
+    ok(O.pick('#trick-count').hidden === true, 'a device that is not the dealer is offered no count');
     ok(/Ben counts the tricks\.$/.test(O.pick('#turn-text').textContent),
        'and is told who keeps it  got ' + O.pick('#turn-text').textContent);
     ok(O.pick('#bid-tally').textContent === '0 of 2 tricks played',
@@ -5672,7 +5672,7 @@ part('bidding for a seat that is not there, and leaving');
        'the screen that runs the table counts whoever deals: it holds no seat');
   }
 
-  {   // on a table dealt on the phones the TV waits on a seat with a card back in the trick
+  {   // on a table dealt on the devices the TV waits on a seat with a card back in the trick
     const H = hostPage('host');
     const st = table({ away: false }); st.phase = 'tricks'; st.turn = null;
     st.rounds[0].bids = [1, 1, 0]; st.play.turn = 2;
@@ -5736,7 +5736,7 @@ part('bidding for a seat that is not there, and leaving');
   /* ---- the card is drawn when it changes, and not when it does not ----
 
      A state arrives for everything a table does -- a card played, a line of
-     talk, a phone coming back -- and the card was rebuilt from scratch on
+     talk, a device coming back -- and the card was rebuilt from scratch on
      every one of them: a table of HTML parsed and laid out again, then read
      back to keep the round in play in view. Most states do not change a
      figure on it. */
@@ -5760,12 +5760,12 @@ part('bidding for a seat that is not there, and leaving');
     ok(draws === 1, 'and a bid that lands draws it  got ' + draws + ' redraws');
   }
 
-  {   // the page says a phone has gone, once
+  {   // the page says a device has gone, once
     const P = playPage(seed, '?c=TEST');
     P.feed(table({ away: false }));
     said.length = 0;
     P.feed(table({}));
-    ok(said.length === 1 && /^Cal dropped out/.test(said[0]), 'the page says a phone has gone  got ' + said[0]);
+    ok(said.length === 1 && /^Cal dropped out/.test(said[0]), 'the page says a device has gone  got ' + said[0]);
     ok(/waiting on them/.test(said[0]), 'and that the table is stopped  got ' + said[0]);
     said.length = 0;
     P.feed(table({}));
@@ -5789,7 +5789,7 @@ part('bidding for a seat that is not there, and leaving');
     P.feed(table({ boss: false }));
     ok(P.pick('#playout-row').hidden === true, 'only whoever runs the table is offered it');
     P.feed(table({ away: false }));
-    ok(P.pick('#playout-row').hidden === true, 'and not while that phone is there');
+    ok(P.pick('#playout-row').hidden === true, 'and not while that device is there');
     const gone = table({}); gone.seats[2].left = true;
     P.feed(gone);
     ok(P.pick('#playout-row').hidden === true, 'nor for a hand the table already plays');
@@ -5818,7 +5818,7 @@ part('bidding for a seat that is not there, and leaving');
     ok(row.hidden === false, 'every screen says the table is held up');
     /* Not "paused": that word is the hold somebody pressed, and this is a
        table waiting on a seat nobody is behind. Two things with two ways out
-       of them, and one word for both had a player pressing Play at a phone
+       of them, and one word for both had a player pressing Play at a device
        that had gone quiet. */
     ok(row.querySelector('.hint').textContent === 'Waiting on Cal. No answer for 5 minutes.',
        'naming the seat and how long  got ' + row.querySelector('.hint').textContent);
@@ -5834,14 +5834,14 @@ part('bidding for a seat that is not there, and leaving');
     ok(row.hidden === true, 'and it goes when the table is not stopped');
   }
 
-  {   // the table has been waiting on this phone, and asks whether anybody is there
+  {   // the table has been waiting on this device, and asks whether anybody is there
     const P = playPage(seed, '?c=TEST');
     P.feed(table({}));
     telling.length = 0;
     P.socks[0].sent.length = 0;
     P.socks[0].onmessage({ data: JSON.stringify({ t: 'idle', in: 60000 }) });
     ok(telling.length === 1 && telling[0].t === 'Still there?',
-       'the table asks the phone it is waiting on whether anybody is there');
+       'the table asks the device it is waiting on whether anybody is there');
     ok(/auto-play takes your hand/.test(telling[0].b),
        'and says what happens if nobody answers  got ' + (telling[0] || {}).b);
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"here"}',
@@ -5870,7 +5870,7 @@ part('bidding for a seat that is not there, and leaving');
        'and the table is still remembered, so the seat can be taken back');
   }
 
-  part('who you are, on the phone');
+  part('who you are, on the device');
 
   /* The name and the photo live on the settings page. At a table they are the
      seat's: a change in the lobby goes to the table, a change during a game
@@ -5894,11 +5894,11 @@ part('bidding for a seat that is not there, and leaving');
     page.querySelector('.settings-back').fire('click');
     const sent = P.socks[0].sent.filter((m) => m.t === 'rename');
     ok(sent.length === 1 && sent[0].name === 'Zed', 'a new name goes to the table  got ' + JSON.stringify(sent));
-    ok(P.Net.name() === 'Zed', 'and the phone keeps it for the next table');
+    ok(P.Net.name() === 'Zed', 'and the device keeps it for the next table');
     picked('data:me');
     const pics = P.socks[0].sent.filter((m) => m.t === 'avatar');
     ok(pics.length === 1 && pics[0].data === 'data:me', 'a photo picked goes to the table at once  got ' + JSON.stringify(pics));
-    ok(kept === 'data:me', 'and the phone keeps that too');
+    ok(kept === 'data:me', 'and the device keeps that too');
 
     const Q = playPage(seed, '?c=TEST', o);
     Q.feed(table({}));                       // bidding: the game is on
@@ -5909,10 +5909,10 @@ part('bidding for a seat that is not there, and leaving');
     qp.querySelector('.settings-name').value = 'Zed';
     qp.querySelector('.settings-back').fire('click');
     ok(!Q.socks[0].sent.some((m) => m.t === 'rename'), 'and sends the table no name');
-    ok(Q.Net.name() === 'Zed', 'but the phone keeps it');
+    ok(Q.Net.name() === 'Zed', 'but the device keeps it');
     picked('data:later');
     ok(!Q.socks[0].sent.some((m) => m.t === 'avatar'), 'nor a photo');
-    ok(kept === 'data:later', 'which the phone keeps for the next table');
+    ok(kept === 'data:later', 'which the device keeps for the next table');
 
     // a window that only watches a seat has no name to change
     const W = playPage({ 'rcs:tables:v1': JSON.stringify([{ code: 'TEST', token: 'w0', role: 'watch', seatId: 's0' }]) }, '?c=TEST', o);
@@ -5957,7 +5957,7 @@ part('the deal, with motion on');
 
      It peeks up, shivers and lies down again, once every three seconds. That
      was one animation of three seconds repeating for ever, two seconds of it
-     holding the card where it already was, and the phone drew every frame of
+     holding the card where it already was, and the device drew every frame of
      it: a whole core, for the whole of the bidding. The peek is the animation
      now and the wait between peeks is a timer, so nothing is drawn while the
      card lies still. Anything on this screen that repeats for ever costs the
@@ -5970,7 +5970,7 @@ part('the deal, with motion on');
   ok(peek.every((a) => a.opts.duration <= 1200),
      'and the peek is a second, not three  got ' + JSON.stringify(peek.map((a) => a.opts.duration)));
   ok(asked.every((a) => a.opts.iterations === undefined || Number.isFinite(a.opts.iterations)),
-     'nothing on the deal repeats for ever: a phone would draw it for ever');
+     'nothing on the deal repeats for ever: a device would draw it for ever');
 }
 
 /* ---- the seat the table waits on ----
@@ -5978,7 +5978,7 @@ part('the deal, with motion on');
    The pile of the seat to act peeks on the felt the same as on the deal and
    on the TV screen, so whose turn it is reads without the words. It rides on
    the top card of that pile, moves with the turn, and stops when the turn is
-   this phone's own, when nobody is on play, and when the felt is dropped. */
+   this device's own, when nobody is on play, and when the felt is dropped. */
 part('the seat the table waits on peeks');
 {
   const stub = (L) => {
@@ -6015,7 +6015,7 @@ part('the seat the table waits on peeks');
   ok(live().length && live()[0].el.style.zIndex === String(cards - 1), 'on the top card of it');
   ok(live().length && live()[0].kf[0].transform === live()[0].el.style.transform, 'from where the card lies');
   ok(live().length && live()[0].opts.duration <= 1200 && live()[0].opts.iterations === undefined,
-     'one peek at a time: a phone would draw a repeat for ever');
+     'one peek at a time: a device would draw a repeat for ever');
   const first = live()[0];
   L.Felt.sync(touched({ phase: 'bid', turn: 2 }), me, {});
   ok(piles().length === 1, 'the same turn again does not start it over  got ' + piles().length);
@@ -6068,7 +6068,7 @@ part('the seat the table waits on peeks');
 /* ---- a bid landing on the felt ----
 
    The TV screen stamps every bid onto the pile it belongs to, in gold. The
-   deal did that on a phone while it held the stage, and the felt did not
+   deal did that on a device while it held the stage, and the felt did not
    once it had taken over: a bid was a name changing under a pile. The felt
    stamps now, the same way; only bids that land after the table is stood
    up, and never your own. */
@@ -6207,7 +6207,7 @@ part('tapping the deal away');
     ok(!overlay.hidden, 'and the table stays up: the deal is the round, not a scene');
   }
 
-  {   // a scene of its own (a phone at a table with real cards): the bids land on it, and one tap closes it
+  {   // a scene of its own (a device at a table with real cards): the bids land on it, and one tap closes it
     const L = load(412, 860, 'full');
     const asked = record(L);
     const overlay = L.Stage.parts().overlay;
@@ -6326,7 +6326,7 @@ part('tapping the deal away');
     ok(out === 0, 'and once it has gone a tap on the stage is nobody\'s');
   }
 
-  {   // a phone at a table with real cards: the shuffle plays, and the scene goes before a card is dealt
+  {   // a device at a table with real cards: the shuffle plays, and the scene goes before a card is dealt
     const L = load(412, 860, 'full');
     const asked = record(L);
     const overlay = L.Stage.parts().overlay;
@@ -6359,7 +6359,7 @@ part('tapping the deal away');
 
 part('the finish takes the stage over');
 
-/* On a table dealt on the phones the felt is up when the last round is scored,
+/* On a table dealt on the devices the felt is up when the last round is scored,
    and it hands the game straight to the finish. An overlay faded in from
    nothing shows the page behind it -- the scorecard -- for the length of the
    fade, which reads as being taken to the scores and brought back. */
@@ -6485,7 +6485,7 @@ part('the pages and the stylesheet agree');
 /* The felt gives every card on the table a z-index of its own -- a pile card
    its place in the pile, the card in the reader's fingers 30, a bid number
    picked up 40 -- and a stamp with no z-index went under the pile it was
-   slammed onto. Every phone at a virtual table missed every golden number. */
+   slammed onto. Every device at a virtual table missed every golden number. */
 {
   const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
   const rule = /\.dstamp\{([^}]*)\}/.exec(css);

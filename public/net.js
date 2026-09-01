@@ -75,7 +75,7 @@ const Net = (function () {
     return list;
   }
 
-  /* The name this phone plays under. It is asked for once and kept, so coming
+  /* The name this device plays under. It is asked for once and kept, so coming
      back to start another table does not mean typing it again. */
   function name() {
     try { return localStorage.getItem(NAME) || ''; } catch (e) { return ''; }
@@ -160,7 +160,7 @@ const Net = (function () {
       // Left on purpose. The seat is still this browser's to come back to, so
       // the table is remembered; the page just walks away from it.
       else if (m.t === 'left') { handlers.onLeft && handlers.onLeft(m); }
-      /* The table has been waiting on this phone and is about to give up on
+      /* The table has been waiting on this device and is about to give up on
          it. Nothing has happened yet: it is a question, and any answer to it
          is the answer. */
       else if (m.t === 'idle') { handlers.onIdle && handlers.onIdle(m); }
@@ -186,7 +186,7 @@ const Net = (function () {
      #w=TOKEN opens the same screen to watch only. It is how the dev page hands
      out seats and how a seat moves to another device: the token is the seat.
 
-     `role` is what a t= token means on this page -- 'player' on a phone,
+     `role` is what a t= token means on this page -- 'player' on a device,
      'host' on the host screen. A w= token is always watching.
 
      Inside a frame, and for any watcher, the session is kept in memory only:
