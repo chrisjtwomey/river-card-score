@@ -1969,10 +1969,14 @@ part('game speed');
   const rows = UI.commonSettings({ motion: true });
   const i = rows.findIndex((r) => r.label === 'Game speed');
   ok(i > 0, 'the settings page offers it');
-  ok(rows[i - 1].kind === 'group' && rows[i - 1].label === 'Play',
+  ok(rows[i - 1].kind === 'group' && rows[i - 1].label === 'Gameplay',
      'in a section of its own  got ' + JSON.stringify(rows[i - 1]));
   ok(rows[i].options.map((o) => o.v).join(',') === '0.5,1,2',
      'half, as it is, and twice  got ' + rows[i].options.map((o) => o.v).join(','));
+  /* Beside the animations and above them: both change how long a hand takes to
+     watch, and speed is the one that is always felt. */
+  ok((rows[i + 1] || {}).label === 'Animations',
+     'with the animations under it  got ' + (rows[i + 1] || {}).label);
   ok(UI.commonSettings({}).every((r) => r.label !== 'Game speed'),
      'and not on a page that never animates anything');
   UI.setSpeed(1);
@@ -2048,10 +2052,20 @@ part('the swatch');
   // And they are on the settings page, in a panel of their own: a list, not a
   // strip, because six will not fit across a phone.
   const rows = UI.commonSettings({});
-  const g = rows.findIndex((r) => r.kind === 'group' && r.label === 'Colours');
-  ok(g > 0, 'the settings page gives the colours a panel of their own  got ' + g);
+  const g = rows.findIndex((r) => r.kind === 'group' && r.label === 'Themes');
+  ok(g === 0, 'the settings page opens with the themes, in a panel of their own  got ' + g);
+  /* Light and dark is a theme too, so it is the first row of that panel rather
+     than a panel of its own with another word for the same thing. */
+  ok((rows[g + 1] || {}).label === 'Appearance' && rows[g + 1].kind === 'choice',
+     'light and dark heads it, called Appearance  got ' + (rows[g + 1] || {}).label);
+  ok(rows.every((r) => r.label !== 'Look' && r.label !== 'Colours' && r.label !== 'Play'),
+     'and the panels it replaced are gone');
+  /* Under the same heading, over a line: the half of a theme is not a theme,
+     and the panel has to say so without a second heading for it. */
+  ok((rows[g + 2] || {}).kind === 'rule',
+     'set apart from the list under it  got ' + (rows[g + 2] || {}).kind);
   const picks = [];
-  for (let k = g + 1; k < rows.length && rows[k].kind === 'pick'; k++) picks.push(rows[k]);
+  for (let k = g + 3; k < rows.length && rows[k].kind === 'pick'; k++) picks.push(rows[k]);
   ok(picks.length === UI.SWATCHES.length,
      'one row for every swatch  got ' + picks.length + ' of ' + UI.SWATCHES.length);
   ok(picks.length > 0 && picks[0].v === 'river',
@@ -4065,7 +4079,7 @@ part('the dev controls, on each kind of server');
     ok(menu.hidden === false, 'and its one button opens it');
     const rowOf = (label) => menu.querySelectorAll('.menu-row')
       .find((r) => (r.querySelector('.menu-label') || {}).textContent === label);
-    ok(!!rowOf('Theme'), 'with the theme in it, where every other page has it');
+    ok(!!rowOf('Appearance'), 'with light and dark in it, where every other page has it');
     const size = rowOf('Preview size');
     ok(!!size, 'and how big this page draws its screens');
     const picks = size.querySelector('.seg').querySelectorAll('button');

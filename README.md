@@ -56,12 +56,14 @@ and the room it would be in:
 | **Saloon** | plum, the smoke the boat puts up | plum | warm white |
 | **Harbour** | navy | navy baize with brass | white |
 
-**Colours** in the settings is a panel of its own, a list with a tick, because
-six will not fit across a phone. It sits under **Theme**, which still means
-system, light or dark. The two are separate questions -- a swatch is the whole
-palette, and the theme says which half of it is showing -- so every swatch works
-in both. Picking **Table** gives back exactly the game as it was in every
-particular.
+They are all in **Themes**, the first panel of the settings page, drawn as a
+list with a tick because six will not fit across a phone. **Appearance** heads
+that same panel -- system, light or dark -- with a line under it, because it
+belongs with the themes without being one of them: it is the half of a theme
+that is showing, not a theme. They used to be two panels with two names for the
+same sort of thing, which asked the reader to know a difference that is not
+there. Every swatch works in both halves, and picking **Table** gives back
+exactly the game as it was in every particular.
 
 It is this screen's choice and nobody else's: the table is not told, and two
 devices at one game can sit in different colours. The Android app's splash and
@@ -69,9 +71,11 @@ its notification stay green whichever is picked, because those are compiled into
 the app and cannot read a browser setting.
 
 Every page carries one **⚙** button in the top bar, and it opens the settings
-page: the theme (system, light or dark), the colours (one of six), the
-animations (full, short or off),
-full screen, and on the TV screen the text size. The settings page lies over
+page. It is three panels: **Themes** (appearance, a line, then the six sets of colours),
+**Gameplay** (game speed, then the animations -- both of them change how long a
+hand takes to watch), and **This screen** (full screen, and on the TV the text
+size, which are how one display is set up and nothing about the game). The
+settings page lies over
 the page it was opened from, with a back arrow of its own, so a game
 underneath keeps its place and its socket.
 Rows that a browser cannot honour leave themselves out -- full screen is not

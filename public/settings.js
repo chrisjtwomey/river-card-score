@@ -14,6 +14,7 @@
      { kind: 'choice', label, options: [{ v, label }], get(), set(v) }
      { kind: 'toggle', label, get(), set() }        -- a tick, or nothing
      { kind: 'pick',   label, v, get(), set(v) }    -- one row of several, ticked
+     { kind: 'rule' }                               -- a line across the panel
      { kind: 'action', label, run(), danger }       -- does it and shuts the page
      { kind: 'link',   label, href }
 
@@ -102,6 +103,9 @@ const Settings = (function () {
     }
 
     function row(it, into) {
+      // A line inside a panel, for two sorts of thing that belong under one
+      // heading without being the same sort of thing.
+      if (it.kind === 'rule') { into.appendChild(el('div', 'menu-rule')); return; }
       if (it.kind === 'choice') {
         const r = el('div', 'menu-row');
         const name = el('span', 'menu-label');

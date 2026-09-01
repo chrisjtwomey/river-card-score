@@ -277,14 +277,49 @@ const UI = (function () {
      the corner of the top bar, and a menu is not where navigation goes. */
   function commonSettings(opts) {
     const o = opts || {};
+    /* A theme is one question with two halves: which set of colours the game is
+       made of, and which half of that set is showing. They were two panels with
+       two names for the same thing -- Look, then Colours -- which asked the
+       reader to know that a theme and a colour were different sorts of thing.
+       They are not. Appearance is a row like the swatches under it. */
     const list = [
-      { kind: 'group', label: 'Look' },
+      { kind: 'group', label: 'Themes' },
       { kind: 'choice',
-        label: 'Theme',
+        label: 'Appearance',
         options: [{ v: '', label: 'System' }, { v: 'light', label: 'Light' }, { v: 'dark', label: 'Dark' }],
         get: () => themeSaved() || '',
         set: (v) => setTheme(v || null) },
     ];
+    /* Set apart inside the panel, because light and dark is not one of the
+       things listed under it: it is the half of a theme, not a theme. Under one
+       heading, over one line. */
+    list.push({ kind: 'rule' });
+    /* A list rather than a strip across the row: six will not fit across a
+       phone, and a list is what a settings page does with a choice that long. */
+    SWATCHES.forEach((sw) => list.push({
+      kind: 'pick', label: sw.label, v: sw.v, get: swatch, set: setSwatch }));
+
+    /* Not what the game looks like but what it does: how fast it plays, and how
+       much of it is drawn on the way. Both change how long a hand takes to
+       watch, which is why they sit together and not with the colours. Speed
+       first, because it is the one that is always felt. */
+    if (o.motion) {
+      list.push({ kind: 'group', label: 'Gameplay' });
+      list.push({ kind: 'choice',
+        label: 'Game speed',
+        options: [{ v: 0.5, label: '0.5\u00d7' }, { v: 1, label: '1\u00d7' }, { v: 2, label: '2\u00d7' }],
+        get: ownSpeed,
+        set: setSpeed });
+      list.push({ kind: 'choice',
+        label: 'Animations',
+        options: [{ v: 'full', label: 'Full' }, { v: 'reduced', label: 'Short' }, { v: 'off', label: 'Off' }],
+        get: motion,
+        set: setMotion });
+    }
+    /* How this one display is set up, and nothing about the game: a TV read
+       from across a room wants bigger text for the same reason it wants the
+       whole screen. */
+    list.push({ kind: 'group', label: 'This screen' });
     if (o.zoom) {
       list.push({ kind: 'choice',
         label: 'Text size',
@@ -292,32 +327,6 @@ const UI = (function () {
         get: zoomNow,
         set: setZoom });
     }
-    if (o.motion) {
-      list.push({ kind: 'choice',
-        label: 'Animations',
-        options: [{ v: 'full', label: 'Full' }, { v: 'reduced', label: 'Short' }, { v: 'off', label: 'Off' }],
-        get: motion,
-        set: setMotion });
-    }
-    /* Which set of colours, in a panel of its own and as a list rather than a
-       strip across the row: six of them will not fit across a phone, and a list
-       is what a settings page does with a choice that long. */
-    list.push({ kind: 'group', label: 'Colours' });
-    SWATCHES.forEach((s) => list.push({
-      kind: 'pick', label: s.label, v: s.v, get: swatch, set: setSwatch }));
-
-    /* A section of its own, under the look of the page and over what belongs
-       to this screen alone. It is not a look -- it changes how long the game
-       takes to watch -- and it is not this screen's hardware either. */
-    if (o.motion) {
-      list.push({ kind: 'group', label: 'Play' });
-      list.push({ kind: 'choice',
-        label: 'Game speed',
-        options: [{ v: 0.5, label: '0.5\u00d7' }, { v: 1, label: '1\u00d7' }, { v: 2, label: '2\u00d7' }],
-        get: ownSpeed,
-        set: setSpeed });
-    }
-    list.push({ kind: 'group', label: 'This screen' });
     // Safari on an iDevice has no full screen at all, so the row is not offered.
     list.push({ kind: 'toggle', label: 'Full screen', hidden: () => !canFull,
                 get: isFull, set: () => { try { toggleFullscreen(); } catch (e) {} } });

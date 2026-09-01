@@ -1758,6 +1758,10 @@ body.host .scorecard-panel .table-wrap{
 .settings .panel > h2{margin-bottom:6px}
 .settings .menu-row{padding:10px 6px;font-size:15px}
 .settings .menu-row + .menu-row{border-top:1px solid var(--line);border-radius:0}
+/* Two sorts of thing under one heading, set apart: the line runs the whole
+   width of the card where a row's own border stops at its padding, and there
+   is more air around it than between two rows of a kind. */
+.settings .menu-rule{height:1px;background:var(--line);margin:8px -16px 4px}
 .settings .field{margin:2px 0 8px}
 .settings-note{margin-bottom:6px}
 .settings-note[hidden]{display:none}
