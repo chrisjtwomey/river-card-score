@@ -2,6 +2,19 @@
 
 > This is a completely vibe-coded app and game. A few mates and I were playing this card game and we ran out of paper for the scorecard. We figured it'd be faster to vibe-code a scorecard system for the game than to find paper, which worked out to be true at the time. I have not seen or reviewed the code generated. I make no guarantees of the quality or completeness of what was produced but a lot of time (and tokens) were spent in fleshing out features and fixing bugs.
 
+### Interesting Claude stats
+
+| | |
+|---|---|
+| **Working sessions** | 8 |
+| **Active time** | 46.3 hours |
+| **Prompts** | 381 |
+| **Tokens** | 2.07 billion — 28.4 million of them new, the rest re-reading the conversation |
+
+Over eight days, to 1 September 2026.
+
+![Up the River, Down the River](docs/img/banner.webp)
+
 A score tracker for the betting card game — the one where you say how many tricks
 you will take before you play the hand, and you are paid for being exactly right.
 
