@@ -41,6 +41,17 @@ function gameEl(g) {
   line.textContent =
     [when(g.at), `table ${g.code}`, `${names.length} players`].filter(Boolean).join(' · ');
   head.append(eyebrow, won, line);
+  /* What can be done with this game, in a row of its own under the headline:
+     watch it again, and the ⋯ of everything else. The ⋯ is the same one the
+     standings use -- one list of what may be done about the thing the row is
+     about -- so a game grows a verb without the headline growing a button. */
+  const acts = document.createElement('div');
+  acts.className = 'game-acts';
+  head.appendChild(acts);
+  const more = Table.rowMenu(acts, [
+    { label: 'Delete this game', danger: true, run: () => askDelete(g) },
+  ], `the game on ${when(g.at)}`);
+  if (more) acts.appendChild(more);
   card.appendChild(head);
   offerReplay(card);
 
@@ -100,30 +111,52 @@ function askWhatCanBeWatched() {
 function offerReplay(card) {
   const id = card.dataset.game;
   if (!id || !CAN || !CAN.has(id)) return;
-  const head = card.querySelector('.game-head');
-  if (!head || head.querySelector('.watch-again')) return;
+  const acts = card.querySelector('.game-acts');
+  if (!acts || acts.querySelector('.watch-again')) return;
   const go = document.createElement('a');
   go.className = 'btn primary watch-again';
   go.href = `replay.html?g=${encodeURIComponent(id)}`;
   go.textContent = '▶ Replay';
   go.title = 'Play this game back, a point at a time or at the pace it was played';
-  head.appendChild(go);
+  acts.insertBefore(go, acts.firstChild);      // the ⋯ stays at the end of the row
+}
+
+/* ---------- letting one go ---------- */
+
+/* This phone's copy, and only this phone's. Each phone keeps its own and the
+   table keeps its own, so the table's is still there to be taken back with the
+   code -- which is said outright, because "delete" on a game everybody played
+   sounds like more than it is. */
+function askDelete(g) {
+  const names = (g.seats || []).map((s) => s.name).join(', ');
+  UI.ask('Delete this game?',
+    `${when(g.at)}${names ? ' · ' + names : ''}. It goes from Past games on this phone. `
+    + 'The table keeps its own copy, so you can take it back with the table code.',
+    'Delete', true).then((yes) => {
+      if (!yes) return;
+      Games.remove(g.id);
+      // Where the eye was: the card that took its place, or the last one left.
+      show(Games.all(), at);
+    });
 }
 
 /* ---------- the swipe ---------- */
 
 let at = 0;
 
-function show(list) {
+function show(list, land) {
   GAMES = list;
   const deck = $('#deck');
   deck.innerHTML = '';
   $('#empty').hidden = !!list.length;
   $('#deck').hidden = !list.length;
   $('#nav').hidden = list.length < 2;
-  if (!list.length) return;
+  if (!list.length) { at = 0; return; }
   list.forEach((g) => deck.appendChild(gameEl(g)));
-  at = 0;
+  // Where the eye was, not the top: one game let go should not send the swipe
+  // back to the newest.
+  at = Math.max(0, Math.min(list.length - 1, Number(land) || 0));
+  deck.scrollLeft = at * (deck.clientWidth || 0);
   mark();
 }
 

@@ -3345,14 +3345,17 @@ part('past games, and the ones the table can still put back');
                                cfg: { max: 2, pattern: 'down', ones: 1 },
                                totals: [12, 3], bonus: [0, 0], winners: [0], mine: 0 });
   const held = JSON.stringify([one('a1b2c3d4e5f6', 'BBBB'), one('f6e5d4c3b2a1', 'QRST')]);
-  const Table = { scorecardHTML: () => '' };
 
   /* The phone keeps its own copy of every game it sat at; the table keeps a
      trail beside the ones it still holds, and by a shorter memory. So the
      offer is made only where the table says it can be met. */
   const page = (answer) => {
     const P = loadPage('history.js', { 'river-card-score:games:v1': held }, '',
-                       { real: ['public/games.js'], fetch: answer, given: { Table } });
+                       /* table.js is real here -- the card's ⋯ is its row menu --
+                          and so is ui.js, because letting a game go is asked
+                          about first and UI.ask is what asks. */
+                       { real: ['public/ui.js', 'public/games.js', 'public/table.js'],
+                         fetch: answer });
     P.start();
     return P;
   };
@@ -3382,6 +3385,42 @@ part('past games, and the ones the table can still put back');
        'so nothing of it is kept');
   }
 
+  {   /* Letting one go. Each phone keeps its own copy and the table keeps its
+         own, so this is this phone's and says so: the table's is still there
+         to be taken back with the code. It is asked about first, because
+         nothing here can be undone from the page. */
+    const P = page(() => Promise.resolve({ json: () => Promise.resolve({ games: [] }) }));
+    const cards = () => P.pick('#deck').querySelectorAll('.gamecard');
+    ok(cards().length === 2, 'two games on the phone to begin with');
+    const more = cards()[0].querySelector('.mini.more');
+    ok(!!more, 'each carries the ⋯ of what may be done with it');
+    more.fire('click');
+    // The name is a span inside the row, as every menu row is built.
+    const named = (card) => card.querySelector('.seatmenu').querySelectorAll('.menu-row')
+      .find((b) => /Delete/.test(b.querySelector('.menu-label').textContent));
+    const item = named(cards()[0]);
+    ok(!!item && item.classList.contains('danger'),
+       'with Delete in it, marked as the one that cannot be taken back');
+
+    let asked = null;
+    P.dom.window.confirm = () => { asked = true; return false; };
+    item.fire('click');
+    ok(asked === true && cards().length === 2,
+       'which asks first, and keeps the game when the answer is no');
+
+    P.dom.window.confirm = () => true;
+    cards()[0].querySelector('.mini.more').fire('click');
+    named(cards()[0]).fire('click');
+    Promise.resolve().then(() => Promise.resolve()).then(() => {
+      ok(cards().length === 1, 'and lets it go when the answer is yes  got ' + cards().length);
+      ok(cards()[0].dataset.game === 'f6e5d4c3b2a1',
+         'the other one is the one left  got ' + cards()[0].dataset.game);
+      ok(JSON.parse(P.dom.localStorage.getItem('river-card-score:games:v1')).length === 1,
+         'and it is gone from the phone, not just off the screen');
+      ok(P.pick('#nav').hidden === true, 'with nothing to swipe between any more');
+    });
+  }
+
   {
     const asked = [];
     const P = page((u) => {
@@ -3402,8 +3441,14 @@ part('past games, and the ones the table can still put back');
       ok(go.length === 1, 'the one with a trail beside it is offered  got ' + go.length);
       ok(go[0].href === 'replay.html?g=a1b2c3d4e5f6',
          'and the button goes to the replay of that game  got ' + go[0].href);
-      ok(go[0].parentNode.classList.contains('game-head'),
-         'under the line saying which game it is');
+      ok(go[0].parentNode.classList.contains('game-acts'),
+         'in the row of what can be done with it, under the line saying which game it is');
+      ok(go[0].parentNode.parentNode.classList.contains('game-head'),
+         'which is under the headline itself');
+      // The ⋯ stays at the end of the row whichever way round they are built.
+      const row = go[0].parentNode;
+      ok(row.children.indexOf(go[0]) === 0 && row.querySelector('.mini.more') === row.children[1],
+         'with Replay first and the ⋯ after it');
     });
   }
 }

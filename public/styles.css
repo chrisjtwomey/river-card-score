@@ -1109,12 +1109,16 @@ body.player .standings-panel{box-shadow:var(--shadow)}
 .seat-item .dotstat{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none}
 .seat-item.off{opacity:.55}
 .seat-item.off .dotstat{background:var(--ink-dim)}
-.seat-item .mini{
+/* A small square button on a row: the ⋯ of what may be done, an ✕, a word.
+   Not scoped to the seat list -- the standings carry one and so does a game
+   on the history page, and both were getting the browser's own button. */
+.mini{
   border:none;background:var(--chip);color:var(--ink-dim);font:inherit;font-size:14px;
   width:30px;height:30px;border-radius:8px;cursor:pointer;flex:none;
 }
-.seat-item .mini:hover{color:var(--ink)}
-.seat-item .mini.x:hover{background:var(--red);color:#fff}
+.mini:hover{color:var(--ink)}
+.mini.x:hover{background:var(--red);color:#fff}
+.mini.more{font-size:18px;line-height:1}
 /* the seat's controls, behind one button, named; and a handle to drag it by */
 .seat-item{position:relative;transition:transform .12s ease-out}
 .seat-item .grip{
@@ -1129,7 +1133,7 @@ body.player .standings-panel{box-shadow:var(--shadow)}
   border-color:var(--gold);box-shadow:var(--shadow);background:var(--bg2);
 }
 .seat-item.dragging .grip{cursor:grabbing}
-.seat-item .mini.more{margin-left:auto;font-size:18px;line-height:1}
+.seat-item .mini.more{margin-left:auto}
 .seat-item .menu{top:calc(100% - 2px);right:8px;min-width:200px}
 
 /* bid strip */
@@ -1389,7 +1393,13 @@ body.host .scorecard-panel .table-wrap{
 .game-head .game-when{margin:0}
 /* Offered only where the table can still put the game back, so it sits under
    the line that says which game it is rather than beside the heading. */
-.game-head .watch-again{align-self:flex-start;margin-top:10px;text-decoration:none}
+/* What can be done with the game on the card: watch it again, and the ⋯ of
+   everything else. A row, so the menu has something to hang off and the
+   headline does not grow a button every time a verb is added. */
+.game-acts{position:relative;display:flex;align-items:center;gap:8px;margin-top:10px}
+.game-head .watch-again{text-decoration:none}
+.game-acts .mini.more{margin-left:auto}
+.game-acts .menu{min-width:200px}
 
 /* ---------- table talk ---------- */
 /* A sheet over the game: the hand keeps its place while the talk is read. */
