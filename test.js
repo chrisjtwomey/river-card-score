@@ -713,10 +713,26 @@ async function bidRound(P) {
     await okBy(() => dev2.replay && dev2.replay.code, 'and a replay of its own');
     const copy2 = dev2.replay.code, key2 = dev2.replay.seats[0].watch;
     dev2.ws.close();
+    /* The copy goes when the server sees that socket close, and that is not
+       the moment the client closed it. Opening a second socket and asking for
+       the copy straight away can beat the close: the copy is still there, the
+       ask is answered, and the wait for a refusal has nothing to wait for.
+       So the close is waited out where it can be seen -- the listing this
+       machine is served -- and only then is the copy asked for. */
+    const dropped = async () => {
+      const end = Date.now() + 2000;
+      for (;;) {
+        const t = await (await fetch(`http://127.0.0.1:${PORT}/tables.json`)).json();
+        if (!t.tables.some((x) => x.code === copy2)) return true;
+        if (Date.now() >= end) return false;
+        await wait(5);
+      }
+    };
+    ok(await dropped(), 'and the copy goes when that page does');
     const gone = client('after'); await gone.ready;
     gone.send({ t: 'watch', code: copy2, token: key2 });
     await okBy(() => /table is gone/i.test(gone.last()),
-       'and the copy goes when that page does  got ' + gone.last());
+       'so its key opens nothing afterwards  got ' + gone.last());
     gone.ws.close();
 
     // ---- the seats come back as watching windows, not as seats ----
