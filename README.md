@@ -948,22 +948,36 @@ by the edges of the picture. The corner's tile is a closer cut of the same
 drawing, because a 38px square is squarer than a boat. Both are cut from
 `art/boat.png` at the root of the tree, which is not shipped.
 
-**A cold start is one picture handed along.** The phone draws the boat on cream
-before a line of our code runs -- `res/values-v31/themes.xml`, and
-`res/drawable/splash_window.xml` on older phones, which is also the window
-behind every page. The chooser comes up on that same cream, and **the name and
-the boat arrive on it**: the boat fades up over about a second, lifting a little
-as it comes, while the name drops from above, overshoots and settles. They
-arrive at different rates on purpose -- at one rate they read as a single
-picture, at two they read as two, one in front of the other. The name is the one
-that moves; the boat arrives. Then the chooser itself. The same drawing and the same ground the
-whole way through, so nothing jumps as one hands over to the next, and the icon
-you tapped is the picture that opens.
+**The app opens on a menu.** The phone draws the boat on cream before a line of
+our code runs -- `res/values-v31/themes.xml`, and `res/drawable/splash_window.xml`
+on older phones, which is also the window behind every page. The menu comes up on
+that same cream, so nothing jumps and the icon you tapped is the picture that
+opens.
 
-A tap takes it away early, and with **Animations** off it does not play at all:
-it is nothing but animation. It is the app's alone -- the pages served to a
-browser open in a moment and have nothing to cover, and the front page is one
-you come back to over and over, where a splash would only be a toll.
+The name and the boat take the top third of it, and under them:
+
+- **Back to the table** -- only while a table is running on this phone. It is
+  what you want nine times in ten when there is one, so it is added above the
+  rest rather than swapped for anything: nothing under your thumb changes
+  meaning.
+- **Start Game** -- the host-or-join screen, which is what this page used to be
+  and is unchanged. A back arrow at its top brings the menu back.
+- **Settings** -- the game's own, over the menu: **Themes**, **Appearance**, and
+  the rows that belong to the screen. This screen keeps its own choice of those,
+  because it is served from the app and a table is served over the network --
+  two origins, two stores.
+- **Quit Game** -- closes the app. Closing it has never stopped the table: the
+  server outlives the app so that a phone in a pocket cannot end somebody
+  else's game. So with a table running it asks first -- **Stop the table and
+  quit**, **Leave it running**, **Cancel** -- because those are two different
+  things and the players at that table are not holding your phone.
+
+On a cold start the picture arrives: the boat fades up and lifts a little, the
+name drops from above, overshoots and settles, and the choices follow. They
+arrive at different rates on purpose -- at one rate they read as a single
+picture, at two they read as two, one in front of the other. Coming back to the
+menu from Start Game is not an opening, so nothing moves then. None of it is on
+the pages served to a browser: those open in a moment and have nothing to cover.
 
 The card-stack mark that used to do this -- five stacks, 1-2-3-2-1, the hand
 growing to the top of the river and shrinking back down -- is gone, and so are
@@ -1488,10 +1502,6 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player device: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
-- `public/splash.js` — the game introducing itself: the name and the boat, on the
-  app's first screen. Kept here, with its look in `styles.css`, because the chooser
-  already links the game's stylesheet and reaches both through the tree
-  `tools/prepare.sh` writes; no page served to a browser shows it.
 - `public/styles.css` — shared styles. It opens with the swatches, each naming
   the same 47 colours in a light set and a dark one, and then three blocks
   that say which half is showing. Nothing below them writes a colour out: a

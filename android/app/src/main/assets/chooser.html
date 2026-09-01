@@ -14,26 +14,48 @@
   .say{min-height:20px;font-size:13px;color:var(--ink-dim);text-align:center}
   .say.bad{color:var(--red)}
 
-  /* The splash the phone drew is still on screen behind this page, so this one
-     begins on the same cream rather than on whatever the theme is: the two have
-     to land on each other. Everything else about it -- the name, the boat, and
-     the way the two arrive -- is in the game's own stylesheet, and shown by the
-     game's own splash.js, because the front page in a browser shows the same
-     thing and there should not be two of it. */
+  /* The menu screen begins on the same cream the phone drew behind it, rather
+     than on whatever the theme is, so the two land on each other. The rest of
+     how it looks is in the game's own stylesheet with everything else. */
+  #home{background:#f4f1ea}
 </style>
+<!-- The game's own, put here by tools/prepare.sh with the server: the theme and
+     the colours before the page is drawn, and the settings page the menu opens.
+     This screen keeps its own choice of those, because it is served from the
+     app and a table is served over the network -- two origins, two stores. -->
+<script src="nodejs-project/public/ui.js"></script>
+<script src="nodejs-project/public/settings.js"></script>
 </head>
 <body>
-
-<script src="nodejs-project/public/splash.js"></script>
 <script>
-  /* Only on a cold start, which the app says with ?splash=1: coming back from
-     a table shows the chooser and nothing else. There is no UI on this page to
-     ask about animations, so splash.js takes its own default. */
-  if (location.search.indexOf('splash=1') >= 0) Splash.play({ ground: '#f4f1ea' });
+  /* The app says ?splash=1 on a cold start. The name and the boat arrive then
+     and only then: coming back from a table, they are simply there. The class
+     goes on before the page is drawn, or the first frame is the settled one. */
+  if (location.search.indexOf('splash=1') >= 0) document.body.className = 'cold';
 </script>
 
+<!-- The menu. The name and the boat take the top of it and the choices sit
+     under them, so the picture is the screen and not a thing in front of it. -->
+<div id="home">
+  <div class="home-art">
+    <span class="sp-glow"></span>
+    <span class="sp-title"></span>
+    <span class="sp-boat"></span>
+  </div>
+  <nav class="home-menu">
+    <!-- Only while there is one. It is what you want nine times in ten when a
+         table is up, so it goes above and nothing below it moves. -->
+    <button class="btn primary big" id="go-resume" data-go="resume" type="button" hidden>Back to the table</button>
+    <button class="btn primary big" data-go="start" type="button">Start Game</button>
+    <button class="btn big" data-go="settings" type="button">Settings</button>
+    <button class="btn ghost big" data-go="quit" type="button">Quit Game</button>
+  </nav>
+</div>
+
+<div id="setup" hidden>
 <header class="topbar">
   <div class="brand">
+    <button class="backlink" data-go="home" type="button" title="Back" aria-label="Back">&lsaquo;</button>
     <span class="pip mark"></span>
     <div>
       <h1>Up the River, Down the River</h1>
@@ -75,21 +97,71 @@
     <button class="btn big" data-do="join" type="button">Join a table</button>
   </section>
 </main>
+</div>
 
 <script src="nodejs-project/public/scan.js"></script>
 <script>
   // The app is told what to do through a link it recognises. Nothing else on
   // this page talks to Android.
-  const tell = (what, arg) => { location.href = 'uptheriver://' + what + (arg ? '?addr=' + encodeURIComponent(arg) : ''); };
+  const tell = (what, arg) => {
+    location.href = 'uptheriver://' + what + (arg ? '?addr=' + encodeURIComponent(arg) : '');
+  };
   const say = (text, bad) => {
     const el = document.getElementById('say');
     el.textContent = text || '';
     el.classList.toggle('bad', !!bad);
   };
   window.appSay = say;                       // the app calls this while starting
-  // The app knocks on the server's door and says what it found. The server is
-  // in another process, so this is the only honest answer.
-  window.appTableOpen = (open) => { document.getElementById('open').hidden = !open; };
+  /* The app knocks on the server's door and says what it found. The server is
+     in another process, so this is the only honest answer -- and it is the one
+     thing the menu changes shape for. */
+  let tableOpen = false;
+  window.appTableOpen = (open) => {
+    tableOpen = !!open;
+    document.getElementById('open').hidden = !open;
+    document.getElementById('go-resume').hidden = !open;
+  };
+
+  /* Two screens on one page: the menu, and the host-or-join one behind Start
+     Game. They are not two documents because the app opens this file and
+     nothing else, and a second file would be a second copy of everything the
+     first one carries. */
+  const show = (which) => {
+    document.getElementById('home').hidden = which !== 'home';
+    document.getElementById('setup').hidden = which !== 'setup';
+    // The name and the boat arrive once. Coming back to the menu from Start
+    // Game is not a cold start and should not play like one.
+    document.body.classList.remove('cold');
+  };
+
+  const settings = Settings.wire(null, { items: UI.commonSettings({}) });
+
+  document.addEventListener('click', (e) => {
+    const go = e.target.closest('[data-go]');
+    if (!go) return;
+    const what = go.dataset.go;
+    if (what === 'home' || what === 'start') return show(what === 'home' ? 'home' : 'setup');
+    if (what === 'settings') return settings.open();
+    if (what === 'resume') return tell('resume');
+    if (what === 'quit') return quit();
+  });
+
+  /* Closing the app has never stopped the table: the server outlives it so a
+     phone in a pocket cannot end somebody else's game. That makes Quit two
+     questions when a table is up, and neither answer is the obvious one, so it
+     is asked rather than guessed. */
+  function quit() {
+    if (!tableOpen) return tell('quit');
+    UI.pick('A table is still running',
+      'Nobody has to hold this phone for the game to go on. Stopping the table ends it for everybody.',
+      [{ value: 'stop', label: 'Stop the table and quit', danger: true },
+       { value: 'leave', label: 'Leave it running' },
+       { value: '', label: 'Cancel', quiet: true }])
+      .then((answer) => {
+        if (answer === 'stop') tell('quit?stop=1');
+        else if (answer === 'leave') tell('quit');
+      });
+  }
 
   const addr = document.getElementById('addr');
   try { addr.value = localStorage.getItem('lastHost') || ''; } catch (e) {}

@@ -165,6 +165,13 @@ public class MainActivity extends Activity {
       case "resume": open(LOCAL);                               return true;
       case "stop":   stopTable();                               return true;
       case "join":   join(link.getQueryParameter("addr"));      return true;
+      /* Quitting for real, from the menu. Closing the app has never stopped the
+         table -- a phone in a pocket should not end somebody else's game -- so
+         the menu asks first when there is one, and says here which it was. */
+      case "quit":
+        if ("1".equals(link.getQueryParameter("stop"))) stopTable();
+        finishAndRemoveTask();
+        return true;
       default:                                                  return true;
     }
   }

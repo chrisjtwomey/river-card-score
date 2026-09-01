@@ -54,10 +54,6 @@ public/settings.js The settings page behind the ⚙: laid over the page that ope
                    the rows a page hands it (`UI.commonSettings` plus its own) and, on a
                    device, who the player is (name, photo). The front page opens it first
                    when there is no name.
-public/splash.js   The game introducing itself: the name and the boat, arriving at
-                   different rates. The app's first screen only -- the chooser,
-                   which reaches it at nodejs-project/public/. No page served to a
-                   browser shows it. A picture and a beat; no state.
 public/net.js      The socket client: reconnect, sessions, one table per page address.
 public/table.js    The scorecard -- editable for `view.boss`: a figure, a round, or a name at
                    the head of a column, all through one delegated listener on the table. A

@@ -508,6 +508,55 @@ const UI = (function () {
     });
   }
 
+  /* The same dialog, where the question has more than two answers. ask() is a
+     yes or a no and returns one; this returns the value of whatever was
+     pressed, or null for none of them. Two answers and a cancel is the most a
+     question should have -- past that it is a menu, and a menu should not be
+     sprung on somebody mid-press.
+
+     choices: [{ value, label, danger }], in the order they should be read. */
+  function pick(title, body, choices) {
+    const list = (choices || []).slice(0, 3);
+    if (!list.length) return Promise.resolve(null);
+    let d = document.getElementById('ui-pick');
+    if (!d) {
+      d = document.createElement('dialog');
+      d.id = 'ui-pick';
+      const h = document.createElement('h2');
+      const p = document.createElement('p');
+      p.className = 'hint';
+      const form = document.createElement('form');
+      form.method = 'dialog';
+      form.className = 'confirm-actions stack';
+      d.append(h, p, form);
+      document.body.appendChild(d);
+    }
+    d.querySelector('h2').textContent = title;
+    const note = d.querySelector('p');
+    note.textContent = body || '';
+    note.hidden = !body;
+    const form = d.querySelector('form');
+    form.innerHTML = '';
+    list.forEach((c) => {
+      const b = document.createElement('button');
+      b.className = 'btn' + (c.danger ? ' primary danger' : c.quiet ? ' ghost' : ' primary');
+      b.value = String(c.value);
+      b.textContent = c.label;
+      form.appendChild(b);
+    });
+    if (!d.showModal) {
+      // No dialog here, so the question has to be asked the plain way: the
+      // first answer, or nothing.
+      return Promise.resolve(window.confirm(title + (body ? '\n\n' + body : ''))
+        ? String(list[0].value) : null);
+    }
+    d.returnValue = '';
+    return new Promise((res) => {
+      d.addEventListener('close', () => res(d.returnValue || null), { once: true });
+      d.showModal();
+    });
+  }
+
   /* The table taken away by the machine that runs it: not a game ending --
      nothing is scored and nothing is filed -- the table itself goes, and every
      screen at it is told so. Two screens offer it, the host screen and the
@@ -928,7 +977,7 @@ const UI = (function () {
            fadeStrip, showCell, wireFullscreen, isFull, canFull, toggleFullscreen, inApp, servedHere,
            keepAwake, measureTopbar, backLink,
            measureSticky, serverAddresses, rememberAddress, isLocalUrl,
-           addressPicker, fullAddress, fx, ask, tell, endTable,
+           addressPicker, fullAddress, fx, ask, pick, tell, endTable,
            commonSettings, startZoom, zoomNow, setZoom,
            wireTheme, startTheme, themeShown, setTheme, THEME_KEY,
            swatch, setSwatch, startSwatch, SWATCHES, SWATCH_KEY, colour };

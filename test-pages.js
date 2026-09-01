@@ -2017,93 +2017,66 @@ part('game speed');
      'the bar stops where the score starts  got ' + at.bar + ' and ' + at.pts);
 }
 
-part('the splash');
+part("the app's menu screen");
 
-/* The game introducing itself, on the app's own first screen. It is a picture
-   and a beat and nothing else, so what is worth checking is that it goes away
-   again, and that the one page which shows it can really reach the file that
-   does it -- that page sits outside public/, so nothing else would notice. */
+/* The app opens on a menu: the name and the boat across the top, and under them
+   what can be done. It is one HTML file outside public/, so nothing else would
+   notice it breaking -- which is why what can be read from here is read. */
 {
-  const load = (dom) => new Function('window', 'document', 'localStorage', 'console',
-    fs.readFileSync(path.join(ROOT, 'public/splash.js'), 'utf8') + '\n; return Splash;')(
-    dom.window, dom.document, dom.localStorage, { log() {}, warn() {}, error() {}, info() {} });
-  const timers = (dom) => {
-    const q = [];
-    dom.window.setTimeout = (fn, ms) => { q.push({ fn, ms }); return q.length; };
-    return { fire: () => q.splice(0).forEach((t) => t.fn()), waiting: () => q.length };
-  };
+  const ROOT_CHOOSER = 'android/app/src/main/assets/chooser.html';
+  const page = fs.readFileSync(path.join(ROOT, ROOT_CHOOSER), 'utf8');
 
-  {
-    const dom = makeDom(412, 860);
-    const clock = timers(dom);
-    const Splash = load(dom);
-    ok(Splash.play({}) === true, 'it plays');
-    const el = dom.document.body.querySelector('#splash');
-    ok(!!el, 'and lays itself over the page');
-    ok(!!el.querySelector('.sp-title') && !!el.querySelector('.sp-boat'),
-       'with the name and the boat, which move apart from each other');
-    ok(!!el.querySelector('.sp-glow'), 'and a lamp behind them');
+  /* It reaches into the tree tools/prepare.sh writes for the stylesheet, the
+     look, and the settings page it opens. A path that stops being right is a
+     broken tag on the one screen nobody opens in a browser. */
+  const asked = (page.match(/(?:src|href)="(nodejs-project\/[^"]+)"/g) || [])
+    .map((m) => /"([^"]+)"/.exec(m)[1]);
+  ok(asked.length >= 3, 'it borrows the game\'s own files  got ' + asked.length);
+  const missing = asked.filter((u) =>
+    !fs.existsSync(path.join(ROOT, u.replace('nodejs-project/', ''))));
+  ok(!missing.length, 'and every one of them is really there  got ' + missing.join(' '));
 
-    /* It has to go. A splash that stays is a page nobody can use, so the beat
-       is checked rather than watched. */
-    ok(clock.waiting() === 1, 'a beat is set for taking it away  got ' + clock.waiting());
-    clock.fire();
-    ok(el.classList.contains('gone'), 'the beat starts it going');
-    clock.fire();
-    ok(!dom.document.body.querySelector('#splash'), 'and it is gone');
-  }
+  // The four things a menu does, in the order they are read.
+  const items = (page.match(/data-go="([a-z]+)"/g) || []).map((m) => /"([a-z]+)"/.exec(m)[1]);
+  ok(items.join(',') === 'resume,start,settings,quit,home',
+     'the menu offers what it should, in order  got ' + items.join(','));
+  ok(/id="go-resume"[^>]*hidden/.test(page),
+     'and the way back to a table is not offered until there is one');
 
-  // A tap is a way out. Nobody should sit through this twice.
-  {
-    const dom = makeDom(412, 860);
-    const clock = timers(dom);
-    const Splash = load(dom);
-    Splash.play({});
-    const el = dom.document.body.querySelector('#splash');
-    el.fire('click');
-    ok(el.classList.contains('gone'), 'a tap takes it away early');
-    clock.fire();
-    ok(!dom.document.body.querySelector('#splash'), 'and it goes');
-  }
+  /* Everything this page tells the app is an uptheriver: link, and the app
+     answers a fixed list of them. The two are in different languages in
+     different files, so a name added on one side and not the other fails
+     quietly -- the menu button simply does nothing. */
+  const java = fs.readFileSync(path.join(ROOT,
+    'android/app/src/main/java/com/chrisjtwomey/rivertable/MainActivity.java'), 'utf8');
+  const answered = (java.match(/case "([a-z]+)":/g) || []).map((m) => /"([a-z]+)"/.exec(m)[1]);
+  const sent = (page.match(/tell\('([a-z]+)/g) || []).map((m) => /'([a-z]+)/.exec(m)[1])
+    .concat((page.match(/data-do="([a-z]+)"/g) || []).map((m) => /"([a-z]+)"/.exec(m)[1]))
+    .filter((v, i, all) => all.indexOf(v) === i);
+  const deaf = sent.filter((w) => answered.indexOf(w) < 0);
+  ok(!deaf.length, 'and the app answers everything the menu says to it  got ' + deaf.join(' '));
+  ok(answered.indexOf('quit') >= 0, 'including quitting');
 
-  /* A splash is nothing but animation, so with the animations off there is
-     nothing to show. */
-  {
-    const dom = makeDom(412, 860);
-    dom.localStorage.setItem('river-card-score:motion:v1', 'off');
-    const src = ['public/ui.js', 'public/splash.js']
-      .map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
-    const Splash = new Function('window', 'document', 'localStorage', 'console',
-      src + '\n; return Splash;')(dom.window, dom.document, dom.localStorage,
-      { log() {}, warn() {}, error() {}, info() {} });
-    ok(Splash.play({}) === false, 'with the animations off it does not play');
-    ok(!dom.document.body.querySelector('#splash'), 'and nothing is laid over the page');
-  }
+  // No page served to a browser draws any of it.
+  const drawn = ['index', 'host', 'play', 'history', 'replay', 'dev']
+    .filter((n) => /home-art|home-menu/.test(
+      fs.readFileSync(path.join(ROOT, 'public/' + n + '.html'), 'utf8')));
+  ok(!drawn.length, 'and no page served to a browser draws it  got ' + drawn.join(', '));
 
-  /* The one screen that shows it lives outside public/ and reaches in by the
-     path tools/prepare.sh writes the tree to. If that ever stops being right
-     the splash is a broken script tag on the one screen nobody opens in a
-     browser, so the paths are read and checked rather than trusted. */
-  {
-    /* The web pages do not show it: a page over a network opens in a moment and
-       has nothing to cover, and the front page is one you come back to. */
-    const pages = ['index', 'host', 'play', 'history', 'replay', 'dev']
-      .filter((n) => /splash/.test(fs.readFileSync(path.join(ROOT, 'public/' + n + '.html'), 'utf8')));
-    ok(!pages.length, 'no page served to a browser shows it  got ' + pages.join(', '));
-
-    const chooser = fs.readFileSync(
-      path.join(ROOT, 'android/app/src/main/assets/chooser.html'), 'utf8');
-    const asked = (chooser.match(/(?:src|href)="(nodejs-project\/[^"]+)"/g) || [])
-      .map((m) => /"([^"]+)"/.exec(m)[1]);
-    ok(asked.indexOf('nodejs-project/public/splash.js') >= 0,
-       'the app\'s own screen asks for the same file  got ' + asked.join(' '));
-    const missing = asked.filter((u) =>
-      !fs.existsSync(path.join(ROOT, u.replace('nodejs-project/', ''))));
-    ok(!missing.length,
-       'and everything it reaches for is really there  got ' + missing.join(' '));
-    ok(/Splash\.play\(\{ ground: /.test(chooser),
-       'on the ground the phone drew before it');
-  }
+  /* The picture arrives on a cold start and not otherwise: coming back to the
+     menu from Start Game is not an opening. */
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const moves = (css.match(/animation:sp-[a-z]+/g) || []).length;
+  ok(moves >= 4, 'the name, the boat, the lamp and the choices each arrive  got ' + moves);
+  // By the rule and not by the line: the selector and the animation are often
+  // on two lines, and it is the selector that has to say cold.
+  const loose = (css.match(/[^{}]+\{[^{}]*animation:sp-[^{}]*\}/g) || [])
+    .map((r) => r.slice(0, r.indexOf('{')).trim())
+    .filter((sel) => sel.indexOf('body.cold') < 0);
+  ok(!loose.length,
+     'and none of them moves unless the page says it is a cold start  got ' + loose.join(' | '));
+  ok(/body\.cold \.home-art \.sp-boat\{[^}]*animation/.test(css),
+     'which is what body.cold says');
 }
 
 part('the swatch');

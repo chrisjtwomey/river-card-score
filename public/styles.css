@@ -393,6 +393,9 @@ p{margin:0}
   display:grid;place-items:center;width:34px;height:38px;flex:none;margin-left:-6px;
   color:var(--on-felt);font-size:30px;line-height:1;text-decoration:none;
   border-radius:9px;opacity:.85;
+  /* Usually a link. On the app's own screen the way back is within the page, so
+     it is a button there, wearing the same mark in the same corner. */
+  border:0;background:none;font-family:inherit;padding:0;cursor:pointer;
 }
 .backlink:hover,.backlink:focus-visible{background:rgba(255,255,255,.16);opacity:1}
 .sub{font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -713,6 +716,9 @@ dialog h2{color:var(--ink);text-transform:none;letter-spacing:-.01em;font-size:1
 .rules{margin:0 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:7px;font-size:14px}
 dialog form{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 .confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+/* Three answers do not sit side by side on a phone: they go down the page,
+   widest first, and the way out is at the foot where a thumb rests. */
+.confirm-actions.stack{flex-direction:column;align-items:stretch;gap:8px}
 
 /* One round of the scorecard, retyped. A sheet rather than an edit in the
    table itself: the row is already four figures wide on a phone. */
@@ -1824,50 +1830,59 @@ body.host .scorecard-panel .table-wrap{
    is more air around it than between two rows of a kind. */
 .settings .menu-rule{height:1px;background:var(--line);margin:8px -16px 4px}
 
-/* ---------- the splash ---------- */
-/* The game introducing itself: the name and the boat, arriving at different
-   rates. The boat fades up over most of a second, lifting a little as it comes;
-   the name drops from above in two thirds of one, overshoots and settles. Two
-   things arriving at one rate read as one picture; at two rates they read as
-   two, one in front of the other. */
-#splash{
-  position:fixed;inset:0;z-index:200;
+/* ---------- the app's menu screen ---------- */
+/* The app's first screen, and the game's only picture of itself: the name and
+   the boat across the top, the choices under them. It is here and not in the
+   page that shows it because that page sits outside the tree -- it links this
+   stylesheet already, so `url(art/boat.webp)` resolves from the same place, and
+   there is one home for the look rather than a second copy nothing can check.
+   No page served to a browser draws it. */
+#home{
+  min-height:100dvh;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) 0 calc(18px + env(safe-area-inset-bottom));
+}
+/* The top third, near enough: enough for the name to be read across a room and
+   the boat to be a picture rather than an icon, and no more. */
+.home-art{
+  flex:0 0 34dvh;min-height:190px;position:relative;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:clamp(8px,2.5vh,30px);padding:0 6vw;
-  background:var(--bg);cursor:pointer;
-  transition:opacity .42s ease;
+  gap:clamp(4px,1.2dvh,14px);padding:0 6vw;
 }
-#splash.gone{opacity:0}
-/* Short animations play the whole thing at about half. --sp is the one number
-   that says so, so no duration below is written twice. */
-#splash{--sp:1}
-#splash.short{--sp:.5}
-/* A lamp behind the boat. On a pale page it is a warm ground under it; on a
-   dark one it is the only thing keeping a dark hull off a dark page. */
-#splash .sp-glow{
-  position:absolute;left:50%;top:56%;pointer-events:none;
-  width:min(130vw,900px);height:min(130vw,900px);transform:translate(-50%,-50%);
-  background:radial-gradient(circle, rgba(var(--gold-soft-rgb),.24), rgba(var(--gold-soft-rgb),0) 62%);
-  opacity:0;animation:sp-lamp calc(1.1s * var(--sp)) ease calc(.2s * var(--sp)) forwards;
+.home-menu{
+  flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;
+  gap:12px;width:100%;max-width:380px;margin:0 auto;padding:0 22px;
 }
-#splash .sp-title,#splash .sp-boat{
-  position:relative;width:100%;flex:none;opacity:0;
+.home-menu .btn{width:100%}
+.home-art .sp-title,.home-art .sp-boat{
+  position:relative;width:100%;flex:none;
   background:center/contain no-repeat;
 }
-#splash .sp-title{
-  background-image:url(art/title.webp);
-  max-width:min(88vw,520px);aspect-ratio:900 / 324;
-  animation:sp-drop calc(.72s * var(--sp)) cubic-bezier(.2,.9,.3,1) calc(.26s * var(--sp)) forwards;
+.home-art .sp-title{background-image:url(art/title.webp);max-width:min(84vw,470px);aspect-ratio:900 / 324}
+.home-art .sp-boat{background-image:url(art/boat.webp);max-width:min(66vw,320px);aspect-ratio:640 / 391}
+/* A lamp behind the boat: a warm ground under it on a pale page, and the only
+   thing keeping a dark hull off a dark one. */
+.home-art .sp-glow{
+  position:absolute;left:50%;top:58%;pointer-events:none;
+  width:min(150vw,760px);height:min(150vw,760px);transform:translate(-50%,-50%);
+  background:radial-gradient(circle, rgba(var(--gold-soft-rgb),.24), rgba(var(--gold-soft-rgb),0) 62%);
 }
-#splash .sp-boat{
-  background-image:url(art/boat.webp);
-  max-width:min(80vw,440px);aspect-ratio:640 / 391;
-  animation:sp-rise calc(.95s * var(--sp)) cubic-bezier(.16,.8,.3,1) forwards;
+
+/* Arriving, on a cold start and only then. Coming back to the menu from Start
+   Game is not an opening and should not play like one.
+
+   The two arrive at different rates, which is what makes them read as two
+   pictures rather than one: the boat fades up and lifts a little, the name
+   drops from above, overshoots and settles. Then the choices, last, so the
+   picture is what you see first. */
+body.cold .home-art .sp-glow{opacity:0;animation:sp-lamp 1.1s ease .2s forwards}
+body.cold .home-art .sp-boat{opacity:0;animation:sp-rise .95s cubic-bezier(.16,.8,.3,1) forwards}
+body.cold .home-art .sp-title{
+  opacity:0;animation:sp-drop .72s cubic-bezier(.2,.9,.3,1) .26s forwards;
 }
+body.cold .home-menu .btn{opacity:0;animation:sp-menu .5s ease .9s forwards}
 @keyframes sp-lamp{to{opacity:1}}
-/* The boat only fades up, and lifts a little as it does. It used to travel and
-   grow with it, which made it the busier of the two and left the name looking
-   like it was catching up. The name is the one that moves; the boat arrives. */
+/* The boat only fades up, and lifts a little as it does. It is the thing being
+   introduced; the name is what moves around it. */
 @keyframes sp-rise{
   from{opacity:0;transform:translateY(14px)}
   to{opacity:1;transform:none}
@@ -1877,6 +1892,14 @@ body.host .scorecard-panel .table-wrap{
   0%{opacity:0;transform:translateY(-36px)}
   70%{opacity:1;transform:translateY(6px)}
   100%{opacity:1;transform:none}
+}
+@keyframes sp-menu{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:none}
+}
+/* Nothing arrives with the animations off, so it is simply there. */
+@media (prefers-reduced-motion: reduce){
+  body.cold .home-art > *,body.cold .home-menu .btn{animation:none;opacity:1}
 }
 
 /* ---------- a theme, drawn as itself ---------- */
