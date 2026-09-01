@@ -861,6 +861,15 @@ part('who may send what, and when');
     const g = table().sit(['Ann', 'Bob', 'Cal']);
     ok(g.Room.giveUp(g.room, 2) === 'kicked' && g.room.seats.length === 2,
        'in the lobby the seat itself goes');
+    /* A seat only leaves the table in the lobby, and the room says so rather
+       than the three doors that reach it agreeing separately: a phone leaving,
+       the table host putting a seat out, and the dev page doing either from
+       outside. Mid-game a seat that went would be a hole in the scorecard. */
+    const started = table().sit(['Ann', 'Bob']).rules({ max: 1, pattern: 'down', ones: 1 });
+    started.Room.startGame(started.room);
+    ok(started.Room.kickSeat(started.room, started.room.seats[1].id) === null
+       && started.room.seats.length === 2,
+       'and once a game has started no door takes one off  got ' + started.room.seats.length);
     const v = table().sit(['Ann', 'Bob']).rules({ deck: 'virtual', max: 1, pattern: 'down', ones: 1 });
     v.Room.startGame(v.room);
     ok(v.Room.giveUp(v.room, 1) === 'left' && v.room.seats[1].left === true,

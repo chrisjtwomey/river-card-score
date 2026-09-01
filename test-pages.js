@@ -3605,15 +3605,18 @@ part('the dev controls, on each kind of server');
        and the scorecard is a column for it -- so Kick says so rather than
        earning a refusal one press at a time. */
     ok(verb(0, 'Kick').disabled === true, 'a seat only leaves the table in the lobby');
-    /* Kicking a seat and giving one back are the table's own messages, said
-       the way the host screen says them: the guards and the words come with
-       them rather than being written out again on this page. */
+    /* Every seat verb goes through the one door, because this page's socket is
+       not always at the table it is driving: watching a game again it is at no
+       table at all, and the copy is reached by name. The rules they lean on
+       are the room's -- kickSeat will not take a seat off a table that has
+       started, whoever asks -- so nothing is agreed twice. */
     P.socks[0].onmessage({ data: devState(false, { phase: 'lobby' }) });
     P.socks[0].sent.length = 0;
     P.pick('#prows').querySelectorAll('.ptools')[0]
       .querySelectorAll('button').find((b) => b.textContent === 'Kick').fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"kick","id":"s1"}',
-       'and in the lobby it goes as the table\'s own  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"seatDo","id":"s1","do":"kick"}',
+       'and in the lobby it goes  got ' + JSON.stringify(P.socks[0].sent[0]));
     P.socks[0].onmessage({ data: devState(false) });
     ok(verb(0, 'Rejoin').disabled === true, 'and only a seat the table took over comes back');
 
@@ -3684,8 +3687,9 @@ part('the dev controls, on each kind of server');
     ok(give && give.disabled === false, 'a seat the table took over can be given back');
     P.socks[0].sent.length = 0;
     give.fire('click');
-    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"letback","id":"s1"}',
-       'as the table\'s own message, by name  got ' + JSON.stringify(P.socks[0].sent[0]));
+    ok(JSON.stringify(P.socks[0].sent[0])
+       === '{"t":"dev","action":"seatDo","id":"s1","do":"back"}',
+       'by name, through the same door  got ' + JSON.stringify(P.socks[0].sent[0]));
   }
 
   {   /* ---- a record the table will not have ----

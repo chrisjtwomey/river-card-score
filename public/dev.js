@@ -222,7 +222,7 @@ const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
    has no table when it is watching one -- so the flag goes on here rather than
    at each of the fifteen places a control sends. Every other action is asked
    before there is a copy, or is not a copy's at all. */
-const FORCES = ['patch', 'state', 'hands'];
+const FORCES = ['patch', 'state', 'hands', 'seatDo'];
 const act = (action, extra) => send(Object.assign(
   { t: 'dev', action },
   (replaying() && FORCES.includes(action)) ? { replay: true } : null,
@@ -837,7 +837,11 @@ function renderPhaseRow() {
      this is a real-cards row: the tool for a hand on the phones is Play for. */
   const tk = line('ptrick');
   if (tk) {
-    tk.hidden = !r || Game.virtual(S) || S.phase !== 'tricks';
+    /* Counting a trick and cancelling a vote are the table's own messages,
+       said on this page's own socket -- and that socket is not at a copy. So
+       they belong to a table, and on a copy they are not there rather than
+       there and refused. */
+    tk.hidden = !r || replaying() || Game.virtual(S) || S.phase !== 'tricks';
     if (!tk.hidden && tk._seats && tk._seats.dataset.key !== S.seats.map((x) => x.name).join('|')) {
       tk._seats.dataset.key = S.seats.map((x) => x.name).join('|');
       tk._seats.innerHTML = '';
@@ -856,7 +860,7 @@ function renderPhaseRow() {
   // A vote is the round's, so it goes where the round's things are.
   const vt = line('pvote');
   if (vt) {
-    vt.hidden = !r;
+    vt.hidden = !r || replaying();
     const v = S.vote;
     if (vt._said) {
       vt._said.textContent = !v ? 'none open'
@@ -1129,17 +1133,15 @@ function seatTools(s, p, S) {
         ? 'What the phone\'s own Leave does in the lobby: the seat goes.'
         : 'What the phone\'s own Leave does mid-game: the seat stays and the table plays its hand.',
       () => doing('leave'));
-  // The table's own two, said the way the host screen says them: their guards
-  // and their words come with them.
   add('Kick', lobby
         ? 'The seat put out. Only in the lobby: mid-game the scorecard is a column for it.'
         : 'A seat only leaves the table in the lobby.',
-      () => send({ t: 'kick', id: s.id }), { off: !lobby });
+      () => doing('kick'), { off: !lobby });
   add('Time out', 'The idle clock run out on this seat, and whatever the table then does '
       + 'about it. A table of stand-ins is never idle, so this is the only way to it.',
       () => doing('out'));
   add('Rejoin', 'A seat the table took over, given back by name.',
-      () => send({ t: 'letback', id: s.id }), { off: !s.left });
+      () => doing('back'), { off: !s.left });
 
   /* Acting for a seat. The table's own two, said the way the host screen says
      them -- so they are offered on exactly the seat the table would take them
