@@ -456,7 +456,12 @@ async function bidRound(P) {
     solo.send({ t: 'join', code: code4, name: 'Solo' });
     await okBy(() => solo.hello.role === 'player' && !!solo.hello.seatId,
        'one socket can make a table and take a seat');
-    ok(solo.state.seats.length === 1 && solo.state.seats[0].name === 'Solo', 'the seat is at the new table');
+    /* The hello and the broadcast are two messages, and the hello can land
+       first. So the state is waited for rather than read the instant the hello
+       says the seat was taken -- otherwise this reads the table as it was
+       before the seat, which it did about one run in eight. */
+    await okBy(() => solo.state.seats.length === 1 && solo.state.seats[0].name === 'Solo',
+       'the seat is at the new table  got ' + JSON.stringify((solo.state.seats || []).map((x) => x.name)));
     ok(solo.state.captainId === solo.hello.seatId, 'and that player runs the table');
     ok(solo.state.code === code4, 'the code is the one the QR shows');
   }
