@@ -1982,6 +1982,41 @@ part('game speed');
   UI.setSpeed(1);
 }
 
+/* The standings row is two lines, and every cell says which line and which
+   column it is in. It has to: the TV screen re-columns the row, and a cell left
+   to fall where it may falls somewhere else the moment the count changes. The
+   score used to land in the rank's 30px on the second line for exactly that
+   reason -- four cells, three columns named. */
+{
+  const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const colsOf = (re) => {
+    const r = re.exec(css);
+    return r ? r[1].trim().split(/\s+/).length : 0;
+  };
+  const base = colsOf(/\n\.stand-row\{[^}]*grid-template-columns:([^;}]+)/);
+  const host = colsOf(/body\.host \.stand-row\{[^}]*grid-template-columns:([^;}]+)/);
+  ok(base === 4, 'the row has a column for the rank, the name, the marks and the score  got ' + base);
+  ok(base === host, 'and the TV screen names as many  got ' + host + ' against ' + base);
+
+  const placed = (cls) => new RegExp('\\.stand-row \\.' + cls + '\\{[^}]*grid-area:\\s*([^;}]+)').exec(css);
+  // (the class name is the only part interpolated, and it is a plain word)
+  const at = {};
+  ['rank', 'name', 'marks', 'bar', 'pts'].forEach((c) => {
+    const m = placed(c);
+    at[c] = m ? m[1].trim() : null;
+  });
+  ok(Object.keys(at).every((c) => at[c]),
+     'every cell is placed by hand  got ' + JSON.stringify(at));
+  ok(/^1 \//.test(at.rank || '') && /^1 \//.test(at.name || '') && /^1 \//.test(at.marks || ''),
+     'who is on the first line');
+  ok(/^2 \//.test(at.bar || '') && /^2 \//.test(at.pts || ''),
+     'the bar and the score share the second  got ' + at.bar + ' and ' + at.pts);
+  /* And the bar stops before the score's column rather than running under it,
+     so the two sit beside each other with the row's own gap between. */
+  ok((at.bar || '').indexOf('/ 4') > 0 && (at.pts || '') === '2 / 4',
+     'the bar stops where the score starts  got ' + at.bar + ' and ' + at.pts);
+}
+
 part('the swatch');
 
 /* A swatch is the whole palette, and there are two of them. The theme says

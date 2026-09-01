@@ -308,6 +308,17 @@ the table host's.
 **The seat the table is standing on** keeps its own panel, as it always had:
 *Bid for them*, *Play a card for them*, *Auto-play that hand*, *Carry on*.
 
+**A standings row is two lines.** The first is who: the place, the name, and at
+the right of it the marks. The second is how they are doing: the bar, and the
+score at the end of it, a gap short of where the bar stops. The score used to sit
+up on the name's line with the bar running the whole width underneath, which said
+less — a bar is a picture of the number it now stops beside. On the TV screen it
+was worse than that: the row is given wider columns there, and it was given one
+column fewer than the row has cells, so the score dropped onto the second line
+and into the 30 pixels meant for the place. Every cell says which line and which
+column it is in now, and the suite fails if the TV screen names a different
+number of columns from the row.
+
 **The standings are the list of everybody**, once the lobby is gone, so that is
 where the seat controls live. Each row says where that seat is — **host**,
 **bot**, **auto-play** for one the table was given, **away 4m** for one nobody
