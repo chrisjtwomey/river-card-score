@@ -38,9 +38,13 @@ its ▶ and the dev page its 🛠, because those say which page you are on, not
 which game.
 
 **The game comes in two sets of colours.** **River** is what it opens as: the
-colours of its own drawing -- indigo and slate teal under a gold sun, on white --
-and the card table is the night river, deep indigo with a teal glow at the
-middle. **Table** is the green baize it was before, kept whole: pick it and
+colours of its own drawing. The bars and the buttons are the boat, in slate teal
+and indigo; the page they sit on is the sun, white going to warm sand, with the
+ink a warm near-black. That split is the drawing's own -- a cool boat against a
+warm sky -- and it is the point: a first cut tinted the page with the same cold
+hue as the bars, and with nothing to relieve it the whole screen sat in one cast
+and looked ill. The card table is the night river, deep indigo with a teal glow
+at the middle. **Table** is the green baize it was before, kept whole: pick it and
 nothing about the game has changed. **Colours** in the settings switches
 between them, under **Theme**, which still means system, light or dark. The two
 are separate questions -- a swatch is the whole palette, and the theme says

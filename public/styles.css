@@ -13,29 +13,34 @@
    dark whichever way the page is: the cards, the stamps, and the cream on them
    read the same in a light room and a dark one. */
 :root{
-  --sw-bg:#ffffff;        --sw-bg-d:#141020;
-  --sw-bg2:#f6f4fa;       --sw-bg2-d:#1e1830;
-  --sw-ink:#282040;       --sw-ink-d:#ece9f4;
-  --sw-ink-dim:#6f6885;   --sw-ink-dim-d:#9d95b3;
-  --sw-line:#e3e0ec;      --sw-line-d:#2f2745;
+  /* The bars and the buttons are the boat: cool. Everything the page is made
+     of is the sun: warm. Tinting the ground with the same cold hue as the
+     chrome was the first try, and it left nothing to relieve it -- the whole
+     page sat in one cast. The drawing does not do that; it puts a cool boat
+     against a warm sky, and so does this. */
+  --sw-bg:#ffffff;        --sw-bg-d:#16131a;
+  --sw-bg2:#faf6ef;       --sw-bg2-d:#211d25;
+  --sw-ink:#241f2e;       --sw-ink-d:#f0ebe0;
+  --sw-ink-dim:#6d6659;   --sw-ink-dim-d:#a39a8b;
+  --sw-line:#ece2d2;      --sw-line-d:#342e38;
   --sw-felt:#3d5760;      --sw-felt-d:#4e707d;
   --sw-felt-2:#282040;    --sw-felt-2-d:#332b52;
-  --sw-gold:#b1782c;      --sw-gold-d:#e0a95c;
+  --sw-gold:#a9711f;      --sw-gold-d:#e8a95c;
   --sw-red:#b03a30;       --sw-red-d:#e07a6e;
-  --sw-good:#2f7a68;      --sw-good-d:#4fb79c;
-  --sw-chip:#efedf5;      --sw-chip-d:#282142;
+  --sw-good:#2f7a62;      --sw-good-d:#4fb79c;
+  --sw-chip:#f4ecdf;      --sw-chip-d:#2b2530;
   --sw-chip-on:#3d5760;   --sw-chip-on-d:#4e707d;
-  --sw-shadow:0 1px 2px rgba(24,20,40,.06), 0 8px 24px rgba(24,20,40,.08);
+  --sw-shadow:0 1px 2px rgba(40,32,20,.06), 0 8px 24px rgba(40,32,20,.08);
   --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
 
   /* the table, and what is on it */
   --felt-hi:#3d5760;            /* the back of a card, lit edge */
   --felt-lo:#221b38;            /* and its dark one */
-  --felt-edge:#e8e4f0;          /* the line round a card */
-  --on-felt:#f1eff7;            /* what is written on the table */
+  --felt-edge:#ece5d8;          /* the line round a card */
+  --on-felt:#f4efe4;            /* what is written on the table */
   --on-felt-danger:#ffd6d0;
-  --card-face:#fbf9f6;
-  --card-ink:#1a1626;
+  --card-face:#fcf8f1;
+  --card-ink:#1c1720;
   --card-red:#bd3a2e;
   --gold-lit:#f3cf8a;           /* gold on the table, where white would shout */
   --gold-soft:#eec078;
