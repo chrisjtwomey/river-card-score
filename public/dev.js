@@ -54,6 +54,20 @@ let NEW_N = Math.max(2, Math.min(8, Number(localStorage.getItem(N_KEY)) || 4));
 const TAB_KEY = 'rcs:dev:tab';
 TAB = localStorage.getItem(TAB_KEY) === 'state' ? 'state' : 'players';
 
+/* How big the screens are drawn. A setting of this page rather than a control
+   on its bar: the bar says which table you are on, and this is how you are
+   looking at it. Kept for the same reason the tab is. */
+const SCALE_KEY = 'rcs:dev:scale';
+const SCALES = [0.5, 0.65, 0.8, 1];
+let SCALE = SCALES.indexOf(Number(localStorage.getItem(SCALE_KEY))) >= 0
+  ? Number(localStorage.getItem(SCALE_KEY)) : 0.65;
+function setScale(v) {
+  SCALE = SCALES.indexOf(Number(v)) >= 0 ? Number(v) : 0.65;
+  try { localStorage.setItem(SCALE_KEY, String(SCALE)); } catch (e) { /* a browser that will not */ }
+  topKey = seatKey = '';        // every pane is drawn at the new size
+  renderFrames();
+}
+
 /* dev.html#c=CODE&t=TOKEN opens the page on that table, so the TV screen's ⚙
    lands on the game it was pressed from; #g=ID opens it on a game watched
    again. The page writes back whichever it lands on, so a reload comes to the
@@ -386,7 +400,7 @@ const seatHash = (s, at) => (s.token ? `#c=${at}&t=${s.token}` : `#c=${at}&w=${s
 // `addr` is whatever the page reads itself by: a hash for a seat and for a
 // screen that runs a table, a query for one that is only shown a table.
 function frame(box, label, page, addr, kind, entry, boss) {
-  const scale = Number($('#scale').value) || 0.65;
+  const scale = SCALE;
   const [w, h] = SIZES[kind];
   const url = page + addr;
   const el = document.createElement('div');
@@ -437,7 +451,7 @@ function setPhone(id, on) {
 
 function renderFrames() {
   if (!CODE && !replaying()) return;
-  const scale = $('#scale').value;
+  const scale = SCALE;
   const cap = ST ? seatOf(ST.captainId) : null;
   /* While a game is being watched again the panes are the copy's, not the
      table's: the whole point of a copy is that it is the thing you look at. */
@@ -1460,7 +1474,17 @@ document.addEventListener('DOMContentLoaded', () => {
   buildPhaseRow();
   setTab(TAB);                    // whichever table the half was left on
   paint();
-  UI.wireTheme('#btn-theme');
+  /* The look of the page and how big it draws the screens are settings, and
+     the app has one place for those. A select and a half-moon parked on the
+     top bar were this page keeping its own. */
+  Settings.wire('#btn-settings', { items: UI.commonSettings().concat([
+    { kind: 'group', label: 'This page' },
+    { kind: 'choice',
+      label: 'Preview size',
+      options: SCALES.map((v) => ({ v, label: `${Math.round(v * 100)}%` })),
+      get: () => SCALE,
+      set: setScale },
+  ]) });
 
   document.querySelectorAll('[data-act]').forEach((b) =>
     b.addEventListener('click', () => act(b.dataset.act)));
@@ -1527,7 +1551,6 @@ document.addEventListener('DOMContentLoaded', () => {
     newTable(ST && ST.seats.length ? ST.seats.length : NEW_N));
   $('#btn-tables').addEventListener('click', askTables);
 
-  $('#scale').addEventListener('change', () => { topKey = seatKey = ''; renderFrames(); });
   // A strip that fits at one width does not at another.
   window.addEventListener('resize', fadeStrips);
 

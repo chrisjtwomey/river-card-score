@@ -3450,7 +3450,10 @@ part('the dev controls, on each kind of server');
   /* The replay half of the page is the viewer's own file, so the checks run
      the real one: what they are proving is that the page puts it where it
      goes and that it draws what the server said. */
-  const VIEWER = ['public/ui.js', 'public/viewer.js'];
+  // What dev.html loads beside the page itself. Settings is real here because
+  // the bar's one button opens it: the look and the preview size are rows in
+  // it, not controls of this page's own.
+  const VIEWER = ['public/ui.js', 'public/settings.js', 'public/viewer.js'];
 
   /* An address that already names where to go still asks what this server
      will take. A table answers with a hello, which says as much; a copy
@@ -3794,6 +3797,38 @@ part('the dev controls, on each kind of server');
     P.dom.window.navigator = {};              // a page that may not copy
     P.pick('#btn-state-copy').fire('click');
     ok(took.length === 1, 'and where it may not, it says so rather than doing nothing');
+  }
+
+  {   /* ---- the look of the page, and how big it draws the screens ----
+         Both are settings, and the app has one place for those. A select and a
+         half-moon parked on the top bar were this page keeping its own. */
+    const P = devPage(true, [{ id: 's1', name: 'Ann', token: 't1' }]);
+    P.socks[0].onmessage({ data: devState(true) });
+    const menu = P.dom.document.body.querySelector('.settings');
+    ok(!!menu, 'the bar has the settings page every screen has');
+    P.pick('#btn-settings').fire('click');
+    ok(menu.hidden === false, 'and its one button opens it');
+    const rowOf = (label) => menu.querySelectorAll('.menu-row')
+      .find((r) => (r.querySelector('.menu-label') || {}).textContent === label);
+    ok(!!rowOf('Theme'), 'with the theme in it, where every other page has it');
+    const size = rowOf('Preview size');
+    ok(!!size, 'and how big this page draws its screens');
+    const picks = size.querySelector('.seg').querySelectorAll('button');
+    ok(picks.map((b) => b.textContent).join(' ') === '50% 65% 80% 100%',
+       'the sizes the bar used to carry  got ' + picks.map((b) => b.textContent).join(' '));
+    ok(picks[1].classList.contains('on'), 'opening on the one it is drawn at');
+
+    /* The size itself is written into the pane as it is built, which a fake
+       page cannot read. What it can see is that another size draws them
+       again: every pane is thrown away and rebuilt, which is the whole of
+       what the old select's change handler did. */
+    const pane = () => P.pick('#seat-frames').querySelector('.frame');
+    const was = pane();
+    ok(!!was, 'there is a pane a seat');
+    picks[3].fire('click');
+    ok(pane() !== was && !!pane(), 'and picking another size draws them again');
+    ok(P.dom.localStorage.getItem('rcs:dev:scale') === '1',
+       'which is remembered, as the tab is  got ' + P.dom.localStorage.getItem('rcs:dev:scale'));
   }
 
   {   /* ---- the record, drawn ----
@@ -6149,6 +6184,13 @@ part('the pages and the stylesheet agree');
   /* In that half the two take turns rather than share it. Stacked, each was
      the other's ceiling: a record is a whole table as text and the seats are
      a row each with a hand under them, and neither had the room it wanted. */
+  /* The bar carries the one button every page has, and nothing of its own.
+     A select and a half-moon parked on it were this page keeping its own
+     settings beside the app's. */
+  ok(/id="btn-settings"/.test(dev) && !/id="scale"/.test(dev) && !/id="btn-theme"/.test(dev),
+     'the top bar opens the settings page rather than carrying controls');
+  ok(/<script src="settings.js">/.test(dev), 'so the page loads it');
+
   const tabs = dev.indexOf('id="dev-tabs"');
   ok(tabs > right && tabs < dev.indexOf('id="players-panel"'),
      'a tab strip heads the tools half  got ' + tabs);
