@@ -1826,10 +1826,10 @@ body.host .scorecard-panel .table-wrap{
 
 /* ---------- the splash ---------- */
 /* The game introducing itself: the name and the boat, arriving at different
-   rates. That is the whole trick -- the boat rises from below over most of a
-   second while the name drops from above in two thirds of one and overshoots
-   coming back. Two things moving at one rate read as one picture sliding; two
-   at different rates read as one in front of the other. */
+   rates. The boat fades up over most of a second, lifting a little as it comes;
+   the name drops from above in two thirds of one, overshoots and settles. Two
+   things arriving at one rate read as one picture; at two rates they read as
+   two, one in front of the other. */
 #splash{
   position:fixed;inset:0;z-index:200;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1865,9 +1865,11 @@ body.host .scorecard-panel .table-wrap{
   animation:sp-rise calc(.95s * var(--sp)) cubic-bezier(.16,.8,.3,1) forwards;
 }
 @keyframes sp-lamp{to{opacity:1}}
-/* Up out of the water, and a little upstream with it. */
+/* The boat only fades up, and lifts a little as it does. It used to travel and
+   grow with it, which made it the busier of the two and left the name looking
+   like it was catching up. The name is the one that moves; the boat arrives. */
 @keyframes sp-rise{
-  from{opacity:0;transform:translate(-14px,32px) scale(.985)}
+  from{opacity:0;transform:translateY(14px)}
   to{opacity:1;transform:none}
 }
 /* Down, past where it lands, and back. */

@@ -952,11 +952,11 @@ drawing, because a 38px square is squarer than a boat. Both are cut from
 before a line of our code runs -- `res/values-v31/themes.xml`, and
 `res/drawable/splash_window.xml` on older phones, which is also the window
 behind every page. The chooser comes up on that same cream, and **the name and
-the boat arrive on it**: the boat rises out of the water and drifts a little
-upstream over about a second while the name drops from above, overshoots and
-settles. They move at different rates on purpose -- two things moving at one
-rate read as one picture sliding, two at different rates read as one in front of
-the other. Then the chooser itself. The same drawing and the same ground the
+the boat arrive on it**: the boat fades up over about a second, lifting a little
+as it comes, while the name drops from above, overshoots and settles. They
+arrive at different rates on purpose -- at one rate they read as a single
+picture, at two they read as two, one in front of the other. The name is the one
+that moves; the boat arrives. Then the chooser itself. The same drawing and the same ground the
 whole way through, so nothing jumps as one hands over to the next, and the icon
 you tapped is the picture that opens.
 
