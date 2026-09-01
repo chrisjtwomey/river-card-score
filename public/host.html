@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TV screen — Up the River, Down the River</title>
 <link rel="stylesheet" href="styles.css">
+<!-- In the head, and not with the rest: it puts on the saved theme and the
+     saved colours, and a page that is already drawn when that happens shows
+     the wrong ones first and corrects itself in front of you. Nothing in it
+     needs the body -- it reads the root and no more until the page is
+     parsed. -->
+<script src="ui.js"></script>
 </head>
 <body class="host">
 
@@ -178,7 +184,6 @@
 
 <script src="/game.js"></script>
 <script src="net.js"></script>
-<script src="ui.js"></script>
 <script src="settings.js"></script>
 <script src="avatar.js"></script>
 <script src="stage.js"></script>

@@ -17,6 +17,12 @@
   .replay-band{padding:10px 14px;gap:10px;flex:none}
   @media (max-width:700px){ .replaywrap{height:auto} .replay-screen{height:62vh;flex:none} }
 </style>
+<!-- In the head, and not with the rest: it puts on the saved theme and the
+     saved colours, and a page that is already drawn when that happens shows
+     the wrong ones first and corrects itself in front of you. Nothing in it
+     needs the body -- it reads the root and no more until the page is
+     parsed. -->
+<script src="ui.js"></script>
 </head>
 <body>
 
@@ -58,7 +64,6 @@
   </div>
 </div>
 
-<script src="ui.js"></script>
 <script src="viewer.js"></script>
 <script src="replay.js"></script>
 </body>

@@ -88,6 +88,12 @@ marks with -- the bid stamp, the winner, the lead, the trick just taken -- is
 turned toward copper in all of them, so a highlight carries some red without red
 being asked to mean two things. A refusal is still the only red thing.
 
+The choice is kept on the device and put back on before the page is drawn:
+`ui.js` is in the `<head>`, alone, for that reason. It used to sit at the end of
+the body with everything else, which meant a page painted itself in the colours
+it opens with and then corrected itself in front of you -- a flash that reads as
+the choice not having been kept at all.
+
 It is this screen's choice and nobody else's: the table is not told, and two
 devices at one game can sit in different colours. The Android app's splash and
 its notification stay green whichever is picked, because those are compiled into

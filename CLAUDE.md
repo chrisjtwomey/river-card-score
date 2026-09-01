@@ -152,9 +152,13 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
     drawable face.
 12. **No build step, no ES modules.** Every file is an IIFE assigned to one top-level
     `const`. Classic scripts share one lexical scope, so a new file declares no
-    top-level `$` or `esc` (the pages own those). Script order in each HTML: `game.js`
-    → helpers (`ui`, `net`, `stage`, `deal`, `finale`, `felt`) → `table` → `lobby` →
-    `round` → the page. `deal/felt/finale` destructure `Stage` at load time.
+    top-level `$` or `esc` (the pages own those). `ui.js` goes in the `<head>`,
+    alone: it puts on the saved theme and swatch, and a page already drawn when
+    that happens shows the wrong ones and corrects itself in front of you
+    (`test-pages.js` checks the tag is there). The rest are at the end of the
+    body, in order: `game.js` → helpers (`net`, `stage`, `deal`, `finale`, `felt`)
+    → `table` → `lobby` → `round` → the page. `deal/felt/finale` destructure
+    `Stage` at load time.
 
 ## Before you change what a player sees
 

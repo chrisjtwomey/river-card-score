@@ -2102,6 +2102,18 @@ part('the swatch');
        'and a page that was never told wears nothing, which is the first swatch');
   }
 
+  /* And it has to happen before the page is drawn, or the choice is kept, shown
+     late, and corrected in front of you -- which reads as not kept at all. The
+     comment beside startTheme has always said "before the first paint"; the tag
+     is what makes that true, so it is checked rather than trusted. */
+  ['index', 'host', 'play', 'history', 'replay', 'dev'].forEach((n) => {
+    const html = fs.readFileSync(path.join(ROOT, 'public/' + n + '.html'), 'utf8');
+    const at = html.indexOf('src="ui.js"');
+    const shut = html.indexOf('</head>');
+    ok(at > 0 && shut > 0 && at < shut,
+       n + '.html puts on what it is wearing before it is drawn  got ' + at + ' of ' + shut);
+  });
+
   // And they are on the settings page, in a panel of their own: a list, not a
   // strip, because six will not fit across a phone.
   const rows = UI.commonSettings({});
