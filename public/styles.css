@@ -1844,7 +1844,7 @@ body.host .scorecard-panel .table-wrap{
   /* The boat's own size, said once: the horizon is put where its hull is, and
      the hull is a fraction of a height that follows from the width. */
   --boat-w:min(64vw,300px);
-  --boat-h:calc(var(--boat-w) * 964 / 1707);
+  --boat-h:calc(var(--boat-w) * 967 / 1708);
   --dip:calc(var(--boat-h) * .18);          /* how much of it is under water */
   /* The ride, measured off the dip rather than in pixels: however deep the boat
      sits, it can never ride higher than it sits. */
@@ -1854,7 +1854,7 @@ body.host .scorecard-panel .table-wrap{
      artist's own, in boat widths. Keeping them means the sun sits behind the
      boat exactly where it was drawn, at any size of screen. */
   --sun-w:calc(var(--boat-w) * .700);
-  --sun-up:calc(var(--boat-w) * .051);      /* how far it clears the funnels */
+  --sun-up:calc(var(--boat-w) * .050);      /* how far it clears the funnels */
   --sun-over:calc(var(--boat-w) * .012);    /* and how far right of the middle */
   min-height:100dvh;display:flex;flex-direction:column;
   /* The lamp behind the boat is deliberately wider than the screen, and an
