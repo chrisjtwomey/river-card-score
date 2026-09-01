@@ -96,6 +96,167 @@
   --table-edge-rgb:7,11,8;
 }
 
+:root[data-swatch="casino"]{
+  /* Red baize and brass: a card room, and a real cloth -- a table is as often
+     red as green. The danger red is pushed away from the bar's burgundy on
+     purpose, because a refusal must not read as more of the furniture. */
+  --sw-bg:#fffaf3;               --sw-bg-d:#150e0d;
+  --sw-bg2:#f8edda;              --sw-bg2-d:#211614;
+  --sw-ink:#241611;              --sw-ink-d:#f3e9da;
+  --sw-ink-dim:#7c6553;          --sw-ink-dim-d:#a89383;
+  --sw-line:#ead8bf;             --sw-line-d:#382622;
+  --sw-felt:#8c1f2b;             --sw-felt-d:#a8323f;
+  --sw-felt-2:#4a0f18;           --sw-felt-2-d:#5d1520;
+  --sw-gold:#a8801a;             --sw-gold-d:#e0bb52;
+  --sw-red:#c33c26;              --sw-red-d:#f0806a;
+  --sw-good:#3f7a4a;             --sw-good-d:#5cbf7d;
+  --sw-chip:#f3e4ca;             --sw-chip-d:#2c1d1b;
+  --sw-chip-on:#8c1f2b;          --sw-chip-on-d:#a8323f;
+  --sw-shadow:0 1px 2px rgba(48,22,14,.07), 0 8px 24px rgba(48,22,14,.09); --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+
+  --felt-hi:#8c1f2b;
+  --felt-lo:#3d0d15;
+  --felt-edge:#e8cf9a;
+  --on-felt:#f7e9cf;
+  --on-felt-danger:#ffd6cc;
+  --card-face:#fcf7ec;
+  --card-ink:#1b1210;
+  --card-red:#c02a22;
+  --gold-lit:#f2d488;
+  --gold-soft:#e8c274;
+  --on-gold:#1c1405;
+  --gold-rgb:168,128,26;
+  --gold-soft-rgb:232,194,116;
+  --gold-lit-rgb:242,212,136;
+  --felt-rgb:140,31,43;
+  --red-rgb:195,60,38;
+  --good-rgb:63,122,74;
+  --good-lit-rgb:92,191,125;
+  --table-hi-rgb:178,48,64;
+  --table-rgb:104,32,43;
+  --table-edge-rgb:21,7,8;
+}
+
+:root[data-swatch="midnight"]{
+  /* Black baize and gold. The colour is taken out and the gold and the card
+     faces do the work, so a screen with little on it is meant to look bare. */
+  --sw-bg:#fcfaf5;               --sw-bg-d:#100f0c;
+  --sw-bg2:#f1ede2;              --sw-bg2-d:#1b1915;
+  --sw-ink:#1a1813;              --sw-ink-d:#efe9db;
+  --sw-ink-dim:#6f6a5c;          --sw-ink-dim-d:#9c9483;
+  --sw-line:#e2dccb;             --sw-line-d:#2f2b23;
+  --sw-felt:#2a2721;             --sw-felt-d:#3a362d;
+  --sw-felt-2:#100f0c;           --sw-felt-2-d:#16150f;
+  --sw-gold:#96780f;             --sw-gold-d:#d8b44a;
+  --sw-red:#b03328;              --sw-red-d:#e0776a;
+  --sw-good:#3b7350;             --sw-good-d:#5cb883;
+  --sw-chip:#eee7d5;             --sw-chip-d:#26231c;
+  --sw-chip-on:#2a2721;          --sw-chip-on-d:#3a362d;
+  --sw-shadow:0 1px 2px rgba(30,26,16,.07), 0 8px 24px rgba(30,26,16,.09); --sw-shadow-d:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.45);
+
+  --felt-hi:#33302a;
+  --felt-lo:#15140f;
+  --felt-edge:#d9c78c;
+  --on-felt:#efe7d0;
+  --on-felt-danger:#ffd6cc;
+  --card-face:#fbf7ec;
+  --card-ink:#17150f;
+  --card-red:#b8332a;
+  --gold-lit:#e8ca74;
+  --gold-soft:#dcbc60;
+  --on-gold:#171204;
+  --gold-rgb:150,120,15;
+  --gold-soft-rgb:220,188,96;
+  --gold-lit-rgb:232,202,116;
+  --felt-rgb:42,39,33;
+  --red-rgb:176,51,40;
+  --good-rgb:59,115,80;
+  --good-lit-rgb:92,184,131;
+  --table-hi-rgb:61,57,48;
+  --table-rgb:38,36,29;
+  --table-edge-rgb:10,10,8;
+}
+
+:root[data-swatch="saloon"]{
+  /* The boat's inside rather than its outside: the plum of the smoke it puts
+     up, and the same sun over it. Between River and Casino. */
+  --sw-bg:#ffffff;               --sw-bg-d:#1a141c;
+  --sw-bg2:#faf3ee;              --sw-bg2-d:#251d28;
+  --sw-ink:#2b2130;              --sw-ink-d:#f2e9e1;
+  --sw-ink-dim:#736159;          --sw-ink-dim-d:#a89489;
+  --sw-line:#eddfd5;             --sw-line-d:#3a2e3c;
+  --sw-felt:#5a4560;             --sw-felt-d:#6b5271;
+  --sw-felt-2:#2e2438;           --sw-felt-2-d:#3a2c44;
+  --sw-gold:#a9711f;             --sw-gold-d:#e8a95c;
+  --sw-red:#b03a30;              --sw-red-d:#e07a6e;
+  --sw-good:#35786a;             --sw-good-d:#52b9a4;
+  --sw-chip:#f5e8df;             --sw-chip-d:#302535;
+  --sw-chip-on:#5a4560;          --sw-chip-on-d:#6b5271;
+  --sw-shadow:0 1px 2px rgba(40,26,34,.07), 0 8px 24px rgba(40,26,34,.08); --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+
+  --felt-hi:#5a4560;
+  --felt-lo:#291d31;
+  --felt-edge:#ecdcc9;
+  --on-felt:#f8f0e6;
+  --on-felt-danger:#ffd6d0;
+  --card-face:#fcf8f1;
+  --card-ink:#1e1722;
+  --card-red:#bd3a2e;
+  --gold-lit:#f2cf8a;
+  --gold-soft:#e6bc78;
+  --on-gold:#1b1408;
+  --gold-rgb:169,113,31;
+  --gold-soft-rgb:230,188,120;
+  --gold-lit-rgb:242,207,138;
+  --felt-rgb:90,69,96;
+  --red-rgb:176,58,48;
+  --good-rgb:53,120,106;
+  --good-lit-rgb:82,185,164;
+  --table-hi-rgb:107,81,117;
+  --table-rgb:74,55,82;
+  --table-edge-rgb:18,12,22;
+}
+
+:root[data-swatch="harbour"]{
+  /* The other cloth a card table really comes in: navy, with brass on it. The
+     coolest of them, and the nearest in spirit to the green it replaced. */
+  --sw-bg:#ffffff;               --sw-bg-d:#101419;
+  --sw-bg2:#f4f2e9;              --sw-bg2-d:#1a1f26;
+  --sw-ink:#1b2230;              --sw-ink-d:#eceadd;
+  --sw-ink-dim:#5f6a72;          --sw-ink-dim-d:#94a0a8;
+  --sw-line:#e0ddcd;             --sw-line-d:#2b323b;
+  --sw-felt:#1b3a6b;             --sw-felt-d:#2f5c96;
+  --sw-felt-2:#0e1f3d;           --sw-felt-2-d:#16294a;
+  --sw-gold:#a8781c;             --sw-gold-d:#dcae4c;
+  --sw-red:#b2372a;              --sw-red-d:#e0796a;
+  --sw-good:#2b7360;             --sw-good-d:#4fb59a;
+  --sw-chip:#ece9dc;             --sw-chip-d:#232a33;
+  --sw-chip-on:#1b3a6b;          --sw-chip-on-d:#2f5c96;
+  --sw-shadow:0 1px 2px rgba(20,28,40,.07), 0 8px 24px rgba(20,28,40,.08); --sw-shadow-d:0 1px 2px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.4);
+
+  --felt-hi:#1b3a6b;
+  --felt-lo:#0d1b33;
+  --felt-edge:#e4dcc2;
+  --on-felt:#f2efe0;
+  --on-felt-danger:#ffd6d0;
+  --card-face:#fcfaf3;
+  --card-ink:#141a24;
+  --card-red:#bb3226;
+  --gold-lit:#efce84;
+  --gold-soft:#e0bc70;
+  --on-gold:#17120a;
+  --gold-rgb:168,120,28;
+  --gold-soft-rgb:224,188,112;
+  --gold-lit-rgb:239,206,132;
+  --felt-rgb:27,58,107;
+  --red-rgb:178,55,42;
+  --good-rgb:43,115,96;
+  --good-lit-rgb:79,181,154;
+  --table-hi-rgb:42,82,136;
+  --table-rgb:29,53,89;
+  --table-edge-rgb:7,11,20;
+}
+
 /* ---------- which half of the swatch is showing ---------- */
 /* The names below are what the rest of the file asks for. Only these three
    blocks know that a swatch has two halves. */

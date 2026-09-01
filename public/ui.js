@@ -67,30 +67,42 @@ const UI = (function () {
      as the game does. Nothing here knows a colour: which block of the
      stylesheet wins is the whole of it. */
   const SWATCH_KEY = 'river-card-score:swatch:v1';
-  const SWATCHES = ['river', 'table'];
+  /* Every set of colours the stylesheet holds, in the order they are offered.
+     The first is what :root already is, so it is what a page opens as and the
+     only one that is never stamped or saved. */
+  const SWATCHES = [
+    { v: 'river', label: 'River' },
+    { v: 'table', label: 'Table' },
+    { v: 'casino', label: 'Casino' },
+    { v: 'midnight', label: 'Midnight' },
+    { v: 'saloon', label: 'Saloon' },
+    { v: 'harbour', label: 'Harbour' },
+  ];
+  const FIRST = SWATCHES[0].v;
+  const knownSwatch = (v) => SWATCHES.some((s) => s.v === v);
 
   function swatch() {
     try {
       const v = localStorage.getItem(SWATCH_KEY);
-      return SWATCHES.indexOf(v) >= 0 ? v : SWATCHES[0];
-    } catch (e) { return SWATCHES[0]; }
+      return knownSwatch(v) ? v : FIRST;
+    } catch (e) { return FIRST; }
   }
 
   function setSwatch(v) {
-    const s = SWATCHES.indexOf(v) >= 0 ? v : SWATCHES[0];
-    if (s === SWATCHES[0]) root.removeAttribute('data-swatch');
+    const s = knownSwatch(v) ? v : FIRST;
+    if (s === FIRST) root.removeAttribute('data-swatch');
     else root.setAttribute('data-swatch', s);
     try {
-      if (s === SWATCHES[0]) localStorage.removeItem(SWATCH_KEY);
+      if (s === FIRST) localStorage.removeItem(SWATCH_KEY);
       else localStorage.setItem(SWATCH_KEY, s);
     } catch (e) {}
   }
 
   // As early as startTheme, and for the same reason: no page should flash one
-  // set of colours and settle on the other.
+  // set of colours and settle on another.
   function startSwatch() {
     const s = swatch();
-    if (s !== SWATCHES[0]) root.setAttribute('data-swatch', s);
+    if (s !== FIRST) root.setAttribute('data-swatch', s);
     return s;
   }
 
@@ -272,11 +284,6 @@ const UI = (function () {
         options: [{ v: '', label: 'System' }, { v: 'light', label: 'Light' }, { v: 'dark', label: 'Dark' }],
         get: () => themeSaved() || '',
         set: (v) => setTheme(v || null) },
-      { kind: 'choice',
-        label: 'Colours',
-        options: [{ v: 'river', label: 'River' }, { v: 'table', label: 'Table' }],
-        get: swatch,
-        set: setSwatch },
     ];
     if (o.zoom) {
       list.push({ kind: 'choice',
@@ -292,6 +299,13 @@ const UI = (function () {
         get: motion,
         set: setMotion });
     }
+    /* Which set of colours, in a panel of its own and as a list rather than a
+       strip across the row: six of them will not fit across a phone, and a list
+       is what a settings page does with a choice that long. */
+    list.push({ kind: 'group', label: 'Colours' });
+    SWATCHES.forEach((s) => list.push({
+      kind: 'pick', label: s.label, v: s.v, get: swatch, set: setSwatch }));
+
     /* A section of its own, under the look of the page and over what belongs
        to this screen alone. It is not a look -- it changes how long the game
        takes to watch -- and it is not this screen's hardware either. */

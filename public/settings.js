@@ -13,6 +13,7 @@
      { kind: 'group',  label }                      -- a heading: a panel of its own
      { kind: 'choice', label, options: [{ v, label }], get(), set(v) }
      { kind: 'toggle', label, get(), set() }        -- a tick, or nothing
+     { kind: 'pick',   label, v, get(), set(v) }    -- one row of several, ticked
      { kind: 'action', label, run(), danger }       -- does it and shuts the page
      { kind: 'link',   label, href }
 
@@ -133,9 +134,12 @@ const Settings = (function () {
       const name = el('span', 'menu-label');
       name.textContent = words(it);
       b.appendChild(name);
-      if (it.kind === 'toggle') {
-        b.setAttribute('role', 'switch');
-        const on = !!it.get();
+      /* A switch is on or off; a pick is one row of several and is on when the
+         setting is standing on it. They are drawn the same way, because to a
+         thumb they are the same thing: a row with a tick or without one. */
+      if (it.kind === 'toggle' || it.kind === 'pick') {
+        const on = it.kind === 'pick' ? String(it.get()) === String(it.v) : !!it.get();
+        b.setAttribute('role', it.kind === 'pick' ? 'radio' : 'switch');
         b.setAttribute('aria-checked', String(on));
         const tick = el('span', 'menu-tick');
         tick.textContent = on ? '✓' : '';
@@ -143,6 +147,7 @@ const Settings = (function () {
       }
       b.addEventListener('click', () => {
         if (it.kind === 'toggle') { it.set(!it.get()); draw(); return; }
+        if (it.kind === 'pick') { it.set(it.v); draw(); return; }
         it.run();
         close();
       });

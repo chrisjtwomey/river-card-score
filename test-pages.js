@@ -2045,13 +2045,33 @@ part('the swatch');
   UI.setSwatch('sideboard');
   ok(UI.swatch() === 'river', 'a swatch that is not offered is refused  got ' + UI.swatch());
 
-  // And the row is on the settings page, under the theme it is not.
+  // And they are on the settings page, in a panel of their own: a list, not a
+  // strip, because six will not fit across a phone.
   const rows = UI.commonSettings({});
-  const i = rows.findIndex((r) => r.label === 'Colours');
-  const t = rows.findIndex((r) => r.label === 'Theme');
-  ok(i > 0 && t >= 0 && i === t + 1, 'the settings page offers it, under Theme  got ' + i + ' after ' + t);
-  ok(i >= 0 && rows[i].options.map((o) => o.v).join(',') === 'river,table',
-     'the one it opens as first  got ' + (i >= 0 ? rows[i].options.map((o) => o.v).join(',') : 'no row'));
+  const g = rows.findIndex((r) => r.kind === 'group' && r.label === 'Colours');
+  ok(g > 0, 'the settings page gives the colours a panel of their own  got ' + g);
+  const picks = [];
+  for (let k = g + 1; k < rows.length && rows[k].kind === 'pick'; k++) picks.push(rows[k]);
+  ok(picks.length === UI.SWATCHES.length,
+     'one row for every swatch  got ' + picks.length + ' of ' + UI.SWATCHES.length);
+  ok(picks.length > 0 && picks[0].v === 'river',
+     'the one it opens as first  got ' + (picks[0] || {}).v);
+  ok(picks.every((r) => typeof r.get === 'function' && typeof r.set === 'function'),
+     'each asks and sets the same setting');
+
+  /* The list here and the blocks in the stylesheet are two halves of one thing:
+     a swatch offered with no block behind it draws the one before it. */
+  const sheetCss = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
+  const orphan = UI.SWATCHES.slice(1)
+    .filter((sw) => sheetCss.indexOf(':root[data-swatch="' + sw.v + '"]') < 0);
+  ok(!orphan.length,
+     'and every one offered is a block in the stylesheet  got ' + orphan.map((x) => x.v).join(','));
+  const offered = UI.SWATCHES.map((x) => x.v);
+  const spare = (sheetCss.match(/:root\[data-swatch="([a-z]+)"\]/g) || [])
+    .map((m) => /"([a-z]+)"/.exec(m)[1])
+    .filter((v, k, a) => a.indexOf(v) === k)
+    .filter((v) => offered.indexOf(v) < 0);
+  ok(!spare.length, 'and every block is one offered  got ' + spare.join(','));
   UI.setSwatch('river');
 }
 

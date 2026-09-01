@@ -37,18 +37,31 @@ moment you set a photo: the boat gives way to your face. The replay page keeps
 its ▶ and the dev page its 🛠, because those say which page you are on, not
 which game.
 
-**The game comes in two sets of colours.** **River** is what it opens as: the
+**The game comes in six sets of colours.** **River** is what it opens as: the
 colours of its own drawing. The bars and the buttons are the boat, in slate teal
 and indigo; the page they sit on is the sun, white going to warm sand, with the
 ink a warm near-black. That split is the drawing's own -- a cool boat against a
 warm sky -- and it is the point: a first cut tinted the page with the same cold
 hue as the bars, and with nothing to relieve it the whole screen sat in one cast
 and looked ill. The card table is the night river, deep indigo with a teal glow
-at the middle. **Table** is the green baize it was before, kept whole: pick it and
-nothing about the game has changed. **Colours** in the settings switches
-between them, under **Theme**, which still means system, light or dark. The two
-are separate questions -- a swatch is the whole palette, and the theme says
-which half of it is showing -- so every swatch works in both.
+at the middle. There are six in all, each a cloth a card table really comes in
+and the room it would be in:
+
+| | the bars | the table | the page |
+|---|---|---|---|
+| **River** | slate teal into indigo | the night river | white to warm sand |
+| **Table** | the green baize, exactly as it was | | |
+| **Casino** | burgundy | red baize | cream |
+| **Midnight** | near-black | black baize edged in gold | cream |
+| **Saloon** | plum, the smoke the boat puts up | plum | warm white |
+| **Harbour** | navy | navy baize with brass | white |
+
+**Colours** in the settings is a panel of its own, a list with a tick, because
+six will not fit across a phone. It sits under **Theme**, which still means
+system, light or dark. The two are separate questions -- a swatch is the whole
+palette, and the theme says which half of it is showing -- so every swatch works
+in both. Picking **Table** gives back exactly the game as it was in every
+particular.
 
 It is this screen's choice and nobody else's: the table is not told, and two
 devices at one game can sit in different colours. The Android app's splash and
@@ -56,7 +69,7 @@ its notification stay green whichever is picked, because those are compiled into
 the app and cannot read a browser setting.
 
 Every page carries one **⚙** button in the top bar, and it opens the settings
-page: the theme (system, light or dark), the colours (river or table), the
+page: the theme (system, light or dark), the colours (one of six), the
 animations (full, short or off),
 full screen, and on the TV screen the text size. The settings page lies over
 the page it was opened from, with a back arrow of its own, so a game
@@ -1420,8 +1433,8 @@ and lets it off by hand rather than waiting. Run it alone with
 - `public/host.html`, `host.js` — TV screen: code, lobby, rules, live bids, standings, scorecard.
 - `public/play.html`, `play.js` — player device: your bid pad, the count of tricks as they are taken, standings, and the scorecard.
 - `public/net.js` — WebSocket client with reconnect, a saved session, and a message when it cannot connect.
-- `public/styles.css` — shared styles. It opens with the two swatches, each naming
-  every colour the game has in a light set and a dark one, and then three blocks
+- `public/styles.css` — shared styles. It opens with the six swatches, each naming
+  the same 47 colours in a light set and a dark one, and then three blocks
   that say which half is showing. Nothing below them writes a colour out: a
   number in the body of the file is a colour no swatch could change, and
   `test-pages.js` fails on one.
