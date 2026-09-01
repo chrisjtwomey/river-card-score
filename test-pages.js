@@ -99,7 +99,17 @@ function makeDom(W, H) {
   const document = {
     body,
     documentElement: root,
-    createElement: (t) => new El(t),
+    createElement: (t) => {
+      const e = new El(t);
+      /* A canvas is drawn on and read back as a data: URI. Nothing here draws,
+         so every call is taken and the picture is a stand-in for a stand-in:
+         what a check can see is that one was made and where it was sent. */
+      if (String(t).toLowerCase() === 'canvas') {
+        e.getContext = () => new Proxy({}, { get: () => () => ({ addColorStop() {} }) });
+        e.toDataURL = () => 'data:image/webp;base64,STANDIN';
+      }
+      return e;
+    },
     // Text put beside elements, which is how the scrubber writes a cell.
     createTextNode: (t) => { const e = new El('#text'); e.textContent = String(t); return e; },
     getElementById: (id) => body.all().find((e) => e.id === id) || null,
@@ -4372,9 +4382,26 @@ part('the dev controls, on each kind of server');
     ok(rows[0].querySelectorAll('input').every((el) => !el.disabled),
        'with every cell on the row to type into');
     ok(P.pick('#btn-state-apply').hidden !== true, 'and a record to apply to the copy');
-    // A stand-in photo is invented data, and stays a table's alone.
-    ok(!rows[0].querySelector('.pbtns').querySelector('.btn'),
-       'but no invented photo, which is a table\'s and not a copy\'s');
+
+    /* A photo is the one thing here that is a look and not a state. It is not
+       in the record, so a copy takes one and stays the game it is a copy of --
+       which is why it is offered on a copy at all. */
+    P.socks[0].sent.length = 0;
+    rows[0].querySelector('.pbtns').querySelectorAll('.btn')[0].fire('click');
+    const shot = P.socks[0].sent.find((o) => o.action === 'avatar');
+    ok(!!shot && shot.replay === true && shot.seat === 0 && /^data:image\//.test(shot.data),
+       'a stand-in photo goes to the copy  got ' + JSON.stringify(shot));
+    P.socks[0].sent.length = 0;
+    rows[0].querySelector('.pbtns').querySelectorAll('.btn')[1].fire('click');
+    ok((P.socks[0].sent.find((o) => o.action === 'avatar') || {}).data === null,
+       'and taking it off goes the same way');
+
+    // Everybody at once is the same verb, in the panel beside it.
+    P.socks[0].sent.length = 0;
+    P.pick('#phase-row').querySelector('.pphoto').querySelectorAll('.btn')[0].fire('click');
+    ok(P.socks[0].sent.filter((o) => o.action === 'avatar' && o.replay).length === 2,
+       'a photo on every seat is one message a seat  got '
+       + JSON.stringify(P.socks[0].sent));
     P.socks[0].sent.length = 0;
     P.tab('state');
     ok(P.socks[0].sent.some((o) =>

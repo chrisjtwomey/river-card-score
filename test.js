@@ -859,6 +859,15 @@ async function bidRound(P) {
          { action: 'patch', patch: { phase: cold.replay.state.phase } });
       await holds('a patch of nothing at all', { action: 'patch', patch: {} });
 
+      /* A photo is a look and not a state. It is not in the record -- the
+         phone that owns one brings it back -- so a copy takes one and stays
+         the game it is a copy of. It is the one control on that panel that
+         changes what is on the screen without changing what happened. */
+      const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      await holds('a stand-in photo on a seat',
+         { action: 'avatar', seat: 0, data: 'data:image/png;base64,' + png });
+      await holds('and taking one off again', { action: 'avatar', seat: 0, data: null });
+
       // A refused verb is not a change either: it never reached the copy.
       const tape = await fresh();
       cold.send({ t: 'dev', action: 'seatDo', replay: true, id: 'nobody', do: 'leave' });

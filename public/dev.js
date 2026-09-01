@@ -230,7 +230,7 @@ const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
    has no table when it is watching one -- so the flag goes on here rather than
    at each of the fifteen places a control sends. Every other action is asked
    before there is a copy, or is not a copy's at all. */
-const FORCES = ['patch', 'state', 'hands', 'seatDo'];
+const FORCES = ['patch', 'state', 'hands', 'seatDo', 'avatar'];
 const act = (action, extra) => send(Object.assign(
   { t: 'dev', action },
   (replaying() && FORCES.includes(action)) ? { replay: true } : null,
@@ -898,6 +898,28 @@ function buildPhaseRow() {
   vt._said = document.createElement('span');
   vt._said.className = 'pstate';
   vt.appendChild(vt._said);
+
+  /* Stand-in photos, on everybody at once. It is the same verb the camera on
+     a row does to one seat, so it lives beside it rather than in the band
+     among the things that play a game on: one home, and one rule about where
+     it works. */
+  const av = line('pphoto', 'Photos');
+  const shot = (text, why, on) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn tiny';
+    b.textContent = text;
+    b.title = why;
+    b.addEventListener('click', () => {
+      const S = stateNow();
+      if (!S || !S.seats) return;
+      S.seats.forEach((x, i) =>
+        act('avatar', { seat: i, data: on ? standInAvatar(x.name, i) : null }));
+    });
+    av.appendChild(b);
+  };
+  shot('Stand-ins', 'A made-up photo on every seat: its own colour and its own initial', true);
+  shot('None', 'Every photo off', false);
 }
 
 // The round the panel is editing, whichever table is on show.
@@ -934,6 +956,11 @@ function renderPhaseRow() {
     tr.hidden = !r || !Game.virtual(S);
     mark(tr, r && r.trump ? r.trump : '');
   }
+
+  /* A picture belongs to a seat and not to a round, so this line is up
+     wherever the photo column is: a dev server's table, or any copy. */
+  const av = line('pphoto');
+  if (av) av.hidden = !(DEVSRV || replaying()) || !S.seats.length;
 
   /* Who took the trick. Where the cards are dealt they count themselves, so
      this is a real-cards row: the tool for a hand on the phones is Play for. */
@@ -1015,8 +1042,10 @@ function renderPlayers() {
   /* A copy is written to as a table is. What the trail says happened stops
      being what the copy is the moment it is changed, and the copy says so --
      the change becomes its last point, and the rest of the trail goes.
-     A stand-in photo is invented data and stays a table's alone. */
-  const invent = DEVSRV && !replaying();
+     A photo is the exception, and the only one: it is not in the record, so a
+     copy takes one without becoming a game of its own. On a table it is a
+     picture invented for somebody's seat, which is a dev server's to do. */
+  const invent = DEVSRV || replaying();
   const r = S.rounds[Math.min(S.idx, S.rounds.length - 1)] || null;
   const key = S.seats.map((s, p) =>
     `${s.name}/${s.bot}/${s.left}/${s.id === S.captainId}/${r ? r.dealer : S.firstDealerId}` +
@@ -1422,7 +1451,7 @@ function applyGates() {
   // The rounds are a strip either way; a table's is the one you can send to.
   if (el('#scrub-tools')) el('#scrub-tools').hidden = going || !DEVSRV;
   if (el('#run-tools') && going) el('#run-tools').hidden = true;
-  if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV && !going ? 'photo' : '';
+  if (el('#ph-photo')) el('#ph-photo').textContent = DEVSRV || going ? 'photo' : '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1438,15 +1467,6 @@ document.addEventListener('DOMContentLoaded', () => {
     b.addEventListener('click', () => {
       document.querySelectorAll('#goto-phase .btn').forEach((x) => x.classList.toggle('on', x === b));
     }));
-
-  $('#btn-avatars').addEventListener('click', () => {
-    if (!ST || !ST.seats) return;
-    ST.seats.forEach((s, i) => act('avatar', { seat: i, data: standInAvatar(s.name, i) }));
-  });
-  $('#btn-no-avatars').addEventListener('click', () => {
-    if (!ST || !ST.seats) return;
-    ST.seats.forEach((s, i) => act('avatar', { seat: i, data: null }));
-  });
 
   /* The box draws itself as it is typed in, and the layers under it are moved
      by its own scrolling: there is one scroller here and two passengers. */
