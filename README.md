@@ -257,8 +257,20 @@ is behind — and carries a ⋯ for whoever runs the table:
   their hand* is not it — the table refuses that for a seat somebody is behind.
   Both decks; with real cards there is no hand for the table to hold, but there
   is still a person to be rid of, and the host bids for the seat as they would
-  for any other nobody is behind. **Let back in** is the way back, and it is the
-  host's alone.
+  for any other nobody is behind.
+
+  Their phone is told, and taken off the seat where it stands: a socket carries
+  which seat it is on and not the key it opened with, so a page that ignored
+  the word would otherwise go on bidding and playing as that seat, which is the
+  whole of what this is for. It stays connected, watching.
+
+  **Let back in** is the way back, and it is the host's alone. It opens the
+  seat, and the person comes to it the way any phone that lost its seat does —
+  the table code and the name they played under. Every other open seat is
+  gated on the table waiting for it, so that a name alone cannot take a seat
+  some phone can still open; a seat put out holds no key for any phone to open
+  it with, so that gate is about nothing and the name is enough. Coming back by
+  it is what mints the new key.
 - **Make table host** — the table passed on, mid-game. Never to a bot, and
   never to a seat the table is playing.
 - **They dealt this hand** — who dealt. Only with **real cards**, where a

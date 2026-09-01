@@ -357,6 +357,15 @@ async function bidRound(P) {
     ok(host.state.seats.length === 3, 'the seat stays: it is a column on the card');
     await okBy(() => P[1].kicked, 'and the phone is told it is out  got ' + P[1].kicked);
 
+    /* And taken off the seat where it stands. Telling it is not enough: a
+       socket carries which seat it is on, not the key it opened with, so a
+       page that ignored the word would go on bidding and playing as that
+       seat. Which is the whole of what this verb is for. */
+    P[1].errors.length = 0;
+    P[1].send({ t: 'bid', v: 1 });
+    await okBy(() => /watching this table/i.test(P[1].last()),
+       'and a page that ignores the word is only watching  got ' + P[1].last());
+
     // The key it held is not a key any more.
     const walk = client('walkback'); await walk.ready;
     walk.send({ t: 'resume', code, token: outTok });
@@ -370,6 +379,31 @@ async function bidRound(P) {
     // The way back in is the host's, by name, as for any seat the table holds.
     host.send({ t: 'letback', id: P[1].seatId });
     await okBy(() => host.state.seats[1].left === false, 'the host can let them back in');
+
+    /* And then the name is the way in, whatever the table is doing. Every
+       other seat is gated on the table waiting for it -- a name alone must not
+       take a seat some phone can still open -- but a seat put out holds no key
+       for any phone to open it with, so that gate is about nothing. Coming
+       back by name is what mints the new key. */
+    const who = host.state.seats[1].name;
+    const again = client('again'); await again.ready;
+    again.send({ t: 'join', code, name: who });
+    await okBy(() => again.hello && again.hello.seatId === P[1].seatId,
+       'the name they played under takes the seat back  got ' + JSON.stringify(again.hello));
+    ok(!!again.hello.token && again.hello.token !== outTok,
+       'with a key of its own, and not the one that was taken away');
+    await okBy(() => host.state.seats[1].online === true, 'and the table sees them at it');
+
+    // Which is a key that works: the phone can go and come back as any can.
+    const fresh = again.hello.token;
+    again.ws.close();
+    await okBy(() => host.state.seats[1].online === false, 'the phone goes');
+    const third = client('third'); await third.ready;
+    third.send({ t: 'resume', code, token: fresh });
+    await okBy(() => third.hello && third.hello.seatId === P[1].seatId,
+       'and the new key brings them back  got ' + JSON.stringify(third.hello));
+    third.ws.close();
+    await okBy(() => host.state.seats[1].online === false, 'left as it was found');
   }
 
   // ---- late join is refused ----

@@ -534,9 +534,17 @@ function handle(ws, m) {
       if (held.bot) return fail(ws, `${held.name} is a bot`);
       if (held.online) return fail(ws, `${held.name} is already at the table`);
       if (held.left) return fail(ws, `${held.name} left the game, so auto-play has that hand`);
-      if (!Room.waitingOn(room, seatIndex(room, held.id))) {
+      /* A seat whose key was destroyed: a player put out of the game, and then
+         let back in by whoever runs the table. Nobody holds a key to it, so
+         the gate below is about nothing -- it is there to stop a name alone
+         taking a seat some phone can still open, and this is not one. The way
+         back in is the name, and coming back by it is what mints the new key.
+         Every other seat is still gated: the table has to be waiting on it. */
+      const barred = !held.token;
+      if (!barred && !Room.waitingOn(room, seatIndex(room, held.id))) {
         return fail(ws, `the game has gone on without ${held.name}. Only the phone that holds that seat can come back to it`);
       }
+      if (barred) held.token = token();
       attach(ws, room, { role: 'player', seatId: held.id });
       send(ws, { t: 'hello', role: 'player', code: room.code, token: held.token, seatId: held.id });
       return broadcast(room);
