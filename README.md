@@ -46,7 +46,7 @@ rooms to move it into, each a cloth a card table really comes in:
 | **Original** | the green baize, as it always was | green | cream to white |
 | **River** | slate teal into indigo | the night river | white to warm sand |
 | **Casino** | burgundy | red baize | cream |
-| **Parlour** | deep red | the green baize, under brass | cream |
+| **Parlour** | deep red | the green baize, red-backed cards | cream |
 | **Midnight** | near-black | black baize edged in gold | cream |
 | **Saloon** | plum, the smoke the boat puts up | plum | warm white |
 | **Harbour** | navy | navy baize with brass | white |
@@ -73,6 +73,12 @@ belongs with the themes without being one of them: it is the half of a theme
 that is showing, not a theme. They used to be two panels with two names for the
 same sort of thing, which asked the reader to know a difference that is not
 there. Every swatch works in both halves.
+
+A card is backed in the colour of the room it is dealt in, not the colour of the
+cloth: every swatch builds its card backs out of the same hue as its bar, and
+the suite fails on one that does not. Parlour is where that is visible, because
+it is the only theme whose table is not the colour of the room around it --
+red-backed cards on green baize.
 
 **Two things a theme does not touch.** A playing card is white paper with a
 white edge, in a green room and in a red one, so a card's whites are declared

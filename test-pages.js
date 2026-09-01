@@ -2011,6 +2011,29 @@ part('the swatch');
   ok(/--card-face:\s*#ffffff/.test(head) && /--felt-edge:\s*#ffffff/.test(head),
      'they are full white, said once');
 
+  /* The back of a card is the colour of the room it is dealt in. Every swatch
+     builds its cards out of the same hue as its bar, so a table cannot end up
+     with somebody else's deck on it. */
+  const hueOf = (hx) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hx.slice(i, i + 2), 16) / 255);
+    const hi = Math.max(r, g, b), lo = Math.min(r, g, b), d = hi - lo;
+    if (!d) return 0;
+    const h = hi === r ? ((g - b) / d + 6) % 6 : hi === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return h * 60;
+  };
+  const odd = [];
+  const blocks = head.match(/(?::root, )?\[data-swatch="[a-z]+"\]\{[\s\S]*?\n\}/g) || [];
+  blocks.forEach((blk) => {
+    const name = /"([a-z]+)"/.exec(blk)[1];
+    const bar = /--sw-felt:(#[0-9a-f]{6});/.exec(blk);
+    const back = /--felt-hi:(#[0-9a-f]{6});/.exec(blk);
+    if (!bar || !back) { odd.push(name + ' (missing)'); return; }
+    const d = Math.abs(hueOf(bar[1]) - hueOf(back[1]));
+    if (Math.min(d, 360 - d) > 12) odd.push(name + ' ' + Math.round(Math.min(d, 360 - d)) + 'deg');
+  });
+  ok(blocks.length > 1 && !odd.length,
+     'a card is backed in the colour of its own room  got ' + odd.join(', '));
+
   /* Every name the rest of the file asks for is set three times over -- as it
      is, in dark, and by a system set to dark -- and the three have to agree or
      one of them shows a colour from the other half. */
@@ -2034,10 +2057,10 @@ part('the swatch');
 /* The page opens as the game does, and remembers being told otherwise. */
 {
   const dom = makeDom(412, 860);
-  const quiet = { log() {}, info() {}, warn() {}, error() {} };
+  const quiet3 = { log() {}, info() {}, warn() {}, error() {} };
   const load1 = () => new Function('window', 'document', 'localStorage', 'console',
     fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8') + '\n; return UI;')(
-    dom.window, dom.document, dom.localStorage, quiet);
+    dom.window, dom.document, dom.localStorage, quiet3);
   let UI = load1();
   const root = dom.document.documentElement;
 
@@ -2056,6 +2079,28 @@ part('the swatch');
 
   UI.setSwatch('sideboard');
   ok(UI.swatch() === 'original', 'a swatch that is not offered is refused  got ' + UI.swatch());
+
+  /* And it survives the page going away. Remembering the value is not enough:
+     the page has to wear it again on the way up, before anything is drawn, or
+     the choice is kept and never shown. */
+  {
+    const kept = makeDom(412, 860);
+    kept.localStorage.setItem('river-card-score:swatch:v1', 'casino');
+    new Function('window', 'document', 'localStorage', 'console',
+      fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8'))(
+      kept.window, kept.document, kept.localStorage, quiet3);
+    ok(kept.document.documentElement.getAttribute('data-swatch') === 'casino',
+       'a page opening wears what was chosen last time  got '
+       + kept.document.documentElement.getAttribute('data-swatch'));
+  }
+  {
+    const fresh = makeDom(412, 860);
+    new Function('window', 'document', 'localStorage', 'console',
+      fs.readFileSync(path.join(ROOT, 'public/ui.js'), 'utf8'))(
+      fresh.window, fresh.document, fresh.localStorage, quiet3);
+    ok(!fresh.document.documentElement.getAttribute('data-swatch'),
+       'and a page that was never told wears nothing, which is the first swatch');
+  }
 
   // And they are on the settings page, in a panel of their own: a list, not a
   // strip, because six will not fit across a phone.

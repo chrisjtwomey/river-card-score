@@ -140,10 +140,10 @@
 
 [data-swatch="parlour"]{
   /* The green baize of Table, in the room Casino is in. The cloth and the cards
-     are Table's, down to the green on the back of one; everything the room is
-     made of is Casino's -- a deep red bar, brass, and a warm cream page. The
-     only theme where the bar and the table are not the same colour, which is
-     the whole of it: you sit at a green table in a red room. */
+     are Original's; everything the room is made of is Casino's -- a deep red
+     bar, brass, and a warm cream page. The only theme where the table is not
+     the colour of the room around it, which is the whole of it: you sit at a
+     green table in a red room, with red-backed cards on the green. */
   --sw-bg:#fffaf3;               --sw-bg-d:#100f0b;
   --sw-bg2:#f8edda;              --sw-bg2-d:#1a1a13;
   --sw-ink:#241611;              --sw-ink-d:#f3e9da;
@@ -158,8 +158,8 @@
   --sw-chip-on:#7b1414;          --sw-chip-on-d:#a72f2f;
   --sw-shadow:0 1px 2px rgba(28,32,18,.07), 0 8px 24px rgba(28,32,18,.09); --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
 
-  --felt-hi:#1c6b48;
-  --felt-lo:#0d3f2a;
+  --felt-hi:#8f1919;
+  --felt-lo:#3d0a0a;
   --on-felt:#f7e9cf;
   --on-felt-danger:#ffd6cc;
   --card-ink:#1b1210;
