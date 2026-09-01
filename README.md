@@ -945,10 +945,11 @@ the drawing inside the middle 72dp, which is all Android promises to keep -- a
 round launcher cuts the rest away. It is as large as it goes with every inked
 pixel still inside that circle, and it is placed by where the ink is rather than
 by the edges of the picture. The corner's tile is a closer cut of the same
-drawing, because a 38px square is squarer than a boat. Both are cut from
-`art/` at the root of the tree, which is not shipped -- from the boat as it was
-drawn with its sun, before the two were separated for the menu's horizon. The
-marks have not been recut since.
+drawing, because a 38px square is squarer than a boat. Both were cut from an
+earlier drawing of the boat, the one that had its sun in it, and they have not
+been recut since that was replaced by the two separate drawings the menu needs.
+Recutting them means laying `sun.png` behind `boat.png` first: they are still one
+picture on one canvas, so that puts the sun back exactly where it was.
 
 **The app opens on a menu.** The phone draws the boat on cream before a line of
 our code runs -- `res/values-v31/themes.xml`, and `res/drawable/splash_window.xml`
@@ -1544,7 +1545,11 @@ and lets it off by hand rather than waiting. Run it alone with
   number in the body of the file is a colour no swatch could change, and
   `test-pages.js` fails on one.
 - `public/art/` — the pictures the pages load. `mark.png` is the game's mark, the riverboat drawn on nothing, in the corner of every page that carries the name.
-- `art/` — the drawings, at the size they were drawn. `boat.png` is what both marks are cut from; `icon.jpeg` is the same boat on a white ground, which the swatches' colours were read out of. Kept out of `public/` on purpose: everything under `public/` is packed into the APK and unpacked on the device at first run, and a source file no page loads has no business there.
+- `art/` — the three drawings, at the size they were drawn: `boat.png`, `sun.png`
+  and `title.png`, each on nothing. Everything the game shows is cut from these.
+  Kept out of `public/` on purpose: everything under `public/` is packed into the
+  APK and unpacked on the device at first run, and a source file no page loads has
+  no business there.
 
 ## Notes
 
