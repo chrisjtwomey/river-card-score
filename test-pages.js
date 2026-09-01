@@ -3105,6 +3105,35 @@ part('the front page, and the screen');
     ok(JSON.stringify(sent[0]) === '{"t":"playout","id":"b"}',
        'then handed over by name, not by whose turn it is  got ' + JSON.stringify(sent[0]));
 
+    /* A player put out of the game, whether they are at the table or not: one
+       who has to stop and cannot press it themselves, or one the table wants
+       rid of. Auto-play only ever reaches a phone that has already gone
+       quiet -- the table refuses it for a seat somebody is sitting at -- so
+       there was nothing the host could do about a player who was there. */
+    R.Table.standings(box, ST(), { view: boss });
+    rows = openMenu('Ben').map(label);
+    ok(rows.indexOf('Remove from the game') >= 0,
+       'a player at the table can be put out of it  got ' + rows.join(' | '));
+    ok(rows.indexOf('Auto-play their hand') < 0,
+       'which is the only thing there is for a seat somebody is behind');
+    sent.length = 0; asked.length = 0;
+    openMenu('Ben').find((b) => label(b) === 'Remove from the game').fire('click');
+    ok(asked.length === 1 && /^Remove Ben from the game\?$/.test(asked[0].t),
+       'asked about first, by name  got ' + JSON.stringify(asked[0]));
+    ok(/let them back in/.test(asked[0].b || ''),
+       'and told the way back, which is the host\'s  got ' + (asked[0].b || ''));
+    ok(JSON.stringify(sent[0]) === '{"t":"remove","id":"b"}',
+       'then put out by name  got ' + JSON.stringify(sent[0]));
+
+    // A seat the table already has, and a bot, are not put out of anything.
+    R.Table.standings(box, given, { view: boss });
+    ok(openMenu('Ben').map(label).indexOf('Remove from the game') < 0,
+       'a seat the table already holds is already out');
+    const overNow = ST({ phase: 'done' });
+    R.Table.standings(box, overNow, { view: boss });
+    ok(openMenu('Ben').map(label).indexOf('Remove from the game') < 0,
+       'and a game that is over has nobody left to put out of it');
+
     // With real cards the table holds no hand of anybody's.
     const real = ST({ cfg: { deck: 'physical', trump: false } });
     real.seats[1].online = false;

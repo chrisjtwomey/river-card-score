@@ -340,6 +340,38 @@ async function bidRound(P) {
   await okBy(() => back.hello && back.hello.seatId === P[2].seatId, 'resume returns the same seat');
   await okBy(() => host.state.seats[2].online === true, 'seat 2 is back online');
 
+  /* ---- a player put out of a game in play ----
+     The seat cannot go: it is a column on the scorecard. So it stays, the
+     table takes its hand, and the key stops working -- which is what stops the
+     phone walking back in, and the only thing that separates this from a seat
+     that simply went quiet. */
+  {
+    const outTok = P[1].hello.token;
+    P[1].errors.length = 0;
+    P[1].send({ t: 'remove', id: P[2].seatId });
+    await okBy(() => /only the table host/i.test(P[1].last()),
+       'a player cannot put another out  got ' + P[1].last());
+
+    host.send({ t: 'remove', id: P[1].seatId });
+    await okBy(() => host.state.seats[1].left === true, 'the host can, and the table takes the hand');
+    ok(host.state.seats.length === 3, 'the seat stays: it is a column on the card');
+    await okBy(() => P[1].kicked, 'and the phone is told it is out  got ' + P[1].kicked);
+
+    // The key it held is not a key any more.
+    const walk = client('walkback'); await walk.ready;
+    walk.send({ t: 'resume', code, token: outTok });
+    await okBy(() => /seat is gone/i.test(walk.last()),
+       'the key it held opens nothing  got ' + walk.last());
+    // Nor does a key of nothing, which a seat put out would otherwise match.
+    walk.send({ t: 'resume', code, token: null });
+    await okBy(() => /seat is gone/i.test(walk.last()), 'and neither does no key at all');
+    walk.ws.close();
+
+    // The way back in is the host's, by name, as for any seat the table holds.
+    host.send({ t: 'letback', id: P[1].seatId });
+    await okBy(() => host.state.seats[1].left === false, 'the host can let them back in');
+  }
+
   // ---- late join is refused ----
   const late = client('late'); await late.ready;
   late.send({ t: 'join', code, name: 'Zoe' });

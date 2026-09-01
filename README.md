@@ -208,7 +208,7 @@ under the bids on the TV screen, and beside the turn on the phone:
 
 | | |
 |---|---|
-| **❚❚ Pause / ▶ Play** | Stops the table, for everybody. |
+| **❚❚ Pause / ▶ Play** | Pauses the table, for everybody. |
 | **Start the hand** / **Take the trick in** | Only where the table has hung on a beat nothing is left to end. |
 | **Bum deal** | Throws the hand in and deals it again, counting the re-deal. Any player can ask; the dealer and the table host throw it in. |
 | **Reset round** | Puts the round in play back to its bids, to be played again. |
@@ -247,6 +247,18 @@ is behind — and carries a ⋯ for whoever runs the table:
   behind, not only the one the table is standing on: they need not be holding
   the game up for their hand to be one nobody is behind. Only on a table dealt
   on the phones; with real cards their cards are on the table in front of them.
+- **Remove from the game** — a player put out of a game already in play,
+  whether they are sitting at the table or not: one who has to stop and cannot
+  press it themselves, or one the table wants rid of. The seat stays, because
+  it is a column on the scorecard and the rounds already played are theirs, and
+  the table takes its hand where there is a hand to take. What goes with them
+  is the key: their phone cannot come back to the seat, which is the whole of
+  what makes this different from a seat that went quiet, and why *Auto-play
+  their hand* is not it — the table refuses that for a seat somebody is behind.
+  Both decks; with real cards there is no hand for the table to hold, but there
+  is still a person to be rid of, and the host bids for the seat as they would
+  for any other nobody is behind. **Let back in** is the way back, and it is the
+  host's alone.
 - **Make table host** — the table passed on, mid-game. Never to a bot, and
   never to a seat the table is playing.
 - **They dealt this hand** — who dealt. Only with **real cards**, where a

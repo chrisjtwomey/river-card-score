@@ -327,6 +327,46 @@ part('a round opens in one place, whatever brought it there');
 }
 
 {
+  /* ---- a player put out of a game in play ----
+     The seat cannot go: the scorecard is a column for it and the rounds
+     already played are that player's. So it stays, the table takes its hand,
+     and the key stops working -- which is the whole of what makes this
+     different from a seat that went quiet, and why the host has it at all. */
+  const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual', max: 2, pattern: 'down', ones: 1 });
+  const cal = t.room.seats[2];
+  const key = cal.token;
+  ok(!!key, 'a seat has a key to come back with');
+
+  ok(/only the table host/.test(t.say(1, { t: 'remove', id: cal.id }) || ''),
+     'a player cannot put another player out  got ' + t.say(1, { t: 'remove', id: cal.id }));
+  ok(t.say('host', { t: 'remove', id: cal.id }) === null, 'whoever runs the table can');
+  ok(t.room.seats.length === 3 && t.room.seats[2].id === cal.id,
+     'the seat stays, because the scorecard is a column for it');
+  ok(cal.left === true && cal.online === false, 'and the table takes its hand');
+  ok(cal.token === null, 'the key goes with the player  got ' + JSON.stringify(cal.token));
+  ok(G.tablePlays(cal, t.room.cfg), 'so the hand is one the table plays');
+
+  // And the way back in is the host's, by name, exactly as for a seat that left.
+  ok(G.handedOver(cal), 'the seat reads as one the table was given');
+  ok(t.say('host', { t: 'letback', id: cal.id }) === null, 'which the host can give back');
+  ok(cal.left === false, 'and then it is open again  got ' + cal.left);
+
+  // A bot is the table's own, and a seat put out is already out.
+  const bot = table().sit(['Ann']).sit(['Otter'], { bot: true })
+    .rules({ deck: 'virtual', max: 1, pattern: 'down', ones: 1 });
+  bot.Room.startGame(bot.room);
+  ok(bot.Room.removeSeat(bot.room, bot.room.seats[1].id) === null,
+     'a bot is the table\'s own and is not put out, it is taken off in the lobby');
+  ok(bot.Room.removeSeat(bot.room, 'nobody') === null, 'and no seat is no seat');
+
+  /* In the lobby the seat itself goes, which is `kick`: there is no column
+     for it yet, so nothing is kept by keeping it. */
+  const lob = table().sit(['Ann', 'Bob']);
+  ok(lob.Room.removeSeat(lob.room, lob.room.seats[1].id) === null,
+     'in the lobby this is not the verb: the seat simply goes');
+}
+
+{
   // the last round scores, and the game is over
   const t = started(['Ann', 'Bob'], { max: 1, pattern: 'down', ones: 1 });
   ok(t.room.rounds.length === 1, 'a one-round game');

@@ -556,12 +556,16 @@ function handle(ws, m) {
   if (m.t === 'resume') {
     const room = seatableOf(m.code);
     if (!room) return fail(ws, 'that table is gone');
-    if (m.token === room.hostToken) {
+    if (m.token && m.token === room.hostToken) {
       attach(ws, room, { role: 'host' });
       send(ws, { t: 'hello', role: 'host', code: room.code, token: room.hostToken,
                  replay: !!room.replay });
       return broadcast(room);
     }
+    /* A key that is not one. A seat put out of a game keeps its place and
+       loses its key, so a token of nothing must never find it -- and the host
+       token above is checked the same way for the same reason. */
+    if (!m.token) return fail(ws, 'that seat is gone');
     const seat = room.seats.find((s) => s.token === m.token);
     if (!seat) return fail(ws, 'that seat is gone');
     seat.left = false;                       // whoever left has come back to it

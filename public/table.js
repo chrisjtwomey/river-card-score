@@ -686,6 +686,15 @@ const Table = (function () {
       out.push({ label: 'Auto-play their hand', danger: true,
                  run: () => handOver(view, s.name, s.id) });
     }
+    /* A player put out of the game, whether they are at the table or not: one
+       who has to stop and cannot press it themselves, or one the table wants
+       rid of. The seat stays -- it is a column -- and the key goes with them,
+       which is what makes it different from a seat that went quiet. Not a
+       bot's, which is the table's own, and not on a game already over. */
+    if (!s.bot && !s.left && Game.PLAY_PHASES.indexOf(ST.phase) >= 0) {
+      out.push({ label: 'Remove from the game', danger: true,
+                 run: () => putOut(view, s.name, s.id) });
+    }
     /* Who dealt. With real cards a person did the dealing and can have been the
        wrong one -- and only while nobody has bid, because the order of bidding
        is the dealer's. */
@@ -754,6 +763,17 @@ const Table = (function () {
       'Auto-play', true).then((yes) => {
         if (yes) view.send(id ? { t: 'playout', id } : { t: 'playout' });
       });
+  }
+
+  /* Putting a player out of a game in play. Asked about first: it is the one
+     thing on this list that the person it is about cannot undo. */
+  function putOut(view, who, id) {
+    const gone = `${who} cannot come back to the seat on their own \u2014 you let them back in `
+      + `by name, from this same menu.`;
+    return UI.ask(`Remove ${who} from the game?`,
+      `The seat keeps its name and its place on the scorecard, and the table takes its hand `
+      + `from here on. ${gone}`,
+      'Remove', true).then((yes) => { if (yes) view.send({ t: 'remove', id }); });
   }
 
   /* Who won, and by how much. The places come back with it, because the host
