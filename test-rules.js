@@ -1717,6 +1717,25 @@ part('a game put back on a table of its own');
     const copy = copyOf(t, scored);
     ok(JSON.stringify(copy.rounds[0].tricks) === JSON.stringify(trail[scored].v),
        'a round of taps put back scores what it scored  got ' + JSON.stringify(copy.rounds[0].tricks));
+
+    /* A seat only leaves the table in the lobby, on a copy as on a table: a
+       scorecard is a column for every seat, and taking one out mid-game would
+       shift every round already played onto the wrong people. Mid-game the
+       verb is Leave, which keeps the column and gives the hand to the table.
+
+       The lobby is not out of reach on a copy, though: the first point of
+       every trail is the game starting, and its picture is the lobby. Stand
+       there and a seat can be put out like any other. */
+    ok(copy.phase !== 'lobby' && t.Room.kickSeat(copy, copy.seats[1].id) === null,
+       'mid-game a copy will not put a seat out either');
+    ok(copy.seats.length === 3 && !!t.Room.standDown(copy, 1),
+       'the mid-game verb is the one that keeps the column');
+
+    const top = copyOf(t, 0);
+    ok(top.phase === 'lobby', 'the first point of a trail is the lobby  got ' + top.phase);
+    const was = top.seats.length;
+    ok(!!t.Room.kickSeat(top, top.seats[1].id) && top.seats.length === was - 1,
+       'and standing there, a seat can be put out  got ' + top.seats.length + ' of ' + was);
   }
 
   {
