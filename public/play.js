@@ -129,7 +129,7 @@ function render() {
 
 /* The panel that is only there when the table needs a decision from this
    phone: a vote to answer, or a seat with nobody behind it that the table is
-   stopped on. renderVote has already said whether the vote box shows. */
+   waiting on. renderVote has already said whether the vote box shows. */
 function renderAttention(r, me) {
   const v = view();
   Round.bidFor($('#bidfor-pad'), ST, r, v);
@@ -140,7 +140,7 @@ function renderAttention(r, me) {
   $('#attn-panel').hidden = rows.every((sel) => $(sel).hidden);
 }
 
-/* The table is stopped on this seat and has been for a while, so it asks
+/* The table is waiting on this seat and has been for a while, so it asks
    whether anybody is there. Any tap is the answer -- the clock is wound back
    by every message a phone sends, and this dialog sends one. What happens if
    nobody taps depends on the table: a hand dealt on the phones is one
@@ -243,7 +243,7 @@ function renderCaptain(lobby) {
   const row = $('#bum-row');
   if (lobby) { row.hidden = true; return; }
   /* The same row the TV screen carries, drawn by the same widgets: throw the
-     hand in, stop the table, move it on where it has hung, play the round
+     hand in, pause the table, move it on where it has hung, play the round
      again, start over. The bum deal is any player's; the rest are the table
      host's, and each widget knows which. */
   const v = view();
@@ -376,11 +376,11 @@ function renderTurn(r, me) {
     $('#turn-eyebrow').textContent = 'Bidding';
     const amend = Game.changeableSeat(r, ST.seats.length) === me;
 
-    /* A stopped table takes no bid, so it is not offered one. The round line
-       already says the table is stopped; a pad that is lit and refused says
-       the opposite of it. */
+    /* A paused table takes no bid, so it is not offered one. The round line
+       already says the table is paused; a pad that is lit and refused says the
+       opposite of it. */
     const showPad = () => {
-      if (Game.stopped(ST)) return Game.forbiddenBid(r, me, ST.cfg, ST.seats.length);
+      if (Game.paused(ST)) return Game.forbiddenBid(r, me, ST.cfg, ST.seats.length);
       bidPad.hidden = false;
       const forbidden = Game.forbiddenBid(r, me, ST.cfg, ST.seats.length);
       const chips = $('#bid-chips');
@@ -401,10 +401,10 @@ function renderTurn(r, me) {
 
     if (ST.turn === me) {
       panel.classList.add('mine');
-      $('#turn-text').textContent = Game.stopped(ST) ? 'Your bid, when the table starts again' : 'Your bid';
+      $('#turn-text').textContent = Game.paused(ST) ? 'Your bid, when the table starts again' : 'Your bid';
       const forbidden = showPad();
-      $('#bid-hint').textContent = Game.stopped(ST)
-        ? 'The table is stopped. Nothing lands until whoever runs it starts it again.'
+      $('#bid-hint').textContent = Game.paused(ST)
+        ? 'The table is paused.'
         : forbidden === null
           ? `How many of the ${r.cards} tricks will you win?`
           : `You deal, so you bid last. ${forbidden} is not allowed: the bids must not total ${r.cards}.`;
@@ -413,8 +413,8 @@ function renderTurn(r, me) {
       panel.classList.add('amend');
       $('#turn-text').textContent = `You bid ${r.bids[me]}`;
       showPad();
-      $('#bid-hint').textContent = Game.stopped(ST)
-        ? 'The table is stopped. Nothing lands until whoever runs it starts it again.'
+      $('#bid-hint').textContent = Game.paused(ST)
+        ? 'The table is paused.'
         : `Tap another number to change your bid. You can change it until ${ST.seats[ST.turn].name} bids.`;
     } else if (ST.turn === null) {
       $('#turn-text').textContent = 'All bids are in.';

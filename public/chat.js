@@ -82,7 +82,7 @@ const Chat = (function () {
       + '<form class="chat-say"><input class="chat-text" type="text" maxlength="200"'
       + ' autocomplete="off" placeholder="Say something…">'
       + '<button class="btn primary" type="submit">Send</button></form>'
-      + '<p class="hint chat-read" hidden>This window is only watching.</p>'
+      + '<p class="hint chat-read" hidden>You are watching this table.</p>'
       + '</div>';
     document.body.appendChild(sheet);
     list = sheet.querySelector('.chat-list');

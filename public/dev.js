@@ -606,7 +606,7 @@ function renderScrub() {
   UI.showCell(box, box.querySelector('.scell.on'));
 }
 
-/* Stopping the table, and walking it on. A stopped table is stopped for
+/* Pausing the table, and walking it on. A paused table is paused for
    everybody -- no bid, no card, no trick, and none of the hands it plays for
    itself -- so it is offered wherever a hand is out, a table of people with
    real cards included. `Game.canPause` is the same question the host screen's
@@ -985,7 +985,7 @@ function renderPhaseRow() {
        they belong to a table, and on a copy they are not there rather than
        there and refused. */
     tk.hidden = !r || replaying() || Game.virtual(S) || S.phase !== 'tricks'
-      || Game.stopped(S);      // a stopped table takes no trick, here either
+      || Game.paused(S);      // a paused table takes no trick, here either
     if (!tk.hidden && tk._seats && tk._seats.dataset.key !== S.seats.map((x) => x.name).join('|')) {
       tk._seats.dataset.key = S.seats.map((x) => x.name).join('|');
       tk._seats.innerHTML = '';
@@ -1363,7 +1363,7 @@ function renderHead() {
        is a copy that went its own way at the point it is standing on. */
     const held = !!(S && S.paused);
     $('#subtitle').textContent = REPLAY.forked
-      ? `table ${REPLAY.of}, changed by hand · ${held ? 'stopped' : 'playing'}`
+      ? `table ${REPLAY.of}, changed by hand · ${held ? 'paused' : 'playing'}`
         + ` · point ${REPLAY.at + 1} of ${REPLAY.n}`
       : `watching table ${REPLAY.of} again · point ${REPLAY.at + 1} of ${REPLAY.n}`;
     return;

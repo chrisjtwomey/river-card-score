@@ -45,7 +45,7 @@ const Round = (function () {
   /* ---------- the round line ---------- */
 
   function header(root, ST, view) {
-    /* The table has been stopped. Every screen says so, on the round line it
+    /* The table has been paused. Every screen says so, on the round line it
        already has: a hand that is waiting on a bot looks exactly like a hand
        that has hung, and nobody should have to guess which. */
     const mark = q(root, '#round-paused');
@@ -119,9 +119,9 @@ const Round = (function () {
     if (!root) return;
     const p = ST.play;
     const may = Game.countingSeat(ST) === view.me || (view.me < 0 && view.boss);
-    // A stopped table takes no trick, so it is not offered one to take.
+    // A paused table takes no trick, so it is not offered one to take.
     const on = may && !!r && !!playing(ST) && !Game.virtual(ST) && !!p && !!p.log
-      && !Game.stopped(ST);
+      && !Game.paused(ST);
     root.hidden = !on;
     if (!on) return;
     const rows = part(root, '.count-rows', () => make('div', 'count-rows'));
@@ -154,8 +154,8 @@ const Round = (function () {
   function bidFor(root, ST, r, view) {
     if (!root) return;
     const p = ST.phase === 'bid' && r ? Game.awaySeat(ST) : -1;
-    // A stopped table is stopped for the seat it is holding too.
-    const on = view.boss && p >= 0 && p !== view.me && !Game.stopped(ST);
+    // A paused table is paused for the seat it is holding too.
+    const on = view.boss && p >= 0 && p !== view.me && !Game.paused(ST);
     root.hidden = !on;
     if (!on) return;
     const who = ST.seats[p], dealt = Game.virtual(ST);
@@ -188,7 +188,7 @@ const Round = (function () {
   function playFor(root, ST, view) {
     if (!root) return;
     const p = ST.phase === 'tricks' && Game.virtual(ST) ? Game.awaySeat(ST) : -1;
-    const on = view.boss && p >= 0 && !Game.stopped(ST);
+    const on = view.boss && p >= 0 && !Game.paused(ST);
     root.hidden = !on;
     if (!on) return;
     const btn = part(root, '.btn', () => button('btn ghost', 'Play a card for them'));
@@ -214,10 +214,10 @@ const Round = (function () {
     onClick(btn, () => Table.handOver(view, root._who || 'that seat'));
   }
 
-  /* The table has stopped on a seat nobody is behind, at a table with real
+  /* The table is waiting on a seat nobody is behind, at a table with real
      cards. Nothing can be taken from that player -- their hand is on the table
      in front of them, not on a phone -- so every screen says the table is
-     stopped, and whoever runs it says when to go on. */
+     held up, and whoever runs it says when to go on. */
   function stalled(root, ST, view) {
     if (!root) return;
     const p = ST.stalled ? ST.seats.findIndex((s) => s.id === ST.stalled.id) : -1;
@@ -225,7 +225,11 @@ const Round = (function () {
     if (p < 0) return;
     const mins = Math.max(1, Math.round((ST.stalled.ms || 0) / 60000));
     const hint = part(root, '.hint', () => make('p', 'hint'));
-    hint.textContent = `Paused. ${ST.seats[p].name} has not answered for `
+    /* Not "paused": that is the hold somebody pressed, and this is the table
+       held up on a seat nobody is behind. Two things with two ways out of
+       them, and one word for both left a player pressing Play at a phone that
+       had gone quiet. */
+    hint.textContent = `Waiting on ${ST.seats[p].name}. No answer for `
       + `${mins} minute${mins === 1 ? '' : 's'}.`;
     const row = part(root, '.row-actions', () => {
       const r = make('div', 'row-actions');
@@ -397,11 +401,11 @@ const Round = (function () {
 
   // The dealer and whoever runs the table deal again on the spot, so they are
   // asked first. Anybody else is asking the table, which can still be taken back.
-  /* Stop the table, and let it go again. A stopped table is stopped for
+  /* Pause the table, and let it go again. A paused table is paused for
      everybody -- no bid, no card, no trick, and none of the hands it plays for
      itself -- so it is offered wherever a hand is out, a table of people with
-     real cards included. Being stopped does not take the button away: it is
-     how you start it again. */
+     real cards included. Being paused does not take the button away: it is how
+     you start it again. */
   function pause(root, ST, view) {
     if (!root) return;
     const on = view.boss && Game.canPause(ST);
@@ -411,7 +415,7 @@ const Round = (function () {
     root.textContent = root._now ? '▶ Play' : '❚❚ Pause';
     root.title = root._now
       ? 'Start the table again. Bids and cards land as before.'
-      : 'Stop the table. No bid, no card and no trick lands, and it plays none '
+      : 'Pause the table. No bid, no card and no trick lands, and it plays none '
         + 'of its own hands, until you start it again.';
     root.setAttribute('aria-pressed', String(root._now));
     onClick(root, () => view.send({ t: 'pause', on: !root._now }));

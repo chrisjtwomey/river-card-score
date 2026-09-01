@@ -223,7 +223,7 @@ const Viewer = (function () {
 
   // Whether the copy's own table is held. A copy is, always; a fork is until
   // it is carried on.
-  const stopped = (R) => !!(R && R.state && R.state.paused);
+  const paused = (R) => !!(R && R.state && R.state.paused);
 
   /* Whether the one button runs the table rather than the tape. Only a fork
      has a game of its own to run, and only at the end of its own tape: with
@@ -298,7 +298,7 @@ const Viewer = (function () {
       btn(box, 'btn vw-back', '◀', 'One point back', () => ask({ do: 'step', by: -1 }));
       btn(box, 'btn primary vw-play', '', '', () => {
         const R = now();
-        return runsTable(R) ? ask({ do: 'run', on: stopped(R) })
+        return runsTable(R) ? ask({ do: 'run', on: paused(R) })
                             : ask({ do: R.playing ? 'pause' : 'play' });
       });
       btn(box, 'btn vw-fwd', '▶', 'One point on', () => ask({ do: 'step', by: 1 }));
@@ -334,7 +334,7 @@ const Viewer = (function () {
        there. Two buttons for that were two clocks wearing one face. */
     const play = box.querySelector('.vw-play');
     if (runsTable(R)) {
-      const held = stopped(R);
+      const held = paused(R);
       play.textContent = held ? '▶ Play' : '❚❚ Pause';
       play.title = held
         ? 'Carry the game on from here: the panes hold their seats, and the bots take their turns'
@@ -359,8 +359,8 @@ const Viewer = (function () {
 
      Beside the word, the two verbs that move between them: Fork branches here,
      Reset puts it back. What the fork's own table is doing rides on the word,
-     because a stopped fork looks exactly like a running one and every card
-     comes back "the table is stopped" with nothing on the page agreeing. */
+     because a paused fork looks exactly like a running one and every card
+     comes back "the table is paused" with nothing on the page agreeing. */
   function fork(root, R, view) {
     if (!root || !R) return;
     const box = part(root, 'viewer-fork');
@@ -395,16 +395,16 @@ const Viewer = (function () {
             .then((yes) => { if (yes) box._view.send({ do: 'reset' }); }));
     }
     box.hidden = false;
-    const held = stopped(R);
+    const held = paused(R);
     box._said.textContent = R.forked
-      ? `forked \u00b7 ${held ? 'stopped' : 'playing'}` : 'original replay';
+      ? `forked \u00b7 ${held ? 'paused' : 'playing'}` : 'original replay';
     box._said.classList.toggle('on', !!R.forked);
     box._said.title = !R.forked
       ? 'This is the game that was played, as the trail recorded it. Nothing here is yours yet.'
       : held
-        ? 'A table of its own, held. Play carries it on: the panes hold their seats, and the '
-          + 'bots take their turns.'
-        : 'A table of its own, running. Pause stops it.';
+        ? 'A table of its own, paused. Play carries it on: the panes hold their seats, and '
+          + 'the bots take their turns.'
+        : 'A table of its own, running. Pause holds it.';
     /* At the end of a fork's own tape there is nothing in front to drop, so
        there is nothing branching here would do. Anywhere else there is. */
     const end = !!(R.forked && R.at >= R.n - 1);

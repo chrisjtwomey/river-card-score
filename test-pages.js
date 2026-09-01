@@ -427,7 +427,7 @@ function table(o) {
   ok(t.stage.querySelectorAll('.dcard.mine').length === t.cards, 'and it is on the table, not gone');
 }
 
-/* A stopped table is stopped for everybody, and the felt says so rather than
+/* A paused table is paused for everybody, and the felt says so rather than
    letting a card leave the hand for a refusal. The card used to go out, the
    table answered "the table is stopped" on the socket, and nothing here ever
    heard it: the card sat on the table, held out of the hand it never left,
@@ -441,8 +441,8 @@ function table(o) {
   t.overlay.fire('pointerup', { pointerId: 1 });
   t.overlay.fire('pointerdown', t.pt(3));
   t.overlay.fire('pointerup', { pointerId: 1 });
-  ok(t.sends.length === 0, 'a stopped table is offered no card  got ' + JSON.stringify(t.sends));
-  ok(/stopped/.test(t.hint()), 'and the line under the hand says why  got ' + t.hint());
+  ok(t.sends.length === 0, 'a paused table is offered no card  got ' + JSON.stringify(t.sends));
+  ok(/paused/.test(t.hint()), 'and the line under the hand says why  got ' + t.hint());
   ok(t.stage.querySelectorAll('.dcard.mine').length === t.cards,
      'with every card still in the hand');
 
@@ -468,9 +468,9 @@ function table(o) {
   t.overlay.fire('pointerdown', t.pt(3));
   t.overlay.fire('pointerup', { pointerId: 1 });
   ok(t.sends.length === 1, 'the card goes to the table');
-  ok(t.L.Felt.refused('The table has stopped.') === true,
+  ok(t.L.Felt.refused('The table is paused.') === true,
      'a refusal is an answer, and the felt takes it as one');
-  ok(/stopped/i.test(t.hint()), 'which is said under the hand  got ' + t.hint());
+  ok(/paused/i.test(t.hint()), 'which is said under the hand  got ' + t.hint());
   // And it is a card again: it plays, rather than sitting out of reach.
   t.overlay.fire('pointerdown', t.pt(3));
   t.overlay.fire('pointerup', { pointerId: 1 });
@@ -4394,12 +4394,12 @@ part('the dev controls, on each kind of server');
 
     const held = (on) => JSON.parse(devState(false, { paused: on }));
     say({ forked: true, at: 12, n: 13, state: held(true) });
-    ok(forkBox().hidden === false && word() === 'forked · stopped',
+    ok(forkBox().hidden === false && word() === 'forked · paused',
        'a fork says so, and what its table is doing  got ' + word());
     ok(resetBtn().disabled === false, 'and now there is something to put back');
     ok(forkBtn().disabled === true,
        'with nothing in front of the head to branch away from');
-    ok(/changed by hand · stopped/.test(P.pick('#subtitle').textContent),
+    ok(/changed by hand · paused/.test(P.pick('#subtitle').textContent),
        'and the head says it too, where the eye already is  got '
        + P.pick('#subtitle').textContent);
     ok(play.textContent === '▶ Play', 'the one button offers to go forward');
@@ -4999,19 +4999,19 @@ part('bidding for a seat that is not there, and leaving');
 
     const held = mine(); held.paused = true;
     P.feed(held);
-    ok(P.pick('#bid-pad').hidden === true, 'a stopped table is offered no bid at all');
-    ok(/stopped/.test(P.pick('#bid-hint').textContent),
+    ok(P.pick('#bid-pad').hidden === true, 'a paused table is offered no bid at all');
+    ok(/paused/.test(P.pick('#bid-hint').textContent),
        'and says why, where the numbers were  got ' + P.pick('#bid-hint').textContent);
     P.feed(mine());
     ok(P.pick('#bid-pad').hidden === false, 'which comes back when the table is let go');
   }
 
-  {   /* A stopped table is stopped for the seat it is holding too. Whoever
-         runs it stopped it on purpose; the way on is to start it again, not
-         to bid past it and be refused. */
+  {   /* A paused table is paused for the seat it is holding too. Whoever runs
+         it paused it on purpose; the way on is to start it again, not to bid
+         past it and be refused. */
     const P = playPage(seed, '?c=TEST');
     P.feed(Object.assign(table({}), { paused: true }));
-    ok(P.pick('#bidfor-pad').hidden === true, 'nor is it offered while the table is stopped');
+    ok(P.pick('#bidfor-pad').hidden === true, 'nor is it offered while the table is paused');
     P.feed(table({}));
     ok(P.pick('#bidfor-pad').hidden === false, 'and it comes back when the table is let go');
   }
@@ -5518,13 +5518,13 @@ part('bidding for a seat that is not there, and leaving');
     S.feed(counting([]));
     ok(S.pick('#host-count').hidden === true, 'a screen that only shows the table does not');
 
-    /* A stopped table takes no trick, so it is not offered one to take. The
-       round line already says the table is stopped; rows that are lit and
+    /* A paused table takes no trick, so it is not offered one to take. The
+       round line already says the table is paused; rows that are lit and
        refused say the opposite of it. */
     const held = counting([]); held.paused = true;
     const Q = playPage(seed, '?c=TEST');
     Q.feed(held);
-    ok(Q.pick('#trick-count').hidden === true, 'a stopped table is offered no trick to count');
+    ok(Q.pick('#trick-count').hidden === true, 'a paused table is offered no trick to count');
     Q.feed(counting([]));
     ok(Q.pick('#trick-count').hidden === false, 'and gets it back when the table is let go');
 
@@ -5688,8 +5688,12 @@ part('bidding for a seat that is not there, and leaving');
     const stop = (o) => Object.assign(table(o || {}), { stalled: { id: 's2', ms: 300000 } });
     P.feed(stop());
     const row = P.pick('#stalled-row');
-    ok(row.hidden === false, 'every screen says the table is stopped');
-    ok(row.querySelector('.hint').textContent === 'Paused. Cal has not answered for 5 minutes.',
+    ok(row.hidden === false, 'every screen says the table is held up');
+    /* Not "paused": that word is the hold somebody pressed, and this is a
+       table waiting on a seat nobody is behind. Two things with two ways out
+       of them, and one word for both had a player pressing Play at a phone
+       that had gone quiet. */
+    ok(row.querySelector('.hint').textContent === 'Waiting on Cal. No answer for 5 minutes.',
        'naming the seat and how long  got ' + row.querySelector('.hint').textContent);
     ok(P.pick('#attn-panel').hidden === false, 'and the panel it sits in is up');
     P.socks[0].sent.length = 0;

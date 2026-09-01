@@ -193,7 +193,7 @@
      it would be refused. */
   const mustDeal = (state) => !!(state && (state.seats || []).some((s) => s.bot));
 
-  // The seat the table is stopped on, or null. Bidding: the next bidder.
+  // The seat the table is waiting on, or null. Bidding: the next bidder.
   // Playing: the seat on play. Never the dealer at a table with real cards --
   // typing the tricks in is not a turn, and nobody is waited for.
   function onTurn(state) {
@@ -240,7 +240,7 @@
 
   /* Whether stopping the table is something this table can be asked for.
 
-     A stopped table is stopped for everybody: it plays none of its own hands,
+     A paused table is paused for everybody: it plays none of its own hands,
      and nobody may bid, play a card or count a trick until it is let go. So
      the question is only whether a hand is out -- both decks have one, and a
      table of people with real cards is exactly the table most likely to want
@@ -250,15 +250,17 @@
     !!state && PLAY_PHASES.indexOf(state.phase) >= 0;
 
   /* Whether the hand may be moved on at all: a bid, a card, a trick counted.
-     A stopped table refuses all six of those (`live` in lib/messages.js), so
+     A paused table refuses all six of those (`live` in lib/messages.js), so
      every screen asks this before it offers one -- a control left lit on a
-     stopped table earns a refusal for a tap that looked allowed, and on the
+     paused table earns a refusal for a tap that looked allowed, and on the
      felt the card had already left the hand by then.
 
+     Paused is the hold somebody pressed, and nothing else: a table waiting on
+     a seat nobody is behind is `stalled`, and a table that is over is over.
      Not the same question as whose turn it is, and not what a pause is for
-     either: putting a game right is exactly what a table is stopped for, so
+     either -- putting a game right is exactly what a table is paused for, so
      the scorecard, the seat verbs and the record are untouched by it. */
-  const stopped = (state) => !!state && !!state.paused;
+  const paused = (state) => !!state && !!state.paused;
 
   /* A seat the table was handed: a player who left, or one the clock gave up
      on. Never a bot, which was nobody's to begin with. This is the seat that
@@ -302,7 +304,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, mustDeal, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, stopped, handedOver, PLAY_PHASES,
+                virtual, mustDeal, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, paused, handedOver, PLAY_PHASES,
                 awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };

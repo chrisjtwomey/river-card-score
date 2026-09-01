@@ -108,7 +108,7 @@ waiting on them. Three ways back:
 
 **A phone that is not coming back** can be handed to auto-play for good:
 **Auto-play their hand** appears beside the bid-for and play-for buttons
-whenever the game is stopped on an empty seat. The seat keeps its name and
+whenever the game is waiting on an empty seat. The seat keeps its name and
 its column, auto-play takes it from there on, and the phone that holds the
 seat takes it back by coming to the table. From the ⋯ on a
 player's standings row any seat nobody is behind can be handed over, not only
@@ -136,7 +136,7 @@ auto-play takes its hand from there on. That phone can still come back to the se
 from the front page, and it is a player's again.
 
 **A seat nobody is behind leaves the table.** A clock runs on a seat while
-nobody holds it — no window open on it — and while the table is stopped on it
+nobody holds it — no window open on it — and while the table is waiting on it
 and can go no further. A phone that is open with nothing to do is never idle,
 however long it sits there: at a table with real cards a phone is touched to
 bid and not again, and the players are all sat around the table. A minute
@@ -169,26 +169,32 @@ A table of bots alone is worth looking at — a table of stand-ins on the dev
 page, a screen put up to watch one — so it plays while it is looked at. Close
 the last window on it and it stops.
 
-**Stopping it.** The host screen and the table host's phone both carry a
-**❚❚ Pause**, in the row of controls under the bids, whenever a hand is out. A stopped
-table is stopped for everybody: it plays none of its own hands — a bot's, or one
+**Pausing it.** The host screen and the table host's phone both carry a
+**❚❚ Pause**, in the row of controls under the bids, whenever a hand is out. A paused
+table is paused for everybody: it plays none of its own hands — a bot's, or one
 handed over to it — and no bid, no card and no trick lands until it is let go.
-Every screen shows **❚❚ paused** on its round line, so a stopped table is never
+Every screen shows **❚❚ paused** on its round line, so a paused table is never
 mistaken for a hung one, and the same button lets it go again.
 
 The screens ask the same question the table does, so nothing is offered that
 would be refused: the bid pad is not put up, the cards on the felt do not lift,
 the trick rows are not there, and the pads for a seat nobody is behind go with
-them. Each says the table is stopped where the control was. They used to stay
+them. Each says **The table is paused** where the control was. They used to stay
 lit and earn a refusal for a tap that looked allowed — and on the felt the card
 had already left the hand by then, which held it out of a hand it never left for
 the rest of the round.
 
 Everything whoever runs the table does to put a game right goes on working
-while it is stopped — a step back, a bum deal, a seat given back, a new game.
-That is what a table is stopped for. A table of people playing with real cards
-can be stopped like any other, and is the one most likely to want a moment: the
+while it is paused — a step back, a bum deal, a seat given back, a new game.
+That is what a table is paused for. A table of people playing with real cards
+can be paused like any other, and is the one most likely to want a moment: the
 food arrives, or somebody is arguing about a rule.
+
+*Paused* is only ever the hold somebody pressed, and *stopped* is only ever the
+final thing: a table that is over, or the phone hosting a game shutting its
+server down. A table held up on a seat nobody is behind is a third thing again
+and says so — **Waiting on Ann. No answer for 3 minutes.** Each has its own way
+out of it, so each has its own word.
 
 ### Running the table, mid-game
 
@@ -579,7 +585,7 @@ that band.
   read as one page rather than a stack of cards,
   with **Leave the game** across the foot of it. One panel appears on it only
   when the table needs a decision from that phone: a vote to answer, or a seat
-  with nobody behind it that the table is stopped on.
+  with nobody behind it that the table is waiting on.
   The other corner opens table talk.
 - **A table of many comes down in size.** Eight piles at full size do not go
   round a phone, so the piles, the stacks of tricks won and the names under
@@ -1130,7 +1136,7 @@ The controls are one band at the foot of the window, three rows — the same row
 - **Go to** — the whole scorecard as cells sharing the row between them: the lobby, every round with its hand size written out, the finish. Below the width a hand size needs they stop shrinking and the strip scrolls instead — with no scrollbar, which was a bar of its own across the band: a strip with more in it than fits fades out on whichever side there is more on, and stops fading once you reach that end. Landing on a round near an edge brings the next couple of cells in with it, rather than leaving it hard against the edge where nothing says whether there is anything after it. Click a round and the game is taken there — the card is rebuilt and played up to it with rounds a real table could make. The **bid / tricks** toggle says where the round lands: waiting for its bids, or with its bids in. So the last round with its bids in — the doorstep of the end of the game — is two clicks, and the end itself one more.
 - **One-shots** — fill bids, fill tricks, play the round through, a bum deal vote, and **randomise** (shuffles the rules and plays a random number of rounds).
 
-- **❚❚ Pause / ▶ Play** and **Step** — on a table that plays a hand of its own. Pause is the same control the host screen has, said the same way. **Step**, which only the dev page has, then lets the table make exactly one move: one bid, or one card. It is how a hand is read at your own pace rather than at a bot's. Step is live only while the table is stopped, and it invents nothing — it is the move the bots were going to make anyway.
+- **❚❚ Pause / ▶ Play** and **Step** — on a table that plays a hand of its own. Pause is the same control the host screen has, said the same way. **Step**, which only the dev page has, then lets the table make exactly one move: one bid, or one card. It is how a hand is read at your own pace rather than at a bot's. Step is live only while the table is paused, and it invents nothing — it is the move the bots were going to make anyway.
 
 - **⏮ ◀ ▶ Play ▶ ⏭** — the same place in the band, for a game watched again: a round back or on at the outside, a point back or on inside those, and Play between them. Under it, the **Points** timeline of the round on show.
 
@@ -1233,7 +1239,7 @@ Open a replay, go to the round you want, and the **Players** panel and the **Sta
 
 A photo is the exception, and the only one: **Photos** and the 📷 on a row dress the seats of a copy without forking it, because a picture is not in the record and so nothing the trail says happened has changed. Dressing a copy for a screenshot is not editing its history.
 
-**The band says which timeline the copy is on, always.** **Timeline · original replay** is the game that was played, as the trail recorded it; **Timeline · forked** is a game of your own, in gold, with what its table is doing after it — *forked · stopped*, *forked · playing*. The head line says it too: *table 4F2K, changed by hand · stopped · point 7 of 8*. It used to appear only once the copy was the second of the two, so nothing on the page said which you were looking at until you were past the choice.
+**The band says which timeline the copy is on, always.** **Timeline · original replay** is the game that was played, as the trail recorded it; **Timeline · forked** is a game of your own, in gold, with what its table is doing after it — *forked · paused*, *forked · playing*. The head line says it too: *table 4F2K, changed by hand · paused · point 7 of 8*. It used to appear only once the copy was the second of the two, so nothing on the page said which you were looking at until you were past the choice.
 
 **Fork** branches here on purpose: the copy becomes a table of its own from the point the head is on, and what the trail said happened after it goes. It is dim at the end of a fork's own tape, where there is nothing in front to drop. Changing anything forks too, and always did — the button is for branching without changing anything first, which is what you want before playing a round out differently.
 
@@ -1241,7 +1247,7 @@ A photo is the exception, and the only one: **Photos** and the 📷 on a row dre
 
 It is a point like any other, so moving about still works. Step back over it and the copy re-reads the trail — the change is not there, because that state is what the trail says. Step forward and the change comes back, because it is written down. Change it again from further back and the copy cuts back to there.
 
-**And a fork can be played.** A copy is watched and never played at — what happened at it has already happened — but a fork is no longer that game, so it is a table of its own and takes the game's own verbs. Its seats stop being watching keys and become seats: the panes on one hold them and act as the players. It is stopped when it is made, because forking is setting a game up rather than starting one, and **▶ Play** starts it — the panes can bid and play, and the bots take their turns.
+**And a fork can be played.** A copy is watched and never played at — what happened at it has already happened — but a fork is no longer that game, so it is a table of its own and takes the game's own verbs. Its seats stop being watching keys and become seats: the panes on one hold them and act as the players. It is paused when it is made, because forking is setting a game up rather than starting one, and **▶ Play** starts it — the panes can bid and play, and the bots take their turns.
 
 There is still one button, and it still means what it always meant: *go forward from here*. What is in front depends on where the head is. On a tape there is tape, and it is played back at the pace the table played it. At the end of a fork's own tape there is no tape left — there is a game — so the same button carries the table on, and ❚❚ Pause stops it. Scrub back and there is tape in front again, so it plays that. Two buttons for this were two clocks wearing one face, both green and both starting with ▶: press the wrong one and the table sits there while the tape runs, the phones say ❚❚ paused, and nothing else on the page agrees.
 

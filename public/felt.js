@@ -824,8 +824,8 @@ const Felt = (function () {
     const n = ST.seats.length;
     const mine = ST.turn === me;
     const amend = Game.changeableSeat(r, n) === me;
-    // A stopped table takes no bid, so the numbers are not put up to be tapped.
-    const on = ST.phase === 'bid' && !watch && !!send && (mine || amend) && !Game.stopped(ST);
+    // A paused table takes no bid, so the numbers are not put up to be tapped.
+    const on = ST.phase === 'bid' && !watch && !!send && (mine || amend) && !Game.paused(ST);
     rail.hidden = !on;
     if (!on) { rail.innerHTML = ''; rail.dataset.k = ''; bidSlots = []; heldBid = -1; return; }
 
@@ -947,11 +947,11 @@ const Felt = (function () {
     const p = ST.play;
     const bidding = ST.phase === 'bid';
     if (watch) return say('You are watching this table.');
-    /* Above everything else the line could say: while the table is stopped
+    /* Above everything else the line could say: while the table is paused
        none of it is what is happening. Whose turn it is has not changed, and
        saying so under a hand that will not move is the puzzle a pause is
        supposed to end. */
-    if (Game.stopped(ST)) return say('The table is stopped. Nothing lands until it starts again.');
+    if (Game.paused(ST)) return say('The table is paused.');
     if (bidding) {
       const n = ST.seats.length;
       if (ST.turn === me) {
@@ -968,7 +968,7 @@ const Felt = (function () {
       if (ST.turn === null) return say('All bids are in.');
       const who = ST.seats[ST.turn];
       if (!who) return say('Waiting for a bid.');
-      // A seat with nobody behind it stops the table, and the felt should not
+      // A seat with nobody behind it holds the table up, and the felt should not
       // leave a player guessing why nothing is happening. The bid for it is
       // made from the page under the felt, by whoever runs the table.
       if (!who.online) {
@@ -1045,8 +1045,8 @@ const Felt = (function () {
   // before the card leaves the hand instead of after.
   function refusal() {
     const p = ST.play;
-    if (watch || !send) return 'This window is only watching.';
-    if (Game.stopped(ST)) return 'The table is stopped.';
+    if (watch || !send) return 'You are watching this table.';
+    if (Game.paused(ST)) return 'The table is paused.';
     if (ST.phase !== 'tricks' || !p) return 'The bids come first.';
     if (sent) return '…';
     if (p.turn === null) return 'That trick is still on the table.';
@@ -1058,7 +1058,7 @@ const Felt = (function () {
   function playable(card) {
     const p = ST.play;
     if (watch || !send || sent) return false;
-    if (Game.stopped(ST)) return false;
+    if (Game.paused(ST)) return false;
     if (ST.phase !== 'tricks' || !p || p.turn !== me) return false;
     return Game.legalPlays(myHand(), ledSuit()).indexOf(card) >= 0;
   }

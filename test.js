@@ -569,7 +569,7 @@ async function bidRound(P) {
     ok(eye2.hello.replay === true,
        'and is told it is a copy, so the browser does not write it down as a table');
     eye2.send({ t: 'bid', v: 1 });
-    await okBy(() => /only watching/i.test(eye2.last()),
+    await okBy(() => /watching this table/i.test(eye2.last()),
        'but nothing can be played at it: a watch token is the only way in  got ' + eye2.last());
 
     const seen = await (await fetch(`http://127.0.0.1:${PORT}/tables.json`)).json();
@@ -672,7 +672,7 @@ async function bidRound(P) {
     eye.send({ t: 'bid', v: 1 });
     eye.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
     eye.send({ t: 'chat', text: 'hello from the sofa' });
-    await okBy(() => eye.errors.filter((e) => /only watching/.test(e)).length === 3,
+    await okBy(() => eye.errors.filter((e) => /watching this table/i.test(e)).length === 3,
        'and it can do nothing at all');
     ok(h.state.phase === 'bid', 'so the game is untouched');
     ok(!(h.state.chat || []).length, 'and it has said nothing');
@@ -2181,17 +2181,17 @@ async function bidRound(P) {
        'and the name alone is enough to sit back down  got ' + lost.last());
     await okBy(() => h.state.seats[p].online === true, 'with the table saying he is back');
 
-    // A stopped table is stopped for the phone as well as for the bots.
+    // A paused table is paused for the phone as well as for the bots.
     const turn = h.state.turn;
     h.send({ t: 'pause', on: true });
-    await okBy(() => h.state.paused === true, 'the table is stopped');
+    await okBy(() => h.state.paused === true, 'the table is paused');
     // Ben's first socket still remembers the seat and is long closed: the phone
     // behind it now is the one that came back.
     const sitter = [P[0], P[1], P[2], lost]
       .find((c) => c.ws.readyState === 1 && c.seatId === h.state.seats[turn].id);
     sitter.errors.length = 0;
     sitter.send({ t: 'bid', v: 1 });
-    await okBy(() => /stopped/i.test(sitter.last()),
+    await okBy(() => /paused/i.test(sitter.last()),
        'and the phone on turn is told so, in its own words  got ' + sitter.last());
     ok(h.state.rounds[0].bids[turn] === null, 'with nothing landing on the table');
 

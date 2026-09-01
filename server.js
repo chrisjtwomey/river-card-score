@@ -611,7 +611,7 @@ function handle(ws, m) {
   const room = ctx.room;
   const n = room.seats.length;
   const isHost = ctx.role === 'host';
-  if (ctx.role === 'watch' && m.t !== 'ping') return fail(ws, 'this window is only watching');
+  if (ctx.role === 'watch' && m.t !== 'ping') return fail(ws, 'you are watching this table');
   if (ctx.role === 'screen' && m.t !== 'ping') return fail(ws, 'this screen only shows the table');
   const mySeat = ctx.seatId ? seatIndex(room, ctx.seatId) : -1;
   // The table host is a player with the same powers as the host screen, so a

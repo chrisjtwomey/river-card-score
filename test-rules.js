@@ -521,7 +521,7 @@ part('a round put back')
   t.bidAll(1);
   t.room.stalled = { id: t.room.seats[1].id, ms: 5 * 60e3 };
   t.Room.resetRound(t.room);
-  ok(t.room.stalled === null, 'a round put back is not still stopped on anybody');
+  ok(t.room.stalled === null, 'a round put back is not still waiting on anybody');
 }
 
 part('the bids stand for a moment before the hand is played');
@@ -1001,7 +1001,7 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   ok(t.Bots.anyAuto(t.room), 'and it is playing it');
 
   ok(t.say(0, { t: 'pause', on: true }) === null, 'the table host stops the table');
-  ok(t.room.paused === true, 'and it is stopped');
+  ok(t.room.paused === true, 'and it is paused');
   ok(!t.Bots.anyAuto(t.room), 'so it plays none of its own hands');
   t.Bots.nudge(t.room);
   ok(!t.room.botTimer, 'and nothing is set going');
@@ -1011,15 +1011,15 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   /* A stopped table is stopped for everybody. Whichever seat is on turn --
      Ann's or the bot's -- nothing lands on it until the table is let go. */
   const turn = G.turnSeat(t.round(), 2);
-  ok(/stopped/.test(t.say(turn, { t: 'bid', v: 1 }) || ''), 'and no bid lands while it is stopped');
+  ok(/paused/.test(t.say(turn, { t: 'bid', v: 1 }) || ''), 'and no bid lands while it is paused');
   ok(t.round().bids[turn] === null, 'so the seat on turn has still not bid');
 
   /* And the screens ask the same question the refusal is made of, so a
      control is never lit for a tap that will not be taken. Every message the
      table holds while it is stopped is offered by a widget that asks this. */
-  ok(G.stopped(t.room) === true, 'the rule has a name every screen can ask for');
-  ok(G.stopped({ paused: false }) === false && G.stopped(null) === false,
-     'and a table that is running is not stopped');
+  ok(G.paused(t.room) === true, 'the rule has a name every screen can ask for');
+  ok(G.paused({ paused: false }) === false && G.paused(null) === false,
+     'and a table that is running is not paused');
 
   // But everything that puts a game right does: that is what it was stopped for.
   ok(t.say(0, { t: 'bumdeal' }) === null, 'a hand can still be thrown in');
@@ -1031,7 +1031,7 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   // Said outright, so two screens pressing at once agree where it lands.
   t.say(0, { t: 'pause', on: true });
   t.say('host', { t: 'pause', on: true });
-  ok(t.room.paused === true, 'stopping a stopped table leaves it stopped');
+  ok(t.room.paused === true, 'pausing a paused table leaves it paused');
 
   // A pause belongs to the game it was called in.
   t.Room.startGame(t.room);
@@ -1046,10 +1046,10 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   const t = table().sit(['Ann', 'Bob']).rules({ max: 3, pattern: 'down', ones: 1 });
   t.Room.startGame(t.room);
   ok(!G.tableSelfPlays(t.room), 'a table of players plays no hand of its own');
-  ok(G.canPause(t.room), 'and it can be stopped all the same');
+  ok(G.canPause(t.room), 'and it can be paused all the same');
   t.bidAll(1);
   ok(t.say(0, { t: 'pause', on: true }) === null, 'the table host stops it');
-  ok(/stopped/.test(t.say(0, { t: 'trick', p: 0 }) || ''), 'and no trick is counted while it is');
+  ok(/paused/.test(t.say(0, { t: 'trick', p: 0 }) || ''), 'and no trick is counted while it is');
   ok(t.say(0, { t: 'pause', on: false }) === null, 'let go again');
   ok(t.say(0, { t: 'trick', p: 0 }) === null, 'and the count goes on');
 
@@ -1137,7 +1137,7 @@ part('leaving on purpose, which is not the same as a phone going quiet');
 
   // A stopped table is exactly the table somebody would unstick.
   t.say('host', { t: 'pause', on: true });
-  ok(!/stopped/.test(t.say('host', { t: 'unstick' }) || ''), 'being stopped does not hold this one');
+  ok(!/paused/.test(t.say('host', { t: 'unstick' }) || ''), 'being paused does not hold this one');
 }
 
 {
@@ -1248,7 +1248,7 @@ const later = (mins) => Date.now() + mins * 60e3;
   const t = started(['Ann', 'Bob', 'Cal'], { deck: 'virtual' });
   const p = G.onTurn(t.room);
   ok(p === 1, 'the player left of the dealer bids first');
-  ok(t.Room.idleSeat(t.room, p), 'the table is stopped on them, so their clock runs');
+  ok(t.Room.idleSeat(t.room, p), 'the table is waiting on them, so their clock runs');
   ok(!t.Room.idleSeat(t.room, 2), 'and the players waiting their turn are not idle at all');
   let out = t.Room.sweep(t.room, later(4.5), MS);
   ok(out.warn.length === 1 && out.warn[0] === p, 'a minute before the end, the phone is asked whether anybody is there');
@@ -1287,7 +1287,7 @@ const later = (mins) => Date.now() + mins * 60e3;
   ok(t.room.stalled.ms === MS.idle, 'and how long it waited, so every screen can say so');
   ok(/only the table host/.test(t.say(1, { t: 'carryon' }) || ''), 'no player starts the table again');
   ok(t.say('host', { t: 'carryon' }) === null, 'whoever runs the table does');
-  ok(!t.room.stalled, 'and the table is not stopped any more');
+  ok(!t.room.stalled, 'and the table is not waiting on anybody any more');
   t.Room.sweep(t.room, later(120), MS);
   ok(!t.room.stalled, 'nor stopped again on the seat the host has looked at');
   ok(!t.room.seats[1].left && t.room.seats.length === 3, 'and still nothing is taken from it');
@@ -1306,7 +1306,7 @@ const later = (mins) => Date.now() + mins * 60e3;
   t.room.seats[2].online = true;
   ok(t.Room.sweep(t.room, later(7), MS).changed, 'the player comes back');
   ok(!t.room.stalled, 'and the table says nothing about it any more');
-  ok(/not stopped on anybody/.test(t.say('host', { t: 'carryon' }) || ''),
+  ok(/not waiting on anybody/.test(t.say('host', { t: 'carryon' }) || ''),
      'there is nothing left to carry on from');
 }
 
