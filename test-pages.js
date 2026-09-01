@@ -4288,13 +4288,29 @@ part('the dev controls, on each kind of server');
        Two buttons for that were two clocks wearing one face. */
     const forkBox = () => P.pick('#fork-run').querySelector('.viewer-fork');
     const word = () => forkBox().querySelector('.viewer-held').textContent;
-    ok(forkBox().hidden === true, 'a copy that is still the game has no table of its own');
+    /* Which of the two timelines the copy is on is always up: it is the thing
+       that says whether what you are about to change is the game that was
+       played or a game of your own. It used to appear only once it was the
+       second, so nothing said which until you were past the choice. */
+    ok(forkBox().hidden === false && word() === 'original replay',
+       'a copy says it is still the game that was played  got ' + word());
     ok(!run().querySelector('.vw-run'), 'and no second clock beside the transport');
+    const forkBtn = () => forkBox().querySelector('.vw-fork');
+    const resetBtn = () => forkBox().querySelector('.vw-reset');
+    ok(forkBtn().disabled === false && resetBtn().disabled === true,
+       'there is a way onto a timeline of its own, and nothing yet to put back');
+    P.socks[0].sent.length = 0;
+    forkBtn().fire('click');
+    ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"fork"}',
+       'and branching is asked for by pressing it  got ' + JSON.stringify(P.socks[0].sent[0]));
 
     const held = (on) => JSON.parse(devState(false, { paused: on }));
     say({ forked: true, at: 12, n: 13, state: held(true) });
-    ok(forkBox().hidden === false && word() === 'stopped',
-       'a fork says what its table is doing  got ' + word());
+    ok(forkBox().hidden === false && word() === 'forked · stopped',
+       'a fork says so, and what its table is doing  got ' + word());
+    ok(resetBtn().disabled === false, 'and now there is something to put back');
+    ok(forkBtn().disabled === true,
+       'with nothing in front of the head to branch away from');
     ok(/changed by hand · stopped/.test(P.pick('#subtitle').textContent),
        'and the head says it too, where the eye already is  got '
        + P.pick('#subtitle').textContent);
@@ -4305,7 +4321,7 @@ part('the dev controls, on each kind of server');
        'and at the end of the tape that is the game  got '
        + JSON.stringify(P.socks[0].sent[0]));
     say({ forked: true, at: 12, n: 13, state: held(false) });
-    ok(play.textContent === '❚❚ Pause' && word() === 'playing',
+    ok(play.textContent === '❚❚ Pause' && word() === 'forked · playing',
        'a running fork says so, and the same button stops it  got ' + play.textContent);
     P.socks[0].sent.length = 0;
     play.fire('click');
@@ -4334,12 +4350,15 @@ part('the dev controls, on each kind of server');
          'and puts the copy back when it is yes  got ' + after.join(' '));
     });
     say();
-    ok(forkBox().hidden === true, 'a copy that is the game again has no fork to put back');
+    ok(word() === 'original replay' && resetBtn().disabled === true,
+       'a copy that is the game again has nothing to put back  got ' + word());
     say({ forked: true, at: 12, n: 13, state: held(true) });
 
     /* Scrubbed back, there is tape in front of the head again, so going
        forward is playing it back -- the game is where the tape ends. */
     say({ forked: true, at: 4, n: 13, state: held(true) });
+    ok(forkBtn().disabled === false,
+       'behind the end of a fork there is a tail to branch away from');
     P.socks[0].sent.length = 0;
     play.fire('click');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"play"}',

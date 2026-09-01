@@ -876,6 +876,26 @@ async function bidRound(P) {
       ok(!cold.replay.forked && cold.replay.n === tape,
          'and a refusal cuts nothing  got ' + cold.replay.n + ' of ' + tape);
     }
+    /* Branching on purpose, rather than as a side effect of changing
+       something. Nothing about the copy is different afterwards except which
+       timeline it is on -- and what is in front of the head has gone. */
+    {
+      await cold.rtr({ do: 'open', game: filed });
+      const whole = cold.replay.n;
+      await cold.rtr({ do: 'seek', at: 1 });
+      const head = cold.replay.at;
+      ok(!cold.replay.forked, 'a copy opened is the game that was played');
+      await cold.rtr({ do: 'fork' });
+      ok(cold.replay.forked, 'and Fork makes it one of its own');
+      ok(cold.replay.n === head + 2 && cold.replay.at === head + 1,
+         'from the point it was standing on, with the rest gone  got '
+         + cold.replay.n + ' of ' + whole + ' at ' + cold.replay.at);
+      // The way back is the one that was already there.
+      await cold.rtr({ do: 'reset' });
+      ok(!cold.replay.forked && cold.replay.n === whole,
+         'and Reset puts the whole game back  got ' + cold.replay.n + ' of ' + whole);
+    }
+
     await cold.rtr({ do: 'open', game: filed });
     await cold.rtr({ do: 'seek', at: 1 });
     cold.send({ t: 'dev', action: 'state', replay: true, record: there });

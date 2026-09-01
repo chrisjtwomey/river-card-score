@@ -1446,8 +1446,10 @@ function applyGates() {
   ['#rounds-tools', '#replay-run', '#steps-row'].forEach((sel) => {
     if (el(sel)) el(sel).hidden = !going;
   });
-  // A copy that has not been changed has no game of its own to run.
-  if (el('#replay-fork')) el('#replay-fork').hidden = !going || !REPLAY.forked;
+  /* Which of the two timelines the copy is on. Always up while one is open:
+     it is the thing that says whether what you are about to change is the
+     game that was played or a game of your own. */
+  if (el('#replay-fork')) el('#replay-fork').hidden = !going;
   // The rounds are a strip either way; a table's is the one you can send to.
   if (el('#scrub-tools')) el('#scrub-tools').hidden = going || !DEVSRV;
   if (el('#run-tools') && going) el('#run-tools').hidden = true;

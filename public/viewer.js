@@ -349,16 +349,18 @@ const Viewer = (function () {
     box.querySelector('.viewer-at').textContent = `${R.at + 1} of ${R.n}`;
   }
 
-  /* ---------- a copy that has been changed ---------- */
+  /* ---------- which timeline the copy is on ---------- */
 
-  /* What a fork's own table is doing, in a word. Not a control: the one
-     button in the transport is the control, and this is what tells you which
-     of the two things it will do. Without it a stopped fork looked exactly
-     like a running one, and every card came back "the table is stopped" with
-     nothing on the page agreeing.
+  /* Two things a copy can be, said in a word that is always there: the game
+     that was played, or a game of its own. It used to appear only once it was
+     the second, so nothing on the page said which of the two you were looking
+     at until you were past the choice -- and the way onto the second was to
+     change something and find out.
 
-     Not there at all on a copy that is still the game it is a copy of: that
-     one has no table of its own to be doing anything. */
+     Beside the word, the two verbs that move between them: Fork branches here,
+     Reset puts it back. What the fork's own table is doing rides on the word,
+     because a stopped fork looks exactly like a running one and every card
+     comes back "the table is stopped" with nothing on the page agreeing. */
   function fork(root, R, view) {
     if (!root || !R) return;
     const box = part(root, 'viewer-fork');
@@ -368,17 +370,23 @@ const Viewer = (function () {
       box._wired = true;
       const lbl = document.createElement('span');
       lbl.className = 'bandlbl';
-      lbl.textContent = 'Fork';
+      lbl.textContent = 'Timeline';
       box.appendChild(lbl);
       const said = document.createElement('span');
       said.className = 'viewer-held';
       box.appendChild(said);
       box._said = said;
+      /* The way onto a timeline of its own, pressed rather than fallen into.
+         What is in front of this point goes: it describes a game that is not
+         going to be played now. */
+      box._fork = btn(box, 'btn tiny vw-fork', 'Fork',
+          'Branch here: the copy becomes a table of its own from this point',
+          () => box._view.send({ do: 'fork' }));
       /* The way back off it. Everything the copy became goes -- the change and
          whatever was played on it -- so it is asked about first: it is the one
          thing here that cannot be undone by pressing it again. The game itself
          was never touched, which is why there is a way back at all. */
-      btn(box, 'btn tiny vw-reset', 'Reset',
+      box._reset = btn(box, 'btn tiny vw-reset', 'Reset',
           'Put the copy back to the game it is a copy of, at the point it was changed at',
           () => UI.ask('Put the fork back?',
             'The change and everything played on it go. The copy stands again at the '
@@ -386,15 +394,30 @@ const Viewer = (function () {
             'Put it back', true)
             .then((yes) => { if (yes) box._view.send({ do: 'reset' }); }));
     }
-    box.hidden = !R.forked;
-    if (!R.forked) return;
+    box.hidden = false;
     const held = stopped(R);
-    box._said.textContent = held ? 'stopped' : 'playing';
-    box._said.classList.toggle('on', !held);
-    box._said.title = held
-      ? 'The table is held. Play carries it on: the panes hold their seats, and the bots '
-        + 'take their turns.'
-      : 'The table is running. Pause stops it.';
+    box._said.textContent = R.forked
+      ? `forked \u00b7 ${held ? 'stopped' : 'playing'}` : 'original replay';
+    box._said.classList.toggle('on', !!R.forked);
+    box._said.title = !R.forked
+      ? 'This is the game that was played, as the trail recorded it. Nothing here is yours yet.'
+      : held
+        ? 'A table of its own, held. Play carries it on: the panes hold their seats, and the '
+          + 'bots take their turns.'
+        : 'A table of its own, running. Pause stops it.';
+    /* At the end of a fork's own tape there is nothing in front to drop, so
+       there is nothing branching here would do. Anywhere else there is. */
+    const end = !!(R.forked && R.at >= R.n - 1);
+    box._fork.disabled = end;
+    box._fork.title = !R.forked
+      ? 'Branch here: the copy becomes a table of its own from this point'
+      : end
+        ? 'Already a table of its own, and this is the end of it'
+        : 'Branch here again: what the copy played after this point goes';
+    box._reset.disabled = !R.forked;
+    box._reset.title = R.forked
+      ? 'Put the copy back to the game it is a copy of, at the point it was changed at'
+      : 'Nothing to put back: this is still the game that was played';
   }
 
   /* ---------- the points of the round on show ---------- */
