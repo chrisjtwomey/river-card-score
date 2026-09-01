@@ -565,7 +565,7 @@ function renderReplay() {
   if (!replaying()) return;
   Viewer.rounds($('#replay-rounds'), REPLAY, watching);
   Viewer.run($('#replay-transport'), REPLAY, watching);
-  Viewer.fork($('#fork-run'), REPLAY);
+  Viewer.fork($('#fork-run'), REPLAY, watching);
   Viewer.points($('#replay-points'), REPLAY, watching);
 }
 

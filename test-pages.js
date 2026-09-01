@@ -4206,6 +4206,31 @@ part('the dev controls, on each kind of server');
     ok(JSON.stringify(P.socks[0].sent[0]) === '{"t":"replay","do":"run","on":false}',
        'which stops the table  got ' + JSON.stringify(P.socks[0].sent[0]));
 
+    /* And the way back off a fork. Everything the copy became goes -- the
+       change, and whatever was played on it -- so it is asked about first: it
+       is the one thing on the band that pressing again does not undo. */
+    say({ forked: true, at: 12, n: 13, state: held(true) });
+    const reset = forkBox().querySelectorAll('button').find((b) => b.textContent === 'Reset');
+    ok(!!reset, 'a fork offers the way back off it');
+    P.socks[0].sent.length = 0;
+    let put = 0;
+    P.dom.window.confirm = () => { put += 1; return false; };   // the page has no dialog here
+    reset.fire('click');
+    ok(put === 1 && P.socks[0].sent.length === 0,
+       'which asks first, and does nothing when the answer is no');
+    P.dom.window.confirm = () => true;
+    const said = P.socks[0].sent, mark = said.length;
+    reset.fire('click');
+    // The answer comes back in a microtask, and the word goes in the one after.
+    Promise.resolve().then(() => Promise.resolve()).then(() => {
+      const after = said.slice(mark).map((o) => JSON.stringify(o));
+      ok(after.includes('{"t":"replay","do":"reset"}'),
+         'and puts the copy back when it is yes  got ' + after.join(' '));
+    });
+    say();
+    ok(forkBox().hidden === true, 'a copy that is the game again has no fork to put back');
+    say({ forked: true, at: 12, n: 13, state: held(true) });
+
     /* Scrubbed back, there is tape in front of the head again, so going
        forward is playing it back -- the game is where the tape ends. */
     say({ forked: true, at: 4, n: 13, state: held(true) });

@@ -1787,6 +1787,25 @@ part('a game put back on a table of its own');
     // What was written down about the game itself is still not touched.
     ok(t.room.trail.length === whole, 'and still nothing reaches the game on file');
     ok(!copy.trail || !copy.trail.length, 'nor a trail of its own, which is what is filed');
+
+    /* And the way back off it. Everything the copy became goes -- the change,
+       and whatever was played on it -- and what is left is the game it is a
+       copy of, standing at the point it was changed at. There is a way back at
+       all because the game itself was never touched: `fork` makes a new array
+       rather than writing into the one it was given. */
+    const grown = copy.replay.points.length;
+    ok(grown > 5, 'the copy has become something of its own  got ' + grown);
+    ok(Replay.unfork(copy) === true, 'and it can be put back');
+    ok(copy.replay.points.length === whole,
+       'to the whole of the game it is a copy of  got '
+       + copy.replay.points.length + ' of ' + whole);
+    ok(copy.replay.at === 3, 'standing at the point it was changed at  got ' + copy.replay.at);
+    ok(copy.replay.forked === false, 'and it is a copy again, not a fork');
+    ok(copy.seats.every((x) => x.watch && !x.token),
+       'so its seats are watched again, not held');
+    ok(copy.paused === true && copy.stand === false, 'and nothing is played at it');
+    ok(copy.seats[0].name !== 'Zed', 'the change itself is gone  got ' + copy.seats[0].name);
+    ok(Replay.unfork(copy) === false, 'and a copy that is the game has nothing to put back');
   }
 
   {

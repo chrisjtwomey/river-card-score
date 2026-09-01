@@ -359,9 +359,11 @@ const Viewer = (function () {
 
      Not there at all on a copy that is still the game it is a copy of: that
      one has no table of its own to be doing anything. */
-  function fork(root, R) {
+  function fork(root, R, view) {
     if (!root || !R) return;
     const box = part(root, 'viewer-fork');
+    box._R = R;
+    box._view = view;
     if (!box._wired) {
       box._wired = true;
       const lbl = document.createElement('span');
@@ -372,6 +374,17 @@ const Viewer = (function () {
       said.className = 'viewer-held';
       box.appendChild(said);
       box._said = said;
+      /* The way back off it. Everything the copy became goes -- the change and
+         whatever was played on it -- so it is asked about first: it is the one
+         thing here that cannot be undone by pressing it again. The game itself
+         was never touched, which is why there is a way back at all. */
+      btn(box, 'btn tiny vw-reset', 'Reset',
+          'Put the copy back to the game it is a copy of, at the point it was changed at',
+          () => UI.ask('Put the fork back?',
+            'The change and everything played on it go. The copy stands again at the '
+            + 'point it was changed at, watching the game that was played.',
+            'Put it back', true)
+            .then((yes) => { if (yes) box._view.send({ do: 'reset' }); }));
     }
     box.hidden = !R.forked;
     if (!R.forked) return;

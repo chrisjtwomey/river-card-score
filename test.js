@@ -813,6 +813,19 @@ async function bidRound(P) {
     ok(cold.replay.state.paused === false, 'the fork is carried on');
     await cold.rtr({ do: 'run', on: false });
     ok(cold.replay.state.paused === true, 'and stopped again');
+    /* And the way back off a fork: everything the copy became goes, and what
+       is left is the game it is a copy of, standing where it was changed. */
+    await cold.rtr({ do: 'reset' });
+    ok(!cold.replay.forked && cold.replay.n === whole,
+       'a fork put back is the whole game again  got '
+       + cold.replay.n + ' of ' + whole);
+    ok(cold.replay.at === 1, 'standing at the point it was changed at  got ' + cold.replay.at);
+    ok(cold.replay.seats.every((x) => !x.token), 'with its seats watched again, not held');
+    // A refusal is a refusal, not an answer about the copy, so it is waited on
+    // as one: `rtr` counts the copy's own frames and none comes back.
+    cold.send({ t: 'replay', do: 'reset' });
+    await okBy(() => /still the game it is a copy of/i.test(cold.last()),
+       'and a copy that is the game has nothing to put back  got ' + cold.last());
     pane.ws.close();
     await cold.rtr({ do: 'open', game: filed });
 
