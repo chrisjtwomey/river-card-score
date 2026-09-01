@@ -141,12 +141,54 @@
   .phand .btn.card:disabled{opacity:.25}
 
 
-  /* The state panel: the whole table as text. */
+  /* The state panel: the whole table as text. A head saying what the record
+     is, the text itself with its lines numbered and coloured, and a foot with
+     its size and the three verbs. A bare box said nothing until it was
+     applied -- whether the text was even JSON was a thing you found out by
+     sending it to the table. */
   .statebox{padding:14px 16px;gap:10px}
-  .statebox textarea{font:12.5px/1.5 ui-monospace,Menlo,monospace;flex:1 1 auto;min-height:160px;
-    resize:none;
-    border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);padding:11px}
+  .sthead,.stfoot{display:flex;align-items:center;gap:10px;flex:none;font-size:12px}
+  .sthead{color:var(--ink-dim)}
+  .stwhat{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-weight:700;letter-spacing:.01em}
+  /* Whether the text is JSON, said as it is typed rather than on the way out. */
+  .stok{flex:none;font-weight:800;font-size:13px;color:var(--good)}
+  .stbody.bad ~ .stfoot .stok,.stok.bad{color:var(--red)}
+
+  /* The text: a gutter that does not scroll on its own, and beside it the
+     colours under the box being typed in. Both are moved by the textarea's
+     own scrolling, which is the only scroller here. */
+  .stbody{display:flex;flex:1 1 auto;min-height:120px;overflow:hidden;
+    border:1px solid var(--line);border-radius:9px;background:var(--bg)}
+  .stbody.bad{border-color:var(--red)}
+  .stbody.stale{border-color:var(--gold)}
+  .stnums{flex:none;overflow:hidden;padding:10px 8px 10px 10px;text-align:right;
+    color:var(--ink-dim);opacity:.7;border-right:1px solid var(--line);
+    user-select:none;-webkit-user-select:none}
+  .stcode{position:relative;flex:1 1 auto;min-width:0}
+  /* One shape for the three, or the colours slide off the letters they are
+     under: the same font, the same padding, and neither of them wrapping. */
+  .stnums,.stpaint,.statebox textarea{
+    font:12.5px/1.55 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre;tab-size:2;margin:0}
+  .stpaint,.statebox textarea{position:absolute;inset:0;padding:10px 12px;border:0}
+  .stpaint{overflow:hidden;pointer-events:none;color:var(--ink)}
+  .statebox textarea{resize:none;background:none;color:transparent;
+    caret-color:var(--ink);overflow:auto}
+  .statebox textarea:focus{outline:0}
+  .statebox textarea::selection{background:rgba(184,134,43,.35);color:transparent}
+
+  /* What a piece of JSON is, in the colours the table already uses for its
+     own things: a name in gold, a word in felt green, a number in red. */
+  .jk{color:var(--gold)}
+  .js{color:var(--good)}
+  .jn{color:var(--red)}
+  .jb{color:var(--gold);font-weight:700}
+  .jz{color:var(--ink-dim);font-style:italic}
+
   .statebox .btnrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:none}
+  .statebox > .hint,.statebox > .err{flex:none}
+  .stsize{color:var(--ink-dim);font-variant-numeric:tabular-nums;flex:none}
   .statebox .err{margin:0}
   .statebox .stale{margin:0;color:var(--gold);font-weight:650}
   body.livemode .topbar{background:linear-gradient(90deg,#5c1a12,#8d2a1c)}
@@ -248,15 +290,31 @@
   </div>
 
   <div class="panel statebox" id="state-panel" hidden>
-    <textarea id="state-text" spellcheck="false" aria-label="The table as JSON"></textarea>
-    <div class="btnrow">
+    <!-- What the record in the box is, and whether it is still JSON. Both are
+         read off the text as it is typed, so they follow the edit and not the
+         table. -->
+    <div class="sthead">
+      <span class="stwhat" id="state-what">the record</span>
+      <span class="stok" id="state-ok" title="Whether the text is JSON"></span>
+    </div>
+    <div class="stbody" id="state-body">
+      <div class="stnums" id="state-nums" aria-hidden="true"></div>
+      <div class="stcode">
+        <pre class="stpaint" id="state-paint" aria-hidden="true"></pre>
+        <textarea id="state-text" spellcheck="false" wrap="off"
+          autocapitalize="off" autocomplete="off" autocorrect="off"
+          aria-label="The table as JSON"></textarea>
+      </div>
+    </div>
+    <div class="btnrow stfoot">
+      <span class="stsize" id="state-size"></span>
       <button class="btn primary" id="btn-state-apply" type="button">Apply</button>
       <button class="btn ghost" id="btn-state-reload" type="button">Reload</button>
       <button class="btn ghost" id="btn-state-copy" type="button" title="The record on the clipboard, to keep or to send on">Copy</button>
-      <p class="err" id="state-err" hidden></p>
-      <p class="hint stale" id="state-stale" hidden>The table has moved since this was read — Reload before you Apply, or the move is undone.</p>
-      <p class="hint">The table becomes what the text says. Its code, its keys and the photos stay as they are.</p>
     </div>
+    <p class="err" id="state-err" hidden></p>
+    <p class="hint stale" id="state-stale" hidden>The table has moved since this was read — Reload before you Apply, or the move is undone.</p>
+    <p class="hint">The table becomes what the text says. Its code, its keys and the photos stay as they are.</p>
   </div>
 
   </div>

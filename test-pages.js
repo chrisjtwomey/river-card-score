@@ -3786,6 +3786,66 @@ part('the dev controls, on each kind of server');
     ok(took.length === 1, 'and where it may not, it says so rather than doing nothing');
   }
 
+  {   /* ---- the record, drawn ----
+         The box is a textarea and nothing else -- what is typed is what is
+         sent -- with a coloured copy of the same text lying under it and the
+         line numbers beside it. Whether the text was even JSON used to be a
+         thing you found out by sending it to the table. */
+    const P = devPage(false, [{ id: 's1', name: 'Ann', watch: 'w1' }], 'state');
+    const box = P.pick('#state-text');
+    box.blur = () => {};
+    P.socks[0].onmessage({ data: JSON.stringify({ t: 'stateRaw', record: {
+      code: 'AAAA', idx: 1, phase: 'bid', seats: [{ id: 's1', name: 'Ann', bot: false }],
+      rounds: [{ cards: 3 }, { cards: 2 }], vote: null,
+    } }) });
+
+    const paint = P.pick('#state-paint');
+    ok(paint.querySelectorAll('.jk').length >= 5,
+       'a name in the record is coloured as one  got ' + paint.querySelectorAll('.jk').length);
+    ok(paint.querySelectorAll('.js').length >= 3, 'and a word as a word');
+    ok(paint.querySelectorAll('.jn').length >= 3, 'a number as a number');
+    ok(paint.querySelectorAll('.jz').length === 1, 'and the one nothing in it');
+    const lines = box.value.split('\n').length;
+    ok(P.pick('#state-nums').textContent.split('\n').length === lines,
+       'a number down the side for every line  got '
+       + P.pick('#state-nums').textContent.split('\n').length + ' against ' + lines);
+    ok(/^table AAAA · 1 seat · round 2 of 2/.test(P.pick('#state-what').textContent),
+       'the head says what the record is  got ' + P.pick('#state-what').textContent);
+    ok(P.pick('#state-ok').textContent === '✓', 'and that it is JSON');
+    ok(new RegExp('^' + lines + ' lines · ').test(P.pick('#state-size').textContent),
+       'the foot says how big it is  got ' + P.pick('#state-size').textContent);
+    ok(P.pick('#btn-state-apply').disabled === false, 'a record that parses can be applied');
+
+    /* Typed into and broken: said as it is typed, and on the box rather than
+       in a line under it. The head is where the eye already is. */
+    box.value = '{"code":"AAAA",';
+    box.fire('input');
+    ok(P.pick('#state-ok').textContent === '✗', 'a record half typed says so');
+    ok(P.pick('#state-body').classList.contains('bad'), 'the frame says it too');
+    ok(/^not JSON — /.test(P.pick('#state-what').textContent),
+       'with the reason where the name was  got ' + P.pick('#state-what').textContent);
+    ok(P.pick('#btn-state-apply').disabled === true,
+       'and there is nothing to apply until it parses');
+
+    box.value = '{"code":"AAAA"}';
+    box.fire('input');
+    ok(P.pick('#state-ok').textContent === '✓' && P.pick('#btn-state-apply').disabled === false,
+       'closed again, it can go');
+    ok(!P.pick('#state-body').classList.contains('bad'), 'and the frame is a frame again');
+
+    // The layers under the box are moved by its own scrolling, not their own.
+    box.scrollTop = 40; box.scrollLeft = 12;
+    box.fire('scroll');
+    ok(P.pick('#state-paint').scrollTop === 40 && P.pick('#state-paint').scrollLeft === 12,
+       'the colours ride with the text');
+    ok(P.pick('#state-nums').scrollTop === 40, 'and so do the numbers, down only');
+
+    // The table moving under it is said on the frame as well as in words.
+    P.socks[0].onmessage({ data: devState(false) });
+    ok(P.pick('#state-body').classList.contains('stale'),
+       'a table that has moved is said on the box itself');
+  }
+
   {   /* ---- the table the half was left on ----
          A change under public/ reloads this page while it is being worked in,
          so the tab outlives the reload: coming back to the seats every time a
@@ -6047,7 +6107,7 @@ part('the pages and the stylesheet agree');
      'the half itself does not scroll');
   ok(/\.devright > \.panel\{flex:1 1 auto;min-height:0;overflow-y:auto\}/.test(dev),
      'the table on show has the whole height, and scrolls inside itself');
-  ok(/\.statebox textarea\{[^}]*flex:1 1 auto/.test(dev),
+  ok(/\.stbody\{[^}]*flex:1 1 auto/.test(dev),
      'and the record grows into the height it is given');
 }
 

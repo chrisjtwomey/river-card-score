@@ -146,6 +146,7 @@ function connect() {
         stateLoaded = true;
         stateErr('');
         stateStale(false);          // this text is the table, as of now
+        paintState();
       }
     } else if (m.t === 'replay') {
       /* A copy opened, moved about in, or let go. Letting go is said plainly;
@@ -237,7 +238,11 @@ const act = (action, extra) => send(Object.assign(
 const err = (msg) => { $('#dev-err').textContent = msg; $('#dev-err').hidden = !msg; };
 // The panel's own line, beside the button that earned it.
 const stateErr = (msg) => { $('#state-err').textContent = msg; $('#state-err').hidden = !msg; };
-const stateStale = (on) => { if ($('#state-stale')) $('#state-stale').hidden = !on; };
+const stateStale = (on) => {
+  if ($('#state-stale')) $('#state-stale').hidden = !on;
+  // The line says it in words; the frame says it where the eye already is.
+  if ($('#state-body')) $('#state-body').classList.toggle('stale', !!on);
+};
 // Reading is asked for in one place, so a change arriving in the meantime is
 // the answer coming, not the table moving under the text.
 const askState = () => {
@@ -245,6 +250,96 @@ const askState = () => {
   stateReading = true;
   act('state');
 };
+
+/* ---------- the record, drawn ----------
+
+   The box is a textarea and nothing else: what is typed in it is what is
+   sent. The colours are a second copy of the same text lying under it, in the
+   same font at the same place, with the box itself see-through apart from its
+   caret. So there is nothing to keep in step but the scrolling, and a record
+   half typed still gets its colours -- which a parse could not give it, and
+   which is when they are most wanted.
+
+   The gutter is the third copy: the line numbers, moved by the same scroll. */
+const J_BITS = /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false)\b|\b(null)\b/g;
+const HTML_BIT = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+const safe = (t) => String(t).replace(/[&<>]/g, (c) => HTML_BIT[c]);
+
+// A name is a string with a colon after it; everything else is what it looks
+// like. Nothing here knows what a table is -- it is JSON being coloured.
+function jsonPaint(text) {
+  let out = '', last = 0, m;
+  J_BITS.lastIndex = 0;
+  while ((m = J_BITS.exec(text))) {
+    out += safe(text.slice(last, m.index));
+    if (m[1]) out += `<span class="${m[2] ? 'jk' : 'js'}">${safe(m[1])}</span>${safe(m[2] || '')}`;
+    else out += `<span class="${m[3] ? 'jn' : m[4] ? 'jb' : 'jz'}">${safe(m[0])}</span>`;
+    last = m.index + m[0].length;
+  }
+  return out + safe(text.slice(last));
+}
+
+// What the record in the box is, off the record and not off the table: the
+// two differ, and which one the head is about is the whole point of it.
+function recordSaid(rec) {
+  if (!rec || typeof rec !== 'object') return 'the record';
+  const n = (rec.seats || []).length;
+  const rounds = (rec.rounds || []).length;
+  const at = rounds
+    ? ` \u00b7 round ${Math.min((rec.idx || 0) + 1, rounds)} of ${rounds}` : '';
+  return `table ${rec.code || '\u00b7\u00b7\u00b7\u00b7'} \u00b7 ${n} seat${n === 1 ? '' : 's'}${at}`;
+}
+
+const bytesSaid = (t) => {
+  const n = typeof TextEncoder === 'function' ? new TextEncoder().encode(t).length : t.length;
+  return n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} kB`;
+};
+
+// The three layers ride on the textarea's own scrolling, which is the only
+// one there is: the other two are clipped and moved by hand.
+function syncState() {
+  const box = $('#state-text');
+  if (!box) return;
+  const paint = $('#state-paint'), nums = $('#state-nums');
+  if (paint) { paint.scrollTop = box.scrollTop; paint.scrollLeft = box.scrollLeft; }
+  if (nums) nums.scrollTop = box.scrollTop;
+}
+
+/* Everything the box says about itself, off the text as it stands: the
+   colours, the numbers, what the record is, how big it is, and whether it is
+   JSON at all. Whether it parses was a thing you used to find out by sending
+   it to the table. */
+function paintState() {
+  const box = $('#state-text');
+  if (!box) return;
+  const text = String(box.value || '');
+  if ($('#state-paint')) $('#state-paint').innerHTML = jsonPaint(text);
+  const lines = text.split('\n');
+  if ($('#state-nums')) $('#state-nums').textContent = lines.map((x, i) => i + 1).join('\n');
+
+  let rec = null, bad = '';
+  try { rec = JSON.parse(text); } catch (e) { bad = e.message; }
+  const empty = !text.trim();
+  if ($('#state-body')) $('#state-body').classList.toggle('bad', !!bad && !empty);
+  const ok = $('#state-ok');
+  if (ok) {
+    ok.textContent = empty ? '' : bad ? '\u2717' : '\u2713';
+    ok.classList.toggle('bad', !!bad);
+  }
+  const what = $('#state-what');
+  if (what) {
+    what.textContent = bad && !empty ? `not JSON \u2014 ${bad}` : recordSaid(rec);
+    what.title = bad && !empty ? bad : '';
+    what.classList.toggle('bad', !!bad && !empty);
+  }
+  if ($('#state-size')) {
+    $('#state-size').textContent =
+      `${lines.length} line${lines.length === 1 ? '' : 's'} \u00b7 ${bytesSaid(text)}`;
+  }
+  // A text that will not parse has nothing to apply. Reload and Copy still do.
+  if ($('#btn-state-apply')) $('#btn-state-apply').disabled = !!bad;
+  syncState();
+}
 
 /* Back to the question. The table is let go here and the copy on the server,
    so what the page offers next is what is actually there. */
@@ -1352,6 +1447,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ST || !ST.seats) return;
     ST.seats.forEach((s, i) => act('avatar', { seat: i, data: null }));
   });
+
+  /* The box draws itself as it is typed in, and the layers under it are moved
+     by its own scrolling: there is one scroller here and two passengers. */
+  $('#state-text').addEventListener('input', paintState);
+  $('#state-text').addEventListener('scroll', syncState);
+  paintState();
 
   // The state panel: fetch on open and after every apply; never mid-edit.
   $('#btn-state-reload').addEventListener('click', () => {
