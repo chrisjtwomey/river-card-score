@@ -418,6 +418,8 @@ They come from the scorecard alone — the bids, the tricks and the hand sizes �
 
 An accolade is shared when two players earn it, and both are paid. It is not awarded at all when half the table or more would share it, or when every seat is level. A game of fewer than three rounds earns none, and nothing is drawn.
 
+**What gets kept.** A game goes to Past games when it was played: at least one round scored. The table files it and so does every screen at it, and both ask the same question, so nothing is kept in one place and not the other. Playing a game always leaves scored rounds behind — the finish is what happens when the last round is scored — so the only way to a finished table with nothing behind it is [the dev page](#the-dev-page) forcing the phase, which is a screen to look at rather than a game to keep. It used to file a nought-round game with no seats and no winner, on the table and in every browser in the room.
+
 ### Playing with a virtual deck
 
 The table can play without real cards. In the lobby set **Cards** to *Virtual cards*, and the server becomes the dealer:

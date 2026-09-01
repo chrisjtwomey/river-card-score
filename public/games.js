@@ -36,7 +36,9 @@ const Games = (function () {
      a screen with no seat. It is the same shape the table writes, with the
      seat added, so one reader draws either. */
   function record(ST, me) {
-    if (!ST || ST.phase !== 'done' || !ST.gameId) return null;
+    // Over, named, and actually played: a table whose phase was forced to
+    // `done` with nothing behind it is a screen to look at, not a game to keep.
+    if (!ST || ST.phase !== 'done' || !ST.gameId || !Game.played(ST)) return null;
     const best = ST.totals.length ? Math.max.apply(null, ST.totals) : 0;
     return {
       id: ST.gameId,

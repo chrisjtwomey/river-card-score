@@ -330,9 +330,22 @@ part('a round opens in one place, whatever brought it there');
   // the last round scores, and the game is over
   const t = started(['Ann', 'Bob'], { max: 1, pattern: 'down', ones: 1 });
   ok(t.room.rounds.length === 1, 'a one-round game');
+  t.round().bids = [1, 0];                  // as a round reaches its tricks
   t.Room.scoreRound(t.room, [1, 0]);
   ok(t.room.phase === 'done', 'the last round scoring finishes the game');
   ok(!!t.room.gameId && t.saved[0] === t.room.gameId, 'and it is written to file, once');
+
+  /* And what a game worth filing is. A game reached by playing it always has
+     scored rounds -- the finish is what happens when the last one is scored --
+     so the only way to a `done` with nothing behind it is the phase forced
+     from the dev page. That is a screen to look at, not a game to keep: it was
+     filing a record with no seats, no rounds and no winner, on the table and
+     in every browser at it. */
+  ok(G.played(t.room) === true, 'a game that was played is one to keep');
+  ok(G.played({ seats: [], rounds: [] }) === false, 'a table that never dealt is not');
+  ok(G.played({ seats: [{}, {}], rounds: [{ cards: 3, bids: null, tricks: null }] }) === false,
+     'nor is a card that was dealt and never scored');
+  ok(G.played(null) === false, 'and no table at all is not a game');
   ok(Array.isArray(t.room.awards) && Array.isArray(t.room.bonus), 'the accolades are drawn and paid');
 }
 

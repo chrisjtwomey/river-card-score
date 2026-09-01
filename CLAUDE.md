@@ -107,8 +107,10 @@ every screen (`ST` from `publicState`). `game.js` functions accept either.
    `Game.tablePlaysOn`, `Game.tableSelfPlays`, `Game.canPause`, `Game.handedOver`,
    `Game.virtual`, `Game.firstLeader`, `Game.forbiddenBid`,
    `Game.changeableSeat`, `Game.bidsHeld`, `Game.countingSeat`, `Game.mustDeal`,
-   `Game.stopped` (the six `live` messages in `lib/messages.js` are refused while
-   the table is stopped; every widget that sends one asks this before offering it).
+   `Game.paused` (the six `live` messages in `lib/messages.js` are refused while
+   the table is paused; every widget that sends one asks this before offering it),
+   `Game.played` (whether there is a game here worth filing: `lib/games.js` and
+   `public/games.js` both ask it, so a table that never dealt is kept nowhere).
    `cfg.deck === 'virtual'` appears in `game.js` and nowhere else.
 3. **A new message is a row in `lib/messages.js`.** Give it `who`, `phase`, `deck`,
    `live` and `when` guards and a one-line `run` that calls a Room verb. (`live`

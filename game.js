@@ -249,6 +249,17 @@
   const canPause = (state) =>
     !!state && PLAY_PHASES.indexOf(state.phase) >= 0;
 
+  /* Whether there is a game here worth keeping. A game is its rounds: one
+     scored is a game somebody played, and none is a table that never dealt.
+
+     The table files past games and so does every screen at it, so both ask
+     this. A game reached by playing it always has scored rounds -- the finish
+     is what happens when the last one is scored -- so the only way to a
+     `done` with nothing behind it is forcing the phase, which the dev page can
+     do to an empty lobby. That is a screen to look at, not a game to keep. */
+  const played = (state) =>
+    !!state && (state.seats || []).length > 0 && (state.rounds || []).some(roundDone);
+
   /* Whether the hand may be moved on at all: a bid, a card, a trick counted.
      A paused table refuses all six of those (`live` in lib/messages.js), so
      every screen asks this before it offers one -- a control left lit on a
@@ -304,7 +315,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, mustDeal, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, paused, handedOver, PLAY_PHASES,
+                virtual, mustDeal, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, paused, played, handedOver, PLAY_PHASES,
                 awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };

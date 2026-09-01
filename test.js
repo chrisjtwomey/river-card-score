@@ -714,10 +714,15 @@ async function bidRound(P) {
     ok(cold.ways.tables.length === 0, 'so it lists none of the tables it is running');
     ok(cold.ways.here === null, 'and a page on no table has no live trail to put back');
 
-    // A game on file, put there the way a game that ends gets there.
+    /* A game on file, put there the way a game that ends gets there. The round
+       is played out first: a table that never dealt is not a past game, so
+       forcing the phase over an empty card files nothing. */
     const done = await tableOf(['Eve', 'Fay'], { max: 1, pattern: 'down', ones: 2 });
     done.h.send({ t: 'start' });
     await okBy(() => done.h.state.phase === 'bid', 'a game starts, and is written down as it goes');
+    done.h.send({ t: 'dev', action: 'patch',
+                  patch: { round: { i: 0, bids: [1, 0], tricks: [1, 0] } } });
+    await okBy(() => (done.h.state.rounds[0].tricks || []).length === 2, 'a round is played');
     done.h.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
     await okBy(() => done.h.state.gameId, 'and is filed when it ends');
 
@@ -1473,6 +1478,22 @@ async function bidRound(P) {
     ok(none.games.length === 0, 'and finds nothing for a table that never played');
     ok((await fetch(`http://127.0.0.1:${port4}/game/nosuchgameid`)).status === 404,
        'an id that is not a game is a 404');
+
+    /* A table that never dealt is not a past game. The phase can be forced to
+       `done` from an empty lobby -- it is how the finish is looked at -- and
+       that used to file a record with no seats, no rounds and no winner, on
+       the table and in every browser at it. Every screen keeps the game it is
+       shown, so one forced phase put a nought-round game in Past games on
+       every phone in the room. */
+    d.send({ t: 'dev', action: 'lobby' }); await until(() => d.state.phase === 'lobby');
+    const before = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length;
+    d.send({ t: 'dev', action: 'patch', patch: { phase: 'done' } });
+    await until(() => d.state.phase === 'done');
+    await d.rt();
+    ok(fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length === before,
+       'a phase forced to done with nothing behind it files nothing');
+    const still = await fetch(`http://127.0.0.1:${port4}/games.json?code=${d.state.code}`).then((r) => r.json());
+    ok(still.games.length === 1, 'so the table still has the one game it played  got ' + still.games.length);
 
     // a second game on the same table is a second record
     d.send({ t: 'dev', action: 'lobby' }); await until(() => d.state.phase === 'lobby');

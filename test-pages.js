@@ -3358,6 +3358,30 @@ part('past games, and the ones the table can still put back');
   };
   const watchers = (P) => P.pick('#deck').querySelectorAll('.watch-again');
 
+  {   /* What a phone will keep. Every screen files the game it is shown the
+         moment the table says `done`, so a phase forced to `done` over an
+         empty card put a nought-round game in Past games on every phone in the
+         room -- and on the table too. A game reached by playing it always has
+         a scored round behind it. */
+    const P = page(() => Promise.resolve({ json: () => Promise.resolve({ games: [] }) }));
+    const G2 = P.dom.window.Games || null;
+    const Games = G2 || (new Function('Game', 'localStorage',
+      fs.readFileSync(path.join(ROOT, 'public/games.js'), 'utf8') + '\n; return Games;')
+      (Game, P.dom.localStorage));
+    const over = (o) => Object.assign({
+      phase: 'done', gameId: 'aaaabbbbcccc', code: 'G4JQ', cfg: {},
+      seats: [{ id: 's0', name: 'Ann' }, { id: 's1', name: 'Ben' }],
+      rounds: [{ cards: 2, bids: [1, 0], tricks: [1, 1] }], totals: [11, 1],
+    }, o || {});
+    ok(!!Games.record(over(), 0), 'a game that was played is one to keep');
+    ok(Games.record(over({ seats: [], rounds: [], totals: [] }), -1) === null,
+       'a table that never dealt is not');
+    ok(Games.record(over({ rounds: [{ cards: 2, bids: null, tricks: null }] }), 0) === null,
+       'nor is a card that was dealt and never scored');
+    ok(Games.keep(over({ seats: [], rounds: [], totals: [] }), -1) === false,
+       'so nothing of it is kept');
+  }
+
   {
     const asked = [];
     const P = page((u) => {
