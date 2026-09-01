@@ -968,6 +968,13 @@ cycle, and once you have seen that you cannot stop seeing it. The sky is the cre
 behind the page, whatever the theme is, so the two land on each other; everything
 below the horizon follows the theme.
 
+The boat carries no shadow. It is a masked element -- the hull fades into the
+water -- and the WebView on a phone draws a filter on a masked element over the
+whole of its box rather than over what is in it, which put a soft dark rectangle
+around the boat with a hard edge where the picture ends. A desktop browser is
+newer and does not, so it is invisible everywhere except the one place the
+screen is actually used.
+
 The sun is its own drawing now, set behind the boat and cut off by the water.
 Where it goes is not a number anybody chose: the boat and the sun were one
 picture on one canvas, so its width, how far it clears the funnels, and how far

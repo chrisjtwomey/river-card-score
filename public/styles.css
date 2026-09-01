@@ -1969,12 +1969,18 @@ body:not(.motion-off) .home-ripple{animation:sp-drift 9s linear infinite}
   background:url(art/sun.webp) center/contain no-repeat;   /* size in the shorthand */
   clip-path:inset(0 0 calc(var(--sun-w) - var(--boat-h) + var(--dip) - var(--sun-up)) 0);
 }
-/* In front of it, and drawn over the water rather than under it. */
+/* In front of it, and drawn over the water rather than under it.
+
+   No drop-shadow here, and it must not come back: this element is masked, and
+   the WebView on a phone draws a filter on a masked element over the whole box
+   instead of over what is in it. That put a soft dark rectangle around the boat
+   with a hard edge where the picture ends -- invisible in a desktop browser,
+   which is newer, and plain on the phone. If the boat ever wants a shadow it
+   needs an element of its own to carry it, outside the mask. */
 .home-sky .sp-boat{
   position:absolute;inset:0;z-index:2;
   background-image:url(art/boat.webp);
   background-position:center;background-size:contain;background-repeat:no-repeat;
-  filter:drop-shadow(0 10px 22px rgba(0,0,0,.3));
   /* The last of the hull goes soft, so it ends in the water rather than
      stopping in it. The ripples over it do the rest. */
   -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - var(--dip)),
