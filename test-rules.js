@@ -1014,6 +1014,13 @@ part('leaving on purpose, which is not the same as a phone going quiet');
   ok(/stopped/.test(t.say(turn, { t: 'bid', v: 1 }) || ''), 'and no bid lands while it is stopped');
   ok(t.round().bids[turn] === null, 'so the seat on turn has still not bid');
 
+  /* And the screens ask the same question the refusal is made of, so a
+     control is never lit for a tap that will not be taken. Every message the
+     table holds while it is stopped is offered by a widget that asks this. */
+  ok(G.stopped(t.room) === true, 'the rule has a name every screen can ask for');
+  ok(G.stopped({ paused: false }) === false && G.stopped(null) === false,
+     'and a table that is running is not stopped');
+
   // But everything that puts a game right does: that is what it was stopped for.
   ok(t.say(0, { t: 'bumdeal' }) === null, 'a hand can still be thrown in');
   ok(t.room.paused === true, 'and throwing it in does not let the table go');

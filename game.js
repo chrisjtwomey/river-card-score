@@ -249,6 +249,17 @@
   const canPause = (state) =>
     !!state && PLAY_PHASES.indexOf(state.phase) >= 0;
 
+  /* Whether the hand may be moved on at all: a bid, a card, a trick counted.
+     A stopped table refuses all six of those (`live` in lib/messages.js), so
+     every screen asks this before it offers one -- a control left lit on a
+     stopped table earns a refusal for a tap that looked allowed, and on the
+     felt the card had already left the hand by then.
+
+     Not the same question as whose turn it is, and not what a pause is for
+     either: putting a game right is exactly what a table is stopped for, so
+     the scorecard, the seat verbs and the record are untouched by it. */
+  const stopped = (state) => !!state && !!state.paused;
+
   /* A seat the table was handed: a player who left, or one the clock gave up
      on. Never a bot, which was nobody's to begin with. This is the seat that
      can be given back, whichever deck the table plays with -- `tablePlays`
@@ -291,7 +302,7 @@
 
   const api = { SUITS, MISS_RULES, maxCardsFor, schedule, defaultCfg, buildRounds,
                 roundScore, roundDone, totals, bidOrder, turnSeat, changeableSeat, forbiddenBid,
-                virtual, mustDeal, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, handedOver, PLAY_PHASES,
+                virtual, mustDeal, onTurn, tablePlays, tablePlaysOn, tableSelfPlays, canPause, stopped, handedOver, PLAY_PHASES,
                 awaySeat, firstLeader, bidsHeld, countingSeat, totalsWithBonus,
                 RANKS, deck, shuffle, sortHand, legalPlays, trickWinner,
                 suitOf, rankOf, rankValue, cardFace, cardRed, cardGlyph, cardName };

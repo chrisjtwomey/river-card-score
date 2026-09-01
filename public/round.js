@@ -119,7 +119,9 @@ const Round = (function () {
     if (!root) return;
     const p = ST.play;
     const may = Game.countingSeat(ST) === view.me || (view.me < 0 && view.boss);
-    const on = may && !!r && !!playing(ST) && !Game.virtual(ST) && !!p && !!p.log;
+    // A stopped table takes no trick, so it is not offered one to take.
+    const on = may && !!r && !!playing(ST) && !Game.virtual(ST) && !!p && !!p.log
+      && !Game.stopped(ST);
     root.hidden = !on;
     if (!on) return;
     const rows = part(root, '.count-rows', () => make('div', 'count-rows'));
@@ -152,7 +154,8 @@ const Round = (function () {
   function bidFor(root, ST, r, view) {
     if (!root) return;
     const p = ST.phase === 'bid' && r ? Game.awaySeat(ST) : -1;
-    const on = view.boss && p >= 0 && p !== view.me;
+    // A stopped table is stopped for the seat it is holding too.
+    const on = view.boss && p >= 0 && p !== view.me && !Game.stopped(ST);
     root.hidden = !on;
     if (!on) return;
     const who = ST.seats[p], dealt = Game.virtual(ST);
@@ -185,7 +188,7 @@ const Round = (function () {
   function playFor(root, ST, view) {
     if (!root) return;
     const p = ST.phase === 'tricks' && Game.virtual(ST) ? Game.awaySeat(ST) : -1;
-    const on = view.boss && p >= 0;
+    const on = view.boss && p >= 0 && !Game.stopped(ST);
     root.hidden = !on;
     if (!on) return;
     const btn = part(root, '.btn', () => button('btn ghost', 'Play a card for them'));

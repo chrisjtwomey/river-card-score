@@ -824,7 +824,8 @@ const Felt = (function () {
     const n = ST.seats.length;
     const mine = ST.turn === me;
     const amend = Game.changeableSeat(r, n) === me;
-    const on = ST.phase === 'bid' && !watch && !!send && (mine || amend);
+    // A stopped table takes no bid, so the numbers are not put up to be tapped.
+    const on = ST.phase === 'bid' && !watch && !!send && (mine || amend) && !Game.stopped(ST);
     rail.hidden = !on;
     if (!on) { rail.innerHTML = ''; rail.dataset.k = ''; bidSlots = []; heldBid = -1; return; }
 
@@ -946,6 +947,11 @@ const Felt = (function () {
     const p = ST.play;
     const bidding = ST.phase === 'bid';
     if (watch) return say('You are watching this table.');
+    /* Above everything else the line could say: while the table is stopped
+       none of it is what is happening. Whose turn it is has not changed, and
+       saying so under a hand that will not move is the puzzle a pause is
+       supposed to end. */
+    if (Game.stopped(ST)) return say('The table is stopped. Nothing lands until it starts again.');
     if (bidding) {
       const n = ST.seats.length;
       if (ST.turn === me) {
@@ -1040,6 +1046,7 @@ const Felt = (function () {
   function refusal() {
     const p = ST.play;
     if (watch || !send) return 'This window is only watching.';
+    if (Game.stopped(ST)) return 'The table is stopped.';
     if (ST.phase !== 'tricks' || !p) return 'The bids come first.';
     if (sent) return '…';
     if (p.turn === null) return 'That trick is still on the table.';
@@ -1051,6 +1058,7 @@ const Felt = (function () {
   function playable(card) {
     const p = ST.play;
     if (watch || !send || sent) return false;
+    if (Game.stopped(ST)) return false;
     if (ST.phase !== 'tricks' || !p || p.turn !== me) return false;
     return Game.legalPlays(myHand(), ledSuit()).indexOf(card) >= 0;
   }
@@ -1831,5 +1839,19 @@ const Felt = (function () {
 
   window.addEventListener('resize', () => { if (T && want) layout(); });
 
-  return { sync, show, hide, isOpen, shown };
+  /* The table would not take the card. It says so on the socket and not in a
+     state, so without this nothing here ever hears the answer: the card sits
+     out on the table, `sent` holds it out of the hand it never left, and it
+     can be neither played nor picked up again. A refusal is the answer
+     arriving, so it is treated as one -- the latch goes, and the state that
+     is already in hand is drawn again, which is what puts the card back. */
+  function refused(why) {
+    if (!sent || !ST) return false;
+    sent = null;
+    sync(ST, me);
+    if (why) say(why);
+    return true;
+  }
+
+  return { sync, show, hide, isOpen, shown, refused };
 })();

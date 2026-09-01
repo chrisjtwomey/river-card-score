@@ -984,7 +984,8 @@ function renderPhaseRow() {
        said on this page's own socket -- and that socket is not at a copy. So
        they belong to a table, and on a copy they are not there rather than
        there and refused. */
-    tk.hidden = !r || replaying() || Game.virtual(S) || S.phase !== 'tricks';
+    tk.hidden = !r || replaying() || Game.virtual(S) || S.phase !== 'tricks'
+      || Game.stopped(S);      // a stopped table takes no trick, here either
     if (!tk.hidden && tk._seats && tk._seats.dataset.key !== S.seats.map((x) => x.name).join('|')) {
       tk._seats.dataset.key = S.seats.map((x) => x.name).join('|');
       tk._seats.innerHTML = '';

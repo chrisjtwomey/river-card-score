@@ -46,6 +46,16 @@ function boot() {
         location.href = 'index.html?gone=' + encodeURIComponent(s.code || '');
         return;
       }
+      /* A refusal is an answer, and every control that sent something is
+         waiting for one: the bid pad dims its chips as it sends, and the felt
+         holds the card it sent out of the hand. Nothing else here hears a
+         refusal, so both would sit like that until the table happened to move
+         on its own. The felt puts its card back; the page draws itself again
+         off the state it already has, which is what the pad wants. */
+      if (ST) {
+        render();                 // every control that dimmed itself as it sent
+        Felt.refused(msg);        // and the card the table would not take
+      }
       // A line under the top bar, over whatever is on screen. The panel that
       // carried this was hidden on a virtual table, in the lobby and under the
       // felt, so a refusal went unseen exactly where it mattered.
@@ -366,7 +376,11 @@ function renderTurn(r, me) {
     $('#turn-eyebrow').textContent = 'Bidding';
     const amend = Game.changeableSeat(r, ST.seats.length) === me;
 
+    /* A stopped table takes no bid, so it is not offered one. The round line
+       already says the table is stopped; a pad that is lit and refused says
+       the opposite of it. */
     const showPad = () => {
+      if (Game.stopped(ST)) return Game.forbiddenBid(r, me, ST.cfg, ST.seats.length);
       bidPad.hidden = false;
       const forbidden = Game.forbiddenBid(r, me, ST.cfg, ST.seats.length);
       const chips = $('#bid-chips');
@@ -387,17 +401,21 @@ function renderTurn(r, me) {
 
     if (ST.turn === me) {
       panel.classList.add('mine');
-      $('#turn-text').textContent = 'Your bid';
+      $('#turn-text').textContent = Game.stopped(ST) ? 'Your bid, when the table starts again' : 'Your bid';
       const forbidden = showPad();
-      $('#bid-hint').textContent = forbidden === null
-        ? `How many of the ${r.cards} tricks will you win?`
-        : `You deal, so you bid last. ${forbidden} is not allowed: the bids must not total ${r.cards}.`;
+      $('#bid-hint').textContent = Game.stopped(ST)
+        ? 'The table is stopped. Nothing lands until whoever runs it starts it again.'
+        : forbidden === null
+          ? `How many of the ${r.cards} tricks will you win?`
+          : `You deal, so you bid last. ${forbidden} is not allowed: the bids must not total ${r.cards}.`;
     } else if (amend) {
       // You bid last and the next player has not bid yet, so you can change it.
       panel.classList.add('amend');
       $('#turn-text').textContent = `You bid ${r.bids[me]}`;
       showPad();
-      $('#bid-hint').textContent = `Tap another number to change your bid. You can change it until ${ST.seats[ST.turn].name} bids.`;
+      $('#bid-hint').textContent = Game.stopped(ST)
+        ? 'The table is stopped. Nothing lands until whoever runs it starts it again.'
+        : `Tap another number to change your bid. You can change it until ${ST.seats[ST.turn].name} bids.`;
     } else if (ST.turn === null) {
       $('#turn-text').textContent = 'All bids are in.';
     } else {

@@ -176,6 +176,14 @@ handed over to it — and no bid, no card and no trick lands until it is let go.
 Every screen shows **❚❚ paused** on its round line, so a stopped table is never
 mistaken for a hung one, and the same button lets it go again.
 
+The screens ask the same question the table does, so nothing is offered that
+would be refused: the bid pad is not put up, the cards on the felt do not lift,
+the trick rows are not there, and the pads for a seat nobody is behind go with
+them. Each says the table is stopped where the control was. They used to stay
+lit and earn a refusal for a tap that looked allowed — and on the felt the card
+had already left the hand by then, which held it out of a hand it never left for
+the rest of the round.
+
 Everything whoever runs the table does to put a game right goes on working
 while it is stopped — a step back, a bum deal, a seat given back, a new game.
 That is what a table is stopped for. A table of people playing with real cards
