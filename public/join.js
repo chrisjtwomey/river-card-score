@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#app-row').hidden = false;
     $('#btn-stop-host').addEventListener('click', () => {
       UI.ask('Stop hosting the table?',
-        'The server on this phone stops and every phone at the table is put off it. '
+        'The server on this phone stops and every device at the table is put off it. '
         + 'The table itself is kept, and comes back the next time you host.',
         'Stop the table', true).then((yes) => {
           if (yes) location.href = 'uptheriver://stop';
