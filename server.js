@@ -422,7 +422,7 @@ function dropRoom(code) {
 
 /* Watching a game again. It is nobody's controls: a game on file is finished
    and already public, so any socket may ask for a copy of one. */
-const { handleWatch, games: watchGames, copyOf, forked } = Watch({
+const { handleWatch, games: watchGames, copyOf, forked, said } = Watch({
   createRoom, roomOf, listGames, send, fail, broadcast,
   Replay, Trail, dropRoom, paceReplay,
 });
@@ -431,7 +431,7 @@ const { handleWatch, games: watchGames, copyOf, forked } = Watch({
 // it, and the half that invents data answers only a table of stand-ins.
 const { handleDev, devHello, runs } = Dev({
   DEV, CHAT_KEEP, G, createRoom, roomOf, listTables, endTable, attach, send, fail, broadcast, setAvatar,
-  Room, Tables, Bots, Trail, watchGames, copyOf, forked,
+  Room, Tables, Bots, Trail, watchGames, copyOf, forked, said,
 });
 
 // Every message a seated socket may send, and who may send it, as a table.

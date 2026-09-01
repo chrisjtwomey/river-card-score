@@ -813,6 +813,65 @@ async function bidRound(P) {
     ok(cold.replay.state.paused === false, 'the fork is carried on');
     await cold.rtr({ do: 'run', on: false });
     ok(cold.replay.state.paused === true, 'and stopped again');
+    /* Every forcing control forks a copy, because changing a copy is changing
+       a copy whichever one does it -- the trump, the redeal count, a seat made
+       a bot, the host, the dealer, a name, the phase, a bid, a seat verb.
+
+       And only a control that actually changed something. One pressed that
+       lands on the value already there changed nothing, and cutting a game's
+       tape for nothing is the worst thing that page could do quietly. */
+    {
+      const fresh = async () => {
+        await cold.rtr({ do: 'open', game: filed });
+        await cold.rtr({ do: 'seek', at: cold.replay.n - 1 });
+        return cold.replay.n;
+      };
+      const forks = async (what, msg) => {
+        const tape = await fresh();
+        cold.send(Object.assign({ t: 'dev', replay: true }, msg));
+        await okBy(() => cold.replay.forked || cold.replay.n !== tape,
+           what + ' forks the copy  got ' + cold.last());
+        ok(cold.replay.n === tape + 1,
+           'and the change is its last point  got ' + cold.replay.n + ' of ' + tape);
+      };
+      const holds = async (what, msg) => {
+        const tape = await fresh();
+        cold.send(Object.assign({ t: 'dev', replay: true }, msg));
+        await cold.rtr({ do: 'seek', at: cold.replay.at });   // a round trip after it
+        ok(!cold.replay.forked && cold.replay.n === tape,
+           what + ' changes nothing, so nothing is cut  got '
+           + cold.replay.n + ' of ' + tape + (cold.replay.forked ? ' (forked)' : ''));
+      };
+      const at = cold.replay.state.idx;
+      const who = cold.replay.state.seats;
+      await forks('the trump', { action: 'patch', patch: { round: { i: at, trump: 'H' } } });
+      await forks('a redeal', { action: 'patch', patch: { round: { i: at, redeals: 4 } } });
+      await forks('a seat made a bot', { action: 'patch', patch: { seat: { i: 1, bot: true } } });
+      await forks('the host moved', { action: 'patch', patch: { captainId: who[1].id } });
+      await forks('the dealer moved', { action: 'patch', patch: { round: { i: at, dealer: 1 } } });
+      await forks('a seat renamed', { action: 'patch', patch: { seat: { i: 0, name: 'Zed' } } });
+      await forks('a bid typed over', { action: 'patch', patch: { round: { i: at, bids: [2, 2] } } });
+      await forks('a seat leaving', { action: 'seatDo', id: who[1].id, do: 'leave' });
+
+      await holds('a rename to the name it has',
+         { action: 'patch', patch: { seat: { i: 0, name: who[0].name } } });
+      await holds('the phase it is already in',
+         { action: 'patch', patch: { phase: cold.replay.state.phase } });
+      await holds('a patch of nothing at all', { action: 'patch', patch: {} });
+
+      // A refused verb is not a change either: it never reached the copy.
+      const tape = await fresh();
+      cold.send({ t: 'dev', action: 'seatDo', replay: true, id: 'nobody', do: 'leave' });
+      await okBy(() => /no such seat/i.test(cold.last()), 'a verb about no seat is refused');
+      await cold.rtr({ do: 'seek', at: cold.replay.at });
+      ok(!cold.replay.forked && cold.replay.n === tape,
+         'and a refusal cuts nothing  got ' + cold.replay.n + ' of ' + tape);
+    }
+    await cold.rtr({ do: 'open', game: filed });
+    await cold.rtr({ do: 'seek', at: 1 });
+    cold.send({ t: 'dev', action: 'state', replay: true, record: there });
+    await okBy(() => cold.replay.forked, 'a fork again, to put back');
+
     /* And the way back off a fork: everything the copy became goes, and what
        is left is the game it is a copy of, standing where it was changed. */
     await cold.rtr({ do: 'reset' });
