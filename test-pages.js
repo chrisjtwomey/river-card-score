@@ -2066,17 +2066,36 @@ part("the app's menu screen");
   /* The picture arrives on a cold start and not otherwise: coming back to the
      menu from Start Game is not an opening. */
   const css = fs.readFileSync(path.join(ROOT, 'public/styles.css'), 'utf8');
-  const moves = (css.match(/animation:sp-[a-z]+/g) || []).length;
-  ok(moves >= 4, 'the name, the boat, the lamp and the choices each arrive  got ' + moves);
-  // By the rule and not by the line: the selector and the animation are often
-  // on two lines, and it is the selector that has to say cold.
-  const loose = (css.match(/[^{}]+\{[^{}]*animation:sp-[^{}]*\}/g) || [])
-    .map((r) => r.slice(0, r.indexOf('{')).trim())
-    .filter((sel) => sel.indexOf('body.cold') < 0);
-  ok(!loose.length,
-     'and none of them moves unless the page says it is a cold start  got ' + loose.join(' | '));
-  ok(/body\.cold \.home-art \.sp-boat\{[^}]*animation/.test(css),
-     'which is what body.cold says');
+  /* By the rule and not by the line: the selector and the animation are often
+     on two lines, and it is the selector that has to say which. */
+  const rules = (css.match(/[^{}]+\{[^{}]*animation:sp-[^{}]*\}/g) || [])
+    .map((r) => ({ sel: r.slice(0, r.indexOf('{')).trim(), body: r }));
+  ok(rules.length >= 5,
+     'the name, the boat, the lamp, the choices and the ride each move  got ' + rules.length);
+
+  /* Arriving happens once, on a cold start. Riding happens for as long as the
+     screen is up. Both stop dead with the animations off, which is the one
+     thing every moving part of this game has in common. */
+  const arrive = rules.filter((r) => !/sp-bob/.test(r.body));
+  const notCold = arrive.filter((r) => r.sel.indexOf('body.cold') < 0);
+  ok(!notCold.length,
+     'nothing arrives unless the page says it is a cold start  got '
+     + notCold.map((r) => r.sel).join(' | '));
+  const stilled = rules.filter((r) => r.sel.indexOf(':not(.motion-off)') < 0);
+  ok(!stilled.length,
+     'and nothing moves at all with the animations off  got '
+     + stilled.map((r) => r.sel).join(' | '));
+  ok(rules.some((r) => /sp-bob/.test(r.body) && r.sel.indexOf('body.cold') < 0),
+     'the boat rides whether the screen was just opened or come back to');
+
+  /* A horizon: the sky above, the felt below, and the boat hung over the line
+     between them by the depth of its own hull. */
+  ok(/\.home-river\{[^}]*radial-gradient/.test(css), 'the water is under the boat');
+  ok(/--dip:calc\(var\(--boat-h\)/.test(css)
+     && /\.sp-boat\{[^}]*margin-bottom:calc\(var\(--dip\) \* -1\)/.test(css),
+     'and the boat sits in it rather than on top of it');
+  const chooserSky = /\.home-sky\{background:#f4f1ea\}/.test(page);
+  ok(chooserSky, 'the sky is the cream the phone drew behind the page');
 }
 
 part('the swatch');

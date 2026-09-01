@@ -14,10 +14,11 @@
   .say{min-height:20px;font-size:13px;color:var(--ink-dim);text-align:center}
   .say.bad{color:var(--red)}
 
-  /* The menu screen begins on the same cream the phone drew behind it, rather
-     than on whatever the theme is, so the two land on each other. The rest of
-     how it looks is in the game's own stylesheet with everything else. */
-  #home{background:#f4f1ea}
+  /* The sky is the cream the phone drew behind this page, whatever the theme
+     is, so the two land on each other. Everything below the horizon is the
+     game's own felt and does follow the theme. The rest of how it looks is in
+     the game's stylesheet with the rest of the game. */
+  .home-sky{background:#f4f1ea}
 </style>
 <!-- The game's own, put here by tools/prepare.sh with the server: the theme and
      the colours before the page is drawn, and the settings page the menu opens.
@@ -28,28 +29,37 @@
 </head>
 <body>
 <script>
-  /* The app says ?splash=1 on a cold start. The name and the boat arrive then
-     and only then: coming back from a table, they are simply there. The class
-     goes on before the page is drawn, or the first frame is the settled one. */
-  if (location.search.indexOf('splash=1') >= 0) document.body.className = 'cold';
+  /* Two things the stylesheet cannot ask, said on the body before the page is
+     drawn -- later than that and the first frame is the wrong one.
+
+     cold: the app says ?splash=1 on a cold start, and the name and the boat
+     arrive then and only then. Coming back from a table, they are simply there.
+     motion-off: with the animations off nothing moves, the boat included -- it
+     rides on the water for as long as this screen is up, and that is a setting
+     somebody may have turned off for a reason. */
+  document.body.className =
+    (location.search.indexOf('splash=1') >= 0 ? 'cold ' : '') +
+    (UI.motion() === 'off' ? 'motion-off' : '');
 </script>
 
 <!-- The menu. The name and the boat take the top of it and the choices sit
      under them, so the picture is the screen and not a thing in front of it. -->
 <div id="home">
-  <div class="home-art">
+  <div class="home-sky">
     <span class="sp-glow"></span>
     <span class="sp-title"></span>
     <span class="sp-boat"></span>
   </div>
+  <div class="home-river">
   <nav class="home-menu">
     <!-- Only while there is one. It is what you want nine times in ten when a
          table is up, so it goes above and nothing below it moves. -->
     <button class="btn primary big" id="go-resume" data-go="resume" type="button" hidden>Back to the table</button>
-    <button class="btn primary big" data-go="start" type="button">Start Game</button>
+    <button class="btn primary big" id="go-start" data-go="start" type="button">Start Game</button>
     <button class="btn big" data-go="settings" type="button">Settings</button>
     <button class="btn ghost big" data-go="quit" type="button">Quit Game</button>
   </nav>
+  </div>
 </div>
 
 <div id="setup" hidden>
@@ -120,6 +130,8 @@
     tableOpen = !!open;
     document.getElementById('open').hidden = !open;
     document.getElementById('go-resume').hidden = !open;
+    // Only one gold button at a time: whichever is the thing to do now.
+    document.getElementById('go-start').classList.toggle('primary', !open);
   };
 
   /* Two screens on one page: the menu, and the host-or-join one behind Start

@@ -954,7 +954,18 @@ on older phones, which is also the window behind every page. The menu comes up o
 that same cream, so nothing jumps and the icon you tapped is the picture that
 opens.
 
-The name and the boat take the top third of it, and under them:
+There is a horizon across it. Cream sky above, the game's own felt below
+standing in for the river, and the boat on the line between them with its hull
+in the water — hung over the edge by the depth of its own hull, so the waterline
+cuts across it rather than the boat sitting on top of a colour. It rides there,
+rising and falling and turning by a third of a degree, for as long as the screen
+is up: a boat on water is never quite still. The sky is the cream the phone drew
+behind the page, whatever the theme is, so the two land on each other; everything
+below the horizon follows the theme.
+
+The name is in the sky. The choices are on the water, and wear the water's
+colours rather than the page's — gold for the thing you came to do, and the
+cream the table is written in for the rest:
 
 - **Back to the table** -- only while a table is running on this phone. It is
   what you want nine times in ten when there is one, so it is added above the
