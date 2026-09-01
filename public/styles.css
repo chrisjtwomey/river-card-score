@@ -1857,7 +1857,7 @@ body.host .scorecard-panel .table-wrap{
 /* The water: brightest at the horizon and falling away, which is the same
    gradient the table wears for a deal, turned to face up the page. */
 .home-river{
-  flex:1 1 auto;
+  flex:1 1 auto;position:relative;
   display:flex;flex-direction:column;justify-content:center;
   padding:calc(var(--dip) + clamp(18px,5dvh,54px)) 22px
           calc(24px + env(safe-area-inset-bottom));
@@ -1865,6 +1865,34 @@ body.host .scorecard-panel .table-wrap{
     rgb(var(--table-hi-rgb)), rgb(var(--table-edge-rgb)) 88%);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
 }
+/* Light catching on the water, across the waterline and over the part of the
+   boat that is under it -- which is what makes the boat float rather than sit.
+   Three bands, each a different length so no two line up twice, each drifting
+   its own whole tile in the same time so all three loop seamlessly, and one of
+   them the other way. Masked to nothing at the bottom, so the water is only
+   busy where the hull meets it. */
+.home-ripple{
+  position:absolute;left:0;right:0;top:0;z-index:3;pointer-events:none;
+  height:calc(var(--dip) * 2.8);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 34px,
+      rgba(255,255,255,.13) 34px 52px, transparent 52px 96px),
+    repeating-linear-gradient(90deg, transparent 0 22px,
+      rgba(255,255,255,.09) 22px 33px, transparent 33px 61px),
+    repeating-linear-gradient(90deg, transparent 0 48px,
+      rgba(255,255,255,.07) 48px 70px, transparent 70px 132px);
+  background-size:96px 2px, 61px 2px, 132px 2px;
+  background-position:0 24%, 0 56%, 0 82%;
+  background-repeat:repeat-x;
+  -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.45) 0, #000 38%, transparent 100%);
+  mask-image:linear-gradient(to bottom, rgba(0,0,0,.45) 0, #000 38%, transparent 100%);
+}
+body:not(.motion-off) .home-ripple{animation:sp-drift 9s linear infinite}
+@keyframes sp-drift{
+  from{background-position:0 24%, 0 56%, 0 82%}
+  to{background-position:96px 24%, -61px 56%, 132px 82%}
+}
+
 .home-menu{
   display:flex;flex-direction:column;gap:12px;
   width:100%;max-width:380px;margin:0 auto;
@@ -1900,6 +1928,12 @@ body.host .scorecard-panel .table-wrap{
   width:var(--boat-w);height:var(--boat-h);
   margin-bottom:calc(var(--dip) * -1);z-index:2;
   filter:drop-shadow(0 10px 22px rgba(0,0,0,.3));
+  /* The last of the hull goes soft, so it ends in the water rather than
+     stopping in it. The ripples over it do the rest. */
+  -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - var(--dip)),
+                                     rgba(0,0,0,.28) 100%);
+  mask-image:linear-gradient(to bottom, #000 calc(100% - var(--dip)),
+                             rgba(0,0,0,.28) 100%);
 }
 /* A lamp behind the boat: a warm ground under it, and the sun in the drawing
    given somewhere to fall. */

@@ -2076,17 +2076,25 @@ part("the app's menu screen");
   /* Arriving happens once, on a cold start. Riding happens for as long as the
      screen is up. Both stop dead with the animations off, which is the one
      thing every moving part of this game has in common. */
-  const arrive = rules.filter((r) => !/sp-bob/.test(r.body));
-  const notCold = arrive.filter((r) => r.sel.indexOf('body.cold') < 0);
+  /* Told apart by what they do rather than by name, so the next moving thing
+     needs no editing here: one that finishes and stays put is an arrival, one
+     that runs for ever is the screen being alive. */
+  const notCold = rules.filter((r) => /forwards/.test(r.body))
+    .filter((r) => r.sel.indexOf('body.cold') < 0);
   ok(!notCold.length,
      'nothing arrives unless the page says it is a cold start  got '
      + notCold.map((r) => r.sel).join(' | '));
+  const stuck = rules.filter((r) => /infinite/.test(r.body) && !/forwards/.test(r.body))
+    .filter((r) => r.sel.indexOf('body.cold') >= 0);
+  ok(!stuck.length,
+     'and what runs for ever runs whether the screen was opened or come back to  got '
+     + stuck.map((r) => r.sel).join(' | '));
   const stilled = rules.filter((r) => r.sel.indexOf(':not(.motion-off)') < 0);
   ok(!stilled.length,
-     'and nothing moves at all with the animations off  got '
+     'nothing moves at all with the animations off  got '
      + stilled.map((r) => r.sel).join(' | '));
-  ok(rules.some((r) => /sp-bob/.test(r.body) && r.sel.indexOf('body.cold') < 0),
-     'the boat rides whether the screen was just opened or come back to');
+  ok(rules.filter((r) => /infinite/.test(r.body)).length >= 2,
+     'the boat rides and the water moves under it');
 
   /* A horizon: the sky above, the felt below, and the boat hung over the line
      between them by the depth of its own hull. */
