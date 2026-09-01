@@ -132,21 +132,23 @@
 }
 
 [data-swatch="parlour"]{
-  /* The green baize of Table, in the room Casino is in: the same cloth and the
-     same cards, under brass and a warm cream page. The gold edge on a card is
-     where the two meet -- Table's own is cream, and this one is not. */
+  /* The green baize of Table, in the room Casino is in. The cloth and the cards
+     are Table's, down to the green on the back of one; everything the room is
+     made of is Casino's -- a deep red bar, brass, and a warm cream page. The
+     only theme where the bar and the table are not the same colour, which is
+     the whole of it: you sit at a green table in a red room. */
   --sw-bg:#fffaf3;               --sw-bg-d:#100f0b;
   --sw-bg2:#f8edda;              --sw-bg2-d:#1a1a13;
   --sw-ink:#241611;              --sw-ink-d:#f3e9da;
   --sw-ink-dim:#7c6553;          --sw-ink-dim-d:#a89383;
   --sw-line:#ead8bf;             --sw-line-d:#2e2d20;
-  --sw-felt:#14603f;             --sw-felt-d:#1e8a5a;
-  --sw-felt-2:#0a3a24;           --sw-felt-2-d:#0f5537;
+  --sw-felt:#7b1414;             --sw-felt-d:#a72f2f;
+  --sw-felt-2:#460b0b;           --sw-felt-2-d:#631717;
   --sw-gold:#b06520;             --sw-gold-d:#e3ab4f;
   --sw-red:#c33c26;              --sw-red-d:#f0806a;
   --sw-good:#1f7a4d;             --sw-good-d:#4fc38a;
   --sw-chip:#f3e4ca;             --sw-chip-d:#232219;
-  --sw-chip-on:#14603f;          --sw-chip-on-d:#1e8a5a;
+  --sw-chip-on:#7b1414;          --sw-chip-on-d:#a72f2f;
   --sw-shadow:0 1px 2px rgba(28,32,18,.07), 0 8px 24px rgba(28,32,18,.09); --sw-shadow-d:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
 
   --felt-hi:#1c6b48;
@@ -161,7 +163,7 @@
   --gold-rgb:176,101,32;
   --gold-soft-rgb:234,183,114;
   --gold-lit-rgb:244,202,134;
-  --felt-rgb:20,96,63;
+  --felt-rgb:123,20,20;
   --red-rgb:195,60,38;
   --good-rgb:31,122,77;
   --good-lit-rgb:79,195,138;

@@ -52,7 +52,7 @@ and the room it would be in:
 | **River** | slate teal into indigo | the night river | white to warm sand |
 | **Table** | the green baize, exactly as it was | | |
 | **Casino** | burgundy | red baize | cream |
-| **Parlour** | green | the green baize, under brass | cream |
+| **Parlour** | deep red | the green baize, under brass | cream |
 | **Midnight** | near-black | black baize edged in gold | cream |
 | **Saloon** | plum, the smoke the boat puts up | plum | warm white |
 | **Harbour** | navy | navy baize with brass | white |
